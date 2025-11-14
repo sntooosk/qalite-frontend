@@ -5,18 +5,22 @@ interface AuthLayoutProps {
   subtitle: string;
   children: ReactNode;
   footer?: ReactNode;
+  hideHeader?: boolean;
 }
 
 export const AuthLayout = ({
   title,
   subtitle,
   children,
-  footer
+  footer,
+  hideHeader = false
 }: AuthLayoutProps) => (
   <div className="auth-page">
-    <header className="auth-page__topbar">
-      <span className="auth-page__brand">QaLite</span>
-    </header>
+    {!hideHeader && (
+      <header className="auth-page__topbar">
+        <span className="auth-page__brand">QaLite</span>
+      </header>
+    )}
     <div className="auth-page__body">
       <section className="auth-page__panel">
         <div className="auth-page__panel-header">

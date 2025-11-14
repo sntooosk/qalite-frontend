@@ -14,14 +14,18 @@ const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
 
 export const ProfilePage = () => {
   const { user, updateProfile, isLoading } = useAuth();
-  const [displayName, setDisplayName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
-    setDisplayName(user?.displayName ?? '');
-  }, [user?.displayName]);
+    setFirstName(user?.firstName ?? '');
+    setLastName(user?.lastName ?? '');
+    setPhoneNumber(user?.phoneNumber ?? '');
+  }, [user?.firstName, user?.lastName, user?.phoneNumber]);
 
   useEffect(() => {
     if (!photoFile) {
@@ -65,18 +69,34 @@ export const ProfilePage = () => {
     event.preventDefault();
     setLocalError(null);
 
-    if (!displayName.trim()) {
-      setLocalError('Informe um nome para continuar.');
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+    const trimmedPhoneNumber = phoneNumber.trim();
+
+    if (!trimmedFirstName) {
+      setLocalError('Informe seu nome para continuar.');
+      return;
+    }
+
+    if (!trimmedLastName) {
+      setLocalError('Informe seu sobrenome para continuar.');
       return;
     }
 
     try {
-      await updateProfile({ displayName: displayName.trim(), photoFile });
+      await updateProfile({
+        firstName: trimmedFirstName,
+        lastName: trimmedLastName,
+        phoneNumber: trimmedPhoneNumber,
+        photoFile
+      });
       setPhotoFile(null);
     } catch (err) {
       console.error(err);
     }
   };
+
+  const fullName = `${firstName} ${lastName}`.trim() || user?.displayName || user?.email || '';
 
   return (
     <Layout>
@@ -100,7 +120,7 @@ export const ProfilePage = () => {
 
         <form className="profile-editor" onSubmit={handleSubmit}>
           <div className="profile-header">
-            <UserAvatar name={displayName || user?.email || ''} photoURL={photoPreview || undefined} />
+            <UserAvatar name={fullName} photoURL={photoPreview || undefined} />
             <label className="upload-label">
               <span>Foto de perfil</span>
               <span className="upload-trigger">Selecionar nova foto</span>
@@ -110,11 +130,27 @@ export const ProfilePage = () => {
           </div>
 
           <TextInput
-            id="displayName"
+            id="firstName"
             label="Nome"
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
             required
+          />
+
+          <TextInput
+            id="lastName"
+            label="Sobrenome"
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
+            required
+          />
+
+          <TextInput
+            id="phoneNumber"
+            label="Telefone"
+            type="tel"
+            value={phoneNumber}
+            onChange={(event) => setPhoneNumber(event.target.value)}
           />
 
           <TextInput

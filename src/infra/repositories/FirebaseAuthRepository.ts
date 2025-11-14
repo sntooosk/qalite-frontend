@@ -32,12 +32,18 @@ export class FirebaseAuthRepository implements IAuthRepository {
       payload.password
     );
 
-    await firebaseUpdateProfile(user, { displayName: payload.displayName });
+    const normalizedDisplayName = payload.displayName.trim();
+
+    await firebaseUpdateProfile(user, { displayName: normalizedDisplayName || undefined });
 
     const role = payload.role;
+    const { firstName, lastName } = this.extractNameParts(normalizedDisplayName);
     await this.persistUserProfile(user, {
       role,
-      displayName: payload.displayName,
+      displayName: normalizedDisplayName,
+      firstName,
+      lastName,
+      phoneNumber: '',
       photoURL: user.photoURL ?? null,
       isNew: true
     });
@@ -100,14 +106,22 @@ export class FirebaseAuthRepository implements IAuthRepository {
       photoURL = await this.uploadProfilePhoto(user.uid, payload.photoFile);
     }
 
+    const trimmedFirstName = payload.firstName.trim();
+    const trimmedLastName = payload.lastName.trim();
+    const trimmedPhoneNumber = payload.phoneNumber.trim();
+    const displayName = `${trimmedFirstName} ${trimmedLastName}`.trim();
+
     await firebaseUpdateProfile(user, {
-      displayName: payload.displayName,
+      displayName: displayName || undefined,
       photoURL: photoURL ?? undefined
     });
 
     await this.persistUserProfile(user, {
       role: currentProfile.role,
-      displayName: payload.displayName,
+      displayName,
+      firstName: trimmedFirstName,
+      lastName: trimmedLastName,
+      phoneNumber: trimmedPhoneNumber,
       photoURL,
       isNew: false
     });
@@ -118,12 +132,36 @@ export class FirebaseAuthRepository implements IAuthRepository {
 
   private mapToAuthUser(
     user: FirebaseUser,
-    profile: { role: Role; displayName?: string | null; photoURL?: string | null }
+    profile: {
+      role: Role;
+      displayName?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+      phoneNumber?: string | null;
+      photoURL?: string | null;
+    }
   ): AuthUser {
+    const storedFirstName = (profile.firstName ?? '').trim();
+    const storedLastName = (profile.lastName ?? '').trim();
+    const storedPhoneNumber = (profile.phoneNumber ?? '').trim();
+    const nameFromParts = `${storedFirstName} ${storedLastName}`.trim();
+    const computedDisplayName = (profile.displayName ?? '').trim()
+      || nameFromParts
+      || (user.displayName ?? '')
+      || (user.email ?? '')
+      || '';
+    const [computedFirstName, ...computedLastNameParts] = computedDisplayName.split(/\s+/);
+    const effectiveFirstName = storedFirstName || computedFirstName || '';
+    const effectiveLastName = storedLastName || computedLastNameParts.join(' ');
+    const effectivePhoneNumber = storedPhoneNumber || (user.phoneNumber ?? '').trim();
+
     return {
       uid: user.uid,
       email: user.email ?? '',
-      displayName: profile.displayName ?? user.displayName ?? user.email ?? '',
+      displayName: computedDisplayName,
+      firstName: effectiveFirstName,
+      lastName: effectiveLastName,
+      phoneNumber: effectivePhoneNumber,
       role: profile.role,
       photoURL: profile.photoURL ?? user.photoURL ?? undefined,
       accessToken: user.refreshToken
@@ -132,7 +170,15 @@ export class FirebaseAuthRepository implements IAuthRepository {
 
   private async persistUserProfile(
     user: FirebaseUser,
-    profile: { role: Role; displayName: string; photoURL?: string | null; isNew?: boolean }
+    profile: {
+      role: Role;
+      displayName: string;
+      firstName: string;
+      lastName: string;
+      phoneNumber: string;
+      photoURL?: string | null;
+      isNew?: boolean;
+    }
   ): Promise<void> {
     const userDoc = doc(firebaseFirestore, USERS_COLLECTION, user.uid);
     await setDoc(
@@ -140,6 +186,9 @@ export class FirebaseAuthRepository implements IAuthRepository {
       {
         email: user.email,
         displayName: profile.displayName,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        phoneNumber: profile.phoneNumber,
         role: profile.role,
         photoURL: profile.photoURL ?? null,
         ...(profile.isNew ? { createdAt: serverTimestamp() } : {}),
@@ -151,7 +200,14 @@ export class FirebaseAuthRepository implements IAuthRepository {
 
   private async fetchUserProfile(
     uid: string
-  ): Promise<{ role: Role; displayName?: string | null; photoURL?: string | null }> {
+  ): Promise<{
+    role: Role;
+    displayName?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    phoneNumber?: string | null;
+    photoURL?: string | null;
+  }> {
     const userDoc = doc(firebaseFirestore, USERS_COLLECTION, uid);
     const snapshot = await getDoc(userDoc);
 
@@ -160,6 +216,9 @@ export class FirebaseAuthRepository implements IAuthRepository {
       return {
         role: (data.role as Role) ?? DEFAULT_ROLE,
         displayName: (data.displayName as string) ?? '',
+        firstName: (data.firstName as string) ?? '',
+        lastName: (data.lastName as string) ?? '',
+        phoneNumber: (data.phoneNumber as string) ?? '',
         photoURL: (data.photoURL as string | null) ?? null
       };
     }
@@ -167,6 +226,9 @@ export class FirebaseAuthRepository implements IAuthRepository {
     return {
       role: DEFAULT_ROLE,
       displayName: '',
+      firstName: '',
+      lastName: '',
+      phoneNumber: '',
       photoURL: null
     };
   }
@@ -175,5 +237,18 @@ export class FirebaseAuthRepository implements IAuthRepository {
     const storageRef = ref(firebaseStorage, `${USERS_COLLECTION}/${uid}/${USER_AVATAR_FILE}`);
     await uploadBytes(storageRef, file);
     return getDownloadURL(storageRef);
+  }
+
+  private extractNameParts(fullName: string): { firstName: string; lastName: string } {
+    const trimmed = fullName.trim();
+    if (!trimmed) {
+      return { firstName: '', lastName: '' };
+    }
+
+    const [first, ...rest] = trimmed.split(/\s+/);
+    return {
+      firstName: first ?? '',
+      lastName: rest.join(' ')
+    };
   }
 }
