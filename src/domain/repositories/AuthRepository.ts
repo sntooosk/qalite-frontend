@@ -5,7 +5,7 @@ export interface RegisterPayload {
   email: string;
   password: string;
   displayName: string;
-  role?: Role;
+  role: Role;
 }
 
 export interface LoginPayload {
@@ -17,6 +17,11 @@ export interface AuthStateListener {
   (user: AuthUser | null): void;
 }
 
+export interface UpdateProfilePayload {
+  displayName: string;
+  photoFile?: File | null;
+}
+
 export interface IAuthRepository {
   register(payload: RegisterPayload): Promise<AuthUser>;
   login(payload: LoginPayload): Promise<AuthUser>;
@@ -24,4 +29,5 @@ export interface IAuthRepository {
   sendPasswordReset(email: string): Promise<void>;
   getCurrentUser(): Promise<AuthUser | null>;
   onAuthStateChanged(listener: AuthStateListener): () => void;
+  updateProfile(payload: UpdateProfilePayload): Promise<AuthUser>;
 }

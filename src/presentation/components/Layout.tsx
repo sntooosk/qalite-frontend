@@ -1,8 +1,10 @@
 import { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../application/hooks/useAuth';
+import { ThemeToggle } from './ThemeToggle';
 import { Button } from './Button';
+import { UserAvatar } from './UserAvatar';
 
 interface LayoutProps {
   children: ReactNode;
@@ -10,34 +12,48 @@ interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const displayName = user?.displayName || user?.email || '';
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="flex items-center justify-between bg-white px-6 py-4 shadow">
-        <Link to="/" className="text-lg font-bold text-blue-600">
-          QaLite Auth
+    <div className="app-shell">
+      <header className="app-header">
+        <Link to="/" className="app-brand">
+          <span className="app-logo">QaLite</span>
+          <span className="app-brand-subtitle">Auth Experience</span>
         </Link>
-        <nav className="flex items-center gap-4 text-sm">
+        <nav className="header-actions">
+          <ThemeToggle />
           {user ? (
-            <>
-              <span className="text-slate-600">Olá, {user.displayName || user.email}</span>
-              <Button type="button" variant="secondary" onClick={() => void logout()}>
+            <div className="header-user">
+              <div className="user-context">
+                <span className="user-greeting">Olá,</span>
+                <span className="user-name">{displayName}</span>
+                <span className="user-role">{user.role === 'admin' ? 'Administrador' : 'Usuário'}</span>
+              </div>
+              <UserAvatar
+                name={displayName}
+                photoURL={user.photoURL}
+                size="sm"
+                onClick={() => navigate('/profile')}
+              />
+              <Button type="button" variant="ghost" onClick={() => void logout()}>
                 Sair
               </Button>
-            </>
+            </div>
           ) : (
-            <>
-              <Link to="/login" className="text-blue-600 hover:underline">
+            <div className="header-auth">
+              <Link to="/login" className="text-link">
                 Entrar
               </Link>
-              <Link to="/register" className="text-blue-600 hover:underline">
+              <Button type="button" onClick={() => navigate('/register')}>
                 Criar conta
-              </Link>
-            </>
+              </Button>
+            </div>
           )}
         </nav>
       </header>
-      <main className="mx-auto max-w-4xl px-6 py-10">{children}</main>
+      <main className="app-main">{children}</main>
     </div>
   );
 };

@@ -5,9 +5,10 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
-  updateProfile
+  updateProfile as firebaseUpdateProfile
 } from 'firebase/auth';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import { AuthUser } from '../../domain/entities/AuthUser';
 import { DEFAULT_ROLE, Role } from '../../domain/entities/Role';
@@ -15,11 +16,13 @@ import {
   AuthStateListener,
   IAuthRepository,
   LoginPayload,
-  RegisterPayload
+  RegisterPayload,
+  UpdateProfilePayload
 } from '../../domain/repositories/AuthRepository';
-import { firebaseAuth, firebaseFirestore } from '../firebase/firebaseConfig';
+import { firebaseAuth, firebaseFirestore, firebaseStorage } from '../firebase/firebaseConfig';
 
 const USERS_COLLECTION = 'users';
+const USER_AVATAR_FILE = 'avatar.jpg';
 
 export class FirebaseAuthRepository implements IAuthRepository {
   async register(payload: RegisterPayload): Promise<AuthUser> {
@@ -29,12 +32,18 @@ export class FirebaseAuthRepository implements IAuthRepository {
       payload.password
     );
 
-    await updateProfile(user, { displayName: payload.displayName });
+    await firebaseUpdateProfile(user, { displayName: payload.displayName });
 
-    const role = payload.role ?? DEFAULT_ROLE;
-    await this.persistUserProfile(user, role);
+    const role = payload.role;
+    await this.persistUserProfile(user, {
+      role,
+      displayName: payload.displayName,
+      photoURL: user.photoURL ?? null,
+      isNew: true
+    });
 
-    return this.mapToAuthUser(user, role);
+    const profile = await this.fetchUserProfile(user.uid);
+    return this.mapToAuthUser(user, profile);
   }
 
   async login(payload: LoginPayload): Promise<AuthUser> {
@@ -44,8 +53,8 @@ export class FirebaseAuthRepository implements IAuthRepository {
       payload.password
     );
 
-    const role = await this.fetchUserRole(credential.user.uid);
-    return this.mapToAuthUser(credential.user, role);
+    const profile = await this.fetchUserProfile(credential.user.uid);
+    return this.mapToAuthUser(credential.user, profile);
   }
 
   async logout(): Promise<void> {
@@ -62,8 +71,8 @@ export class FirebaseAuthRepository implements IAuthRepository {
       return null;
     }
 
-    const role = await this.fetchUserRole(user.uid);
-    return this.mapToAuthUser(user, role);
+    const profile = await this.fetchUserProfile(user.uid);
+    return this.mapToAuthUser(user, profile);
   }
 
   onAuthStateChanged(listener: AuthStateListener): () => void {
@@ -73,45 +82,98 @@ export class FirebaseAuthRepository implements IAuthRepository {
         return;
       }
 
-      const role = await this.fetchUserRole(user.uid);
-      listener(this.mapToAuthUser(user, role));
+      const profile = await this.fetchUserProfile(user.uid);
+      listener(this.mapToAuthUser(user, profile));
     });
   }
 
-  private mapToAuthUser(user: FirebaseUser, role: Role): AuthUser {
+  async updateProfile(payload: UpdateProfilePayload): Promise<AuthUser> {
+    const user = firebaseAuth.currentUser;
+    if (!user) {
+      throw new Error('Usuário não autenticado.');
+    }
+
+    const currentProfile = await this.fetchUserProfile(user.uid);
+
+    let photoURL = currentProfile.photoURL ?? user.photoURL ?? null;
+    if (payload.photoFile) {
+      photoURL = await this.uploadProfilePhoto(user.uid, payload.photoFile);
+    }
+
+    await firebaseUpdateProfile(user, {
+      displayName: payload.displayName,
+      photoURL: photoURL ?? undefined
+    });
+
+    await this.persistUserProfile(user, {
+      role: currentProfile.role,
+      displayName: payload.displayName,
+      photoURL,
+      isNew: false
+    });
+
+    const refreshedProfile = await this.fetchUserProfile(user.uid);
+    return this.mapToAuthUser(firebaseAuth.currentUser ?? user, refreshedProfile);
+  }
+
+  private mapToAuthUser(
+    user: FirebaseUser,
+    profile: { role: Role; displayName?: string | null; photoURL?: string | null }
+  ): AuthUser {
     return {
       uid: user.uid,
       email: user.email ?? '',
-      displayName: user.displayName ?? '',
-      role,
+      displayName: profile.displayName ?? user.displayName ?? user.email ?? '',
+      role: profile.role,
+      photoURL: profile.photoURL ?? user.photoURL ?? undefined,
       accessToken: user.refreshToken
     };
   }
 
-  private async persistUserProfile(user: FirebaseUser, role: Role): Promise<void> {
+  private async persistUserProfile(
+    user: FirebaseUser,
+    profile: { role: Role; displayName: string; photoURL?: string | null; isNew?: boolean }
+  ): Promise<void> {
     const userDoc = doc(firebaseFirestore, USERS_COLLECTION, user.uid);
     await setDoc(
       userDoc,
       {
         email: user.email,
-        displayName: user.displayName,
-        role,
-        createdAt: serverTimestamp(),
+        displayName: profile.displayName,
+        role: profile.role,
+        photoURL: profile.photoURL ?? null,
+        ...(profile.isNew ? { createdAt: serverTimestamp() } : {}),
         updatedAt: serverTimestamp()
       },
       { merge: true }
     );
   }
 
-  private async fetchUserRole(uid: string): Promise<Role> {
+  private async fetchUserProfile(
+    uid: string
+  ): Promise<{ role: Role; displayName?: string | null; photoURL?: string | null }> {
     const userDoc = doc(firebaseFirestore, USERS_COLLECTION, uid);
     const snapshot = await getDoc(userDoc);
 
     if (snapshot.exists()) {
       const data = snapshot.data();
-      return (data.role as Role) ?? DEFAULT_ROLE;
+      return {
+        role: (data.role as Role) ?? DEFAULT_ROLE,
+        displayName: (data.displayName as string) ?? '',
+        photoURL: (data.photoURL as string | null) ?? null
+      };
     }
 
-    return DEFAULT_ROLE;
+    return {
+      role: DEFAULT_ROLE,
+      displayName: '',
+      photoURL: null
+    };
+  }
+
+  private async uploadProfilePhoto(uid: string, file: File): Promise<string> {
+    const storageRef = ref(firebaseStorage, `${USERS_COLLECTION}/${uid}/${USER_AVATAR_FILE}`);
+    await uploadBytes(storageRef, file);
+    return getDownloadURL(storageRef);
   }
 }

@@ -30,13 +30,18 @@ export const ForgotPasswordPage = () => {
     }
   };
 
+  const feedbackType = feedback?.startsWith('Verifique') ? 'success' : 'error';
+
   return (
     <Layout>
-      <div className="mx-auto max-w-md rounded bg-white p-8 shadow">
-        <h1 className="mb-6 text-2xl font-bold text-slate-800">Recuperar senha</h1>
-        {feedback && <Alert type={feedback.startsWith('Verifique') ? 'success' : 'error'} message={feedback} />}
+      <div className="mx-auto max-w-md rounded-2xl bg-surface p-10 shadow-xl">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-primary">Recuperar acesso</h1>
+          <p className="mt-2 text-sm text-muted">Enviaremos um link para redefinir sua senha.</p>
+        </div>
+        {feedback && <Alert type={feedbackType} message={feedback} />}
         {error && <Alert type="error" message={error} />}
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
           <TextInput
             id="email"
             label="E-mail"
@@ -50,8 +55,8 @@ export const ForgotPasswordPage = () => {
           </Button>
         </form>
         {isLoading && <Spinner />}
-        <div className="mt-4 text-sm text-slate-600">
-          <Link to="/login" className="text-blue-600 hover:underline">
+        <div className="mt-6 text-center text-sm text-muted">
+          <Link to="/login" className="text-link">
             Voltar para login
           </Link>
         </div>

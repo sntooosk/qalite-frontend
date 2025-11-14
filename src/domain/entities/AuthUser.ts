@@ -6,4 +6,5 @@ export interface AuthUser {
   displayName: string;
   role: Role;
   accessToken?: string;
+  photoURL?: string;
 }

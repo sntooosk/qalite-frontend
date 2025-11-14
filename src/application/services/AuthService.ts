@@ -6,6 +6,8 @@ import { LoginUser, LoginUserInput } from '../../domain/usecases/LoginUser';
 import { LogoutUser } from '../../domain/usecases/LogoutUser';
 import { ObserveAuthState } from '../../domain/usecases/ObserveAuthState';
 import { RegisterUser, RegisterUserInput } from '../../domain/usecases/RegisterUser';
+import { UpdateUserProfile } from '../../domain/usecases/UpdateUserProfile';
+import type { UpdateProfilePayload } from '../../domain/repositories/AuthRepository';
 import { ResetPassword } from '../../domain/usecases/ResetPassword';
 
 const authRepository = new FirebaseAuthRepository();
@@ -17,6 +19,7 @@ export class AuthService {
   private readonly resetPassword = new ResetPassword(authRepository);
   private readonly getCurrentUser = new GetCurrentUser(authRepository);
   private readonly observeAuthState = new ObserveAuthState(authRepository);
+  private readonly updateUserProfile = new UpdateUserProfile(authRepository);
 
   register(input: RegisterUserInput): Promise<AuthUser> {
     return this.registerUser.execute(input);
@@ -45,6 +48,10 @@ export class AuthService {
   hasRequiredRole(user: AuthUser | null, allowedRoles: Role[]): boolean {
     if (!user) return false;
     return allowedRoles.includes(user.role);
+  }
+
+  updateProfile(input: UpdateProfilePayload): Promise<AuthUser> {
+    return this.updateUserProfile.execute(input);
   }
 }
 

@@ -34,11 +34,14 @@ export const LoginPage = () => {
 
   return (
     <Layout>
-      <div className="mx-auto max-w-md rounded bg-white p-8 shadow">
-        <h1 className="mb-6 text-2xl font-bold text-slate-800">Entrar</h1>
+      <div className="mx-auto max-w-md rounded-2xl bg-surface p-10 shadow-xl">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-primary">Entre com sua conta</h1>
+          <p className="mt-2 text-sm text-muted">Acesse seus dashboards e personalize sua experiência.</p>
+        </div>
         {formError && <Alert type="error" message={formError} />}
         {error && <Alert type="error" message={error} />}
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
           <TextInput
             id="email"
             label="E-mail"
@@ -60,14 +63,14 @@ export const LoginPage = () => {
           </Button>
         </form>
         {isLoading && <Spinner />}
-        <div className="mt-4 text-sm text-slate-600">
-          <Link to="/forgot-password" className="text-blue-600 hover:underline">
+        <div className="mt-6 text-center text-sm text-muted">
+          <Link to="/forgot-password" className="text-link">
             Esqueci minha senha
           </Link>
         </div>
-        <div className="mt-2 text-sm text-slate-600">
+        <div className="mt-2 text-center text-sm text-muted">
           Não tem conta?{' '}
-          <Link to="/register" className="text-blue-600 hover:underline">
+          <Link to="/register" className="text-link">
             Cadastre-se
           </Link>
         </div>

@@ -5,9 +5,12 @@ interface TextInputProps {
   label: string;
   type?: string;
   value: string;
-  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
   required?: boolean;
   placeholder?: string;
+  disabled?: boolean;
+  readOnly?: boolean;
+  autoComplete?: string;
 }
 
 export const TextInput = ({
@@ -15,12 +18,15 @@ export const TextInput = ({
   label,
   type = 'text',
   value,
-  onChange,
+  onChange = () => {},
   required = false,
-  placeholder
+  placeholder,
+  disabled = false,
+  readOnly = false,
+  autoComplete
 }: TextInputProps) => (
-  <label htmlFor={id} className="flex flex-col gap-1 text-sm font-medium text-slate-700">
-    {label}
+  <label htmlFor={id} className="field">
+    <span className="field-label">{label}</span>
     <input
       id={id}
       name={id}
@@ -29,7 +35,10 @@ export const TextInput = ({
       onChange={onChange}
       required={required}
       placeholder={placeholder}
-      className="rounded border border-slate-300 px-3 py-2 text-base shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+      disabled={disabled}
+      readOnly={readOnly}
+      autoComplete={autoComplete}
+      className="field-input"
     />
   </label>
 );
