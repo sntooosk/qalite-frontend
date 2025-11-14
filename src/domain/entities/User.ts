@@ -4,6 +4,9 @@ export interface UserProfile {
   id: string;
   email: string;
   displayName: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
   role: Role;
   photoURL: string | null;
   createdAt: Date;

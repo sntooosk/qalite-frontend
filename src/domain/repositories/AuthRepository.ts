@@ -18,7 +18,9 @@ export interface AuthStateListener {
 }
 
 export interface UpdateProfilePayload {
-  displayName: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
   photoFile?: File | null;
 }
 
