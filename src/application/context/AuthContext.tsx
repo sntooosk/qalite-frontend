@@ -10,6 +10,7 @@ import {
 
 import type { AuthUser } from '../../domain/entities/AuthUser';
 import type { Role } from '../../domain/entities/Role';
+import type { UpdateProfilePayload } from '../../domain/repositories/AuthRepository';
 import { authService } from '../services/AuthService';
 
 interface AuthContextValue {
@@ -21,11 +22,11 @@ interface AuthContextValue {
     email: string;
     password: string;
     displayName: string;
-    role?: Role;
   }) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   hasRole: (roles: Role[]) => boolean;
+  updateProfile: (payload: UpdateProfilePayload) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -62,7 +63,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     email: string;
     password: string;
     displayName: string;
-    role?: Role;
   }) => {
     setIsLoading(true);
     setError(null);
@@ -109,9 +109,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     [user]
   );
 
+  const updateProfile = useCallback(async (payload: UpdateProfilePayload) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updated = await authService.updateProfile(payload);
+      setUser(updated);
+    } catch (err) {
+      setError((err as Error).message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isLoading, error, login, register, logout, resetPassword, hasRole }),
-    [user, isLoading, error, login, register, logout, resetPassword, hasRole]
+    () => ({ user, isLoading, error, login, register, logout, resetPassword, hasRole, updateProfile }),
+    [user, isLoading, error, login, register, logout, resetPassword, hasRole, updateProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
