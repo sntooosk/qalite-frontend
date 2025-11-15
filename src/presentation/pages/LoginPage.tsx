@@ -31,7 +31,7 @@ export const LoginPage = () => {
       }
 
       if (authenticatedUser.organizationId) {
-        navigate('/organization', { replace: true });
+        navigate('/dashboard', { replace: true });
         return;
       }
 

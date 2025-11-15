@@ -5,6 +5,7 @@ import { ProtectedRoute, RoleProtectedRoute } from '../../application/routes/Pro
 import { ThemeProvider } from '../context/ThemeContext';
 import { ToastProvider } from '../context/ToastContext';
 import { AdminDashboardPage } from '../pages/AdminDashboardPage';
+import { AdminOrganizationsPage } from '../pages/AdminOrganizationsPage';
 import { ForbiddenPage } from '../pages/ForbiddenPage';
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
 import { HomePage } from '../pages/HomePage';
@@ -14,6 +15,8 @@ import { RegisterPage } from '../pages/RegisterPage';
 import { UserDashboardPage } from '../pages/UserDashboardPage';
 import { NoOrganizationPage } from '../pages/NoOrganizationPage';
 import { OrganizationDashboardPage } from '../pages/OrganizationDashboardPage';
+import { OrganizationStoresPage } from '../pages/OrganizationStoresPage';
+import { StoreSummaryPage } from '../pages/StoreSummaryPage';
 
 export const AppRoutes = () => (
   <ThemeProvider>
@@ -32,10 +35,13 @@ export const AppRoutes = () => (
             <Route path="/organization" element={<OrganizationDashboardPage />} />
             <Route path="/no-organization" element={<NoOrganizationPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/stores/:storeId" element={<StoreSummaryPage />} />
           </Route>
 
           <Route element={<RoleProtectedRoute allowedRoles={['admin']} />}>
-            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/admin" element={<AdminOrganizationsPage />} />
+            <Route path="/admin/manage" element={<AdminDashboardPage />} />
+            <Route path="/admin/organizations/:organizationId/stores" element={<OrganizationStoresPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
