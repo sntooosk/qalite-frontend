@@ -541,6 +541,7 @@ export const AdminDashboardPage = () => {
               organizationName={selectedOrganization.name}
               canManageStores
               canManageScenarios
+              showScenarioForm={false}
             />
           )}
         </>

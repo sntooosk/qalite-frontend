@@ -13,6 +13,7 @@ interface StoreManagementPanelProps {
   organizationName: string;
   canManageStores: boolean;
   canManageScenarios: boolean;
+  showScenarioForm?: boolean;
 }
 
 const emptyScenarioForm: StoreScenarioInput = {
@@ -28,7 +29,8 @@ export const StoreManagementPanel = ({
   organizationId,
   organizationName,
   canManageStores,
-  canManageScenarios
+  canManageScenarios,
+  showScenarioForm = true
 }: StoreManagementPanelProps) => {
   const { showToast } = useToast();
   const [stores, setStores] = useState<Store[]>([]);
@@ -48,6 +50,7 @@ export const StoreManagementPanel = ({
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const canUseScenarioForm = canManageScenarios && showScenarioForm !== false;
 
   useEffect(() => {
     const fetchStores = async () => {
@@ -556,7 +559,7 @@ export const StoreManagementPanel = ({
               </div>
             </div>
 
-            {canManageScenarios && (
+            {canUseScenarioForm && (
               <form className="scenario-form" onSubmit={handleScenarioSubmit}>
                 <h3 className="form-title">{editingScenarioId ? 'Editar cenário' : 'Novo cenário'}</h3>
                 {scenarioFormError && <p className="form-message form-message--error">{scenarioFormError}</p>}
@@ -630,7 +633,10 @@ export const StoreManagementPanel = ({
                 <p className="section-subtitle">Carregando cenários cadastrados...</p>
               ) : scenarios.length === 0 ? (
                 <p className="section-subtitle">
-                  Nenhum cenário cadastrado para esta loja ainda. {canManageScenarios ? 'Cadastre o primeiro utilizando o formulário acima.' : 'Aguarde um responsável cadastrar os cenários.'}
+                  Nenhum cenário cadastrado para esta loja ainda.{' '}
+                  {canUseScenarioForm
+                    ? 'Cadastre o primeiro utilizando o formulário acima.'
+                    : 'Acesse a página da loja para gerenciar os cenários.'}
                 </p>
               ) : (
                 <table className="scenario-table">
@@ -642,7 +648,7 @@ export const StoreManagementPanel = ({
                       <th>Criticidade</th>
                       <th>Observação</th>
                       <th>BDD</th>
-                      {canManageScenarios && <th>Ações</th>}
+                      {canUseScenarioForm && <th>Ações</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -654,7 +660,7 @@ export const StoreManagementPanel = ({
                         <td>{scenario.criticality}</td>
                         <td className="scenario-observation">{scenario.observation}</td>
                         <td className="scenario-bdd">{scenario.bdd}</td>
-                        {canManageScenarios && (
+                        {canUseScenarioForm && (
                           <td className="scenario-actions">
                             <button type="button" onClick={() => handleEditScenario(scenario)} disabled={isSavingScenario}>
                               Editar
