@@ -137,11 +137,6 @@ export const EnvironmentPage = () => {
               &larr; Voltar
             </button>
             <div className="environment-page__title">
-              {environment && (
-                <span className={`status-pill status-pill--${environment.status}`}>
-                  {STATUS_LABEL[environment.status]}
-                </span>
-              )}
               <h1 className="section-title">{environment?.identificador ?? 'Ambiente'}</h1>
               {environment && (
                 <p className="section-subtitle">
