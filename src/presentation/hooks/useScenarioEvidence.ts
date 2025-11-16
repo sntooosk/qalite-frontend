@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import type { EnvironmentScenarioStatus } from '../../domain/entities/Environment';
-import { updateScenarioStatus, uploadEvidenceFile } from '../../infra/firebase/environmentService';
+import { environmentService } from '../../main/factories/environmentServiceFactory';
 
 export const useScenarioEvidence = (environmentId: string | null | undefined) => {
   const [isUpdating, setIsUpdating] = useState(false);
@@ -9,12 +9,12 @@ export const useScenarioEvidence = (environmentId: string | null | undefined) =>
   const handleEvidenceUpload = useCallback(
     async (scenarioId: string, file: File) => {
       if (!environmentId) {
-        throw new Error('Ambiente inválido.');
+        throw new Error('Invalid environment.');
       }
 
       setIsUpdating(true);
       try {
-        return await uploadEvidenceFile(environmentId, scenarioId, file);
+        return await environmentService.uploadScenarioEvidence(environmentId, scenarioId, file);
       } finally {
         setIsUpdating(false);
       }
@@ -25,12 +25,12 @@ export const useScenarioEvidence = (environmentId: string | null | undefined) =>
   const changeScenarioStatus = useCallback(
     async (scenarioId: string, status: EnvironmentScenarioStatus) => {
       if (!environmentId) {
-        throw new Error('Ambiente inválido.');
+        throw new Error('Invalid environment.');
       }
 
       setIsUpdating(true);
       try {
-        await updateScenarioStatus(environmentId, scenarioId, status);
+        await environmentService.updateScenarioStatus(environmentId, scenarioId, status);
       } finally {
         setIsUpdating(false);
       }

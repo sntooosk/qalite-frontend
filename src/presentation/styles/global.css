@@ -2953,23 +2953,23 @@ a.text-link:hover {
   filter: grayscale(0.15);
 }
 
-.scenario-status-select--pendente {
+.scenario-status-select--pending {
   background-color: #c2410c;
   border-color: rgba(239, 124, 60, 0.7);
 }
 
-.scenario-status-select--em_andamento {
+.scenario-status-select--in_progress {
   background-color: #1d4ed8;
   border-color: rgba(59, 130, 246, 0.75);
 }
 
-.scenario-status-select--concluido,
-.scenario-status-select--concluido_automatizado {
+.scenario-status-select--done,
+.scenario-status-select--automated_done {
   background-color: #047857;
   border-color: rgba(52, 211, 153, 0.65);
 }
 
-.scenario-status-select--nao_se_aplica {
+.scenario-status-select--not_applicable {
   background-color: #475569;
   color: #f1f5f9;
   border-color: rgba(148, 163, 184, 0.65);

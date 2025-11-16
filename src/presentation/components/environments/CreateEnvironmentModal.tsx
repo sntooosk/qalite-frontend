@@ -2,14 +2,14 @@ import { FormEvent, useMemo, useState } from 'react';
 
 import type { EnvironmentScenario, EnvironmentStatus } from '../../../domain/entities/Environment';
 import type { StoreScenario, StoreSuite } from '../../../domain/entities/Store';
-import { createEnvironment } from '../../../infra/firebase/environmentService';
+import { environmentService } from '../../../main/factories/environmentServiceFactory';
 import { Button } from '../Button';
 import { Modal } from '../Modal';
 import { SelectInput } from '../SelectInput';
 import { TextArea } from '../TextArea';
 import { TextInput } from '../TextInput';
 
-interface ModalCriarAmbienteProps {
+interface CreateEnvironmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   storeId: string;
@@ -20,7 +20,7 @@ interface ModalCriarAmbienteProps {
 
 const STATUS_OPTIONS: { value: EnvironmentStatus; label: string }[] = [
   { value: 'backlog', label: 'Backlog' },
-  { value: 'in_progress', label: 'Em andamento' },
+  { value: 'in_progress', label: 'In progress' },
 ];
 
 const TEST_TYPES_BY_ENVIRONMENT: Record<string, string[]> = {
@@ -45,30 +45,30 @@ const buildScenarioMap = (
     }
 
     scenarioMap[scenarioId] = {
-      titulo: match.title,
-      categoria: match.category,
-      criticidade: match.criticality,
-      status: 'pendente',
-      evidenciaArquivoUrl: null,
+      title: match.title,
+      category: match.category,
+      criticality: match.criticality,
+      status: 'pending',
+      evidenceFileUrl: null,
     };
   });
 
   return scenarioMap;
 };
 
-export const ModalCriarAmbiente = ({
+export const CreateEnvironmentModal = ({
   isOpen,
   onClose,
   storeId,
   suites,
   scenarios,
   onCreated,
-}: ModalCriarAmbienteProps) => {
-  const [identificador, setIdentificador] = useState('');
+}: CreateEnvironmentModalProps) => {
+  const [identifier, setIdentifier] = useState('');
   const [urls, setUrls] = useState('');
   const [jiraTask, setJiraTask] = useState('');
-  const [tipoAmbiente, setTipoAmbiente] = useState('WS');
-  const [tipoTeste, setTipoTeste] = useState('Funcional');
+  const [environmentType, setEnvironmentType] = useState('WS');
+  const [testType, setTestType] = useState('Funcional');
   const [suiteId, setSuiteId] = useState('');
   const [status, setStatus] = useState<EnvironmentStatus>('backlog');
   const [bugs, setBugs] = useState(0);
@@ -83,21 +83,21 @@ export const ModalCriarAmbiente = ({
     () => buildScenarioMap(selectedSuite, scenarios),
     [selectedSuite, scenarios],
   );
-  const totalCenarios = Object.keys(scenarioMap).length;
+  const totalScenarios = Object.keys(scenarioMap).length;
 
-  const tipoTesteOptions = useMemo(() => {
-    const options = TEST_TYPES_BY_ENVIRONMENT[tipoAmbiente] ?? ['Funcional'];
-    if (!options.includes(tipoTeste)) {
-      setTipoTeste(options[0]);
+  const testTypeOptions = useMemo(() => {
+    const options = TEST_TYPES_BY_ENVIRONMENT[environmentType] ?? ['Funcional'];
+    if (!options.includes(testType)) {
+      setTestType(options[0]);
     }
     return options;
-  }, [tipoAmbiente, tipoTeste]);
+  }, [environmentType, testType]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!identificador.trim()) {
-      setFormError('Informe um identificador para o ambiente.');
+    if (!identifier.trim()) {
+      setFormError('Provide an identifier for the environment.');
       return;
     }
 
@@ -114,22 +114,22 @@ export const ModalCriarAmbiente = ({
           ? { start: new Date().toISOString(), end: null, totalMs: 0 }
           : { start: null, end: null, totalMs: 0 };
 
-      await createEnvironment({
-        identificador: identificador.trim(),
+      await environmentService.create({
+        identifier: identifier.trim(),
         storeId,
         suiteId: selectedSuite?.id ?? null,
         suiteName: selectedSuite?.name ?? null,
         urls: urlsList,
         jiraTask: jiraTask.trim(),
-        tipoAmbiente,
-        tipoTeste,
+        environmentType,
+        testType,
         status,
         timeTracking,
         presentUsersIds: [],
         concludedBy: null,
         scenarios: scenarioMap,
         bugs,
-        totalCenarios,
+        totalScenarios,
         participants: [],
       });
 
@@ -137,7 +137,7 @@ export const ModalCriarAmbiente = ({
       onClose();
     } catch (error) {
       console.error(error);
-      setFormError('Não foi possível criar o ambiente. Tente novamente.');
+      setFormError('Unable to create the environment. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -147,24 +147,24 @@ export const ModalCriarAmbiente = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Criar ambiente"
-      description="Preencha os campos para iniciar um novo ambiente de teste."
+      title="Create environment"
+      description="Fill in the details to start a new test environment."
     >
       <form className="environment-form" onSubmit={handleSubmit}>
         {formError && <p className="form-message form-message--error">{formError}</p>}
         <TextInput
-          id="identificador"
-          label="Identificador"
-          value={identificador}
-          onChange={(event) => setIdentificador(event.target.value)}
+          id="identifier"
+          label="Identifier"
+          value={identifier}
+          onChange={(event) => setIdentifier(event.target.value)}
           required
         />
         <TextArea
           id="urls"
-          label="URLs (uma por linha)"
+          label="URLs (one per line)"
           value={urls}
           onChange={(event) => setUrls(event.target.value)}
-          placeholder="https://exemplo.com"
+          placeholder="https://example.com"
         />
         <TextInput
           id="jiraTask"
@@ -173,10 +173,10 @@ export const ModalCriarAmbiente = ({
           onChange={(event) => setJiraTask(event.target.value)}
         />
         <SelectInput
-          id="tipoAmbiente"
-          label="Tipo de ambiente"
-          value={tipoAmbiente}
-          onChange={(event) => setTipoAmbiente(event.target.value)}
+          id="environmentType"
+          label="Environment type"
+          value={environmentType}
+          onChange={(event) => setEnvironmentType(event.target.value)}
           options={[
             { value: 'WS', label: 'WS' },
             { value: 'TM', label: 'TM' },
@@ -184,11 +184,11 @@ export const ModalCriarAmbiente = ({
           ]}
         />
         <SelectInput
-          id="tipoTeste"
-          label="Tipo de teste"
-          value={tipoTeste}
-          onChange={(event) => setTipoTeste(event.target.value)}
-          options={tipoTesteOptions.map((option) => ({ value: option, label: option }))}
+          id="testType"
+          label="Test type"
+          value={testType}
+          onChange={(event) => setTestType(event.target.value)}
+          options={testTypeOptions.map((option) => ({ value: option, label: option }))}
         />
         <SelectInput
           id="suiteId"
@@ -196,20 +196,20 @@ export const ModalCriarAmbiente = ({
           value={suiteId}
           onChange={(event) => setSuiteId(event.target.value)}
           options={[
-            { value: '', label: 'Nenhuma' },
+            { value: '', label: 'None' },
             ...suites.map((suite) => ({ value: suite.id, label: suite.name })),
           ]}
         />
         <SelectInput
           id="status"
-          label="Status inicial"
+          label="Initial status"
           value={status}
           onChange={(event) => setStatus(event.target.value as EnvironmentStatus)}
           options={STATUS_OPTIONS}
         />
         <TextInput
           id="bugs"
-          label="Bugs conhecidos"
+          label="Known bugs"
           type="number"
           min={0}
           value={String(bugs)}
@@ -219,13 +219,13 @@ export const ModalCriarAmbiente = ({
         {selectedSuite && (
           <div className="environment-suite-preview">
             <p>
-              Cenários carregados da suíte <strong>{selectedSuite.name}</strong>: {totalCenarios}
+              Loaded scenarios from <strong>{selectedSuite.name}</strong>: {totalScenarios}
             </p>
           </div>
         )}
 
-        <Button type="submit" isLoading={isSubmitting} loadingText="Salvando...">
-          Criar ambiente
+        <Button type="submit" isLoading={isSubmitting} loadingText="Saving...">
+          Create environment
         </Button>
       </form>
     </Modal>

@@ -3,18 +3,18 @@ import { useParams } from 'react-router-dom';
 
 import type { EnvironmentStatus } from '../../domain/entities/Environment';
 import { Layout } from '../components/Layout';
-import { TabelaEvidencias } from '../components/environments/TabelaEvidencias';
+import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
 import { useEnvironmentRealtime } from '../hooks/useEnvironmentRealtime';
 import { useTimeTracking } from '../hooks/useTimeTracking';
 import { useUserProfiles } from '../hooks/useUserProfiles';
 
 const STATUS_LABEL: Record<EnvironmentStatus, string> = {
   backlog: 'Backlog',
-  in_progress: 'Em andamento',
-  done: 'Concluído',
+  in_progress: 'In progress',
+  done: 'Done',
 };
 
-export const PaginaAmbientePublica = () => {
+export const PublicEnvironmentPage = () => {
   const { environmentId } = useParams<{ environmentId: string }>();
   const { environment, isLoading } = useEnvironmentRealtime(environmentId);
   const participants = useUserProfiles(environment?.participants ?? []);
@@ -24,13 +24,13 @@ export const PaginaAmbientePublica = () => {
   );
 
   const urls = useMemo(() => environment?.urls ?? [], [environment?.urls]);
-  const suiteDescription = environment?.suiteName ?? 'Suíte não informada';
+  const suiteDescription = environment?.suiteName ?? 'Suite not provided';
 
   if (isLoading) {
     return (
       <Layout>
         <section className="page-container">
-          <p className="section-subtitle">Carregando ambiente público...</p>
+          <p className="section-subtitle">Loading public environment...</p>
         </section>
       </Layout>
     );
@@ -40,8 +40,8 @@ export const PaginaAmbientePublica = () => {
     return (
       <Layout>
         <section className="page-container">
-          <h1 className="section-title">Ambiente não encontrado</h1>
-          <p className="section-subtitle">Verifique o link compartilhado e tente novamente.</p>
+          <h1 className="section-title">Environment not found</h1>
+          <p className="section-subtitle">Verify the shared link and try again.</p>
         </section>
       </Layout>
     );
@@ -55,33 +55,33 @@ export const PaginaAmbientePublica = () => {
             <span className={`status-pill status-pill--${environment.status}`}>
               {STATUS_LABEL[environment.status]}
             </span>
-            <h1 className="section-title">{environment.identificador}</h1>
+            <h1 className="section-title">{environment.identifier}</h1>
             <p className="section-subtitle">
-              {environment.tipoAmbiente} · {environment.tipoTeste} · {suiteDescription}
+              {environment.environmentType} · {environment.testType} · {suiteDescription}
             </p>
           </div>
         </div>
 
         <div className="environment-summary-grid">
           <div className="summary-card">
-            <h3>Resumo</h3>
+            <h3>Summary</h3>
             <p>
               <strong>Status:</strong> {STATUS_LABEL[environment.status]}
             </p>
             <p>
-              <strong>Tempo total:</strong> {formattedTime}
+              <strong>Total time:</strong> {formattedTime}
             </p>
             <p>
-              <strong>Jira:</strong> {environment.jiraTask || 'Não informado'}
+              <strong>Jira:</strong> {environment.jiraTask || 'Not provided'}
             </p>
             <p>
-              <strong>Suíte:</strong> {suiteDescription}
+              <strong>Suite:</strong> {suiteDescription}
             </p>
           </div>
           <div className="summary-card">
-            <h3>URLs monitoradas</h3>
+            <h3>Tracked URLs</h3>
             {urls.length === 0 ? (
-              <p className="section-subtitle">Nenhuma URL adicionada.</p>
+              <p className="section-subtitle">No URLs were added.</p>
             ) : (
               <ul className="environment-url-list">
                 {urls.map((url) => (
@@ -95,9 +95,9 @@ export const PaginaAmbientePublica = () => {
             )}
           </div>
           <div className="summary-card">
-            <h3>Participantes</h3>
+            <h3>Participants</h3>
             {participants.length === 0 ? (
-              <p className="section-subtitle">Nenhum participante registrado.</p>
+              <p className="section-subtitle">No participants were registered.</p>
             ) : (
               <ul className="environment-present-users">
                 {participants.map((participant) => (
@@ -118,8 +118,8 @@ export const PaginaAmbientePublica = () => {
         </div>
 
         <div className="environment-evidence">
-          <h3 className="section-subtitle">Cenários e evidências</h3>
-          <TabelaEvidencias environment={environment} isLocked readOnly />
+          <h3 className="section-subtitle">Scenarios and evidence</h3>
+          <EnvironmentEvidenceTable environment={environment} isLocked readOnly />
         </div>
       </section>
     </Layout>
