@@ -105,7 +105,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await authService.logout();
       setUser(null);
-      showToast({ type: 'success', message: 'Você saiu da sua conta com segurança.' });
+      showToast({ type: 'success', message: 'Você saiu com segurança.' });
     } catch (err) {
       const message = handleFirebaseError(err);
       throw new Error(message);
@@ -145,7 +145,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(updated);
         showToast({
           type: 'success',
-          message: 'Perfil atualizado com sucesso!',
+          message: 'Perfil atualizado com sucesso.',
         });
       } catch (err) {
         const message = handleFirebaseError(err);

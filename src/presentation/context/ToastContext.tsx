@@ -5,7 +5,7 @@ import {
   useContext,
   useMemo,
   useRef,
-  useState
+  useState,
 } from 'react';
 
 export type ToastType = 'info' | 'success' | 'error';
@@ -48,29 +48,32 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const showToast = useCallback((options: ToastOptions) => {
-    const id = generateId();
-    const toast: Toast = {
-      id,
-      message: options.message,
-      type: options.type ?? 'info',
-      duration: options.duration ?? DEFAULT_DURATION
-    };
+  const showToast = useCallback(
+    (options: ToastOptions) => {
+      const id = generateId();
+      const toast: Toast = {
+        id,
+        message: options.message,
+        type: options.type ?? 'info',
+        duration: options.duration ?? DEFAULT_DURATION,
+      };
 
-    setToasts((previous) => [toast, ...previous]);
+      setToasts((previous) => [toast, ...previous]);
 
-    if (typeof window !== 'undefined') {
-      const timeoutId = window.setTimeout(() => {
-        dismissToast(id);
-      }, toast.duration);
+      if (typeof window !== 'undefined') {
+        const timeoutId = window.setTimeout(() => {
+          dismissToast(id);
+        }, toast.duration);
 
-      timers.current.set(id, timeoutId);
-    }
-  }, [dismissToast]);
+        timers.current.set(id, timeoutId);
+      }
+    },
+    [dismissToast],
+  );
 
   const value = useMemo<ToastContextValue>(
     () => ({ showToast, dismissToast, toasts }),
-    [showToast, dismissToast, toasts]
+    [showToast, dismissToast, toasts],
   );
 
   return (
@@ -103,7 +106,7 @@ const ToastViewport = () => {
             type="button"
             className="toast-dismiss"
             onClick={() => dismissToast(toast.id)}
-            aria-label="Fechar notificação"
+            aria-label="Dispensar notificação"
           >
             ×
           </button>
