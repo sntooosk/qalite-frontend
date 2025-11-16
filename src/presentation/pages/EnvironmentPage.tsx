@@ -283,9 +283,6 @@ export const EnvironmentPage = () => {
                     <p>
                       <strong>Suíte:</strong> {suiteDescription}
                     </p>
-                    <p>
-                      <strong>Bugs:</strong> {environment.bugs}
-                    </p>
                   </div>
                   <div className="summary-card">
                     <h3>URLs monitoradas</h3>

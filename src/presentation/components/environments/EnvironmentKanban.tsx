@@ -9,6 +9,7 @@ import type { StoreScenario, StoreSuite } from '../../../domain/entities/Store';
 import { firebaseFirestore } from '../../../infra/firebase/firebaseConfig';
 import { environmentService } from '../../../main/factories/environmentServiceFactory';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../hooks/useAuth';
 import type { PresentUserProfile } from '../../hooks/usePresentUsers';
 import { Button } from '../Button';
 import { EnvironmentCard } from './EnvironmentCard';
@@ -33,6 +34,7 @@ export const EnvironmentKanban = ({ storeId, suites, scenarios }: EnvironmentKan
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [userProfilesMap, setUserProfilesMap] = useState<Record<string, PresentUserProfile>>({});
+  const { user } = useAuth();
 
   useEffect(() => {
     const unsubscribe = environmentService.observeAll({ storeId }, (list) => {
@@ -49,6 +51,9 @@ export const EnvironmentKanban = ({ storeId, suites, scenarios }: EnvironmentKan
     environments.forEach((environment) => {
       environment.presentUsersIds.filter((id) => Boolean(id)).forEach((id) => ids.add(id));
       (environment.participants ?? []).filter((id) => Boolean(id)).forEach((id) => ids.add(id));
+      if (environment.concludedBy) {
+        ids.add(environment.concludedBy);
+      }
     });
 
     if (ids.size === 0) {
@@ -172,7 +177,11 @@ export const EnvironmentKanban = ({ storeId, suites, scenarios }: EnvironmentKan
     }
 
     try {
-      await environmentService.transitionStatus({ environment, targetStatus: status });
+      await environmentService.transitionStatus({
+        environment,
+        targetStatus: status,
+        currentUserId: user?.uid ?? null,
+      });
       showToast({ type: 'success', message: 'Status atualizado com sucesso.' });
     } catch (error) {
       if (error instanceof EnvironmentStatusError && error.code === 'PENDING_SCENARIOS') {
@@ -230,6 +239,9 @@ export const EnvironmentKanban = ({ storeId, suites, scenarios }: EnvironmentKan
                     )
                       .map((id) => userProfilesMap[id])
                       .filter((user): user is PresentUserProfile => Boolean(user))}
+                    concludedBy={
+                      environment.concludedBy ? userProfilesMap[environment.concludedBy] : undefined
+                    }
                     suiteName={suiteNameByEnvironment[environment.id]}
                     draggable
                     onDragStart={handleDragStart}
