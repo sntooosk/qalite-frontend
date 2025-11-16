@@ -1089,8 +1089,11 @@ export const StoreSummaryPage = () => {
                       </div>
                     ) : (
                       <>
-                        <form className="suite-form" onSubmit={handleSuiteSubmit}>
-                          <div className="card suite-card suite-editor-card">
+                        <div className="suite-form">
+                          <form
+                            className="card suite-card suite-editor-card"
+                            onSubmit={handleSuiteSubmit}
+                          >
                             <div className="suite-form-header-actions suite-editor-actions">
                               <Button
                                 type="button"
@@ -1275,17 +1278,17 @@ export const StoreSummaryPage = () => {
                                 </>
                               )}
                             </div>
-                          </div>
-                          <div className="suite-form-actions">
-                            <Button
-                              type="submit"
-                              isLoading={isSavingSuite}
-                              loadingText="Salvando..."
-                            >
-                              {editingSuiteId ? 'Atualizar suíte' : 'Salvar suíte'}
-                            </Button>
-                          </div>
-                        </form>
+                            <div className="suite-form-actions">
+                              <Button
+                                type="submit"
+                                isLoading={isSavingSuite}
+                                loadingText="Salvando..."
+                              >
+                                {editingSuiteId ? 'Atualizar suíte' : 'Salvar suíte'}
+                              </Button>
+                            </div>
+                          </form>
+                        </div>
                       </>
                     )}
                   </div>
