@@ -1,4 +1,4 @@
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import type { Organization } from '../../domain/entities/Organization';
@@ -91,6 +91,7 @@ export const StoreSummaryPage = () => {
   const [suiteScenarioFilters, setSuiteScenarioFilters] =
     useState<ScenarioFilters>(emptyScenarioFilters);
   const [selectedSuitePreviewId, setSelectedSuitePreviewId] = useState<string | null>(null);
+  const suiteListRef = useRef<HTMLDivElement | null>(null);
 
   const canManageScenarios = Boolean(user);
 
@@ -150,14 +151,6 @@ export const StoreSummaryPage = () => {
   const criticalityFilterOptions = useMemo(
     () => [{ value: '', label: 'Todas as criticidades' }, ...CRITICALITY_OPTIONS],
     [],
-  );
-
-  const selectedSuiteScenarios = useMemo(
-    () =>
-      suiteForm.scenarioIds
-        .map((scenarioId) => scenarioMap.get(scenarioId))
-        .filter((scenario): scenario is StoreScenario => Boolean(scenario)),
-    [scenarioMap, suiteForm.scenarioIds],
   );
 
   const filteredScenarios = useMemo(
@@ -512,6 +505,10 @@ export const StoreSummaryPage = () => {
     setSuiteForm(emptySuiteForm);
     setSuiteFormError(null);
     setEditingSuiteId(null);
+  };
+
+  const handleScrollToSuiteList = () => {
+    suiteListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleScenarioFilterChange =
@@ -978,20 +975,29 @@ export const StoreSummaryPage = () => {
                             {editingSuiteId ? 'Editar suíte de testes' : 'Nova suíte de testes'}
                           </h3>
                           <p className="suite-form-description">
-                            Escolha quais cenários farão parte do grupo e utilize o preview para
-                            validar a massa antes de salvar.
+                            Escolha quais cenários farão parte do grupo e utilize a seção de suítes
+                            cadastradas para validar a massa antes de salvar.
                           </p>
                         </div>
-                        {editingSuiteId && (
+                        <div className="suite-form-header-actions">
                           <Button
                             type="button"
-                            variant="ghost"
-                            onClick={handleCancelSuiteEdit}
-                            disabled={isSavingSuite}
+                            variant="secondary"
+                            onClick={handleScrollToSuiteList}
                           >
-                            Cancelar edição
+                            Ir para suítes cadastradas
                           </Button>
-                        )}
+                          {editingSuiteId && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={handleCancelSuiteEdit}
+                              disabled={isSavingSuite}
+                            >
+                              Cancelar edição
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       {suiteFormError && (
                         <p className="form-message form-message--error">{suiteFormError}</p>
@@ -1137,42 +1143,6 @@ export const StoreSummaryPage = () => {
                     </form>
 
                     <div className="suite-preview">
-                      <h4 className="suite-preview-title">Pré-visualização da seleção atual</h4>
-                      {selectedSuiteScenarios.length === 0 ? (
-                        <p className="section-subtitle">
-                          Selecione cenários para visualizar o resumo antes de salvar.
-                        </p>
-                      ) : (
-                        <table className="suite-preview-table">
-                          <thead>
-                            <tr>
-                              <th>Cenário</th>
-                              <th>Categoria</th>
-                              <th>Automação</th>
-                              <th>Criticidade</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {selectedSuiteScenarios.map((scenario) => (
-                              <tr key={scenario.id}>
-                                <td>{scenario.title}</td>
-                                <td>{scenario.category}</td>
-                                <td>{scenario.automation}</td>
-                                <td>
-                                  <span
-                                    className={`criticality-badge ${getCriticalityClassName(scenario.criticality)}`}
-                                  >
-                                    {scenario.criticality}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-                    </div>
-
-                    <div className="suite-preview">
                       <div className="suite-preview-title-row">
                         <h4 className="suite-preview-title">Suíte selecionada</h4>
                         {selectedSuitePreview && (
@@ -1220,7 +1190,7 @@ export const StoreSummaryPage = () => {
                       )}
                     </div>
 
-                    <div className="suite-table-wrapper">
+                    <div className="suite-table-wrapper" ref={suiteListRef}>
                       <h4 className="suite-preview-title">Suítes cadastradas</h4>
                       {isLoadingSuites ? (
                         <p className="section-subtitle">Carregando suítes de testes...</p>
