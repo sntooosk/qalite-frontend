@@ -23,6 +23,8 @@ const STATUS_LABEL: Record<EnvironmentStatus, string> = {
   done: 'Concluído',
 };
 
+const STATUS_FLOW: EnvironmentStatus[] = ['backlog', 'in_progress', 'done'];
+
 export const EnvironmentPage = () => {
   const { environmentId } = useParams<{ environmentId: string }>();
   const navigate = useNavigate();
@@ -160,12 +162,16 @@ export const EnvironmentPage = () => {
                   Concluir ambiente
                 </Button>
               )}
-              <Button type="button" variant="ghost" onClick={() => setIsEditOpen(true)}>
-                Editar
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setIsDeleteOpen(true)}>
-                Excluir
-              </Button>
+              {environment.status !== 'done' && (
+                <>
+                  <Button type="button" variant="ghost" onClick={() => setIsEditOpen(true)}>
+                    Editar
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={() => setIsDeleteOpen(true)}>
+                    Excluir
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -177,6 +183,36 @@ export const EnvironmentPage = () => {
             <div className="environment-summary-grid">
               <div className="summary-card">
                 <h3>Resumo do ambiente</h3>
+                {environment && (
+                  <div className="environment-status-summary">
+                    <div className="environment-status-summary__header">
+                      <strong>Status do ambiente</strong>
+                      <span className={`status-pill status-pill--${environment.status}`}>
+                        {STATUS_LABEL[environment.status]}
+                      </span>
+                    </div>
+                    <div className="environment-status-progress">
+                      {STATUS_FLOW.map((status) => {
+                        const statusIndex = STATUS_FLOW.indexOf(environment.status);
+                        const currentIndex = STATUS_FLOW.indexOf(status);
+                        const isCurrent = status === environment.status;
+                        const isCompleted = currentIndex < statusIndex;
+
+                        return (
+                          <div
+                            key={status}
+                            className={`status-step${
+                              isCurrent ? ' status-step--current' : ''
+                            }${isCompleted ? ' status-step--completed' : ''}`}
+                          >
+                            <span className="status-step__indicator" aria-hidden />
+                            <span className="status-step__label">{STATUS_LABEL[status]}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 <div className="summary-card__metrics">
                   <div>
                     <span>Total de cenários</span>

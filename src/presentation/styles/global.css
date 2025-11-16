@@ -2903,6 +2903,76 @@ a.text-link:hover {
   gap: 0.75rem;
 }
 
+.environment-status-summary {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(241, 245, 249, 0.35);
+}
+
+.environment-status-summary__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+.environment-status-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+}
+
+.status-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.status-step__indicator {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  border: 2px solid rgba(15, 23, 42, 0.2);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--transition-base),
+    border var(--transition-base);
+}
+
+.status-step--completed .status-step__indicator {
+  border-color: rgba(16, 185, 129, 0.5);
+  background: rgba(16, 185, 129, 0.15);
+}
+
+.status-step--completed .status-step__label {
+  color: #15803d;
+}
+
+.status-step--current .status-step__indicator {
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+}
+
+.status-step--current .status-step__label {
+  color: #0f172a;
+}
+
+.status-step__label {
+  font-size: 0.85rem;
+}
+
 .summary-card__metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
