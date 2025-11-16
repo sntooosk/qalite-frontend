@@ -3,21 +3,25 @@ import type { ChangeEvent } from 'react';
 import type { Environment, EnvironmentScenarioStatus } from '../../../domain/entities/Environment';
 import { useScenarioEvidence } from '../../hooks/useScenarioEvidence';
 
-interface TabelaEvidenciasProps {
+interface EnvironmentEvidenceTableProps {
   environment: Environment;
   isLocked?: boolean;
   readOnly?: boolean;
 }
 
 const STATUS_OPTIONS: { value: EnvironmentScenarioStatus; label: string }[] = [
-  { value: 'pendente', label: 'Pendente' },
-  { value: 'em_andamento', label: 'Em andamento' },
-  { value: 'concluido', label: 'Concluído' },
-  { value: 'concluido_automatizado', label: 'Concluído automatizado' },
-  { value: 'nao_se_aplica', label: 'Não se aplica' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'in_progress', label: 'In progress' },
+  { value: 'done', label: 'Done' },
+  { value: 'automated_done', label: 'Automated done' },
+  { value: 'not_applicable', label: 'Not applicable' },
 ];
 
-export const TabelaEvidencias = ({ environment, isLocked, readOnly }: TabelaEvidenciasProps) => {
+export const EnvironmentEvidenceTable = ({
+  environment,
+  isLocked,
+  readOnly,
+}: EnvironmentEvidenceTableProps) => {
   const { isUpdating, handleEvidenceUpload, changeScenarioStatus } = useScenarioEvidence(
     environment.id,
   );
@@ -43,7 +47,7 @@ export const TabelaEvidencias = ({ environment, isLocked, readOnly }: TabelaEvid
   };
 
   if (scenarioEntries.length === 0) {
-    return <p className="section-subtitle">Nenhum cenário associado a este ambiente.</p>;
+    return <p className="section-subtitle">No scenarios are linked to this environment.</p>;
   }
 
   return (
@@ -51,26 +55,26 @@ export const TabelaEvidencias = ({ environment, isLocked, readOnly }: TabelaEvid
       <table className="data-table">
         <thead>
           <tr>
-            <th>Título</th>
-            <th>Categoria</th>
-            <th>Criticidade</th>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Criticality</th>
             <th>Status</th>
-            <th>Evidência</th>
+            <th>Evidence</th>
           </tr>
         </thead>
         <tbody>
           {scenarioEntries.map(([scenarioId, data]) => (
             <tr key={scenarioId}>
-              <td>{data.titulo}</td>
-              <td>{data.categoria}</td>
-              <td>{data.criticidade}</td>
+              <td>{data.title}</td>
+              <td>{data.category}</td>
+              <td>{data.criticality}</td>
               <td>
                 <div className="scenario-status-cell">
                   <select
                     className={`scenario-status-select scenario-status-select--${data.status}`}
                     value={data.status}
                     disabled={isReadOnly}
-                    aria-label={`Status do cenário ${data.titulo}`}
+                    aria-label={`Scenario ${data.title} status`}
                     onChange={(event) =>
                       handleStatusChange(
                         scenarioId,
@@ -88,12 +92,12 @@ export const TabelaEvidencias = ({ environment, isLocked, readOnly }: TabelaEvid
               </td>
               <td>
                 <div className="scenario-evidence-cell">
-                  {data.evidenciaArquivoUrl ? (
-                    <a href={data.evidenciaArquivoUrl} target="_blank" rel="noreferrer">
-                      Abrir evidência
+                  {data.evidenceFileUrl ? (
+                    <a href={data.evidenceFileUrl} target="_blank" rel="noreferrer">
+                      Open evidence
                     </a>
                   ) : (
-                    <span className="section-subtitle">Sem arquivo</span>
+                    <span className="section-subtitle">No file</span>
                   )}
                   {!isReadOnly && (
                     <label className="environment-upload">
@@ -102,7 +106,7 @@ export const TabelaEvidencias = ({ environment, isLocked, readOnly }: TabelaEvid
                         accept="image/*,application/pdf,video/mp4,video/quicktime,application/zip,application/x-zip-compressed"
                         onChange={(event) => handleFileChange(scenarioId, event)}
                       />
-                      <span>Enviar arquivo</span>
+                      <span>Upload file</span>
                     </label>
                   )}
                 </div>
@@ -111,7 +115,7 @@ export const TabelaEvidencias = ({ environment, isLocked, readOnly }: TabelaEvid
           ))}
         </tbody>
       </table>
-      {isUpdating && <p className="section-subtitle">Sincronizando evidências...</p>}
+      {isUpdating && <p className="section-subtitle">Syncing evidence...</p>}
     </div>
   );
 };

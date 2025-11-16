@@ -1,23 +1,23 @@
 import { useState } from 'react';
 
 import type { Environment } from '../../../domain/entities/Environment';
-import { deleteEnvironment } from '../../../infra/firebase/environmentService';
+import { environmentService } from '../../../main/factories/environmentServiceFactory';
 import { Button } from '../Button';
 import { Modal } from '../Modal';
 
-interface ModalExcluirAmbienteProps {
+interface DeleteEnvironmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   environment: Environment | null;
   onDeleted?: () => void;
 }
 
-export const ModalExcluirAmbiente = ({
+export const DeleteEnvironmentModal = ({
   isOpen,
   onClose,
   environment,
   onDeleted,
-}: ModalExcluirAmbienteProps) => {
+}: DeleteEnvironmentModalProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,35 +29,35 @@ export const ModalExcluirAmbiente = ({
     setError(null);
     setIsDeleting(true);
     try {
-      await deleteEnvironment(environment.id);
+      await environmentService.delete(environment.id);
       onDeleted?.();
       onClose();
     } catch (err) {
       console.error(err);
-      setError('Não foi possível excluir este ambiente.');
+      setError('Unable to delete this environment.');
     } finally {
       setIsDeleting(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Excluir ambiente">
+    <Modal isOpen={isOpen} onClose={onClose} title="Delete environment">
       {error && <p className="form-message form-message--error">{error}</p>}
       <p>
-        Esta ação é permanente. Deseja excluir o ambiente{' '}
-        <strong>{environment?.identificador ?? 'sem identificador'}</strong>?
+        This action cannot be undone. Do you want to delete environment{' '}
+        <strong>{environment?.identifier ?? 'without identifier'}</strong>?
       </p>
       <div className="modal-actions">
         <Button type="button" variant="ghost" onClick={onClose} disabled={isDeleting}>
-          Cancelar
+          Cancel
         </Button>
         <Button
           type="button"
           onClick={handleDelete}
           isLoading={isDeleting}
-          loadingText="Excluindo..."
+          loadingText="Deleting..."
         >
-          Confirmar exclusão
+          Confirm delete
         </Button>
       </div>
     </Modal>

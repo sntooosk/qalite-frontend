@@ -1,14 +1,14 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 import type { Environment, EnvironmentStatus } from '../../../domain/entities/Environment';
-import { updateEnvironment } from '../../../infra/firebase/environmentService';
+import { environmentService } from '../../../main/factories/environmentServiceFactory';
 import { Button } from '../Button';
 import { Modal } from '../Modal';
 import { SelectInput } from '../SelectInput';
 import { TextArea } from '../TextArea';
 import { TextInput } from '../TextInput';
 
-interface ModalEditarAmbienteProps {
+interface EditEnvironmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   environment: Environment | null;
@@ -16,16 +16,20 @@ interface ModalEditarAmbienteProps {
 
 const STATUS_OPTIONS: { value: EnvironmentStatus; label: string }[] = [
   { value: 'backlog', label: 'Backlog' },
-  { value: 'in_progress', label: 'Em andamento' },
-  { value: 'done', label: 'Concluído' },
+  { value: 'in_progress', label: 'In progress' },
+  { value: 'done', label: 'Done' },
 ];
 
-export const ModalEditarAmbiente = ({ isOpen, onClose, environment }: ModalEditarAmbienteProps) => {
-  const [identificador, setIdentificador] = useState('');
+export const EditEnvironmentModal = ({
+  isOpen,
+  onClose,
+  environment,
+}: EditEnvironmentModalProps) => {
+  const [identifier, setIdentifier] = useState('');
   const [urls, setUrls] = useState('');
   const [jiraTask, setJiraTask] = useState('');
-  const [tipoAmbiente, setTipoAmbiente] = useState('WS');
-  const [tipoTeste, setTipoTeste] = useState('Funcional');
+  const [environmentType, setEnvironmentType] = useState('WS');
+  const [testType, setTestType] = useState('Funcional');
   const [status, setStatus] = useState<EnvironmentStatus>('backlog');
   const [bugs, setBugs] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
@@ -36,11 +40,11 @@ export const ModalEditarAmbiente = ({ isOpen, onClose, environment }: ModalEdita
       return;
     }
 
-    setIdentificador(environment.identificador);
+    setIdentifier(environment.identifier);
     setUrls(environment.urls.join('\n'));
     setJiraTask(environment.jiraTask);
-    setTipoAmbiente(environment.tipoAmbiente);
-    setTipoTeste(environment.tipoTeste);
+    setEnvironmentType(environment.environmentType);
+    setTestType(environment.testType);
     setStatus(environment.status);
     setBugs(environment.bugs);
   }, [environment]);
@@ -67,42 +71,26 @@ export const ModalEditarAmbiente = ({ isOpen, onClose, environment }: ModalEdita
         .map((entry) => entry.trim())
         .filter((entry) => entry.length > 0);
 
-      let timeTracking = environment.timeTracking;
-      const now = new Date().toISOString();
-
-      if (environment.status !== status) {
-        if (status === 'backlog') {
-          timeTracking = { start: null, end: null, totalMs: 0 };
-        } else if (status === 'in_progress') {
-          timeTracking = {
-            start: timeTracking.start ?? now,
-            end: null,
-            totalMs: timeTracking.totalMs,
-          };
-        } else if (status === 'done') {
-          const startDate = timeTracking.start
-            ? new Date(timeTracking.start).getTime()
-            : Date.now();
-          const totalMs = timeTracking.totalMs + Math.max(0, Date.now() - startDate);
-          timeTracking = { start: timeTracking.start ?? now, end: now, totalMs };
-        }
-      }
-
-      await updateEnvironment(environment.id, {
-        identificador: identificador.trim(),
+      await environmentService.update(environment.id, {
+        identifier: identifier.trim(),
         urls: urlsList,
         jiraTask: jiraTask.trim(),
-        tipoAmbiente,
-        tipoTeste,
-        status,
+        environmentType,
+        testType,
         bugs,
-        timeTracking,
       });
+
+      if (environment.status !== status) {
+        await environmentService.transitionStatus({
+          environment,
+          targetStatus: status,
+        });
+      }
 
       onClose();
     } catch (error) {
       console.error(error);
-      setFormError('Não foi possível atualizar o ambiente.');
+      setFormError('Unable to update the environment.');
     } finally {
       setIsSubmitting(false);
     }
@@ -112,38 +100,38 @@ export const ModalEditarAmbiente = ({ isOpen, onClose, environment }: ModalEdita
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Editar ambiente"
-      description="Atualize as informações necessárias."
+      title="Edit environment"
+      description="Update the details as needed."
     >
       <form className="environment-form" onSubmit={handleSubmit}>
         {formError && <p className="form-message form-message--error">{formError}</p>}
         <TextInput
-          id="identificadorEditar"
-          label="Identificador"
-          value={identificador}
-          onChange={(event) => setIdentificador(event.target.value)}
+          id="identifierEdit"
+          label="Identifier"
+          value={identifier}
+          onChange={(event) => setIdentifier(event.target.value)}
           required
           disabled={isLocked}
         />
         <TextArea
-          id="urlsEditar"
+          id="urlsEdit"
           label="URLs"
           value={urls}
           onChange={(event) => setUrls(event.target.value)}
           disabled={isLocked}
         />
         <TextInput
-          id="jiraEditar"
+          id="jiraEdit"
           label="Jira Task"
           value={jiraTask}
           onChange={(event) => setJiraTask(event.target.value)}
           disabled={isLocked}
         />
         <SelectInput
-          id="tipoAmbienteEditar"
-          label="Tipo de ambiente"
-          value={tipoAmbiente}
-          onChange={(event) => setTipoAmbiente(event.target.value)}
+          id="environmentTypeEdit"
+          label="Environment type"
+          value={environmentType}
+          onChange={(event) => setEnvironmentType(event.target.value)}
           disabled={isLocked}
           options={[
             { value: 'WS', label: 'WS' },
@@ -152,14 +140,14 @@ export const ModalEditarAmbiente = ({ isOpen, onClose, environment }: ModalEdita
           ]}
         />
         <TextInput
-          id="tipoTesteEditar"
-          label="Tipo de teste"
-          value={tipoTeste}
-          onChange={(event) => setTipoTeste(event.target.value)}
+          id="testTypeEdit"
+          label="Test type"
+          value={testType}
+          onChange={(event) => setTestType(event.target.value)}
           disabled={isLocked}
         />
         <SelectInput
-          id="statusEditar"
+          id="statusEdit"
           label="Status"
           value={status}
           onChange={(event) => setStatus(event.target.value as EnvironmentStatus)}
@@ -167,7 +155,7 @@ export const ModalEditarAmbiente = ({ isOpen, onClose, environment }: ModalEdita
           disabled={isLocked}
         />
         <TextInput
-          id="bugsEditar"
+          id="bugsEdit"
           label="Bugs"
           type="number"
           min={0}
@@ -175,14 +163,9 @@ export const ModalEditarAmbiente = ({ isOpen, onClose, environment }: ModalEdita
           onChange={(event) => setBugs(Number(event.target.value))}
           disabled={isLocked}
         />
-        <p className="environment-suite-preview">Cenários associados: {suiteSummary}</p>
-        <Button
-          type="submit"
-          disabled={isLocked}
-          isLoading={isSubmitting}
-          loadingText="Salvando..."
-        >
-          Salvar alterações
+        <p className="environment-suite-preview">Linked scenarios: {suiteSummary}</p>
+        <Button type="submit" disabled={isLocked} isLoading={isSubmitting} loadingText="Saving...">
+          Save changes
         </Button>
       </form>
     </Modal>

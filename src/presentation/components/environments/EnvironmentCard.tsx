@@ -3,7 +3,7 @@ import type { DragEvent } from 'react';
 import type { Environment } from '../../../domain/entities/Environment';
 import type { PresentUserProfile } from '../../hooks/usePresentUsers';
 
-interface CardAmbienteProps {
+interface EnvironmentCardProps {
   environment: Environment;
   presentUsers: PresentUserProfile[];
   suiteName?: string | null;
@@ -14,20 +14,20 @@ interface CardAmbienteProps {
 
 const STATUS_LABEL: Record<Environment['status'], string> = {
   backlog: 'Backlog',
-  in_progress: 'Em andamento',
-  done: 'Concluído',
+  in_progress: 'In progress',
+  done: 'Done',
 };
 
-export const CardAmbiente = ({
+export const EnvironmentCard = ({
   environment,
   presentUsers,
   suiteName,
   onOpen,
   draggable = false,
   onDragStart,
-}: CardAmbienteProps) => {
+}: EnvironmentCardProps) => {
   const isLocked = environment.status === 'done';
-  const displaySuiteName = suiteName ?? 'Suíte não informada';
+  const displaySuiteName = suiteName ?? 'Suite not provided';
   const hasPresentUsers = presentUsers.length > 0;
 
   const handleOpen = () => onOpen(environment);
@@ -55,13 +55,13 @@ export const CardAmbiente = ({
           title={STATUS_LABEL[environment.status]}
         />
         <div className="environment-card-minimal-info">
-          <span className="environment-card-identifier">{environment.identificador}</span>
-          <span className="environment-card-type">{environment.tipoTeste}</span>
+          <span className="environment-card-identifier">{environment.identifier}</span>
+          <span className="environment-card-type">{environment.testType}</span>
           <span className="environment-card-suite">{displaySuiteName}</span>
         </div>
       </div>
 
-      <div className="environment-card-avatars" aria-label="Participantes">
+      <div className="environment-card-avatars" aria-label="Participants">
         {hasPresentUsers ? (
           <ul className="environment-card-avatar-list">
             {presentUsers.map((user) => (
@@ -80,7 +80,7 @@ export const CardAmbiente = ({
             ))}
           </ul>
         ) : (
-          <span className="environment-card-avatars__placeholder">Sem participantes</span>
+          <span className="environment-card-avatars__placeholder">No participants</span>
         )}
       </div>
     </div>

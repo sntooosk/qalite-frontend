@@ -1,12 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { EnvironmentStatusError } from '../../application/errors/EnvironmentStatusError';
 import type { EnvironmentStatus } from '../../domain/entities/Environment';
-import {
-  exportEnvironmentAsMarkdown,
-  exportEnvironmentAsPDF,
-  updateEnvironment,
-} from '../../infra/firebase/environmentService';
+import { environmentService } from '../../main/factories/environmentServiceFactory';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
 import { useToast } from '../context/ToastContext';
@@ -14,18 +11,19 @@ import { useEnvironmentRealtime } from '../hooks/useEnvironmentRealtime';
 import { usePresentUsers } from '../hooks/usePresentUsers';
 import { useTimeTracking } from '../hooks/useTimeTracking';
 import { useAuth } from '../hooks/useAuth';
-import { TabelaEvidencias } from '../components/environments/TabelaEvidencias';
-import { ModalEditarAmbiente } from '../components/environments/ModalEditarAmbiente';
-import { ModalExcluirAmbiente } from '../components/environments/ModalExcluirAmbiente';
+import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
+import { EditEnvironmentModal } from '../components/environments/EditEnvironmentModal';
+import { DeleteEnvironmentModal } from '../components/environments/DeleteEnvironmentModal';
 import { useUserProfiles } from '../hooks/useUserProfiles';
+import { copyToClipboard } from '../utils/clipboard';
 
 const STATUS_LABEL: Record<EnvironmentStatus, string> = {
   backlog: 'Backlog',
-  in_progress: 'Em andamento',
-  done: 'Concluído',
+  in_progress: 'In progress',
+  done: 'Done',
 };
 
-export const PaginaAmbiente = () => {
+export const EnvironmentPage = () => {
   const { environmentId } = useParams<{ environmentId: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -50,7 +48,7 @@ export const PaginaAmbiente = () => {
   );
 
   const urls = useMemo(() => environment?.urls ?? [], [environment?.urls]);
-  const suiteDescription = environment?.suiteName ?? 'Suíte não informada';
+  const suiteDescription = environment?.suiteName ?? 'Suite not provided';
 
   const scenarioStats = useMemo(() => {
     if (!environment) {
@@ -59,10 +57,10 @@ export const PaginaAmbiente = () => {
 
     const scenarios = Object.values(environment.scenarios ?? {});
     const concluded = scenarios.filter((scenario) =>
-      ['concluido', 'concluido_automatizado', 'nao_se_aplica'].includes(scenario.status),
+      ['done', 'automated_done', 'not_applicable'].includes(scenario.status),
     ).length;
-    const pending = scenarios.filter((scenario) => scenario.status === 'pendente').length;
-    const running = scenarios.filter((scenario) => scenario.status === 'em_andamento').length;
+    const pending = scenarios.filter((scenario) => scenario.status === 'pending').length;
+    const running = scenarios.filter((scenario) => scenario.status === 'in_progress').length;
     return { total: scenarios.length, concluded, pending, running };
   }, [environment]);
 
@@ -71,79 +69,42 @@ export const PaginaAmbiente = () => {
       return;
     }
 
-    if (target === 'done') {
-      const hasPending = Object.values(environment.scenarios ?? {}).some(
-        (scenario) => scenario.status === 'pendente',
-      );
+    try {
+      await environmentService.transitionStatus({
+        environment,
+        targetStatus: target,
+        currentUserId: user?.uid ?? null,
+      });
 
-      if (hasPending) {
+      showToast({
+        type: 'success',
+        message: target === 'done' ? 'Environment finished.' : 'Status updated successfully.',
+      });
+    } catch (error) {
+      if (error instanceof EnvironmentStatusError && error.code === 'PENDING_SCENARIOS') {
         showToast({
           type: 'error',
-          message: 'Existem cenários pendentes. Conclua-os antes de finalizar.',
+          message: 'There are pending scenarios. Finish them before closing the environment.',
         });
         return;
       }
-    }
 
-    const now = new Date().toISOString();
-    let timeTracking = environment.timeTracking;
-
-    if (target === 'backlog') {
-      timeTracking = { start: null, end: null, totalMs: 0 };
-    } else if (target === 'in_progress') {
-      timeTracking = { start: timeTracking.start ?? now, end: null, totalMs: timeTracking.totalMs };
-    } else if (target === 'done') {
-      const startTimestamp = timeTracking.start
-        ? new Date(timeTracking.start).getTime()
-        : Date.now();
-      const totalMs = timeTracking.totalMs + Math.max(0, Date.now() - startTimestamp);
-      const uniqueParticipants = Array.from(
-        new Set([...(environment.participants ?? []), ...(environment.presentUsersIds ?? [])]),
-      );
-      timeTracking = { start: timeTracking.start ?? now, end: now, totalMs };
-
-      try {
-        await updateEnvironment(environment.id, {
-          status: target,
-          timeTracking,
-          presentUsersIds: [],
-          concludedBy: user?.uid ?? null,
-          participants: uniqueParticipants,
-        });
-        showToast({ type: 'success', message: 'Ambiente concluído.' });
-        return;
-      } catch (error) {
-        console.error(error);
-        showToast({ type: 'error', message: 'Não foi possível atualizar o status.' });
-        return;
-      }
-    }
-
-    try {
-      await updateEnvironment(environment.id, { status: target, timeTracking });
-      showToast({ type: 'success', message: 'Status atualizado com sucesso.' });
-    } catch (error) {
       console.error(error);
-      showToast({ type: 'error', message: 'Não foi possível atualizar o status.' });
+      showToast({ type: 'error', message: 'Unable to update the status.' });
     }
   };
 
   const handleCopyLink = async (url: string) => {
+    if (!url) {
+      return;
+    }
+
     try {
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(url);
-      } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = url;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-      }
-      showToast({ type: 'success', message: 'Link copiado para a área de transferência.' });
+      await copyToClipboard(url);
+      showToast({ type: 'success', message: 'Link copied to the clipboard.' });
     } catch (error) {
       console.error(error);
-      showToast({ type: 'error', message: 'Não foi possível copiar o link.' });
+      showToast({ type: 'error', message: 'Unable to copy the link.' });
     }
   };
 
@@ -151,14 +112,14 @@ export const PaginaAmbiente = () => {
     if (!environment) {
       return;
     }
-    exportEnvironmentAsPDF(environment);
+    environmentService.exportAsPDF(environment);
   };
 
   const handleExportMarkdown = () => {
     if (!environment) {
       return;
     }
-    exportEnvironmentAsMarkdown(environment);
+    environmentService.exportAsMarkdown(environment);
   };
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -171,7 +132,7 @@ export const PaginaAmbiente = () => {
         <div className="environment-page__header">
           <div>
             <button type="button" className="link-button" onClick={() => navigate(-1)}>
-              &larr; Voltar
+              &larr; Back
             </button>
             <div className="environment-page__title">
               {environment && (
@@ -179,10 +140,10 @@ export const PaginaAmbiente = () => {
                   {STATUS_LABEL[environment.status]}
                 </span>
               )}
-              <h1 className="section-title">{environment?.identificador ?? 'Ambiente'}</h1>
+              <h1 className="section-title">{environment?.identifier ?? 'Environment'}</h1>
               {environment && (
                 <p className="section-subtitle">
-                  {environment.tipoAmbiente} · {environment.tipoTeste} · {suiteDescription}
+                  {environment.environmentType} · {environment.testType} · {suiteDescription}
                 </p>
               )}
             </div>
@@ -191,66 +152,66 @@ export const PaginaAmbiente = () => {
             <div className="environment-actions">
               {environment.status === 'backlog' && (
                 <Button type="button" onClick={() => handleStatusTransition('in_progress')}>
-                  Iniciar execução
+                  Start execution
                 </Button>
               )}
               {environment.status === 'in_progress' && (
                 <Button type="button" onClick={() => handleStatusTransition('done')}>
-                  Concluir ambiente
+                  Finish environment
                 </Button>
               )}
               <Button type="button" variant="ghost" onClick={() => setIsEditOpen(true)}>
-                Editar
+                Edit
               </Button>
               <Button type="button" variant="ghost" onClick={() => setIsDeleteOpen(true)}>
-                Excluir
+                Delete
               </Button>
             </div>
           )}
         </div>
 
-        {isLoading && <p className="section-subtitle">Carregando dados do ambiente...</p>}
+        {isLoading && <p className="section-subtitle">Loading environment data...</p>}
 
         {!isLoading && environment && (
           <>
             <div className="environment-summary-grid">
               <div className="summary-card">
-                <h3>Resumo do ambiente</h3>
+                <h3>Environment overview</h3>
                 <div className="summary-card__metrics">
                   <div>
-                    <span>Total de cenários</span>
+                    <span>Total scenarios</span>
                     <strong>{scenarioStats.total}</strong>
                   </div>
                   <div>
-                    <span>Concluídos</span>
+                    <span>Completed</span>
                     <strong>{scenarioStats.concluded}</strong>
                   </div>
                   <div>
-                    <span>Em andamento</span>
+                    <span>In progress</span>
                     <strong>{scenarioStats.running}</strong>
                   </div>
                   <div>
-                    <span>Pendentes</span>
+                    <span>Pending</span>
                     <strong>{scenarioStats.pending}</strong>
                   </div>
                 </div>
                 <p>
-                  <strong>Tempo total:</strong> {formattedTime}
+                  <strong>Total time:</strong> {formattedTime}
                 </p>
                 <p>
-                  <strong>Jira:</strong> {environment.jiraTask || 'Não informado'}
+                  <strong>Jira:</strong> {environment.jiraTask || 'Not provided'}
                 </p>
                 <p>
-                  <strong>Suíte:</strong> {suiteDescription}
+                  <strong>Suite:</strong> {suiteDescription}
                 </p>
                 <p>
                   <strong>Bugs:</strong> {environment.bugs}
                 </p>
               </div>
               <div className="summary-card">
-                <h3>URLs monitoradas</h3>
+                <h3>Tracked URLs</h3>
                 {urls.length === 0 ? (
-                  <p className="section-subtitle">Nenhuma URL adicionada.</p>
+                  <p className="section-subtitle">No URLs were added.</p>
                 ) : (
                   <ul className="environment-url-list">
                     {urls.map((url) => (
@@ -264,7 +225,7 @@ export const PaginaAmbiente = () => {
                 )}
               </div>
               <div className="summary-card">
-                <h3>Compartilhamento e exportação</h3>
+                <h3>Sharing and export</h3>
                 <div className="share-actions">
                   <Button
                     type="button"
@@ -272,25 +233,25 @@ export const PaginaAmbiente = () => {
                     onClick={() => handleCopyLink(privateLink)}
                     disabled={isLocked}
                   >
-                    Copiar link do ambiente
+                    Copy private link
                   </Button>
                   <Button
                     type="button"
                     variant="secondary"
                     onClick={() => handleCopyLink(publicLink)}
                   >
-                    Copiar link público
+                    Copy public link
                   </Button>
                   <Button type="button" variant="ghost" onClick={handleExportPDF}>
-                    Exportar PDF
+                    Export PDF
                   </Button>
                   <Button type="button" variant="ghost" onClick={handleExportMarkdown}>
-                    Exportar Markdown
+                    Export Markdown
                   </Button>
                 </div>
                 {isLocked && (
                   <p className="section-subtitle">
-                    Ambiente concluído: compartilhamento bloqueado para novos acessos.
+                    Environment finished: sharing is blocked for new accesses.
                   </p>
                 )}
               </div>
@@ -298,9 +259,9 @@ export const PaginaAmbiente = () => {
 
             <div className="environment-participants">
               <div>
-                <h3>Usuários presentes</h3>
+                <h3>Present users</h3>
                 {presentUsers.length === 0 ? (
-                  <p className="section-subtitle">Nenhum usuário neste ambiente agora.</p>
+                  <p className="section-subtitle">No one is connected to this environment.</p>
                 ) : (
                   <ul className="environment-present-users">
                     {presentUsers.map((user) => (
@@ -319,9 +280,9 @@ export const PaginaAmbiente = () => {
                 )}
               </div>
               <div>
-                <h3>Participantes registrados</h3>
+                <h3>Registered participants</h3>
                 {participantProfiles.length === 0 ? (
-                  <p className="section-subtitle">Nenhum participante registrado ainda.</p>
+                  <p className="section-subtitle">No participants were registered yet.</p>
                 ) : (
                   <ul className="environment-present-users">
                     {participantProfiles.map((profile) => (
@@ -344,8 +305,8 @@ export const PaginaAmbiente = () => {
             <div className="environment-evidence">
               <div className="environment-evidence__header">
                 <div>
-                  <h3 className="section-subtitle">Cenários e evidências</h3>
-                  <p>Atualize o status e faça upload das evidências aprovadas.</p>
+                  <h3 className="section-subtitle">Scenarios and evidence</h3>
+                  <p>Update the status and upload approved evidence.</p>
                 </div>
                 <a
                   href={`/environments/${environment.id}/public`}
@@ -353,21 +314,24 @@ export const PaginaAmbiente = () => {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Abrir preview público ↗
+                  Open public preview ↗
                 </a>
               </div>
-              <TabelaEvidencias environment={environment} isLocked={Boolean(isScenarioLocked)} />
+              <EnvironmentEvidenceTable
+                environment={environment}
+                isLocked={Boolean(isScenarioLocked)}
+              />
             </div>
           </>
         )}
       </section>
 
-      <ModalEditarAmbiente
+      <EditEnvironmentModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         environment={environment ?? null}
       />
-      <ModalExcluirAmbiente
+      <DeleteEnvironmentModal
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         environment={environment ?? null}
