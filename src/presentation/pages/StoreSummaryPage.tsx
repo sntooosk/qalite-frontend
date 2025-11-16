@@ -1045,7 +1045,6 @@ export const StoreSummaryPage = () => {
                             <table className="suite-preview-table data-table">
                               <thead>
                                 <tr>
-                                  <th>Suíte</th>
                                   <th>Cenário</th>
                                   <th>Categoria</th>
                                   <th>Automação</th>
@@ -1055,7 +1054,6 @@ export const StoreSummaryPage = () => {
                               <tbody>
                                 {selectedSuitePreviewEntries.map(({ scenarioId, scenario }) => (
                                   <tr key={`${selectedSuitePreview.id}-${scenarioId}`}>
-                                    <td>{selectedSuitePreview.name}</td>
                                     <td>{scenario?.title ?? 'Cenário removido'}</td>
                                     <td>{scenario?.category ?? 'N/A'}</td>
                                     <td>{scenario?.automation ?? '-'}</td>
@@ -1222,7 +1220,6 @@ export const StoreSummaryPage = () => {
                                             <th>Automação</th>
                                             <th>Criticidade</th>
                                             <th>Observação</th>
-                                            <th>BDD</th>
                                           </tr>
                                         </thead>
                                         <tbody>
@@ -1259,15 +1256,6 @@ export const StoreSummaryPage = () => {
                                                 </td>
                                                 <td className="scenario-observation">
                                                   {scenario.observation}
-                                                </td>
-                                                <td className="scenario-bdd">
-                                                  <button
-                                                    type="button"
-                                                    className="scenario-copy-button"
-                                                    onClick={() => void handleCopyBdd(scenario.bdd)}
-                                                  >
-                                                    Copiar BDD
-                                                  </button>
                                                 </td>
                                               </tr>
                                             );
