@@ -237,15 +237,6 @@ export const EnvironmentPage = () => {
 
         {!isLoading && environment && (
           <>
-            <div
-              className={`environment-status-card environment-status-card--${environment.status}`}
-            >
-              <span className="environment-status-card__label">Status do ambiente</span>
-              <span className="environment-status-card__value">
-                {STATUS_LABEL[environment.status]}
-              </span>
-            </div>
-
             {!hasEnteredEnvironment && (
               <p className="environment-locked-message">
                 Entre no ambiente para visualizar os dados completos e liberar as funcionalidades.
@@ -257,6 +248,14 @@ export const EnvironmentPage = () => {
                 <div className="environment-summary-grid">
                   <div className="summary-card summary-card--environment">
                     <h3>Resumo do ambiente</h3>
+                    <div className="summary-card__status">
+                      <span className="summary-card__status-label">Status atual</span>
+                      <span
+                        className={`summary-card__status-badge summary-card__status-badge--${environment.status}`}
+                      >
+                        {STATUS_LABEL[environment.status]}
+                      </span>
+                    </div>
                     <div className="summary-card__metrics">
                       <div>
                         <span>Total de cenários</span>
