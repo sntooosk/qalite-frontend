@@ -18,9 +18,9 @@ export const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Link to="/" className="app-brand">
+        <Link to="/" className="app-brand" aria-label="Página inicial da QaLite">
           <span className="app-logo">QaLite</span>
-          <span className="app-brand-subtitle">Auth Experience</span>
+          <span className="app-brand-subtitle">Plataforma de Experiências</span>
         </Link>
         <nav className="header-actions">
           {user ? (
@@ -31,7 +31,7 @@ export const Layout = ({ children }: LayoutProps) => {
                   <span className="user-greeting">Olá,</span>
                   <span className="user-name">{displayName}</span>
                   <span className="user-role">
-                    {user.role === 'admin' ? 'Administrador' : 'Usuário'}
+                    {user.role === 'admin' ? 'Administrador' : 'Colaborador'}
                   </span>
                 </div>
               </div>

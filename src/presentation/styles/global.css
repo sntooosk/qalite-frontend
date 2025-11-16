@@ -551,6 +551,53 @@ a.text-link:hover {
   justify-items: center;
 }
 
+.empty-state {
+  border: 1px dashed var(--color-border);
+  border-radius: 1.5rem;
+  padding: clamp(1.5rem, 3vw, 2.75rem);
+  background: var(--color-surface-alt);
+  text-align: center;
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.empty-state__icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--color-primary);
+}
+
+.empty-state__content {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.empty-state__content h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--color-text-primary);
+}
+
+.empty-state__content p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.empty-state__action {
+  display: inline-flex;
+}
+
+.empty-state__meta {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
 .link-button {
   background: none;
   border: none;

@@ -1,21 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import type { Organization } from '../../domain/entities/Organization';
-import type { Store } from '../../domain/entities/Store';
 import { useAuth } from '../hooks/useAuth';
-import { organizationService } from '../../main/factories/organizationServiceFactory';
-import { storeService } from '../../main/factories/storeServiceFactory';
-import { useToast } from '../context/ToastContext';
 import { Layout } from '../components/Layout';
+import { Button } from '../components/Button';
+import { EmptyState } from '../components/EmptyState';
+import { useOrganizationStores } from '../hooks/useOrganizationStores';
 
 export const UserDashboardPage = () => {
   const navigate = useNavigate();
   const { user, isInitializing } = useAuth();
-  const { showToast } = useToast();
-  const [stores, setStores] = useState<Store[]>([]);
-  const [organization, setOrganization] = useState<Organization | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const organizationId = user?.organizationId ?? null;
+  const { organization, stores, isLoading, status } = useOrganizationStores(organizationId);
 
   useEffect(() => {
     if (isInitializing) {
@@ -36,60 +32,59 @@ export const UserDashboardPage = () => {
       navigate('/no-organization', { replace: true });
       return;
     }
-
-    const fetchStores = async () => {
-      try {
-        setIsLoading(true);
-        const [organizationData, storesData] = await Promise.all([
-          organizationService.getById(user.organizationId as string),
-          storeService.listByOrganization(user.organizationId as string),
-        ]);
-
-        if (organizationData) {
-          setOrganization(organizationData);
-        }
-
-        setStores(storesData);
-      } catch (error) {
-        console.error(error);
-        showToast({ type: 'error', message: 'Não foi possível carregar as lojas disponíveis.' });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void fetchStores();
-  }, [isInitializing, navigate, showToast, user]);
+  }, [isInitializing, navigate, user]);
 
   const handleSelectStore = (storeId: string) => {
     navigate(`/stores/${storeId}`);
   };
+
+  const subtitle = useMemo(() => {
+    if (organization?.name) {
+      return `Você está colaborando com ${organization.name}. Selecione uma loja para continuar.`;
+    }
+
+    if (status === 'error') {
+      return 'Não conseguimos carregar as lojas. Tente novamente ou fale com o administrador.';
+    }
+
+    return 'Escolha uma das lojas disponíveis para revisar as suítes de cenários.';
+  }, [organization?.name, status]);
+
+  const isError = status === 'error';
+  const emptyStateTitle = isError ? 'Não foi possível carregar as lojas' : 'Nenhuma loja disponível ainda';
+  const emptyStateDescription = isError
+    ? 'Atualize a página ou tente novamente mais tarde. Se o problema persistir, contate o administrador.'
+    : 'Peça para um administrador adicionar lojas à sua organização ou volte mais tarde.';
 
   return (
     <Layout>
       <section className="page-container">
         <div className="page-header">
           <div>
-            <span className="badge">Minhas lojas</span>
-            <h1 className="section-title">Escolha uma loja para visualizar a massa de cenários</h1>
-            <p className="section-subtitle">
-              {organization?.name
-                ? `Você está vinculado à organização ${organization.name}.`
-                : 'Visualize as lojas disponíveis para começar a explorar os cenários.'}
-            </p>
+            <span className="badge">Biblioteca de lojas</span>
+            <h1 className="section-title">Selecione uma loja para revisar seus cenários</h1>
+            <p className="section-subtitle">{subtitle}</p>
           </div>
         </div>
 
         {isLoading ? (
           <p className="section-subtitle">Carregando lojas disponíveis...</p>
         ) : stores.length === 0 ? (
-          <div className="dashboard-empty">
-            <h2 className="text-xl font-semibold text-primary">Nenhuma loja disponível</h2>
-            <p className="section-subtitle">
-              Aguarde até que um administrador cadastre lojas para sua organização ou atualize a
-              página mais tarde.
-            </p>
-          </div>
+          <EmptyState
+            title={emptyStateTitle}
+            description={emptyStateDescription}
+            action={
+              isError ? (
+                <Button type="button" variant="secondary" onClick={() => window.location.reload()}>
+                  Tentar novamente
+                </Button>
+              ) : (
+                <Button type="button" variant="secondary" onClick={() => navigate('/profile')}>
+                  Revisar perfil
+                </Button>
+              )
+            }
+          />
         ) : (
           <div className="dashboard-grid">
             {stores.map((store) => (
