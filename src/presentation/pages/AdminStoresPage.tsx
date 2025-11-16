@@ -15,13 +15,11 @@ import { Modal } from '../components/Modal';
 interface StoreForm {
   name: string;
   site: string;
-  stage: string;
 }
 
 const initialStoreForm: StoreForm = {
   name: '',
   site: '',
-  stage: ''
 };
 
 export const AdminStoresPage = () => {
@@ -48,7 +46,7 @@ export const AdminStoresPage = () => {
         setOrganizations(data);
         const organizationFromParam = searchParams.get('organizationId');
         const hasValidOrganizationParam = Boolean(
-          organizationFromParam && data.some((item) => item.id === organizationFromParam)
+          organizationFromParam && data.some((item) => item.id === organizationFromParam),
         );
 
         if (hasValidOrganizationParam && organizationFromParam) {
@@ -88,7 +86,10 @@ export const AdminStoresPage = () => {
         setSearchParams({ organizationId: selectedOrganizationId });
       } catch (error) {
         console.error(error);
-        showToast({ type: 'error', message: 'Não foi possível carregar as lojas desta organização.' });
+        showToast({
+          type: 'error',
+          message: 'Não foi possível carregar as lojas desta organização.',
+        });
       } finally {
         setIsLoadingStores(false);
       }
@@ -99,7 +100,7 @@ export const AdminStoresPage = () => {
 
   const selectedOrganization = useMemo(
     () => organizations.find((organization) => organization.id === selectedOrganizationId) ?? null,
-    [organizations, selectedOrganizationId]
+    [organizations, selectedOrganizationId],
   );
 
   const openCreateModal = () => {
@@ -110,7 +111,7 @@ export const AdminStoresPage = () => {
   };
 
   const openEditModal = (store: Store) => {
-    setStoreForm({ name: store.name, site: store.site, stage: store.stage });
+    setStoreForm({ name: store.name, site: store.site });
     setCurrentStore(store);
     setStoreError(null);
     setIsStoreModalOpen(true);
@@ -129,7 +130,7 @@ export const AdminStoresPage = () => {
 
     const trimmedName = storeForm.name.trim();
     const trimmedSite = storeForm.site.trim();
-    const trimmedStage = storeForm.stage.trim();
+    const stageValue = currentStore?.stage ?? '';
 
     if (!selectedOrganizationId) {
       setStoreError('Selecione uma organização antes de cadastrar a loja.');
@@ -148,10 +149,12 @@ export const AdminStoresPage = () => {
         const updated = await storeService.update(currentStore.id, {
           name: trimmedName,
           site: trimmedSite,
-          stage: trimmedStage
+          stage: stageValue,
         });
 
-        setStores((previous) => previous.map((store) => (store.id === updated.id ? updated : store)));
+        setStores((previous) =>
+          previous.map((store) => (store.id === updated.id ? updated : store)),
+        );
         showToast({ type: 'success', message: 'Loja atualizada com sucesso.' });
         setCurrentStore(updated);
         return;
@@ -161,7 +164,7 @@ export const AdminStoresPage = () => {
         organizationId: selectedOrganizationId,
         name: trimmedName,
         site: trimmedSite,
-        stage: trimmedStage
+        stage: '',
       });
 
       setStores((previous) => [...previous, created]);
@@ -225,7 +228,9 @@ export const AdminStoresPage = () => {
           <div className="page-actions">
             {isOrganizationLocked ? (
               <div className="selected-organization-info">
-                <span className="badge">{selectedOrganization?.name ?? 'Organização selecionada'}</span>
+                <span className="badge">
+                  {selectedOrganization?.name ?? 'Organização selecionada'}
+                </span>
               </div>
             ) : (
               <SelectInput
@@ -235,7 +240,7 @@ export const AdminStoresPage = () => {
                 onChange={(event) => setSelectedOrganizationId(event.target.value)}
                 options={organizations.map((organization) => ({
                   value: organization.id,
-                  label: organization.name
+                  label: organization.name,
                 }))}
                 disabled={isLoadingOrganizations || organizations.length === 0}
               />
@@ -271,20 +276,25 @@ export const AdminStoresPage = () => {
                     <strong>Site:</strong> {store.site || 'Não informado'}
                   </span>
                   <span>
-                    <strong>Ambiente:</strong> {store.stage || 'Não informado'}
-                  </span>
-                  <span>
                     <strong>Organização:</strong> {selectedOrganization?.name ?? 'Desconhecida'}
                   </span>
                 </p>
                 <div className="card-actions">
-                  <Button type="button" variant="secondary" onClick={() => navigate(`/stores/${store.id}`)}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => navigate(`/stores/${store.id}`)}
+                  >
                     Entrar na loja
                   </Button>
                   <Button type="button" onClick={() => openEditModal(store)}>
                     Editar
                   </Button>
-                  <Button type="button" variant="ghost" onClick={() => void handleDeleteStore(store.id)}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => void handleDeleteStore(store.id)}
+                  >
                     Excluir
                   </Button>
                 </div>
@@ -306,7 +316,9 @@ export const AdminStoresPage = () => {
             id="store-name"
             label="Nome da loja"
             value={storeForm.name}
-            onChange={(event) => setStoreForm((previous) => ({ ...previous, name: event.target.value }))}
+            onChange={(event) =>
+              setStoreForm((previous) => ({ ...previous, name: event.target.value }))
+            }
             placeholder="Ex.: Loja QA"
             required
           />
@@ -314,21 +326,21 @@ export const AdminStoresPage = () => {
             id="store-site"
             label="URL do site"
             value={storeForm.site}
-            onChange={(event) => setStoreForm((previous) => ({ ...previous, site: event.target.value }))}
+            onChange={(event) =>
+              setStoreForm((previous) => ({ ...previous, site: event.target.value }))
+            }
             placeholder="https://minhaloja.com"
-          />
-          <TextInput
-            id="store-stage"
-            label="Ambiente"
-            value={storeForm.stage}
-            onChange={(event) => setStoreForm((previous) => ({ ...previous, stage: event.target.value }))}
-            placeholder="Produção, Staging, etc."
           />
           <div className="form-actions">
             <Button type="submit" isLoading={isSavingStore} loadingText="Salvando...">
               {currentStore ? 'Salvar alterações' : 'Criar loja'}
             </Button>
-            <Button type="button" variant="ghost" onClick={closeStoreModal} disabled={isSavingStore}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={closeStoreModal}
+              disabled={isSavingStore}
+            >
               Cancelar
             </Button>
           </div>

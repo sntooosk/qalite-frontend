@@ -42,7 +42,7 @@ export const UserDashboardPage = () => {
         setIsLoading(true);
         const [organizationData, storesData] = await Promise.all([
           organizationService.getById(user.organizationId as string),
-          storeService.listByOrganization(user.organizationId as string)
+          storeService.listByOrganization(user.organizationId as string),
         ]);
 
         if (organizationData) {
@@ -86,7 +86,8 @@ export const UserDashboardPage = () => {
           <div className="dashboard-empty">
             <h2 className="text-xl font-semibold text-primary">Nenhuma loja disponível</h2>
             <p className="section-subtitle">
-              Aguarde até que um administrador cadastre lojas para sua organização ou atualize a página mais tarde.
+              Aguarde até que um administrador cadastre lojas para sua organização ou atualize a
+              página mais tarde.
             </p>
           </div>
         ) : (
@@ -105,9 +106,6 @@ export const UserDashboardPage = () => {
                 <div className="card-description">
                   <p>
                     <strong>Site:</strong> {store.site || 'Não informado'}
-                  </p>
-                  <p>
-                    <strong>Ambiente:</strong> {store.stage || 'Não informado'}
                   </p>
                 </div>
               </button>

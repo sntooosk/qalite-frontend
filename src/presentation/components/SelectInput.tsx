@@ -12,6 +12,7 @@ interface SelectInputProps {
   options: SelectOption[];
   onChange?: (event: ChangeEvent<HTMLSelectElement>) => void;
   disabled?: boolean;
+  required?: boolean;
 }
 
 export const SelectInput = ({
@@ -20,7 +21,8 @@ export const SelectInput = ({
   value,
   options,
   onChange = () => {},
-  disabled = false
+  disabled = false,
+  required = false,
 }: SelectInputProps) => (
   <label htmlFor={id} className="field">
     <span className="field-label">{label}</span>
@@ -30,6 +32,7 @@ export const SelectInput = ({
       value={value}
       onChange={onChange}
       disabled={disabled}
+      required={required}
       className="field-input"
     >
       {options.map((option) => (
