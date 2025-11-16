@@ -24,6 +24,7 @@ export const PaginaAmbientePublica = () => {
   );
 
   const urls = useMemo(() => environment?.urls ?? [], [environment?.urls]);
+  const suiteDescription = environment?.suiteName ?? 'Suíte não informada';
 
   if (isLoading) {
     return (
@@ -56,7 +57,7 @@ export const PaginaAmbientePublica = () => {
             </span>
             <h1 className="section-title">{environment.identificador}</h1>
             <p className="section-subtitle">
-              {environment.tipoAmbiente} · {environment.tipoTeste}
+              {environment.tipoAmbiente} · {environment.tipoTeste} · {suiteDescription}
             </p>
           </div>
         </div>
@@ -72,6 +73,9 @@ export const PaginaAmbientePublica = () => {
             </p>
             <p>
               <strong>Jira:</strong> {environment.jiraTask || 'Não informado'}
+            </p>
+            <p>
+              <strong>Suíte:</strong> {suiteDescription}
             </p>
           </div>
           <div className="summary-card">

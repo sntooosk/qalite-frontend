@@ -25,6 +25,8 @@ export interface Environment {
   id: string;
   identificador: string;
   storeId: string;
+  suiteId: string | null;
+  suiteName: string | null;
   urls: string[];
   jiraTask: string;
   tipoAmbiente: string;
@@ -44,6 +46,8 @@ export interface Environment {
 export interface CreateEnvironmentInput {
   identificador: string;
   storeId: string;
+  suiteId: string | null;
+  suiteName: string | null;
   urls: string[];
   jiraTask: string;
   tipoAmbiente: string;

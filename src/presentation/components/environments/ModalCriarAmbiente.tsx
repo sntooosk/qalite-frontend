@@ -117,6 +117,8 @@ export const ModalCriarAmbiente = ({
       await createEnvironment({
         identificador: identificador.trim(),
         storeId,
+        suiteId: selectedSuite?.id ?? null,
+        suiteName: selectedSuite?.name ?? null,
         urls: urlsList,
         jiraTask: jiraTask.trim(),
         tipoAmbiente,
