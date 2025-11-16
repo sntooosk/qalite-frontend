@@ -2903,6 +2903,51 @@ a.text-link:hover {
   gap: 0.75rem;
 }
 
+.environment-status-card {
+  margin: 1.5rem 0 0.5rem;
+  padding: clamp(1rem, 2vw, 1.75rem);
+  border-radius: 1.5rem;
+  background: linear-gradient(135deg, #0b1f4b 0%, #0f3dbd 55%, #2563eb 100%);
+  border: 1px solid rgba(147, 197, 253, 0.45);
+  color: #f8fbff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: 0 25px 55px rgba(3, 15, 48, 0.45);
+}
+
+.environment-status-card--in_progress {
+  background: linear-gradient(135deg, #0a1c44 0%, #17378c 45%, #1d4ed8 100%);
+}
+
+.environment-status-card--done {
+  background: linear-gradient(135deg, #0a1a3e 0%, #10306f 40%, #0ea5e9 100%);
+}
+
+.environment-status-card__label {
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.environment-status-card__value {
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.environment-locked-message {
+  background: var(--color-surface-alt);
+  border-radius: 1rem;
+  padding: 0.85rem 1.1rem;
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-muted);
+  max-width: 32rem;
+  margin-bottom: 1rem;
+}
+
 .summary-card__metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

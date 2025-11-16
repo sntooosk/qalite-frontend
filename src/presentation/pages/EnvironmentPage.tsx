@@ -14,7 +14,6 @@ import { useAuth } from '../hooks/useAuth';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
 import { EditEnvironmentModal } from '../components/environments/EditEnvironmentModal';
 import { DeleteEnvironmentModal } from '../components/environments/DeleteEnvironmentModal';
-import { useUserProfiles } from '../hooks/useUserProfiles';
 import { copyToClipboard } from '../utils/clipboard';
 
 const STATUS_LABEL: Record<EnvironmentStatus, string> = {
@@ -31,16 +30,15 @@ export const EnvironmentPage = () => {
   const { environment, isLoading } = useEnvironmentRealtime(environmentId);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [hasEnteredEnvironment, setHasEnteredEnvironment] = useState(false);
   const isLocked = environment?.status === 'done';
   const isScenarioLocked = environment?.status !== 'in_progress';
 
   const { presentUsers } = usePresentUsers({
     environmentId: environment?.id ?? null,
     presentUsersIds: environment?.presentUsersIds ?? [],
-    isLocked: Boolean(isLocked),
+    isLocked: Boolean(isLocked) || !hasEnteredEnvironment,
   });
-
-  const participantProfiles = useUserProfiles(environment?.participants ?? []);
 
   const { formattedTime } = useTimeTracking(
     environment?.timeTracking ?? null,
@@ -150,22 +148,34 @@ export const EnvironmentPage = () => {
           </div>
           {!isLoading && environment && (
             <div className="environment-actions">
-              {environment.status === 'backlog' && (
-                <Button type="button" onClick={() => handleStatusTransition('in_progress')}>
-                  Iniciar execução
+              {!hasEnteredEnvironment ? (
+                <Button type="button" onClick={() => setHasEnteredEnvironment(true)}>
+                  Entrar no ambiente
                 </Button>
+              ) : (
+                <>
+                  {environment.status === 'backlog' && (
+                    <Button type="button" onClick={() => handleStatusTransition('in_progress')}>
+                      Iniciar execução
+                    </Button>
+                  )}
+                  {environment.status === 'in_progress' && (
+                    <Button type="button" onClick={() => handleStatusTransition('done')}>
+                      Concluir ambiente
+                    </Button>
+                  )}
+                  {environment.status !== 'done' && (
+                    <>
+                      <Button type="button" variant="ghost" onClick={() => setIsEditOpen(true)}>
+                        Editar
+                      </Button>
+                      <Button type="button" variant="ghost" onClick={() => setIsDeleteOpen(true)}>
+                        Excluir
+                      </Button>
+                    </>
+                  )}
+                </>
               )}
-              {environment.status === 'in_progress' && (
-                <Button type="button" onClick={() => handleStatusTransition('done')}>
-                  Concluir ambiente
-                </Button>
-              )}
-              <Button type="button" variant="ghost" onClick={() => setIsEditOpen(true)}>
-                Editar
-              </Button>
-              <Button type="button" variant="ghost" onClick={() => setIsDeleteOpen(true)}>
-                Excluir
-              </Button>
             </div>
           )}
         </div>
@@ -174,151 +184,149 @@ export const EnvironmentPage = () => {
 
         {!isLoading && environment && (
           <>
-            <div className="environment-summary-grid">
-              <div className="summary-card">
-                <h3>Resumo do ambiente</h3>
-                <div className="summary-card__metrics">
-                  <div>
-                    <span>Total de cenários</span>
-                    <strong>{scenarioStats.total}</strong>
-                  </div>
-                  <div>
-                    <span>Concluídos</span>
-                    <strong>{scenarioStats.concluded}</strong>
-                  </div>
-                  <div>
-                    <span>Em andamento</span>
-                    <strong>{scenarioStats.running}</strong>
-                  </div>
-                  <div>
-                    <span>Pendentes</span>
-                    <strong>{scenarioStats.pending}</strong>
-                  </div>
-                </div>
-                <p>
-                  <strong>Tempo total:</strong> {formattedTime}
-                </p>
-                <p>
-                  <strong>Jira:</strong> {environment.jiraTask || 'Não informado'}
-                </p>
-                <p>
-                  <strong>Suíte:</strong> {suiteDescription}
-                </p>
-                <p>
-                  <strong>Bugs:</strong> {environment.bugs}
-                </p>
-              </div>
-              <div className="summary-card">
-                <h3>URLs monitoradas</h3>
-                {urls.length === 0 ? (
-                  <p className="section-subtitle">Nenhuma URL adicionada.</p>
-                ) : (
-                  <ul className="environment-url-list">
-                    {urls.map((url) => (
-                      <li key={url}>
-                        <a href={url} target="_blank" rel="noreferrer">
-                          {url}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div className="summary-card">
-                <h3>Compartilhamento e exportação</h3>
-                <div className="share-actions">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => handleCopyLink(privateLink)}
-                    disabled={isLocked}
-                  >
-                    Copiar link do ambiente
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => handleCopyLink(publicLink)}
-                  >
-                    Copiar link público
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={handleExportPDF}>
-                    Exportar PDF
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={handleExportMarkdown}>
-                    Exportar Markdown
-                  </Button>
-                </div>
-                {isLocked && (
-                  <p className="section-subtitle">
-                    Ambiente concluído: compartilhamento bloqueado para novos acessos.
-                  </p>
-                )}
-              </div>
+            <div
+              className={`environment-status-card environment-status-card--${environment.status}`}
+            >
+              <span className="environment-status-card__label">Status do ambiente</span>
+              <span className="environment-status-card__value">
+                {STATUS_LABEL[environment.status]}
+              </span>
             </div>
 
-            <div className="environment-participants">
-              <div>
-                <h3>Usuários presentes</h3>
-                {presentUsers.length === 0 ? (
-                  <p className="section-subtitle">Nenhum usuário neste ambiente agora.</p>
-                ) : (
-                  <ul className="environment-present-users">
-                    {presentUsers.map((user) => (
-                      <li key={user.id}>
-                        {user.photoURL ? (
-                          <img src={user.photoURL} alt={user.name} />
-                        ) : (
-                          <span className="environment-card-avatar environment-card-avatar--initials">
-                            {user.name.charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                        <span>{user.name}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div>
-                <h3>Participantes registrados</h3>
-                {participantProfiles.length === 0 ? (
-                  <p className="section-subtitle">Nenhum participante registrado ainda.</p>
-                ) : (
-                  <ul className="environment-present-users">
-                    {participantProfiles.map((profile) => (
-                      <li key={profile.id}>
-                        {profile.photoURL ? (
-                          <img src={profile.photoURL} alt={profile.name} />
-                        ) : (
-                          <span className="environment-card-avatar environment-card-avatar--initials">
-                            {profile.name.charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                        <span>{profile.name}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
+            {!hasEnteredEnvironment && (
+              <p className="environment-locked-message">
+                Entre no ambiente para visualizar os dados completos e liberar as funcionalidades.
+              </p>
+            )}
 
-            <div className="environment-evidence">
-              <div className="environment-evidence__header">
-                <h3 className="section-title">Cenários e evidências</h3>
-                <a
-                  href={`/environments/${environment.id}/public`}
-                  className="link-button"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Abrir preview público ↗
-                </a>
-              </div>
-              <EnvironmentEvidenceTable
-                environment={environment}
-                isLocked={Boolean(isScenarioLocked)}
-              />
-            </div>
+            {hasEnteredEnvironment && (
+              <>
+                <div className="environment-summary-grid">
+                  <div className="summary-card">
+                    <h3>Resumo do ambiente</h3>
+                    <div className="summary-card__metrics">
+                      <div>
+                        <span>Total de cenários</span>
+                        <strong>{scenarioStats.total}</strong>
+                      </div>
+                      <div>
+                        <span>Concluídos</span>
+                        <strong>{scenarioStats.concluded}</strong>
+                      </div>
+                      <div>
+                        <span>Em andamento</span>
+                        <strong>{scenarioStats.running}</strong>
+                      </div>
+                      <div>
+                        <span>Pendentes</span>
+                        <strong>{scenarioStats.pending}</strong>
+                      </div>
+                    </div>
+                    <p>
+                      <strong>Tempo total:</strong> {formattedTime}
+                    </p>
+                    <p>
+                      <strong>Jira:</strong> {environment.jiraTask || 'Não informado'}
+                    </p>
+                    <p>
+                      <strong>Suíte:</strong> {suiteDescription}
+                    </p>
+                    <p>
+                      <strong>Bugs:</strong> {environment.bugs}
+                    </p>
+                  </div>
+                  <div className="summary-card">
+                    <h3>URLs monitoradas</h3>
+                    {urls.length === 0 ? (
+                      <p className="section-subtitle">Nenhuma URL adicionada.</p>
+                    ) : (
+                      <ul className="environment-url-list">
+                        {urls.map((url) => (
+                          <li key={url}>
+                            <a href={url} target="_blank" rel="noreferrer">
+                              {url}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div className="summary-card">
+                    <h3>Compartilhamento e exportação</h3>
+                    <div className="share-actions">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => handleCopyLink(privateLink)}
+                        disabled={isLocked}
+                      >
+                        Copiar link do ambiente
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => handleCopyLink(publicLink)}
+                      >
+                        Copiar link público
+                      </Button>
+                      <Button type="button" variant="ghost" onClick={handleExportPDF}>
+                        Exportar PDF
+                      </Button>
+                      <Button type="button" variant="ghost" onClick={handleExportMarkdown}>
+                        Exportar Markdown
+                      </Button>
+                    </div>
+                    {isLocked && (
+                      <p className="section-subtitle">
+                        Ambiente concluído: compartilhamento bloqueado para novos acessos.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="environment-participants">
+                  <div>
+                    <h3>Usuários presentes</h3>
+                    {presentUsers.length === 0 ? (
+                      <p className="section-subtitle">Nenhum usuário neste ambiente agora.</p>
+                    ) : (
+                      <ul className="environment-present-users">
+                        {presentUsers.map((user) => (
+                          <li key={user.id}>
+                            {user.photoURL ? (
+                              <img src={user.photoURL} alt={user.name} />
+                            ) : (
+                              <span className="environment-card-avatar environment-card-avatar--initials">
+                                {user.name.charAt(0).toUpperCase()}
+                              </span>
+                            )}
+                            <span>{user.name}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+
+                <div className="environment-evidence">
+                  <div className="environment-evidence__header">
+                    <h3 className="section-title">Cenários e evidências</h3>
+                    <a
+                      href={`/environments/${environment.id}/public`}
+                      className="link-button"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Abrir preview público ↗
+                    </a>
+                  </div>
+                  <EnvironmentEvidenceTable
+                    environment={environment}
+                    isLocked={Boolean(isScenarioLocked)}
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
       </section>
