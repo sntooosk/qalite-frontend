@@ -237,15 +237,6 @@ export const EnvironmentPage = () => {
 
         {!isLoading && environment && (
           <>
-            <div
-              className={`environment-status-card environment-status-card--${environment.status}`}
-            >
-              <span className="environment-status-card__label">Status do ambiente</span>
-              <span className="environment-status-card__value">
-                {STATUS_LABEL[environment.status]}
-              </span>
-            </div>
-
             {!hasEnteredEnvironment && (
               <p className="environment-locked-message">
                 Entre no ambiente para visualizar os dados completos e liberar as funcionalidades.
