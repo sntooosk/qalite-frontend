@@ -1998,6 +1998,19 @@ a.text-link:hover {
   }
 }
 
+.suite-form-header-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .suite-form-header-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
 .suite-form-description {
   margin: 0;
   font-size: 0.85rem;
