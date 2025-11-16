@@ -257,6 +257,14 @@ export const EnvironmentPage = () => {
                 <div className="environment-summary-grid">
                   <div className="summary-card summary-card--environment">
                     <h3>Resumo do ambiente</h3>
+                    <div className="summary-card__status">
+                      <span className="summary-card__status-label">Status atual</span>
+                      <span
+                        className={`summary-card__status-badge summary-card__status-badge--${environment.status}`}
+                      >
+                        {STATUS_LABEL[environment.status]}
+                      </span>
+                    </div>
                     <div className="summary-card__metrics">
                       <div>
                         <span>Total de cenários</span>
