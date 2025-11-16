@@ -6,12 +6,12 @@ import {
   doc,
   getDoc,
   onSnapshot,
-  orderBy,
   query,
   runTransaction,
   serverTimestamp,
   updateDoc,
   where,
+  type QueryConstraint,
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
@@ -112,17 +112,24 @@ export const getAllEnvironmentsRealtime = (
   filters: EnvironmentRealtimeFilters,
   callback: (environments: Environment[]) => void,
 ) => {
-  const constraints = [orderBy('createdAt', 'desc')];
+  const constraints: QueryConstraint[] = [];
 
   if (filters.storeId) {
     constraints.push(where('loja', '==', filters.storeId));
   }
 
-  const environmentsQuery = query(environmentsCollection, ...constraints);
+  const environmentsQuery =
+    constraints.length > 0 ? query(environmentsCollection, ...constraints) : environmentsCollection;
+
   return onSnapshot(environmentsQuery, (snapshot) => {
-    const list = snapshot.docs.map((docSnapshot) =>
-      normalizeEnvironment(docSnapshot.id, docSnapshot.data() ?? {}),
-    );
+    const list = snapshot.docs
+      .map((docSnapshot) => normalizeEnvironment(docSnapshot.id, docSnapshot.data() ?? {}))
+      .sort((a, b) => {
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bDate - aDate;
+      });
+
     callback(list);
   });
 };
