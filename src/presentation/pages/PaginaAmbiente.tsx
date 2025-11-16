@@ -34,6 +34,7 @@ export const PaginaAmbiente = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const isLocked = environment?.status === 'done';
+  const isScenarioLocked = environment?.status !== 'in_progress';
 
   const { presentUsers } = usePresentUsers({
     environmentId: environment?.id ?? null,
@@ -49,6 +50,7 @@ export const PaginaAmbiente = () => {
   );
 
   const urls = useMemo(() => environment?.urls ?? [], [environment?.urls]);
+  const suiteDescription = environment?.suiteName ?? 'Suíte não informada';
 
   const scenarioStats = useMemo(() => {
     if (!environment) {
@@ -180,7 +182,7 @@ export const PaginaAmbiente = () => {
               <h1 className="section-title">{environment?.identificador ?? 'Ambiente'}</h1>
               {environment && (
                 <p className="section-subtitle">
-                  {environment.tipoAmbiente} · {environment.tipoTeste}
+                  {environment.tipoAmbiente} · {environment.tipoTeste} · {suiteDescription}
                 </p>
               )}
             </div>
@@ -237,6 +239,9 @@ export const PaginaAmbiente = () => {
                 </p>
                 <p>
                   <strong>Jira:</strong> {environment.jiraTask || 'Não informado'}
+                </p>
+                <p>
+                  <strong>Suíte:</strong> {suiteDescription}
                 </p>
                 <p>
                   <strong>Bugs:</strong> {environment.bugs}
@@ -351,7 +356,7 @@ export const PaginaAmbiente = () => {
                   Abrir preview público ↗
                 </a>
               </div>
-              <TabelaEvidencias environment={environment} isLocked={isLocked} />
+              <TabelaEvidencias environment={environment} isLocked={Boolean(isScenarioLocked)} />
             </div>
           </>
         )}

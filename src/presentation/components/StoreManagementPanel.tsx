@@ -867,7 +867,7 @@ export const StoreManagementPanel = ({
                     : 'Nenhum cenário cadastrado para esta loja ainda. Solicite a um responsável a criação da massa de testes.'}
                 </p>
               ) : (
-                <table className="scenario-table">
+                <table className="scenario-table data-table">
                   <thead>
                     <tr>
                       <th>Título</th>

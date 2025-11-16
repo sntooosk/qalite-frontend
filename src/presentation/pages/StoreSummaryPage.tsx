@@ -922,7 +922,7 @@ export const StoreSummaryPage = () => {
                           Nenhum cenário corresponde aos filtros aplicados.
                         </p>
                       ) : (
-                        <table className="scenario-table">
+                        <table className="scenario-table data-table">
                           <thead>
                             <tr>
                               <th>Título</th>
@@ -1042,7 +1042,7 @@ export const StoreSummaryPage = () => {
                           </p>
                         ) : (
                           <div className="suite-preview suite-preview--cards">
-                            <table className="suite-preview-table">
+                            <table className="suite-preview-table data-table">
                               <thead>
                                 <tr>
                                   <th>Suíte</th>
@@ -1213,7 +1213,7 @@ export const StoreSummaryPage = () => {
                                     </p>
                                   ) : (
                                     <div className="suite-scenario-table-wrapper">
-                                      <table className="scenario-table suite-scenario-table">
+                                      <table className="scenario-table suite-scenario-table data-table">
                                         <thead>
                                           <tr>
                                             <th className="suite-scenario-checkbox">Selecionar</th>

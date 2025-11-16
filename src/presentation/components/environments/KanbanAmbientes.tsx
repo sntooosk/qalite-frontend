@@ -100,6 +100,53 @@ export const KanbanAmbientes = ({ storeId, suites, scenarios }: KanbanAmbientesP
     return columns;
   }, [environments]);
 
+  const suiteNameByEnvironment = useMemo(() => {
+    if (environments.length === 0) {
+      return {} as Record<string, string | null>;
+    }
+
+    const suiteLookup = suites.reduce<Record<string, StoreSuite>>((acc, suite) => {
+      acc[suite.id] = suite;
+      return acc;
+    }, {});
+
+    return environments.reduce<Record<string, string | null>>(
+      (acc, environment) => {
+        if (environment.suiteName) {
+          acc[environment.id] = environment.suiteName;
+          return acc;
+        }
+
+        if (environment.suiteId && suiteLookup[environment.suiteId]) {
+          acc[environment.id] = suiteLookup[environment.suiteId].name;
+          return acc;
+        }
+
+        const scenarioIds = Object.keys(environment.scenarios ?? {});
+        if (scenarioIds.length === 0) {
+          acc[environment.id] = null;
+          return acc;
+        }
+
+        const matchingSuite = suites.find((suite) => {
+          if (suite.scenarioIds.length === 0) {
+            return false;
+          }
+
+          if (suite.scenarioIds.length !== scenarioIds.length) {
+            return false;
+          }
+
+          return suite.scenarioIds.every((scenarioId) => scenarioIds.includes(scenarioId));
+        });
+
+        acc[environment.id] = matchingSuite?.name ?? null;
+        return acc;
+      },
+      {} as Record<string, string | null>,
+    );
+  }, [environments, suites]);
+
   const handleDragStart = (event: DragEvent<HTMLDivElement>, environmentId: string) => {
     event.dataTransfer.setData('text/environment-id', environmentId);
   };
@@ -204,6 +251,7 @@ export const KanbanAmbientes = ({ storeId, suites, scenarios }: KanbanAmbientesP
                     presentUsers={environment.presentUsersIds
                       .map((id) => presentUsersMap[id])
                       .filter((user): user is PresentUserProfile => Boolean(user))}
+                    suiteName={suiteNameByEnvironment[environment.id]}
                     draggable
                     onDragStart={handleDragStart}
                     onOpen={handleOpenEnvironment}

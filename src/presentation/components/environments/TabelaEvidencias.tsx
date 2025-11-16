@@ -17,11 +17,6 @@ const STATUS_OPTIONS: { value: EnvironmentScenarioStatus; label: string }[] = [
   { value: 'nao_se_aplica', label: 'Não se aplica' },
 ];
 
-const STATUS_LABEL: Record<EnvironmentScenarioStatus, string> = STATUS_OPTIONS.reduce(
-  (acc, option) => ({ ...acc, [option.value]: option.label }),
-  {} as Record<EnvironmentScenarioStatus, string>,
-);
-
 export const TabelaEvidencias = ({ environment, isLocked, readOnly }: TabelaEvidenciasProps) => {
   const { isUpdating, handleEvidenceUpload, changeScenarioStatus } = useScenarioEvidence(
     environment.id,
@@ -30,6 +25,10 @@ export const TabelaEvidencias = ({ environment, isLocked, readOnly }: TabelaEvid
   const isReadOnly = Boolean(isLocked || readOnly);
 
   const handleStatusChange = async (scenarioId: string, status: EnvironmentScenarioStatus) => {
+    if (isReadOnly) {
+      return;
+    }
+
     await changeScenarioStatus(scenarioId, status);
   };
 
@@ -49,7 +48,7 @@ export const TabelaEvidencias = ({ environment, isLocked, readOnly }: TabelaEvid
 
   return (
     <div className="environment-table">
-      <table>
+      <table className="data-table">
         <thead>
           <tr>
             <th>Título</th>
@@ -67,26 +66,24 @@ export const TabelaEvidencias = ({ environment, isLocked, readOnly }: TabelaEvid
               <td>{data.criticidade}</td>
               <td>
                 <div className="scenario-status-cell">
-                  <span className={`scenario-status scenario-status--${data.status}`}>
-                    {STATUS_LABEL[data.status]}
-                  </span>
-                  {!isReadOnly && (
-                    <select
-                      value={data.status}
-                      onChange={(event) =>
-                        handleStatusChange(
-                          scenarioId,
-                          event.target.value as EnvironmentScenarioStatus,
-                        )
-                      }
-                    >
-                      {STATUS_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                  <select
+                    className={`scenario-status-select scenario-status-select--${data.status}`}
+                    value={data.status}
+                    disabled={isReadOnly}
+                    aria-label={`Status do cenário ${data.titulo}`}
+                    onChange={(event) =>
+                      handleStatusChange(
+                        scenarioId,
+                        event.target.value as EnvironmentScenarioStatus,
+                      )
+                    }
+                  >
+                    {STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </td>
               <td>

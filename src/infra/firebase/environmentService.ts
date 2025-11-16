@@ -87,6 +87,8 @@ const normalizeEnvironment = (id: string, data: Record<string, unknown>): Enviro
   id,
   identificador: getString(data.identificador),
   storeId: getString(data.storeId ?? data.loja),
+  suiteId: getStringOrNull(data.suiteId ?? data.suite),
+  suiteName: getStringOrNull(data.suiteName ?? data.nomeSuite),
   urls: getStringArray(data.urls),
   jiraTask: getString(data.jiraTask),
   tipoAmbiente: getString(data.tipoAmbiente),
