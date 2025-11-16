@@ -7,6 +7,12 @@ import { useToast } from '../context/ToastContext';
 import { Button } from './Button';
 import { TextInput } from './TextInput';
 import { TextArea } from './TextArea';
+import { SelectInput } from './SelectInput';
+import {
+  AUTOMATION_OPTIONS,
+  CRITICALITY_OPTIONS,
+  getCriticalityClassName,
+} from '../constants/scenarioOptions';
 
 interface StoreManagementPanelProps {
   organizationId: string;
@@ -22,7 +28,7 @@ const emptyScenarioForm: StoreScenarioInput = {
   automation: '',
   criticality: '',
   observation: '',
-  bdd: ''
+  bdd: '',
 };
 
 export const StoreManagementPanel = ({
@@ -30,13 +36,13 @@ export const StoreManagementPanel = ({
   organizationName,
   canManageStores,
   canManageScenarios,
-  showScenarioForm = true
+  showScenarioForm = true,
 }: StoreManagementPanelProps) => {
   const { showToast } = useToast();
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoadingStores, setIsLoadingStores] = useState(true);
   const [storeFormMode, setStoreFormMode] = useState<'hidden' | 'create' | 'edit'>('hidden');
-  const [storeForm, setStoreForm] = useState({ name: '', site: '', stage: '' });
+  const [storeForm, setStoreForm] = useState({ name: '', site: '' });
   const [storeFormError, setStoreFormError] = useState<string | null>(null);
   const [isSavingStore, setIsSavingStore] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
@@ -49,8 +55,49 @@ export const StoreManagementPanel = ({
   const [editingScenarioId, setEditingScenarioId] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const canUseScenarioForm = canManageScenarios && showScenarioForm !== false;
+
+  const scenarioCategories = useMemo(
+    () =>
+      new Set(
+        scenarios
+          .map((scenario) => scenario.category.trim())
+          .filter((category) => category.length > 0),
+      ),
+    [scenarios],
+  );
+
+  const availableCategories = useMemo(() => {
+    const fromScenarios = Array.from(scenarioCategories);
+    const combined = new Set([...fromScenarios, ...customCategories]);
+    return Array.from(combined).sort((a, b) => a.localeCompare(b));
+  }, [customCategories, scenarioCategories]);
+
+  const categorySelectOptions = useMemo(() => {
+    if (availableCategories.length === 0) {
+      return [{ value: '', label: 'Cadastre uma categoria para começar' }];
+    }
+
+    return [
+      { value: '', label: 'Selecione uma categoria' },
+      ...availableCategories.map((category) => ({ value: category, label: category })),
+    ];
+  }, [availableCategories]);
+
+  const automationSelectOptions = useMemo(
+    () => [{ value: '', label: 'Selecione o tipo de automação' }, ...AUTOMATION_OPTIONS],
+    [],
+  );
+
+  const criticalitySelectOptions = useMemo(
+    () => [{ value: '', label: 'Selecione a criticidade' }, ...CRITICALITY_OPTIONS],
+    [],
+  );
 
   useEffect(() => {
     const fetchStores = async () => {
@@ -66,7 +113,10 @@ export const StoreManagementPanel = ({
         }
       } catch (error) {
         console.error(error);
-        showToast({ type: 'error', message: 'Não foi possível carregar as lojas desta organização.' });
+        showToast({
+          type: 'error',
+          message: 'Não foi possível carregar as lojas desta organização.',
+        });
       } finally {
         setIsLoadingStores(false);
       }
@@ -77,7 +127,7 @@ export const StoreManagementPanel = ({
 
   const selectedStore = useMemo(
     () => stores.find((store) => store.id === selectedStoreId) ?? null,
-    [selectedStoreId, stores]
+    [selectedStoreId, stores],
   );
 
   useEffect(() => {
@@ -93,7 +143,10 @@ export const StoreManagementPanel = ({
         setScenarios(data);
       } catch (error) {
         console.error(error);
-        showToast({ type: 'error', message: 'Não foi possível carregar a massa de cenários desta loja.' });
+        showToast({
+          type: 'error',
+          message: 'Não foi possível carregar a massa de cenários desta loja.',
+        });
       } finally {
         setIsLoadingScenarios(false);
       }
@@ -102,20 +155,32 @@ export const StoreManagementPanel = ({
     void fetchScenarios();
   }, [selectedStore, showToast]);
 
+  useEffect(() => {
+    setCustomCategories([]);
+    setNewCategoryName('');
+    setCategoryError(null);
+  }, [selectedStoreId]);
+
+  useEffect(() => {
+    if (scenarios.length === 0) {
+      setIsScenarioTableCollapsed(false);
+    }
+  }, [scenarios.length]);
+
   const resetStoreForm = () => {
-    setStoreForm({ name: '', site: '', stage: '' });
+    setStoreForm({ name: '', site: '' });
     setStoreFormMode('hidden');
     setStoreFormError(null);
   };
 
   const handleStartCreateStore = () => {
-    setStoreForm({ name: '', site: '', stage: '' });
+    setStoreForm({ name: '', site: '' });
     setStoreFormMode('create');
     setStoreFormError(null);
   };
 
   const handleStartEditStore = (store: Store) => {
-    setStoreForm({ name: store.name, site: store.site, stage: store.stage });
+    setStoreForm({ name: store.name, site: store.site });
     setStoreFormMode('edit');
     setStoreFormError(null);
     setSelectedStoreId(store.id);
@@ -131,7 +196,7 @@ export const StoreManagementPanel = ({
 
     const trimmedName = storeForm.name.trim();
     const trimmedSite = storeForm.site.trim();
-    const trimmedStage = storeForm.stage.trim();
+    const stageValue = storeFormMode === 'edit' && selectedStore ? selectedStore.stage : '';
 
     if (!trimmedName) {
       setStoreFormError('Informe um nome para a loja.');
@@ -139,7 +204,7 @@ export const StoreManagementPanel = ({
     }
 
     if (!trimmedSite) {
-      setStoreFormError('Informe o site ou contexto da loja.');
+      setStoreFormError('Informe o site da loja.');
       return;
     }
 
@@ -150,10 +215,12 @@ export const StoreManagementPanel = ({
           organizationId,
           name: trimmedName,
           site: trimmedSite,
-          stage: trimmedStage
+          stage: '',
         });
 
-        setStores((previous) => [...previous, created].sort((a, b) => a.name.localeCompare(b.name)));
+        setStores((previous) =>
+          [...previous, created].sort((a, b) => a.name.localeCompare(b.name)),
+        );
         setSelectedStoreId(created.id);
         resetStoreForm();
         showToast({ type: 'success', message: 'Loja criada com sucesso.' });
@@ -164,13 +231,15 @@ export const StoreManagementPanel = ({
         const updated = await storeService.update(selectedStore.id, {
           name: trimmedName,
           site: trimmedSite,
-          stage: trimmedStage
+          stage: stageValue,
         });
 
         setStores((previous) =>
           previous
-            .map((store) => (store.id === updated.id ? { ...updated, scenarioCount: store.scenarioCount } : store))
-            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((store) =>
+              store.id === updated.id ? { ...updated, scenarioCount: store.scenarioCount } : store,
+            )
+            .sort((a, b) => a.name.localeCompare(b.name)),
         );
         showToast({ type: 'success', message: 'Loja atualizada com sucesso.' });
         resetStoreForm();
@@ -191,7 +260,7 @@ export const StoreManagementPanel = ({
     }
 
     const confirmation = window.confirm(
-      `Deseja remover a loja "${store.name}"? Todos os cenários vinculados serão excluídos.`
+      `Deseja remover a loja "${store.name}"? Todos os cenários vinculados serão excluídos.`,
     );
 
     if (!confirmation) {
@@ -223,10 +292,59 @@ export const StoreManagementPanel = ({
     }
   };
 
-  const handleScenarioFormChange = (field: keyof StoreScenarioInput) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleScenarioFormChange =
+    (field: keyof StoreScenarioInput) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
       setScenarioForm((previous) => ({ ...previous, [field]: event.target.value }));
     };
+
+  const handleAddCategory = () => {
+    const trimmedCategory = newCategoryName.trim();
+    if (!trimmedCategory) {
+      setCategoryError('Informe o nome da nova categoria.');
+      return;
+    }
+
+    const alreadyExists = availableCategories.some(
+      (category) => category.toLowerCase() === trimmedCategory.toLowerCase(),
+    );
+
+    if (alreadyExists) {
+      setCategoryError('Esta categoria já está disponível.');
+      setScenarioForm((previous) => ({ ...previous, category: trimmedCategory }));
+      return;
+    }
+
+    setCustomCategories((previous) => [...previous, trimmedCategory]);
+    setScenarioForm((previous) => ({ ...previous, category: trimmedCategory }));
+    setNewCategoryName('');
+    setCategoryError(null);
+  };
+
+  const handleRemoveCustomCategory = (category: string) => {
+    setCustomCategories((previous) => previous.filter((item) => item !== category));
+    if (scenarioForm.category === category) {
+      setScenarioForm((previous) => ({ ...previous, category: '' }));
+    }
+  };
+
+  const handleCopyBdd = async (bdd: string) => {
+    if (!bdd.trim()) {
+      showToast({ type: 'error', message: 'Não há conteúdo de BDD para copiar.' });
+      return;
+    }
+
+    try {
+      if (!navigator?.clipboard) {
+        throw new Error('Clipboard API indisponível.');
+      }
+      await navigator.clipboard.writeText(bdd);
+      showToast({ type: 'success', message: 'BDD copiado para a área de transferência.' });
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: 'Não foi possível copiar o BDD automaticamente.' });
+    }
+  };
 
   const handleScenarioSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -242,7 +360,7 @@ export const StoreManagementPanel = ({
       automation: scenarioForm.automation.trim(),
       criticality: scenarioForm.criticality.trim(),
       observation: scenarioForm.observation.trim(),
-      bdd: scenarioForm.bdd.trim()
+      bdd: scenarioForm.bdd.trim(),
     };
 
     const hasEmptyField = Object.values(trimmedScenario).some((value) => value === '');
@@ -254,18 +372,27 @@ export const StoreManagementPanel = ({
     try {
       setIsSavingScenario(true);
       if (editingScenarioId) {
-        const updated = await storeService.updateScenario(selectedStore.id, editingScenarioId, trimmedScenario);
-        setScenarios((previous) => previous.map((scenario) => (scenario.id === updated.id ? updated : scenario)));
+        const updated = await storeService.updateScenario(
+          selectedStore.id,
+          editingScenarioId,
+          trimmedScenario,
+        );
+        setScenarios((previous) =>
+          previous.map((scenario) => (scenario.id === updated.id ? updated : scenario)),
+        );
         showToast({ type: 'success', message: 'Cenário atualizado com sucesso.' });
       } else {
-        const created = await storeService.createScenario({ storeId: selectedStore.id, ...trimmedScenario });
+        const created = await storeService.createScenario({
+          storeId: selectedStore.id,
+          ...trimmedScenario,
+        });
         setScenarios((previous) => [...previous, created]);
         setStores((previous) =>
           previous.map((store) =>
             store.id === selectedStore.id
               ? { ...store, scenarioCount: store.scenarioCount + 1 }
-              : store
-          )
+              : store,
+          ),
         );
         showToast({ type: 'success', message: 'Cenário adicionado com sucesso.' });
       }
@@ -293,7 +420,7 @@ export const StoreManagementPanel = ({
       automation: scenario.automation,
       criticality: scenario.criticality,
       observation: scenario.observation,
-      bdd: scenario.bdd
+      bdd: scenario.bdd,
     });
     setEditingScenarioId(scenario.id);
     setScenarioFormError(null);
@@ -317,13 +444,14 @@ export const StoreManagementPanel = ({
         previous.map((store) =>
           store.id === selectedStore.id
             ? { ...store, scenarioCount: Math.max(store.scenarioCount - 1, 0) }
-            : store
-        )
+            : store,
+        ),
       );
       showToast({ type: 'success', message: 'Cenário removido com sucesso.' });
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'Não foi possível remover o cenário.';
+      const message =
+        error instanceof Error ? error.message : 'Não foi possível remover o cenário.';
       showToast({ type: 'error', message });
     } finally {
       setIsSavingScenario(false);
@@ -342,7 +470,8 @@ export const StoreManagementPanel = ({
       showToast({ type: 'success', message: 'Exportação concluída com sucesso.' });
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'Não foi possível exportar os cenários.';
+      const message =
+        error instanceof Error ? error.message : 'Não foi possível exportar os cenários.';
       showToast({ type: 'error', message });
     } finally {
       setIsExporting(false);
@@ -375,7 +504,11 @@ export const StoreManagementPanel = ({
       const importedStoreName = parsed.store.name.trim().toLowerCase();
       const selectedStoreName = selectedStore.name.trim().toLowerCase();
 
-      if (parsed.store.id && parsed.store.id !== selectedStore.id && importedStoreName !== selectedStoreName) {
+      if (
+        parsed.store.id &&
+        parsed.store.id !== selectedStore.id &&
+        importedStoreName !== selectedStoreName
+      ) {
         throw new Error('O arquivo selecionado pertence a outra loja.');
       }
 
@@ -385,7 +518,7 @@ export const StoreManagementPanel = ({
       }
 
       const shouldReplace = window.confirm(
-        'Deseja sobrescrever os cenários atuais? Clique em Cancelar para mesclar com os existentes.'
+        'Deseja sobrescrever os cenários atuais? Clique em Cancelar para mesclar com os existentes.',
       );
 
       const strategy = shouldReplace ? 'replace' : 'merge';
@@ -395,17 +528,21 @@ export const StoreManagementPanel = ({
         automation: scenario.automation,
         criticality: scenario.criticality,
         observation: scenario.observation,
-        bdd: scenario.bdd
+        bdd: scenario.bdd,
       }));
 
-      const result = await storeService.importScenarios(selectedStore.id, scenariosPayload, strategy);
+      const result = await storeService.importScenarios(
+        selectedStore.id,
+        scenariosPayload,
+        strategy,
+      );
       setScenarios(result.scenarios);
       setStores((previous) =>
         previous.map((store) =>
           store.id === selectedStore.id
             ? { ...store, scenarioCount: result.scenarios.length }
-            : store
-        )
+            : store,
+        ),
       );
 
       const feedbackMessage =
@@ -416,7 +553,8 @@ export const StoreManagementPanel = ({
       showToast({ type: 'success', message: feedbackMessage });
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'Não foi possível importar o arquivo selecionado.';
+      const message =
+        error instanceof Error ? error.message : 'Não foi possível importar o arquivo selecionado.';
       showToast({ type: 'error', message });
     } finally {
       setIsImporting(false);
@@ -430,8 +568,8 @@ export const StoreManagementPanel = ({
           <div>
             <h2 className="text-xl font-semibold text-primary">Lojas da organização</h2>
             <p className="section-subtitle">
-              {organizationName} possui {stores.length}{' '}
-              loja{stores.length === 1 ? '' : 's'} cadastrada{stores.length === 1 ? '' : 's'}.
+              {organizationName} possui {stores.length} loja{stores.length === 1 ? '' : 's'}{' '}
+              cadastrada{stores.length === 1 ? '' : 's'}.
             </p>
           </div>
           {canManageStores && (
@@ -445,18 +583,27 @@ export const StoreManagementPanel = ({
           <p className="section-subtitle">Carregando lojas cadastradas...</p>
         ) : stores.length === 0 ? (
           <p className="section-subtitle">
-            Nenhuma loja foi cadastrada ainda. {canManageStores ? 'Crie a primeira loja para começar.' : 'Aguarde um administrador cadastrar uma loja.'}
+            Nenhuma loja foi cadastrada ainda.{' '}
+            {canManageStores
+              ? 'Crie a primeira loja para começar.'
+              : 'Aguarde um administrador cadastrar uma loja.'}
           </p>
         ) : (
           <ul className="store-list">
             {stores.map((store) => {
               const isActive = store.id === selectedStoreId;
               return (
-                <li key={store.id} className={`store-list-item${isActive ? ' store-list-item--active' : ''}`}>
-                  <button type="button" className="store-list-button" onClick={() => setSelectedStoreId(store.id)}>
+                <li
+                  key={store.id}
+                  className={`store-list-item${isActive ? ' store-list-item--active' : ''}`}
+                >
+                  <button
+                    type="button"
+                    className="store-list-button"
+                    onClick={() => setSelectedStoreId(store.id)}
+                  >
                     <div className="store-list-meta">
                       <h3>{store.name}</h3>
-                      <span>{store.stage || 'Sem estágio definido'}</span>
                     </div>
                     <p>{store.site}</p>
                     <span className="store-list-count">
@@ -465,7 +612,11 @@ export const StoreManagementPanel = ({
                   </button>
                   {canManageStores && (
                     <div className="store-list-actions">
-                      <button type="button" onClick={() => handleStartEditStore(store)} disabled={isSavingStore}>
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditStore(store)}
+                        disabled={isSavingStore}
+                      >
                         Editar
                       </button>
                       <button
@@ -486,36 +637,40 @@ export const StoreManagementPanel = ({
 
         {canManageStores && storeFormMode !== 'hidden' && (
           <form className="form-grid" onSubmit={handleStoreFormSubmit}>
-            <h3 className="form-title">{storeFormMode === 'create' ? 'Cadastrar loja' : 'Editar loja'}</h3>
+            <h3 className="form-title">
+              {storeFormMode === 'create' ? 'Cadastrar loja' : 'Editar loja'}
+            </h3>
             {storeFormError && <p className="form-message form-message--error">{storeFormError}</p>}
             <TextInput
               id="store-name"
               label="Nome"
               value={storeForm.name}
-              onChange={(event) => setStoreForm((previous) => ({ ...previous, name: event.target.value }))}
+              onChange={(event) =>
+                setStoreForm((previous) => ({ ...previous, name: event.target.value }))
+              }
               placeholder="Ex.: Loja Centro"
               required
             />
             <TextInput
               id="store-site"
-              label="Site / Ambiente"
+              label="Site"
               value={storeForm.site}
-              onChange={(event) => setStoreForm((previous) => ({ ...previous, site: event.target.value }))}
+              onChange={(event) =>
+                setStoreForm((previous) => ({ ...previous, site: event.target.value }))
+              }
               placeholder="Ex.: https://minhaloja.com"
               required
-            />
-            <TextInput
-              id="store-stage"
-              label="Estágio"
-              value={storeForm.stage}
-              onChange={(event) => setStoreForm((previous) => ({ ...previous, stage: event.target.value }))}
-              placeholder="Ex.: Produção"
             />
             <div className="store-form-actions">
               <Button type="submit" isLoading={isSavingStore} loadingText="Salvando...">
                 {storeFormMode === 'create' ? 'Salvar loja' : 'Atualizar loja'}
               </Button>
-              <Button type="button" variant="ghost" onClick={resetStoreForm} disabled={isSavingStore}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={resetStoreForm}
+                disabled={isSavingStore}
+              >
                 Cancelar
               </Button>
             </div>
@@ -529,13 +684,16 @@ export const StoreManagementPanel = ({
             <div className="store-details">
               <div>
                 <h2 className="text-xl font-semibold text-primary">{selectedStore.name}</h2>
-                <p className="section-subtitle">
-                  {selectedStore.stage ? `${selectedStore.stage} • ` : ''}
-                  {selectedStore.site}
-                </p>
+                <p className="section-subtitle">{selectedStore.site}</p>
               </div>
               <div className="store-details-actions">
-                <Button type="button" variant="ghost" onClick={handleExport} isLoading={isExporting} loadingText="Exportando...">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleExport}
+                  isLoading={isExporting}
+                  loadingText="Exportando..."
+                >
                   Exportar JSON
                 </Button>
                 {canManageScenarios && (
@@ -561,8 +719,12 @@ export const StoreManagementPanel = ({
 
             {canUseScenarioForm && (
               <form className="scenario-form" onSubmit={handleScenarioSubmit}>
-                <h3 className="form-title">{editingScenarioId ? 'Editar cenário' : 'Novo cenário'}</h3>
-                {scenarioFormError && <p className="form-message form-message--error">{scenarioFormError}</p>}
+                <h3 className="form-title">
+                  {editingScenarioId ? 'Editar cenário' : 'Novo cenário'}
+                </h3>
+                {scenarioFormError && (
+                  <p className="form-message form-message--error">{scenarioFormError}</p>
+                )}
                 <TextInput
                   id="scenario-title"
                   label="Título"
@@ -571,27 +733,78 @@ export const StoreManagementPanel = ({
                   required
                 />
                 <div className="scenario-form-grid">
-                  <TextInput
+                  <SelectInput
                     id="scenario-category"
                     label="Categoria"
                     value={scenarioForm.category}
                     onChange={handleScenarioFormChange('category')}
+                    options={categorySelectOptions}
                     required
                   />
-                  <TextInput
+                  <SelectInput
                     id="scenario-automation"
                     label="Automação"
                     value={scenarioForm.automation}
                     onChange={handleScenarioFormChange('automation')}
+                    options={automationSelectOptions}
                     required
                   />
-                  <TextInput
+                  <SelectInput
                     id="scenario-criticality"
                     label="Criticidade"
                     value={scenarioForm.criticality}
                     onChange={handleScenarioFormChange('criticality')}
+                    options={criticalitySelectOptions}
                     required
                   />
+                </div>
+                <div className="category-manager">
+                  <div className="category-manager-header">
+                    <p className="field-label">Gerencie as categorias disponíveis</p>
+                    <p className="category-manager-description">
+                      As categorias existentes são carregadas automaticamente a partir dos cenários
+                      já cadastrados. Cadastre novas opções para reutilizar no futuro.
+                    </p>
+                  </div>
+                  <div className="category-manager-actions">
+                    <input
+                      type="text"
+                      className="field-input"
+                      placeholder="Informe uma nova categoria"
+                      value={newCategoryName}
+                      onChange={(event) => {
+                        setNewCategoryName(event.target.value);
+                        setCategoryError(null);
+                      }}
+                    />
+                    <Button type="button" variant="secondary" onClick={handleAddCategory}>
+                      Adicionar categoria
+                    </Button>
+                  </div>
+                  {categoryError && (
+                    <p className="form-message form-message--error">{categoryError}</p>
+                  )}
+                  {availableCategories.length > 0 ? (
+                    <ul className="category-chip-list">
+                      {availableCategories.map((category) => (
+                        <li key={category} className="category-chip">
+                          <span>{category}</span>
+                          {!scenarioCategories.has(category) && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCustomCategory(category)}
+                              className="category-chip-remove"
+                              aria-label={`Remover categoria ${category}`}
+                            >
+                              &times;
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="category-manager-empty">Nenhuma categoria cadastrada ainda.</p>
+                  )}
                 </div>
                 <TextArea
                   id="scenario-observation"
@@ -628,15 +841,30 @@ export const StoreManagementPanel = ({
               </form>
             )}
 
+            <div className="scenario-table-header">
+              <h3 className="section-subtitle">Cenários cadastrados</h3>
+              {scenarios.length > 0 && (
+                <button
+                  type="button"
+                  className="scenario-table-toggle"
+                  onClick={() => setIsScenarioTableCollapsed((previous) => !previous)}
+                >
+                  {isScenarioTableCollapsed ? 'Maximizar tabela' : 'Minimizar tabela'}
+                </button>
+              )}
+            </div>
             <div className="scenario-table-wrapper">
-              {isLoadingScenarios ? (
+              {isScenarioTableCollapsed ? (
+                <p className="section-subtitle">
+                  Tabela minimizada. Utilize o botão acima para visualizar os cenários novamente.
+                </p>
+              ) : isLoadingScenarios ? (
                 <p className="section-subtitle">Carregando cenários cadastrados...</p>
               ) : scenarios.length === 0 ? (
                 <p className="section-subtitle">
-                  Nenhum cenário cadastrado para esta loja ainda.{' '}
                   {canUseScenarioForm
-                    ? 'Cadastre o primeiro utilizando o formulário acima.'
-                    : 'Acesse a página da loja para gerenciar os cenários.'}
+                    ? 'Nenhum cenário cadastrado para esta loja ainda. Utilize o formulário acima para criar o primeiro.'
+                    : 'Nenhum cenário cadastrado para esta loja ainda. Solicite a um responsável a criação da massa de testes.'}
                 </p>
               ) : (
                 <table className="scenario-table">
@@ -657,12 +885,30 @@ export const StoreManagementPanel = ({
                         <td>{scenario.title}</td>
                         <td>{scenario.category}</td>
                         <td>{scenario.automation}</td>
-                        <td>{scenario.criticality}</td>
+                        <td>
+                          <span
+                            className={`criticality-badge ${getCriticalityClassName(scenario.criticality)}`}
+                          >
+                            {scenario.criticality}
+                          </span>
+                        </td>
                         <td className="scenario-observation">{scenario.observation}</td>
-                        <td className="scenario-bdd">{scenario.bdd}</td>
+                        <td className="scenario-bdd">
+                          <button
+                            type="button"
+                            className="scenario-copy-button"
+                            onClick={() => void handleCopyBdd(scenario.bdd)}
+                          >
+                            Copiar BDD
+                          </button>
+                        </td>
                         {canUseScenarioForm && (
                           <td className="scenario-actions">
-                            <button type="button" onClick={() => handleEditScenario(scenario)} disabled={isSavingScenario}>
+                            <button
+                              type="button"
+                              onClick={() => handleEditScenario(scenario)}
+                              disabled={isSavingScenario}
+                            >
                               Editar
                             </button>
                             <button
@@ -684,7 +930,9 @@ export const StoreManagementPanel = ({
           </>
         ) : (
           <div className="store-empty">
-            <h2 className="text-xl font-semibold text-primary">Selecione uma loja para continuar</h2>
+            <h2 className="text-xl font-semibold text-primary">
+              Selecione uma loja para continuar
+            </h2>
             <p className="section-subtitle">
               {canManageStores
                 ? 'Escolha uma loja na lista ao lado ou cadastre uma nova para gerenciar os cenários.'
@@ -718,7 +966,12 @@ const validateImportPayload = (payload: StoreExportPayload) => {
     throw new Error('Arquivo não possui informações da loja.');
   }
 
-  const requiredStoreFields: (keyof StoreExportPayload['store'])[] = ['id', 'name', 'site', 'stage', 'scenarioCount'];
+  const requiredStoreFields: (keyof StoreExportPayload['store'])[] = [
+    'id',
+    'name',
+    'site',
+    'scenarioCount',
+  ];
   requiredStoreFields.forEach((field) => {
     if (field === 'scenarioCount') {
       if (typeof payload.store.scenarioCount !== 'number') {
@@ -743,7 +996,7 @@ const validateImportPayload = (payload: StoreExportPayload) => {
       'automation',
       'criticality',
       'observation',
-      'bdd'
+      'bdd',
     ];
 
     requiredScenarioFields.forEach((field) => {

@@ -1,6 +1,11 @@
 :root {
   color-scheme: light;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   --color-background: linear-gradient(150deg, #061537 0%, #0b2f74 45%, #1d4ed8 100%);
   --color-surface: rgba(248, 252, 255, 0.98);
   --color-surface-alt: rgba(255, 255, 255, 0.45);
@@ -59,7 +64,9 @@ body {
   min-height: 100vh;
   background: var(--color-background);
   color: var(--color-text-primary);
-  transition: background 0.5s ease, color 0.5s ease;
+  transition:
+    background 0.5s ease,
+    color 0.5s ease;
 }
 
 a {
@@ -165,7 +172,10 @@ a.text-link:hover {
   color: var(--color-text-primary);
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-base), color var(--transition-base), box-shadow var(--transition-base);
+  transition:
+    background var(--transition-base),
+    color var(--transition-base),
+    box-shadow var(--transition-base);
 }
 
 .header-profile:hover {
@@ -396,7 +406,10 @@ a.text-link:hover {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-md);
-  transition: background var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base),
+    box-shadow var(--transition-base);
 }
 
 .card {
@@ -405,7 +418,10 @@ a.text-link:hover {
   border: 1px solid var(--color-border);
   padding: 2.5rem;
   box-shadow: var(--shadow-md);
-  transition: transform 0.35s ease, box-shadow 0.35s ease, background var(--transition-base);
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease,
+    background var(--transition-base);
 }
 
 .card:hover {
@@ -676,7 +692,11 @@ a.text-link:hover {
   font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background var(--transition-base), color var(--transition-base);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background var(--transition-base),
+    color var(--transition-base);
   box-shadow: var(--shadow-sm);
 }
 
@@ -759,7 +779,10 @@ a.text-link:hover {
   font-size: 1rem;
   background: var(--color-surface-alt);
   color: var(--color-text-primary);
-  transition: border-color var(--transition-base), box-shadow var(--transition-base), background var(--transition-base);
+  transition:
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    background var(--transition-base);
 }
 
 .field-input::placeholder {
@@ -870,7 +893,9 @@ a.text-link:hover {
   overflow: hidden;
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
-  transition: border-color var(--transition-base), transform 0.2s ease;
+  transition:
+    border-color var(--transition-base),
+    transform 0.2s ease;
 }
 
 .avatar-interactive {
@@ -932,7 +957,9 @@ a.text-link:hover {
   color: var(--color-text-primary);
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-base), box-shadow var(--transition-base);
+  transition:
+    background var(--transition-base),
+    box-shadow var(--transition-base);
 }
 
 .back-button:hover {
@@ -964,7 +991,10 @@ a.text-link:hover {
   padding: 0.75rem 1.5rem;
   background: var(--color-surface-alt);
   cursor: pointer;
-  transition: border-color var(--transition-base), color var(--transition-base), box-shadow var(--transition-base);
+  transition:
+    border-color var(--transition-base),
+    color var(--transition-base),
+    box-shadow var(--transition-base);
 }
 
 .upload-trigger:hover {
@@ -993,7 +1023,10 @@ a.text-link:hover {
   justify-content: center;
   font-size: 1.15rem;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background var(--transition-base);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background var(--transition-base);
 }
 
 .theme-toggle:hover {
@@ -1319,7 +1352,9 @@ a.text-link:hover {
 }
 
 .transition-colors {
-  transition: color var(--transition-base), background-color var(--transition-base);
+  transition:
+    color var(--transition-base),
+    background-color var(--transition-base);
 }
 
 .route-loading {
@@ -1378,7 +1413,10 @@ a.text-link:hover {
   background: var(--color-surface-alt);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
-  transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
+  transition:
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    transform var(--transition-base);
 }
 
 .organization-list-item--active {
@@ -1423,7 +1461,9 @@ a.text-link:hover {
   padding: 0.75rem 1.25rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-base), color var(--transition-base);
+  transition:
+    background var(--transition-base),
+    color var(--transition-base);
 }
 
 .organization-list-item-delete:hover:not(:disabled) {
@@ -1507,7 +1547,10 @@ a.text-link:hover {
   padding: 0.5rem 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transition-base), color var(--transition-base), transform var(--transition-base);
+  transition:
+    background var(--transition-base),
+    color var(--transition-base),
+    transform var(--transition-base);
 }
 
 .member-list-remove:hover:not(:disabled) {
@@ -1572,7 +1615,10 @@ a.text-link:hover {
   border-radius: 1.25rem;
   background: var(--color-surface-alt);
   box-shadow: var(--shadow-sm);
-  transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
+  transition:
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    transform var(--transition-base);
   overflow: hidden;
 }
 
@@ -1748,6 +1794,10 @@ a.text-link:hover {
   white-space: pre-wrap;
 }
 
+.scenario-bdd {
+  text-align: center;
+}
+
 .scenario-actions {
   display: flex;
   flex-direction: column;
@@ -1784,6 +1834,142 @@ a.text-link:hover {
 
 .scenario-delete:hover:not(:disabled) {
   color: #b91c1c !important;
+}
+
+.scenario-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.scenario-table-toggle {
+  border: none;
+  background: transparent;
+  color: var(--color-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--transition-base);
+}
+
+.scenario-table-toggle:hover {
+  opacity: 0.85;
+}
+
+.scenario-copy-button {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+  color: var(--color-text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  transition:
+    background var(--transition-base),
+    color var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.scenario-copy-button:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.category-manager {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.category-manager-header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.category-manager-description,
+.category-manager-empty {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.category-manager-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.category-manager-actions .field-input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.category-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.category-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  font-size: 0.85rem;
+}
+
+.category-chip-remove {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.category-chip-remove:hover {
+  color: var(--color-danger);
+}
+
+.criticality-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.criticality-badge--low {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.criticality-badge--medium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.criticality-badge--high {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.criticality-badge--critical {
+  background: #f3e8ff;
+  color: #6b21a8;
 }
 
 .store-empty {
