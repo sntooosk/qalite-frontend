@@ -201,7 +201,7 @@ export const EnvironmentPage = () => {
             </button>
             <div className="environment-page__title">
               {environmentOrganization && (
-                <div className="environment-organization-branding">
+                <div>
                   {environmentOrganization.logoUrl ? (
                     <img
                       src={environmentOrganization.logoUrl}

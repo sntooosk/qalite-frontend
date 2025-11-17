@@ -96,7 +96,7 @@ export const PublicEnvironmentPage = () => {
               {STATUS_LABEL[environment.status]}
             </span>
             {environmentOrganization && (
-              <div className="environment-organization-branding">
+              <div>
                 {environmentOrganization.logoUrl ? (
                   <img
                     src={environmentOrganization.logoUrl}
