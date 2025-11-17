@@ -67,12 +67,13 @@ export const EnvironmentPage = () => {
   const isInteractionLocked = !hasEnteredEnvironment || Boolean(isLocked);
   const canCopyPublicLink = hasEnteredEnvironment;
 
-  const { isCurrentUserPresent, joinEnvironment, leaveEnvironment } = usePresentUsers({
-    environmentId: environment?.id ?? null,
-    presentUsersIds: environment?.presentUsersIds ?? [],
-    isLocked: Boolean(isLocked),
-    shouldAutoJoin: hasEnteredEnvironment && !isLocked && !hasManuallyExitedEnvironment,
-  });
+  const { isCurrentUserPresent, canLeaveEnvironment, joinEnvironment, leaveEnvironment } =
+    usePresentUsers({
+      environmentId: environment?.id ?? null,
+      presentUsersIds: environment?.presentUsersIds ?? [],
+      status: environment?.status ?? null,
+      shouldAutoJoin: hasEnteredEnvironment && !isLocked && !hasManuallyExitedEnvironment,
+    });
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
   const { bugs, isLoading: isLoadingBugs } = useEnvironmentBugs(environment?.id ?? null);
@@ -312,7 +313,17 @@ export const EnvironmentPage = () => {
   };
 
   const handleLeaveEnvironment = async () => {
-    if (!isCurrentUserPresent || isLocked || isLeavingEnvironment) {
+    if (!isCurrentUserPresent || !canLeaveEnvironment || isLeavingEnvironment) {
+      if (isLocked || environment?.status === 'done') {
+        showToast({ type: 'info', message: 'Ambientes concluídos não permitem saída.' });
+        return;
+      }
+
+      if (!isCurrentUserPresent) {
+        showToast({ type: 'info', message: 'Você já não está presente neste ambiente.' });
+        return;
+      }
+
       return;
     }
 
@@ -418,7 +429,7 @@ export const EnvironmentPage = () => {
                       type="button"
                       variant="ghost"
                       onClick={handleLeaveEnvironment}
-                      disabled={!isCurrentUserPresent}
+                      disabled={!canLeaveEnvironment}
                       isLoading={isLeavingEnvironment}
                       loadingText="Saindo..."
                     >

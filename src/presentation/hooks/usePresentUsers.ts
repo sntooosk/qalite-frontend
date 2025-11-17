@@ -1,28 +1,40 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
+import type { EnvironmentStatus } from '../../domain/entities/Environment';
 import { environmentService } from '../../main/factories/environmentServiceFactory';
 import { useAuth } from './useAuth';
 
 interface UsePresentUsersParams {
   environmentId: string | null | undefined;
   presentUsersIds: string[];
-  isLocked: boolean;
+  status: EnvironmentStatus | null | undefined;
   shouldAutoJoin?: boolean;
 }
 
 export const usePresentUsers = ({
   environmentId,
   presentUsersIds,
-  isLocked,
+  status,
   shouldAutoJoin = true,
 }: UsePresentUsersParams) => {
   const { user } = useAuth();
   const hasJoinedRef = useRef(false);
-  const isExitLockedRef = useRef(isLocked);
+  const statusRef = useRef<EnvironmentStatus | null | undefined>(status);
 
-  isExitLockedRef.current = isLocked;
+  statusRef.current = status;
+
+  const isEnvironmentLocked = status === 'done';
+  const canLeaveByStatus = status ? ['backlog', 'in_progress'].includes(status) : false;
+  const isCurrentUserPresent = useMemo(
+    () => (user?.uid ? presentUsersIds.includes(user.uid) : false),
+    [presentUsersIds, user?.uid],
+  );
+
+  useEffect(() => {
+    hasJoinedRef.current = isCurrentUserPresent;
+  }, [isCurrentUserPresent]);
 
   const joinEnvironment = useCallback(async () => {
-    if (!environmentId || !user?.uid || isLocked || hasJoinedRef.current) {
+    if (!environmentId || !user?.uid || isEnvironmentLocked || hasJoinedRef.current) {
       return;
     }
 
@@ -33,11 +45,15 @@ export const usePresentUsers = ({
       console.error(error);
       throw error;
     }
-  }, [environmentId, isLocked, user?.uid]);
+  }, [environmentId, isEnvironmentLocked, user?.uid]);
 
   const leaveEnvironment = useCallback(async () => {
-    if (!environmentId || !user?.uid || isExitLockedRef.current) {
+    if (!environmentId || !user?.uid || !hasJoinedRef.current) {
       return;
+    }
+
+    if (!canLeaveByStatus || statusRef.current === 'done') {
+      throw new Error('Não é possível sair deste ambiente no status atual.');
     }
 
     try {
@@ -47,34 +63,30 @@ export const usePresentUsers = ({
       console.error(error);
       throw error;
     }
-  }, [environmentId, user?.uid]);
+  }, [canLeaveByStatus, environmentId, user?.uid]);
 
   useEffect(() => {
-    if (!environmentId || !user?.uid || isLocked || !shouldAutoJoin) {
+    if (!environmentId || !user?.uid || isEnvironmentLocked || !shouldAutoJoin) {
       return undefined;
     }
 
     void joinEnvironment().catch(() => undefined);
     return () => {
-      if (hasJoinedRef.current && !isExitLockedRef.current) {
+      if (hasJoinedRef.current && canLeaveByStatus) {
         void leaveEnvironment().catch(() => undefined);
       }
     };
-  }, [environmentId, isLocked, joinEnvironment, leaveEnvironment, shouldAutoJoin, user?.uid]);
+  }, [
+    canLeaveByStatus,
+    environmentId,
+    isEnvironmentLocked,
+    joinEnvironment,
+    leaveEnvironment,
+    shouldAutoJoin,
+    user?.uid,
+  ]);
 
-  useEffect(() => {
-    if (!user?.uid) {
-      hasJoinedRef.current = false;
-      return;
-    }
+  const canLeaveEnvironment = isCurrentUserPresent && canLeaveByStatus;
 
-    hasJoinedRef.current = presentUsersIds.includes(user.uid);
-  }, [presentUsersIds, user?.uid]);
-
-  const isCurrentUserPresent = useMemo(
-    () => (user?.uid ? presentUsersIds.includes(user.uid) : false),
-    [presentUsersIds, user?.uid],
-  );
-
-  return { isCurrentUserPresent, joinEnvironment, leaveEnvironment };
+  return { isCurrentUserPresent, canLeaveEnvironment, joinEnvironment, leaveEnvironment };
 };
