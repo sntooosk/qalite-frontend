@@ -402,7 +402,7 @@ export const EnvironmentPage = () => {
                 )}
                 {environment.status !== 'done' && (
                   <>
-                    {hasEnteredEnvironment && (
+                    {hasEnteredEnvironment && environment.status !== 'in_progress' && (
                       <Button
                         type="button"
                         variant="ghost"
