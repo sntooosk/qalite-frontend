@@ -1,4 +1,3 @@
-import { doc, getDoc } from 'firebase/firestore';
 import type { DragEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -6,11 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import { EnvironmentStatusError } from '../../../application/errors/EnvironmentStatusError';
 import type { Environment, EnvironmentStatus } from '../../../domain/entities/Environment';
 import type { StoreScenario, StoreSuite } from '../../../domain/entities/Store';
-import { firebaseFirestore } from '../../../infra/firebase/firebaseConfig';
+import type { UserSummary } from '../../../domain/entities/UserSummary';
 import { environmentService } from '../../../main/factories/environmentServiceFactory';
+import { userService } from '../../../main/factories/userServiceFactory';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../hooks/useAuth';
-import type { PresentUserProfile } from '../../hooks/usePresentUsers';
 import { Button } from '../Button';
 import { EnvironmentCard } from './EnvironmentCard';
 import { CreateEnvironmentModal } from './CreateEnvironmentModal';
@@ -33,7 +32,7 @@ export const EnvironmentKanban = ({ storeId, suites, scenarios }: EnvironmentKan
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [userProfilesMap, setUserProfilesMap] = useState<Record<string, PresentUserProfile>>({});
+  const [userProfilesMap, setUserProfilesMap] = useState<Record<string, UserSummary>>({});
   const { user } = useAuth();
 
   useEffect(() => {
@@ -59,25 +58,17 @@ export const EnvironmentKanban = ({ storeId, suites, scenarios }: EnvironmentKan
     }
 
     const fetchProfiles = async () => {
-      const entries = await Promise.all(
-        Array.from(ids).map(async (userId) => {
-          const userRef = doc(firebaseFirestore, 'users', userId);
-          const snapshot = await getDoc(userRef);
-          const data = snapshot.data();
-          return {
-            id: userId,
-            name: data?.displayName ?? data?.email ?? 'Usuário',
-            photoURL: data?.photoURL ?? undefined,
-          } as PresentUserProfile;
-        }),
-      );
-
-      if (isMounted) {
-        const nextMap: Record<string, PresentUserProfile> = {};
-        entries.forEach((entry) => {
-          nextMap[entry.id] = entry;
-        });
-        setUserProfilesMap(nextMap);
+      try {
+        const profiles = await userService.getSummariesByIds(Array.from(ids));
+        if (isMounted) {
+          const nextMap: Record<string, UserSummary> = {};
+          profiles.forEach((profile) => {
+            nextMap[profile.id] = profile;
+          });
+          setUserProfilesMap(nextMap);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user summaries', error);
       }
     };
 
@@ -235,7 +226,7 @@ export const EnvironmentKanban = ({ storeId, suites, scenarios }: EnvironmentKan
                       ]),
                     )
                       .map((id) => userProfilesMap[id])
-                      .filter((user): user is PresentUserProfile => Boolean(user))}
+                      .filter((user): user is UserSummary => Boolean(user))}
                     suiteName={suiteNameByEnvironment[environment.id]}
                     draggable
                     onDragStart={handleDragStart}
