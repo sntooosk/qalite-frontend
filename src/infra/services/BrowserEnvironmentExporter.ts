@@ -2,6 +2,7 @@ import { getScenarioPlatformStatuses } from '../../domain/entities/Environment';
 import type { Environment } from '../../domain/entities/Environment';
 import type { EnvironmentBug } from '../../domain/entities/EnvironmentBug';
 import type { EnvironmentExporter } from '../../application/ports/EnvironmentExporter';
+import type { UserSummary } from '../../domain/entities/UserSummary';
 
 const BUG_STATUS_LABEL: Record<EnvironmentBug['status'], string> = {
   aberto: 'Aberto',
@@ -17,12 +18,48 @@ const getScenarioLabel = (environment: Environment, scenarioId: string | null) =
   return environment.scenarios?.[scenarioId]?.titulo ?? 'Cenário removido';
 };
 
+const normalizeParticipants = (
+  environment: Environment,
+  participantProfiles: UserSummary[] = [],
+) => {
+  const uniqueIds = Array.from(new Set(environment.participants ?? []));
+  const profileMap = new Map(participantProfiles.map((profile) => [profile.id, profile]));
+
+  return uniqueIds.map((id) => {
+    const profile = profileMap.get(id);
+    const displayName = profile?.displayName?.trim() || profile?.email || `Participante ${id}`;
+
+    return {
+      id,
+      name: displayName,
+      email: profile?.email ?? 'Não informado',
+      photoURL: profile?.photoURL ?? null,
+    };
+  });
+};
+
+const getInitials = (name: string) => {
+  const initials = name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
+
+  return initials || name.slice(0, 2).toUpperCase();
+};
+
 export class BrowserEnvironmentExporter implements EnvironmentExporter {
-  exportAsPDF(environment: Environment, bugs: EnvironmentBug[] = []): void {
+  exportAsPDF(
+    environment: Environment,
+    bugs: EnvironmentBug[] = [],
+    participantProfiles: UserSummary[] = [],
+  ): void {
     if (typeof window === 'undefined') {
       return;
     }
 
+    const normalizedParticipants = normalizeParticipants(environment, participantProfiles);
     const scenarioRows = Object.values(environment.scenarios ?? {})
       .map((scenario) => {
         const statuses = getScenarioPlatformStatuses(scenario);
@@ -42,6 +79,31 @@ export class BrowserEnvironmentExporter implements EnvironmentExporter {
       `;
       })
       .join('');
+
+    const participantRows =
+      normalizedParticipants.length > 0
+        ? normalizedParticipants
+            .map(
+              (participant) => `
+        <tr>
+          <td>
+            ${
+              participant.photoURL
+                ? `<img src="${participant.photoURL}" alt="Foto de ${participant.name}" class="participant-avatar" />`
+                : `<span class="participant-avatar participant-avatar--fallback">${getInitials(participant.name)}</span>`
+            }
+          </td>
+          <td>${participant.name}</td>
+          <td>${participant.email}</td>
+        </tr>
+      `,
+            )
+            .join('')
+        : `
+        <tr>
+          <td colspan="3">Nenhum participante registrado.</td>
+        </tr>
+      `;
 
     const bugRows =
       bugs.length > 0
@@ -72,6 +134,8 @@ export class BrowserEnvironmentExporter implements EnvironmentExporter {
           h1 { margin-bottom: 0; }
           table { width: 100%; border-collapse: collapse; margin-top: 16px; }
           th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+          .participants-table .participant-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: inline-flex; align-items: center; justify-content: center; background: #e5e7eb; color: #374151; font-weight: 600; }
+          .participants-table .participant-avatar--fallback { font-size: 14px; }
         </style>
       </head>
       <body>
@@ -81,6 +145,17 @@ export class BrowserEnvironmentExporter implements EnvironmentExporter {
         ${environment.momento ? `<p>Momento: ${environment.momento}</p>` : ''}
         ${environment.release ? `<p>Release: ${environment.release}</p>` : ''}
         <p>Jira: ${environment.jiraTask || 'Não informado'}</p>
+        <h2>Participantes</h2>
+        <table class="participants-table">
+          <thead>
+            <tr>
+              <th>Foto</th>
+              <th>Nome</th>
+              <th>Email</th>
+            </tr>
+          </thead>
+          <tbody>${participantRows}</tbody>
+        </table>
         <h2>Cenários</h2>
         <table>
           <thead>
@@ -122,11 +197,16 @@ export class BrowserEnvironmentExporter implements EnvironmentExporter {
     printWindow.print();
   }
 
-  async copyAsMarkdown(environment: Environment, bugs: EnvironmentBug[] = []): Promise<void> {
+  async copyAsMarkdown(
+    environment: Environment,
+    bugs: EnvironmentBug[] = [],
+    participantProfiles: UserSummary[] = [],
+  ): Promise<void> {
     if (typeof navigator === 'undefined' && typeof document === 'undefined') {
       return;
     }
 
+    const normalizedParticipants = normalizeParticipants(environment, participantProfiles);
     const scenarioLines = Object.entries(environment.scenarios ?? {})
       .map(([id, scenario]) => {
         const statuses = getScenarioPlatformStatuses(scenario);
@@ -147,8 +227,14 @@ export class BrowserEnvironmentExporter implements EnvironmentExporter {
       .join('\n');
 
     const urls = (environment.urls ?? []).map((url) => `  - ${url}`).join('\n');
-    const participants = (environment.participants ?? [])
-      .map((participant) => `- ${participant}`)
+    const participants = normalizedParticipants
+      .map((participant) => {
+        const photo = participant.photoURL
+          ? `![Foto de ${participant.name}](${participant.photoURL}) `
+          : '';
+        const email = participant.email !== 'Não informado' ? ` (${participant.email})` : '';
+        return `- ${photo}**${participant.name}**${email} · ID: ${participant.id}`;
+      })
       .join('\n');
 
     const markdown = `# Ambiente ${environment.identificador}

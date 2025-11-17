@@ -58,22 +58,19 @@ export const EnvironmentPage = () => {
   const [editingBug, setEditingBug] = useState<EnvironmentBug | null>(null);
   const [defaultBugScenarioId, setDefaultBugScenarioId] = useState<string | null>(null);
   const [hasEnteredEnvironment, setHasEnteredEnvironment] = useState(false);
-  const [hasManuallyExitedEnvironment, setHasManuallyExitedEnvironment] = useState(false);
   const [isJoiningEnvironment, setIsJoiningEnvironment] = useState(false);
   const [isCopyingMarkdown, setIsCopyingMarkdown] = useState(false);
-  const [isLeavingEnvironment, setIsLeavingEnvironment] = useState(false);
   const isLocked = environment?.status === 'done';
   const isScenarioLocked = environment?.status !== 'in_progress' || !hasEnteredEnvironment;
   const isInteractionLocked = !hasEnteredEnvironment || Boolean(isLocked);
   const canCopyPublicLink = hasEnteredEnvironment;
 
-  const { isCurrentUserPresent, canLeaveEnvironment, joinEnvironment, leaveEnvironment } =
-    usePresentUsers({
-      environmentId: environment?.id ?? null,
-      presentUsersIds: environment?.presentUsersIds ?? [],
-      status: environment?.status ?? null,
-      shouldAutoJoin: hasEnteredEnvironment && !isLocked && !hasManuallyExitedEnvironment,
-    });
+  const { isCurrentUserPresent, joinEnvironment } = usePresentUsers({
+    environmentId: environment?.id ?? null,
+    presentUsersIds: environment?.presentUsersIds ?? [],
+    status: environment?.status ?? null,
+    shouldAutoJoin: hasEnteredEnvironment && !isLocked,
+  });
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
   const { bugs, isLoading: isLoadingBugs } = useEnvironmentBugs(environment?.id ?? null);
@@ -96,34 +93,30 @@ export const EnvironmentPage = () => {
   }, [environmentOrganization, setActiveOrganization]);
 
   useEffect(() => {
-    if (isCurrentUserPresent && !hasEnteredEnvironment) {
+    if (isCurrentUserPresent) {
       setHasEnteredEnvironment(true);
-      setHasManuallyExitedEnvironment(false);
     }
-  }, [hasEnteredEnvironment, isCurrentUserPresent]);
+  }, [isCurrentUserPresent]);
 
   useEffect(() => {
     if (!environment?.id || !user?.uid) {
       setHasEnteredEnvironment(false);
-      setHasManuallyExitedEnvironment(false);
       return;
     }
 
     const hasPersistedEntry = environment.participants?.includes(user.uid) ?? false;
-    if (hasPersistedEntry && !hasEnteredEnvironment && !hasManuallyExitedEnvironment) {
+    if (hasPersistedEntry && !hasEnteredEnvironment) {
       setHasEnteredEnvironment(true);
       return;
     }
 
     if (!hasPersistedEntry && !isCurrentUserPresent) {
       setHasEnteredEnvironment(false);
-      setHasManuallyExitedEnvironment(false);
     }
   }, [
     environment?.id,
     environment?.participants,
     hasEnteredEnvironment,
-    hasManuallyExitedEnvironment,
     isCurrentUserPresent,
     user?.uid,
   ]);
@@ -250,7 +243,7 @@ export const EnvironmentPage = () => {
     if (!environment) {
       return;
     }
-    environmentService.exportAsPDF(environment, bugs);
+    environmentService.exportAsPDF(environment, bugs, participantProfiles);
   };
 
   const handleCopyMarkdown = async () => {
@@ -261,7 +254,7 @@ export const EnvironmentPage = () => {
     setIsCopyingMarkdown(true);
 
     try {
-      await environmentService.copyAsMarkdown(environment, bugs);
+      await environmentService.copyAsMarkdown(environment, bugs, participantProfiles);
       showToast({ type: 'success', message: 'Markdown copiado para a área de transferência.' });
     } catch (error) {
       console.error(error);
@@ -303,42 +296,11 @@ export const EnvironmentPage = () => {
     try {
       await joinEnvironment();
       setHasEnteredEnvironment(true);
-      setHasManuallyExitedEnvironment(false);
     } catch (error) {
       console.error(error);
       showToast({ type: 'error', message: 'Não foi possível entrar no ambiente.' });
     } finally {
       setIsJoiningEnvironment(false);
-    }
-  };
-
-  const handleLeaveEnvironment = async () => {
-    if (!isCurrentUserPresent || !canLeaveEnvironment || isLeavingEnvironment) {
-      if (isLocked || environment?.status === 'done') {
-        showToast({ type: 'info', message: 'Ambientes concluídos não permitem saída.' });
-        return;
-      }
-
-      if (!isCurrentUserPresent) {
-        showToast({ type: 'info', message: 'Você já não está presente neste ambiente.' });
-        return;
-      }
-
-      return;
-    }
-
-    setIsLeavingEnvironment(true);
-
-    try {
-      await leaveEnvironment();
-      setHasEnteredEnvironment(false);
-      setHasManuallyExitedEnvironment(true);
-      showToast({ type: 'success', message: 'Você saiu do ambiente.' });
-    } catch (error) {
-      console.error(error);
-      showToast({ type: 'error', message: 'Não foi possível sair do ambiente.' });
-    } finally {
-      setIsLeavingEnvironment(false);
     }
   };
 
@@ -424,16 +386,6 @@ export const EnvironmentPage = () => {
                     </Button>
                     <Button type="button" variant="ghost" onClick={() => setIsDeleteOpen(true)}>
                       Excluir
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={handleLeaveEnvironment}
-                      disabled={!canLeaveEnvironment}
-                      isLoading={isLeavingEnvironment}
-                      loadingText="Saindo..."
-                    >
-                      Sair do ambiente
                     </Button>
                   </>
                 )}
