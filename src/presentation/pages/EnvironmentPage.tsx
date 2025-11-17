@@ -58,6 +58,8 @@ export const EnvironmentPage = () => {
   const [editingBug, setEditingBug] = useState<EnvironmentBug | null>(null);
   const [defaultBugScenarioId, setDefaultBugScenarioId] = useState<string | null>(null);
   const [hasEnteredEnvironment, setHasEnteredEnvironment] = useState(false);
+  const [isJoiningEnvironment, setIsJoiningEnvironment] = useState(false);
+  const [isCopyingMarkdown, setIsCopyingMarkdown] = useState(false);
   const isLocked = environment?.status === 'done';
   const isScenarioLocked = environment?.status !== 'in_progress' || !hasEnteredEnvironment;
   const isInteractionLocked = !hasEnteredEnvironment || Boolean(isLocked);
@@ -240,14 +242,25 @@ export const EnvironmentPage = () => {
     if (!environment) {
       return;
     }
-    environmentService.exportAsPDF(environment);
+    environmentService.exportAsPDF(environment, bugs);
   };
 
-  const handleExportMarkdown = () => {
+  const handleCopyMarkdown = async () => {
     if (!environment) {
       return;
     }
-    environmentService.exportAsMarkdown(environment);
+
+    setIsCopyingMarkdown(true);
+
+    try {
+      await environmentService.copyAsMarkdown(environment, bugs);
+      showToast({ type: 'success', message: 'Markdown copiado para a área de transferência.' });
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: 'Não foi possível copiar o Markdown.' });
+    } finally {
+      setIsCopyingMarkdown(false);
+    }
   };
 
   const openCreateBugModal = (scenarioId: string) => {
@@ -272,14 +285,23 @@ export const EnvironmentPage = () => {
     openCreateBugModal(scenarioId);
   };
 
-  const handleEnterEnvironment = () => {
-    if (hasEnteredEnvironment || isLocked) {
+  const handleEnterEnvironment = async () => {
+    if (hasEnteredEnvironment || isLocked || isJoiningEnvironment) {
       return;
     }
 
     setHasEnteredEnvironment(true);
+    setIsJoiningEnvironment(true);
 
-    void joinEnvironment();
+    try {
+      await joinEnvironment();
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: 'Não foi possível entrar no ambiente.' });
+      setHasEnteredEnvironment(false);
+    } finally {
+      setIsJoiningEnvironment(false);
+    }
   };
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -337,7 +359,12 @@ export const EnvironmentPage = () => {
           </div>
           <div className="environment-actions">
             {!hasEnteredEnvironment && !isLocked ? (
-              <Button type="button" onClick={handleEnterEnvironment}>
+              <Button
+                type="button"
+                onClick={handleEnterEnvironment}
+                isLoading={isJoiningEnvironment}
+                loadingText="Entrando..."
+              >
                 Entrar no ambiente
               </Button>
             ) : (
@@ -539,10 +566,12 @@ export const EnvironmentPage = () => {
               <Button
                 type="button"
                 variant="ghost"
-                onClick={handleExportMarkdown}
+                onClick={handleCopyMarkdown}
                 disabled={isInteractionLocked}
+                isLoading={isCopyingMarkdown}
+                loadingText="Copiando..."
               >
-                Exportar Markdown
+                Copiar Markdown
               </Button>
             </div>
             {isLocked && (
