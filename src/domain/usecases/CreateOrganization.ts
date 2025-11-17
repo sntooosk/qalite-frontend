@@ -1,5 +1,8 @@
 import type { Organization } from '../entities/Organization';
-import type { CreateOrganizationPayload, IOrganizationRepository } from '../repositories/OrganizationRepository';
+import type {
+  CreateOrganizationPayload,
+  IOrganizationRepository,
+} from '../repositories/OrganizationRepository';
 
 export class CreateOrganization {
   constructor(private readonly organizationRepository: IOrganizationRepository) {}

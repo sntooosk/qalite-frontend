@@ -1,7 +1,7 @@
 import type { Organization } from '../entities/Organization';
 import type {
   IOrganizationRepository,
-  UpdateOrganizationPayload
+  UpdateOrganizationPayload,
 } from '../repositories/OrganizationRepository';
 
 export class UpdateOrganization {

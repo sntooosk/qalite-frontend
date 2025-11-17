@@ -1,7 +1,7 @@
 import type { OrganizationMember } from '../entities/Organization';
 import type {
   AddUserToOrganizationPayload,
-  IOrganizationRepository
+  IOrganizationRepository,
 } from '../repositories/OrganizationRepository';
 
 export class AddUserToOrganization {

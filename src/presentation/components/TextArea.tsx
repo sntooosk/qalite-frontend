@@ -19,7 +19,7 @@ export const TextArea = ({
   placeholder,
   required = false,
   rows = 4,
-  disabled = false
+  disabled = false,
 }: TextAreaProps) => (
   <label htmlFor={id} className="field">
     <span className="field-label">{label}</span>

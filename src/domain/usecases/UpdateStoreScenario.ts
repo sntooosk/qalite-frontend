@@ -4,7 +4,11 @@ import type { IStoreRepository, UpdateStoreScenarioPayload } from '../repositori
 export class UpdateStoreScenario {
   constructor(private readonly storeRepository: IStoreRepository) {}
 
-  execute(storeId: string, scenarioId: string, payload: UpdateStoreScenarioPayload): Promise<StoreScenario> {
+  execute(
+    storeId: string,
+    scenarioId: string,
+    payload: UpdateStoreScenarioPayload,
+  ): Promise<StoreScenario> {
     return this.storeRepository.updateScenario(storeId, scenarioId, payload);
   }
 }

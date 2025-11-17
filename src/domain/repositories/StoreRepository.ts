@@ -25,19 +25,19 @@ export interface CreateStoreScenarioPayload extends StoreScenarioInput {
   storeId: string;
 }
 
-export interface UpdateStoreScenarioPayload extends StoreScenarioInput {}
+export type UpdateStoreScenarioPayload = StoreScenarioInput;
 
 export interface CreateStoreSuitePayload extends StoreSuiteInput {
   storeId: string;
 }
 
-export interface UpdateStoreSuitePayload extends StoreSuiteInput {}
+export type UpdateStoreSuitePayload = StoreSuiteInput;
 
 export interface CreateStoreCategoryPayload extends StoreCategoryInput {
   storeId: string;
 }
 
-export interface UpdateStoreCategoryPayload extends StoreCategoryInput {}
+export type UpdateStoreCategoryPayload = StoreCategoryInput;
 
 export interface ImportScenariosResult {
   created: number;

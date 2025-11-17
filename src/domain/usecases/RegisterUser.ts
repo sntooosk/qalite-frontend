@@ -16,7 +16,7 @@ export class RegisterUser {
       email: input.email,
       password: input.password,
       displayName: input.displayName,
-      role: DEFAULT_ROLE
+      role: DEFAULT_ROLE,
     };
 
     return this.authRepository.register(payload);

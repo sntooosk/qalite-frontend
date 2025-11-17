@@ -1,6 +1,6 @@
 import type {
   IOrganizationRepository,
-  RemoveUserFromOrganizationPayload
+  RemoveUserFromOrganizationPayload,
 } from '../repositories/OrganizationRepository';
 
 export class RemoveUserFromOrganization {
