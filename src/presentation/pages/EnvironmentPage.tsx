@@ -59,11 +59,13 @@ export const EnvironmentPage = () => {
   const [defaultBugScenarioId, setDefaultBugScenarioId] = useState<string | null>(null);
   const [hasEnteredEnvironment, setHasEnteredEnvironment] = useState(false);
   const [isJoiningEnvironment, setIsJoiningEnvironment] = useState(false);
+  const [isLeavingEnvironment, setIsLeavingEnvironment] = useState(false);
   const [isCopyingMarkdown, setIsCopyingMarkdown] = useState(false);
   const isLocked = environment?.status === 'done';
   const isScenarioLocked = environment?.status !== 'in_progress' || !hasEnteredEnvironment;
   const isInteractionLocked = !hasEnteredEnvironment || Boolean(isLocked);
   const canCopyPublicLink = hasEnteredEnvironment;
+  const isShareDisabled = !hasEnteredEnvironment;
 
   const { isCurrentUserPresent, joinEnvironment } = usePresentUsers({
     environmentId: environment?.id ?? null,
@@ -304,6 +306,25 @@ export const EnvironmentPage = () => {
     }
   };
 
+  const handleLeaveEnvironment = async () => {
+    if (!environment?.id || !user?.uid || isLocked || isLeavingEnvironment) {
+      return;
+    }
+
+    setIsLeavingEnvironment(true);
+
+    try {
+      await environmentService.removeUser(environment.id, user.uid);
+      setHasEnteredEnvironment(false);
+      showToast({ type: 'success', message: 'Você saiu do ambiente.' });
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: 'Não foi possível sair do ambiente.' });
+    } finally {
+      setIsLeavingEnvironment(false);
+    }
+  };
+
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const privateLink = environment ? `${origin}/environments/${environment.id}` : '';
   const publicLink = environment ? `${origin}/environments/${environment.id}/public` : '';
@@ -381,6 +402,17 @@ export const EnvironmentPage = () => {
                 )}
                 {environment.status !== 'done' && (
                   <>
+                    {hasEnteredEnvironment && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={handleLeaveEnvironment}
+                        isLoading={isLeavingEnvironment}
+                        loadingText="Saindo..."
+                      >
+                        Sair do ambiente
+                      </Button>
+                    )}
                     <Button type="button" variant="ghost" onClick={() => setIsEditOpen(true)}>
                       Editar
                     </Button>
@@ -543,7 +575,7 @@ export const EnvironmentPage = () => {
                 type="button"
                 variant="secondary"
                 onClick={() => handleCopyLink(privateLink)}
-                disabled={isInteractionLocked}
+                disabled={isShareDisabled}
               >
                 Copiar link do ambiente
               </Button>
@@ -559,7 +591,7 @@ export const EnvironmentPage = () => {
                 type="button"
                 variant="ghost"
                 onClick={handleExportPDF}
-                disabled={isInteractionLocked}
+                disabled={isShareDisabled}
               >
                 Exportar PDF
               </Button>
@@ -567,7 +599,7 @@ export const EnvironmentPage = () => {
                 type="button"
                 variant="ghost"
                 onClick={handleCopyMarkdown}
-                disabled={isInteractionLocked}
+                disabled={isShareDisabled}
                 isLoading={isCopyingMarkdown}
                 loadingText="Copiando..."
               >
