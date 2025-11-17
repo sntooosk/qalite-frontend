@@ -74,7 +74,7 @@ export const EnvironmentCard = ({
 
       <div className="environment-card-avatars" aria-label="Participantes">
         {hasParticipants ? (
-          <ul className="environment-card-participant-list">
+          <ul className="environment-card-participant-list" aria-label="Participantes">
             {participants.map((user) => {
               const readableName = resolveDisplayName(user);
               const initials = resolveInitials(readableName);
@@ -94,7 +94,6 @@ export const EnvironmentCard = ({
                       {initials}
                     </span>
                   )}
-                  <span className="environment-card-participant-name">{readableName}</span>
                 </li>
               );
             })}

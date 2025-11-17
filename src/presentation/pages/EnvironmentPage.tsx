@@ -347,6 +347,30 @@ export const EnvironmentPage = () => {
                       </ul>
                     )}
                   </div>
+                  <div className="summary-card__section">
+                    <span className="summary-card__label">Usuários no ambiente</span>
+                    {presentUsers.length === 0 ? (
+                      <p className="summary-card__empty">Nenhum usuário presente no momento.</p>
+                    ) : (
+                      <ul className="environment-present-users summary-card__participants">
+                        {presentUsers.map((profile) => {
+                          const readableName = profile.displayName || profile.email || 'Usuário';
+                          return (
+                            <li key={profile.id}>
+                              {profile.photoURL ? (
+                                <img src={profile.photoURL} alt={readableName} />
+                              ) : (
+                                <span className="environment-card-avatar environment-card-avatar--initials">
+                                  {readableName.charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                              <span>{readableName}</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
                 </div>
                 <div className="summary-card">
                   <h3>Compartilhamento e exportação</h3>
