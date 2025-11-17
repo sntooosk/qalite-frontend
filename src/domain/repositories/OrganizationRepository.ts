@@ -3,11 +3,13 @@ import type { Organization, OrganizationMember } from '../entities/Organization'
 export interface CreateOrganizationPayload {
   name: string;
   description: string;
+  logoFile?: File | null;
 }
 
 export interface UpdateOrganizationPayload {
   name: string;
   description: string;
+  logoFile?: File | null;
 }
 
 export interface AddUserToOrganizationPayload {

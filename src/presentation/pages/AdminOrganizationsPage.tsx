@@ -10,13 +10,26 @@ import { TextInput } from '../components/TextInput';
 import { TextArea } from '../components/TextArea';
 import { Modal } from '../components/Modal';
 
+interface OrganizationFormState {
+  name: string;
+  description: string;
+  logoFile: File | null;
+}
+
+const initialOrganizationForm: OrganizationFormState = {
+  name: '',
+  description: '',
+  logoFile: null,
+};
+
 export const AdminOrganizationsPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [organizationForm, setOrganizationForm] = useState({ name: '', description: '' });
+  const [organizationForm, setOrganizationForm] =
+    useState<OrganizationFormState>(initialOrganizationForm);
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -45,7 +58,7 @@ export const AdminOrganizationsPage = () => {
   }, [showToast]);
 
   const openCreateModal = () => {
-    setOrganizationForm({ name: '', description: '' });
+    setOrganizationForm(initialOrganizationForm);
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -53,6 +66,7 @@ export const AdminOrganizationsPage = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setFormError(null);
+    setOrganizationForm(initialOrganizationForm);
   };
 
   const handleOrganizationSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -73,6 +87,7 @@ export const AdminOrganizationsPage = () => {
       const created = await organizationService.create({
         name: trimmedName,
         description: trimmedDescription,
+        logoFile: organizationForm.logoFile,
       });
       setOrganizations((previous) => [...previous, created]);
       showToast({ type: 'success', message: 'Nova organização criada.' });
@@ -93,7 +108,6 @@ export const AdminOrganizationsPage = () => {
       <section className="page-container">
         <div className="page-header">
           <div>
-            <span className="badge">Painel do administrador</span>
             <h1 className="section-title">Organizações cadastradas</h1>
             <p className="section-subtitle">
               Gerencie as organizações e mantenha os membros atualizados em um só lugar.
@@ -185,6 +199,23 @@ export const AdminOrganizationsPage = () => {
             }
             placeholder="Resuma o objetivo principal desta organização"
           />
+          <label className="upload-label" htmlFor="organization-logo">
+            <span>Logo da organização</span>
+            <span className="upload-trigger">Selecionar arquivo</span>
+            <input
+              id="organization-logo"
+              className="upload-input"
+              type="file"
+              accept="image/*"
+              onChange={(event) =>
+                setOrganizationForm((previous) => ({
+                  ...previous,
+                  logoFile: event.target.files?.[0] ?? null,
+                }))
+              }
+            />
+            <span className="upload-hint">Formatos sugeridos: PNG, JPG ou SVG até 5MB.</span>
+          </label>
           <div className="form-actions">
             <Button type="submit" isLoading={isSavingOrganization} loadingText="Salvando...">
               Criar organização

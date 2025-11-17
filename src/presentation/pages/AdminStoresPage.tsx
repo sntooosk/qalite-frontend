@@ -6,6 +6,7 @@ import type { Store } from '../../domain/entities/Store';
 import { organizationService } from '../../main/factories/organizationServiceFactory';
 import { storeService } from '../../main/factories/storeServiceFactory';
 import { useToast } from '../context/ToastContext';
+import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
@@ -19,14 +20,27 @@ interface StoreForm {
   site: string;
 }
 
+interface OrganizationFormState {
+  name: string;
+  description: string;
+  logoFile: File | null;
+}
+
 const initialStoreForm: StoreForm = {
   name: '',
   site: '',
 };
 
+const initialOrganizationForm: OrganizationFormState = {
+  name: '',
+  description: '',
+  logoFile: null,
+};
+
 export const AdminStoresPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { setActiveOrganization } = useOrganizationBranding();
   const [searchParams, setSearchParams] = useSearchParams();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
@@ -39,7 +53,8 @@ export const AdminStoresPage = () => {
   const [isSavingStore, setIsSavingStore] = useState(false);
   const [storeError, setStoreError] = useState<string | null>(null);
   const [isOrganizationModalOpen, setIsOrganizationModalOpen] = useState(false);
-  const [organizationForm, setOrganizationForm] = useState({ name: '', description: '' });
+  const [organizationForm, setOrganizationForm] =
+    useState<OrganizationFormState>(initialOrganizationForm);
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [memberEmail, setMemberEmail] = useState('');
   const [memberError, setMemberError] = useState<string | null>(null);
@@ -111,6 +126,12 @@ export const AdminStoresPage = () => {
     [organizations, selectedOrganizationId],
   );
 
+  useEffect(() => {
+    setActiveOrganization(selectedOrganization ?? null);
+  }, [selectedOrganization, setActiveOrganization]);
+
+  useEffect(() => () => setActiveOrganization(null), [setActiveOrganization]);
+
   const openCreateModal = () => {
     setStoreForm(initialStoreForm);
     setStoreError(null);
@@ -131,6 +152,7 @@ export const AdminStoresPage = () => {
     setOrganizationForm({
       name: selectedOrganization.name,
       description: selectedOrganization.description,
+      logoFile: null,
     });
     setOrganizationError(null);
     setMemberEmail('');
@@ -143,6 +165,7 @@ export const AdminStoresPage = () => {
     setOrganizationError(null);
     setMemberEmail('');
     setMemberError(null);
+    setOrganizationForm(initialOrganizationForm);
   };
 
   const handleStoreSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -211,14 +234,11 @@ export const AdminStoresPage = () => {
       const updated = await organizationService.update(selectedOrganization.id, {
         name: trimmedName,
         description: trimmedDescription,
+        logoFile: organizationForm.logoFile,
       });
 
       setOrganizations((previous) =>
-        previous.map((organization) =>
-          organization.id === updated.id
-            ? { ...organization, name: updated.name, description: updated.description }
-            : organization,
-        ),
+        previous.map((organization) => (organization.id === updated.id ? updated : organization)),
       );
       showToast({ type: 'success', message: 'Organização atualizada com sucesso.' });
       closeOrganizationModal();
@@ -383,7 +403,6 @@ export const AdminStoresPage = () => {
             <button type="button" className="link-button" onClick={() => navigate('/admin')}>
               &larr; Voltar
             </button>
-            <span className="badge">Painel do administrador</span>
             <h1 className="section-title">
               {selectedOrganization
                 ? `Lojas da organização ${selectedOrganization.name}`
@@ -398,9 +417,7 @@ export const AdminStoresPage = () => {
           <div className="page-actions">
             {isOrganizationLocked ? (
               <div className="selected-organization-info">
-                <span className="badge">
-                  {selectedOrganization?.name ?? 'Organização selecionada'}
-                </span>
+                <strong>{selectedOrganization?.name ?? 'Organização selecionada'}</strong>
               </div>
             ) : (
               <SelectInput
@@ -550,6 +567,23 @@ export const AdminStoresPage = () => {
               }
               placeholder="Resuma o objetivo principal desta organização"
             />
+            <label className="upload-label" htmlFor="organization-update-logo">
+              <span>Logo da organização</span>
+              <span className="upload-trigger">Atualizar logo</span>
+              <input
+                id="organization-update-logo"
+                className="upload-input"
+                type="file"
+                accept="image/*"
+                onChange={(event) =>
+                  setOrganizationForm((previous) => ({
+                    ...previous,
+                    logoFile: event.target.files?.[0] ?? null,
+                  }))
+                }
+              />
+              <span className="upload-hint">Envie um arquivo PNG, JPG ou SVG até 5MB.</span>
+            </label>
             <div className="form-actions">
               <Button type="submit" isLoading={isSavingOrganization} loadingText="Salvando...">
                 Salvar alterações

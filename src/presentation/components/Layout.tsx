@@ -1,7 +1,10 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+import type { Organization } from '../../domain/entities/Organization';
+import { organizationService } from '../../main/factories/organizationServiceFactory';
 import { useAuth } from '../hooks/useAuth';
+import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Button } from './Button';
 import { UserAvatar } from './UserAvatar';
 import { LogoutIcon, UserIcon } from './icons';
@@ -12,15 +15,65 @@ interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   const { user, logout } = useAuth();
+  const { activeOrganization } = useOrganizationBranding();
   const navigate = useNavigate();
   const displayName = user?.displayName || user?.email || '';
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [isLoadingOrganization, setIsLoadingOrganization] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchOrganization = async () => {
+      if (!user?.organizationId) {
+        setOrganization(null);
+        return;
+      }
+
+      setIsLoadingOrganization(true);
+      try {
+        const data = await organizationService.getById(user.organizationId);
+        if (isMounted) {
+          setOrganization(data);
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setOrganization(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingOrganization(false);
+        }
+      }
+    };
+
+    void fetchOrganization();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.organizationId]);
+
+  const brandSource = activeOrganization ?? organization;
+  const brandName = brandSource?.name || 'QaLite';
+  const brandLogo = brandSource?.logoUrl || null;
 
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Link to="/" className="app-brand" aria-label="Página inicial da QaLite">
-          <span className="app-logo">QaLite</span>
-          <span className="app-brand-subtitle">Plataforma de Experiências</span>
+        <Link to="/" className="app-brand" aria-label={`Página inicial da ${brandName}`}>
+          {brandLogo ? (
+            <img
+              src={brandLogo}
+              alt={`Logo da ${brandName}`}
+              className="app-brand-logo"
+              aria-hidden={isLoadingOrganization}
+            />
+          ) : (
+            <span className="app-logo">{brandName}</span>
+          )}
+          {brandSource?.name && <span className="app-brand-name">{brandSource.name}</span>}
         </Link>
         <nav className="header-actions">
           {user ? (

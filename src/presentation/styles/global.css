@@ -140,9 +140,9 @@ a.text-link:hover {
 }
 
 .app-brand {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
   text-transform: none;
 }
 
@@ -153,12 +153,20 @@ a.text-link:hover {
   color: var(--color-text-primary);
 }
 
-.app-brand-subtitle {
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
+.app-brand-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 0.75rem;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  padding: 0.35rem;
+}
+
+.app-brand-name {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 .header-actions {
@@ -836,17 +844,10 @@ a.text-link:hover {
   }
 }
 
-.section-title {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  margin-bottom: 1rem;
-}
-
-.section-subtitle {
-  font-size: 1rem;
-  color: var(--color-text-muted);
-  margin-bottom: 2rem;
+.section-title,
+.section-subtitle,
+.badge {
+  display: none;
 }
 
 .text-primary {
@@ -3086,10 +3087,41 @@ a.text-link:hover {
   gap: 1rem;
 }
 
-.environment-page__title {
+.environment-organization-branding__logo,
+.environment-organization-branding__placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.environment-organization-branding__logo {
+  padding: 4px;
+}
+
+.environment-organization-branding__details {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  line-height: 1.2;
+}
+
+.environment-organization-branding__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.environment-organization-branding__name {
+  font-size: 1rem;
+  color: var(--color-text-primary);
 }
 
 .environment-summary-grid {
@@ -3152,16 +3184,6 @@ a.text-link:hover {
   font-size: clamp(1.5rem, 3vw, 2.25rem);
   font-weight: 700;
   letter-spacing: 0.02em;
-}
-
-.environment-locked-message {
-  background: var(--color-surface-alt);
-  border-radius: 1rem;
-  padding: 0.85rem 1.1rem;
-  border: 1px dashed var(--color-border);
-  color: var(--color-text-muted);
-  max-width: 32rem;
-  margin-bottom: 1rem;
 }
 
 .summary-card__metrics {
