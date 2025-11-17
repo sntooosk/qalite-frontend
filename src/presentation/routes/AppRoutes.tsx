@@ -19,6 +19,7 @@ import { OrganizationDashboardPage } from '../pages/OrganizationDashboardPage';
 import { StoreSummaryPage } from '../pages/StoreSummaryPage';
 import { EnvironmentPage } from '../pages/EnvironmentPage';
 import { PublicEnvironmentPage } from '../pages/PublicEnvironmentPage';
+import { RouteTransitionOverlay } from '../components/RouteTransitionOverlay';
 
 export const AppRoutes = () => (
   <ThemeProvider>
@@ -26,6 +27,7 @@ export const AppRoutes = () => (
       <AuthProvider>
         <OrganizationBrandingProvider>
           <BrowserRouter>
+            <RouteTransitionOverlay />
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
