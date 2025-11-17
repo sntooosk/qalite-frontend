@@ -307,12 +307,14 @@ export class FirebaseEnvironmentRepository implements IEnvironmentRepository {
       }
 
       const presentUsers: string[] = data?.presentUsersIds ?? [];
+      const participants: string[] = data?.participants ?? [];
       if (!presentUsers.includes(userId)) {
         return;
       }
 
       transaction.update(environmentRef, {
         presentUsersIds: presentUsers.filter((id) => id !== userId),
+        participants: participants.filter((id) => id !== userId),
         updatedAt: serverTimestamp(),
       });
     });
