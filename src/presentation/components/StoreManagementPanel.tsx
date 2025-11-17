@@ -18,6 +18,11 @@ import {
   CRITICALITY_OPTIONS,
   getCriticalityClassName,
 } from '../constants/scenarioOptions';
+import {
+  ScenarioColumnSortControl,
+  sortScenarioList,
+  type ScenarioSortConfig,
+} from './ScenarioColumnSortControl';
 
 interface StoreManagementPanelProps {
   organizationId: string;
@@ -70,9 +75,13 @@ export const StoreManagementPanel = ({
   const [editingCategoryName, setEditingCategoryName] = useState('');
   const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+  const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
+  const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const canUseScenarioForm = canManageScenarios && showScenarioForm !== false;
+  const canToggleCategoryList =
+    !isLoadingCategories && !isSyncingLegacyCategories && categories.length > 0;
 
   const scenarioCategories = useMemo(
     () =>
@@ -82,6 +91,11 @@ export const StoreManagementPanel = ({
           .filter((category) => category.length > 0),
       ),
     [scenarios],
+  );
+
+  const displayedScenarios = useMemo(
+    () => sortScenarioList(scenarios, scenarioSort),
+    [scenarioSort, scenarios],
   );
 
   const persistedCategoryNames = useMemo(
@@ -207,6 +221,11 @@ export const StoreManagementPanel = ({
       isMounted = false;
     };
   }, [selectedStore, showToast]);
+
+  useEffect(() => {
+    setIsCategoryListCollapsed(true);
+    setScenarioSort(null);
+  }, [selectedStoreId]);
 
   useEffect(() => {
     if (
@@ -986,11 +1005,25 @@ export const StoreManagementPanel = ({
                 </div>
                 <div className="category-manager">
                   <div className="category-manager-header">
-                    <p className="field-label">Gerencie as categorias disponíveis</p>
-                    <p className="category-manager-description">
-                      Cadastre, edite ou remova categorias para manter a massa organizada. Só é
-                      possível remover categorias que não estejam associadas a cenários.
-                    </p>
+                    <div className="category-manager-header-text">
+                      <p className="field-label">Gerencie as categorias disponíveis</p>
+                      <p className="category-manager-description">
+                        Cadastre, edite ou remova categorias para manter a massa organizada. Só é
+                        possível remover categorias que não estejam associadas a cenários.
+                      </p>
+                    </div>
+                    {canToggleCategoryList && (
+                      <button
+                        type="button"
+                        className="category-manager-toggle"
+                        onClick={() =>
+                          setIsCategoryListCollapsed((previousState) => !previousState)
+                        }
+                        aria-expanded={!isCategoryListCollapsed}
+                      >
+                        {isCategoryListCollapsed ? 'Maximizar lista' : 'Minimizar lista'}
+                      </button>
+                    )}
                   </div>
                   <div className="category-manager-actions">
                     <input
@@ -1022,6 +1055,10 @@ export const StoreManagementPanel = ({
                   )}
                   {isLoadingCategories || isSyncingLegacyCategories ? (
                     <p className="category-manager-description">Carregando categorias...</p>
+                  ) : isCategoryListCollapsed && categories.length > 0 ? (
+                    <p className="category-manager-description category-manager-collapsed-message">
+                      Lista minimizada. Utilize o botão acima para visualizar novamente.
+                    </p>
                   ) : categories.length > 0 ? (
                     <ul className="category-manager-list">
                       {categories.map((category) => {
@@ -1162,16 +1199,37 @@ export const StoreManagementPanel = ({
                   <thead>
                     <tr>
                       <th>Título</th>
-                      <th>Categoria</th>
-                      <th>Automação</th>
-                      <th>Criticidade</th>
+                      <th>
+                        <ScenarioColumnSortControl
+                          label="Categoria"
+                          field="category"
+                          sort={scenarioSort}
+                          onChange={setScenarioSort}
+                        />
+                      </th>
+                      <th>
+                        <ScenarioColumnSortControl
+                          label="Automação"
+                          field="automation"
+                          sort={scenarioSort}
+                          onChange={setScenarioSort}
+                        />
+                      </th>
+                      <th>
+                        <ScenarioColumnSortControl
+                          label="Criticidade"
+                          field="criticality"
+                          sort={scenarioSort}
+                          onChange={setScenarioSort}
+                        />
+                      </th>
                       <th>Observação</th>
                       <th>BDD</th>
                       {canUseScenarioForm && <th>Ações</th>}
                     </tr>
                   </thead>
                   <tbody>
-                    {scenarios.map((scenario) => (
+                    {displayedScenarios.map((scenario) => (
                       <tr key={scenario.id}>
                         <td>{scenario.title}</td>
                         <td>{scenario.category}</td>

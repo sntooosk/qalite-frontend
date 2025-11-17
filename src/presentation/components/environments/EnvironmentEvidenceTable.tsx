@@ -1,7 +1,12 @@
-import type { ChangeEvent } from 'react';
+import { type ChangeEvent, useMemo, useState } from 'react';
 
 import type { Environment, EnvironmentScenarioStatus } from '../../../domain/entities/Environment';
 import { useScenarioEvidence } from '../../hooks/useScenarioEvidence';
+import {
+  ScenarioColumnSortControl,
+  createScenarioSortComparator,
+  type ScenarioSortConfig,
+} from '../ScenarioColumnSortControl';
 
 interface EnvironmentEvidenceTableProps {
   environment: Environment;
@@ -25,7 +30,35 @@ export const EnvironmentEvidenceTable = ({
   const { isUpdating, handleEvidenceUpload, changeScenarioStatus } = useScenarioEvidence(
     environment.id,
   );
-  const scenarioEntries = Object.entries(environment.scenarios ?? {});
+  const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
+  const scenarioEntries = useMemo(
+    () => Object.entries(environment.scenarios ?? {}),
+    [environment.scenarios],
+  );
+  const orderedScenarioEntries = useMemo(() => {
+    if (!scenarioSort) {
+      return scenarioEntries;
+    }
+
+    const comparator = createScenarioSortComparator(scenarioSort);
+
+    return scenarioEntries.slice().sort(([, first], [, second]) =>
+      comparator(
+        {
+          criticality: first.criticidade,
+          category: first.categoria,
+          automation: first.automatizado ?? '',
+          title: first.titulo,
+        },
+        {
+          criticality: second.criticidade,
+          category: second.categoria,
+          automation: second.automatizado ?? '',
+          title: second.titulo,
+        },
+      ),
+    );
+  }, [scenarioEntries, scenarioSort]);
   const isReadOnly = Boolean(isLocked || readOnly);
 
   const handleStatusChange = async (scenarioId: string, status: EnvironmentScenarioStatus) => {
@@ -56,14 +89,28 @@ export const EnvironmentEvidenceTable = ({
         <thead>
           <tr>
             <th>Título</th>
-            <th>Categoria</th>
-            <th>Criticidade</th>
+            <th>
+              <ScenarioColumnSortControl
+                label="Categoria"
+                field="category"
+                sort={scenarioSort}
+                onChange={setScenarioSort}
+              />
+            </th>
+            <th>
+              <ScenarioColumnSortControl
+                label="Criticidade"
+                field="criticality"
+                sort={scenarioSort}
+                onChange={setScenarioSort}
+              />
+            </th>
             <th>Status</th>
             <th>Evidência</th>
           </tr>
         </thead>
         <tbody>
-          {scenarioEntries.map(([scenarioId, data]) => (
+          {orderedScenarioEntries.map(([scenarioId, data]) => (
             <tr key={scenarioId}>
               <td>{data.titulo}</td>
               <td>{data.categoria}</td>

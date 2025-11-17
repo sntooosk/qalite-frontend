@@ -2153,6 +2153,51 @@ a.text-link:hover {
   text-decoration: underline;
 }
 
+.scenario-column-sort {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.scenario-column-sort-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.scenario-column-sort-buttons {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.scenario-column-sort-button {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  width: 1.75rem;
+  height: 1.45rem;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-text-primary);
+}
+
+.scenario-column-sort-button:hover {
+  background: var(--color-surface-hover);
+}
+
+.scenario-column-sort-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-ring);
+}
+
+.scenario-column-sort-button[aria-pressed='true'] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: transparent;
+}
+
 .data-table {
   width: 100%;
   min-width: 640px;
@@ -2836,8 +2881,18 @@ a.text-link:hover {
 }
 
 .category-manager-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.category-manager-header-text {
   display: grid;
   gap: 0.35rem;
+  flex: 1;
+  min-width: 220px;
 }
 
 .category-manager-description,
@@ -2850,6 +2905,30 @@ a.text-link:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.category-manager-toggle {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 0.35rem 0.8rem;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base),
+    color var(--transition-base);
+}
+
+.category-manager-toggle:hover,
+.category-manager-toggle:focus-visible {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.category-manager-collapsed-message {
+  font-style: italic;
 }
 
 .category-manager-actions .field-input {
@@ -3397,6 +3476,13 @@ a.text-link:hover {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 0.75rem;
+}
+
+.summary-card__footnote {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  font-style: italic;
 }
 
 .summary-card__detail {

@@ -28,6 +28,12 @@ import {
   getCriticalityClassName,
 } from '../constants/scenarioOptions';
 import { EnvironmentKanban } from '../components/environments/EnvironmentKanban';
+import {
+  ScenarioColumnSortControl,
+  createScenarioSortComparator,
+  sortScenarioList,
+  type ScenarioSortConfig,
+} from '../components/ScenarioColumnSortControl';
 
 const emptyScenarioForm: StoreScenarioInput = {
   title: '',
@@ -58,12 +64,14 @@ const emptyScenarioFilters: ScenarioFilters = {
 
 const filterScenarios = (list: StoreScenario[], filters: ScenarioFilters) => {
   const searchValue = filters.search.trim().toLowerCase();
-  return list.filter((scenario) => {
+  const filtered = list.filter((scenario) => {
     const matchesSearch = !searchValue || scenario.title.toLowerCase().includes(searchValue);
     const matchesCategory = !filters.category || scenario.category === filters.category;
     const matchesCriticality = !filters.criticality || scenario.criticality === filters.criticality;
     return matchesSearch && matchesCategory && matchesCriticality;
   });
+
+  return filtered;
 };
 
 export const StoreSummaryPage = () => {
@@ -94,7 +102,9 @@ export const StoreSummaryPage = () => {
   const [editingCategoryName, setEditingCategoryName] = useState('');
   const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+  const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
+  const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const [suiteForm, setSuiteForm] = useState<StoreSuiteInput>(emptySuiteForm);
   const [suiteFormError, setSuiteFormError] = useState<string | null>(null);
   const [editingSuiteId, setEditingSuiteId] = useState<string | null>(null);
@@ -103,7 +113,9 @@ export const StoreSummaryPage = () => {
   const [scenarioFilters, setScenarioFilters] = useState<ScenarioFilters>(emptyScenarioFilters);
   const [suiteScenarioFilters, setSuiteScenarioFilters] =
     useState<ScenarioFilters>(emptyScenarioFilters);
+  const [suiteScenarioSort, setSuiteScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const [selectedSuitePreviewId, setSelectedSuitePreviewId] = useState<string | null>(null);
+  const [suitePreviewSort, setSuitePreviewSort] = useState<ScenarioSortConfig | null>(null);
   const [isViewingSuitesOnly, setIsViewingSuitesOnly] = useState(false);
   const suiteListRef = useRef<HTMLDivElement | null>(null);
   const [isStoreSettingsOpen, setIsStoreSettingsOpen] = useState(false);
@@ -126,6 +138,8 @@ export const StoreSummaryPage = () => {
 
   const canManageScenarios = Boolean(user);
   const canManageStoreSettings = user?.role === 'admin';
+  const canToggleCategoryList =
+    !isLoadingCategories && !isSyncingLegacyCategories && categories.length > 0;
 
   const scenarioMap = useMemo(() => {
     const map = new Map<string, StoreScenario>();
@@ -196,10 +210,18 @@ export const StoreSummaryPage = () => {
     () => filterScenarios(scenarios, scenarioFilters),
     [scenarioFilters, scenarios],
   );
+  const orderedFilteredScenarios = useMemo(
+    () => sortScenarioList(filteredScenarios, scenarioSort),
+    [filteredScenarios, scenarioSort],
+  );
 
   const filteredSuiteScenarios = useMemo(
     () => filterScenarios(scenarios, suiteScenarioFilters),
     [scenarios, suiteScenarioFilters],
+  );
+  const orderedSuiteScenarios = useMemo(
+    () => sortScenarioList(filteredSuiteScenarios, suiteScenarioSort),
+    [filteredSuiteScenarios, suiteScenarioSort],
   );
 
   const selectedSuitePreview = useMemo(
@@ -217,6 +239,31 @@ export const StoreSummaryPage = () => {
       scenario: scenarioMap.get(scenarioId) ?? null,
     }));
   }, [scenarioMap, selectedSuitePreview]);
+
+  const orderedSuitePreviewEntries = useMemo(() => {
+    if (!suitePreviewSort) {
+      return selectedSuitePreviewEntries;
+    }
+
+    const comparator = createScenarioSortComparator(suitePreviewSort);
+
+    return selectedSuitePreviewEntries.slice().sort((first, second) =>
+      comparator(
+        {
+          criticality: first.scenario?.criticality ?? '',
+          category: first.scenario?.category ?? '',
+          automation: first.scenario?.automation ?? '',
+          title: first.scenario?.title ?? '',
+        },
+        {
+          criticality: second.scenario?.criticality ?? '',
+          category: second.scenario?.category ?? '',
+          automation: second.scenario?.automation ?? '',
+          title: second.scenario?.title ?? '',
+        },
+      ),
+    );
+  }, [selectedSuitePreviewEntries, suitePreviewSort]);
 
   useEffect(() => {
     if (isInitializing) {
@@ -280,6 +327,13 @@ export const StoreSummaryPage = () => {
       setIsScenarioTableCollapsed(false);
     }
   }, [scenarios.length]);
+
+  useEffect(() => {
+    setIsCategoryListCollapsed(true);
+    setScenarioSort(null);
+    setSuiteScenarioSort(null);
+    setSuitePreviewSort(null);
+  }, [storeId]);
 
   const openStoreSettings = () => {
     if (!store || !canManageStoreSettings) {
@@ -1111,12 +1165,26 @@ export const StoreSummaryPage = () => {
                     </div>
                     <div className="category-manager">
                       <div className="category-manager-header">
-                        <p className="field-label">Categorias disponíveis</p>
-                        <p className="category-manager-description">
-                          Cadastre, edite ou remova as categorias utilizadas para organizar a massa
-                          de cenários. Uma categoria só pode ser removida se não estiver associada a
-                          nenhum cenário.
-                        </p>
+                        <div className="category-manager-header-text">
+                          <p className="field-label">Categorias disponíveis</p>
+                          <p className="category-manager-description">
+                            Cadastre, edite ou remova as categorias utilizadas para organizar a
+                            massa de cenários. Uma categoria só pode ser removida se não estiver
+                            associada a nenhum cenário.
+                          </p>
+                        </div>
+                        {canToggleCategoryList && (
+                          <button
+                            type="button"
+                            className="category-manager-toggle"
+                            onClick={() =>
+                              setIsCategoryListCollapsed((previousState) => !previousState)
+                            }
+                            aria-expanded={!isCategoryListCollapsed}
+                          >
+                            {isCategoryListCollapsed ? 'Maximizar lista' : 'Minimizar lista'}
+                          </button>
+                        )}
                       </div>
                       <div className="category-manager-actions">
                         <input
@@ -1146,6 +1214,10 @@ export const StoreSummaryPage = () => {
                       )}
                       {isLoadingCategories || isSyncingLegacyCategories ? (
                         <p className="category-manager-description">Carregando categorias...</p>
+                      ) : isCategoryListCollapsed && categories.length > 0 ? (
+                        <p className="category-manager-description category-manager-collapsed-message">
+                          Lista minimizada. Utilize o botão acima para visualizar novamente.
+                        </p>
                       ) : categories.length > 0 ? (
                         <ul className="category-manager-list">
                           {categories.map((category) => {
@@ -1344,16 +1416,37 @@ export const StoreSummaryPage = () => {
                             <thead>
                               <tr>
                                 <th>Título</th>
-                                <th>Categoria</th>
-                                <th>Automação</th>
-                                <th>Criticidade</th>
+                                <th>
+                                  <ScenarioColumnSortControl
+                                    label="Categoria"
+                                    field="category"
+                                    sort={scenarioSort}
+                                    onChange={setScenarioSort}
+                                  />
+                                </th>
+                                <th>
+                                  <ScenarioColumnSortControl
+                                    label="Automação"
+                                    field="automation"
+                                    sort={scenarioSort}
+                                    onChange={setScenarioSort}
+                                  />
+                                </th>
+                                <th>
+                                  <ScenarioColumnSortControl
+                                    label="Criticidade"
+                                    field="criticality"
+                                    sort={scenarioSort}
+                                    onChange={setScenarioSort}
+                                  />
+                                </th>
                                 <th>Observação</th>
                                 <th>BDD</th>
                                 {canManageScenarios && <th>Ações</th>}
                               </tr>
                             </thead>
                             <tbody>
-                              {filteredScenarios.map((scenario) => (
+                              {orderedFilteredScenarios.map((scenario) => (
                                 <tr key={scenario.id}>
                                   <td>{scenario.title}</td>
                                   <td>{scenario.category}</td>
@@ -1449,7 +1542,7 @@ export const StoreSummaryPage = () => {
                             <p className="section-subtitle">
                               Clique em um card para visualizar os cenários associados.
                             </p>
-                          ) : selectedSuitePreviewEntries.length === 0 ? (
+                          ) : orderedSuitePreviewEntries.length === 0 ? (
                             <p className="section-subtitle">
                               Esta suíte não possui cenários cadastrados ou alguns itens foram
                               removidos.
@@ -1460,13 +1553,34 @@ export const StoreSummaryPage = () => {
                                 <thead>
                                   <tr>
                                     <th>Cenário</th>
-                                    <th>Categoria</th>
-                                    <th>Automação</th>
-                                    <th>Criticidade</th>
+                                    <th>
+                                      <ScenarioColumnSortControl
+                                        label="Categoria"
+                                        field="category"
+                                        sort={suitePreviewSort}
+                                        onChange={setSuitePreviewSort}
+                                      />
+                                    </th>
+                                    <th>
+                                      <ScenarioColumnSortControl
+                                        label="Automação"
+                                        field="automation"
+                                        sort={suitePreviewSort}
+                                        onChange={setSuitePreviewSort}
+                                      />
+                                    </th>
+                                    <th>
+                                      <ScenarioColumnSortControl
+                                        label="Criticidade"
+                                        field="criticality"
+                                        sort={suitePreviewSort}
+                                        onChange={setSuitePreviewSort}
+                                      />
+                                    </th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {selectedSuitePreviewEntries.map(({ scenarioId, scenario }) => (
+                                  {orderedSuitePreviewEntries.map(({ scenarioId, scenario }) => (
                                     <tr key={`${selectedSuitePreview.id}-${scenarioId}`}>
                                       <td>{scenario?.title ?? 'Cenário removido'}</td>
                                       <td>{scenario?.category ?? 'N/A'}</td>
@@ -1628,14 +1742,35 @@ export const StoreSummaryPage = () => {
                                                 Selecionar
                                               </th>
                                               <th>Título</th>
-                                              <th>Categoria</th>
-                                              <th>Automação</th>
-                                              <th>Criticidade</th>
+                                              <th>
+                                                <ScenarioColumnSortControl
+                                                  label="Categoria"
+                                                  field="category"
+                                                  sort={suiteScenarioSort}
+                                                  onChange={setSuiteScenarioSort}
+                                                />
+                                              </th>
+                                              <th>
+                                                <ScenarioColumnSortControl
+                                                  label="Automação"
+                                                  field="automation"
+                                                  sort={suiteScenarioSort}
+                                                  onChange={setSuiteScenarioSort}
+                                                />
+                                              </th>
+                                              <th>
+                                                <ScenarioColumnSortControl
+                                                  label="Criticidade"
+                                                  field="criticality"
+                                                  sort={suiteScenarioSort}
+                                                  onChange={setSuiteScenarioSort}
+                                                />
+                                              </th>
                                               <th>Observação</th>
                                             </tr>
                                           </thead>
                                           <tbody>
-                                            {filteredSuiteScenarios.map((scenario) => {
+                                            {orderedSuiteScenarios.map((scenario) => {
                                               const isSelected = suiteForm.scenarioIds.includes(
                                                 scenario.id,
                                               );
