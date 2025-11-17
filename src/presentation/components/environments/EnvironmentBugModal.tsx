@@ -34,13 +34,21 @@ export const EnvironmentBugModal = ({
   const [scenarioId, setScenarioId] = useState<string>('');
   const [status, setStatus] = useState<EnvironmentBugStatus>('aberto');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const scenarioOptions = useMemo(() => {
+    const options = Object.entries(environment.scenarios ?? {}).map(([id, scenario]) => ({
+      id,
+      label: scenario.titulo?.trim() || `Cenário ${id}`,
+    }));
 
-  const scenarioLabel = useMemo(() => {
-    if (!scenarioId) {
-      return 'Nenhum cenário selecionado';
+    options.sort((first, second) =>
+      first.label.localeCompare(second.label, 'pt-BR', { sensitivity: 'base' }),
+    );
+
+    if (scenarioId && !options.some((option) => option.id === scenarioId)) {
+      options.unshift({ id: scenarioId, label: 'Cenário removido' });
     }
 
-    return environment.scenarios?.[scenarioId]?.titulo ?? 'Cenário removido';
+    return options;
   }, [environment.scenarios, scenarioId]);
 
   useEffect(() => {
@@ -97,7 +105,23 @@ export const EnvironmentBugModal = ({
         <div className="environment-bug-form__grid">
           <label>
             <span>Cenário relacionado</span>
-            <input type="text" value={scenarioLabel} readOnly disabled />
+            <select
+              value={scenarioId}
+              onChange={(event) => setScenarioId(event.target.value)}
+              disabled={isSubmitting || scenarioOptions.length === 0}
+            >
+              <option value="">Não vincular a um cenário</option>
+              {scenarioOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {scenarioOptions.length === 0 && (
+              <span className="section-subtitle">
+                Este ambiente ainda não possui cenários disponíveis.
+              </span>
+            )}
           </label>
           <label>
             <span>Status</span>
