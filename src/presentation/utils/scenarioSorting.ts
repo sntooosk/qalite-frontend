@@ -1,0 +1,75 @@
+const normalize = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[^\p{Letter}\p{Number}]+/gu, '')
+    .toLowerCase();
+
+const CRITICALITY_PRIORITY: Record<string, number> = {
+  critica: 0,
+  crítica: 0,
+  alta: 1,
+  media: 2,
+  média: 2,
+  baixa: 3,
+};
+
+const AUTOMATION_PRIORITY: Record<string, number> = {
+  automatizado: 0,
+  naoautomatizado: 1,
+  nãoautomatizado: 1,
+};
+
+export interface ScenarioSortableShape {
+  criticality?: string | null;
+  category?: string | null;
+  automation?: string | null;
+  title?: string | null;
+}
+
+const compareText = (a?: string | null, b?: string | null) => {
+  const first = (a ?? '').trim();
+  const second = (b ?? '').trim();
+  if (!first && !second) {
+    return 0;
+  }
+
+  return first.localeCompare(second, 'pt-BR', { sensitivity: 'base' });
+};
+
+const getCriticalityRank = (value?: string | null) => {
+  if (!value) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  return CRITICALITY_PRIORITY[normalize(value)] ?? Number.MAX_SAFE_INTEGER;
+};
+
+const getAutomationRank = (value?: string | null) => {
+  if (!value) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  return AUTOMATION_PRIORITY[normalize(value)] ?? Number.MAX_SAFE_INTEGER;
+};
+
+export const compareScenarioPriority = <T extends ScenarioSortableShape>(a: T, b: T) => {
+  const criticalityDiff = getCriticalityRank(a.criticality) - getCriticalityRank(b.criticality);
+  if (criticalityDiff !== 0) {
+    return criticalityDiff;
+  }
+
+  const categoryDiff = compareText(a.category, b.category);
+  if (categoryDiff !== 0) {
+    return categoryDiff;
+  }
+
+  const automationDiff = getAutomationRank(a.automation) - getAutomationRank(b.automation);
+  if (automationDiff !== 0) {
+    return automationDiff;
+  }
+
+  return compareText(a.title, b.title);
+};
+
+export const sortScenarioList = <T extends ScenarioSortableShape>(list: T[]) =>
+  list.slice().sort(compareScenarioPriority);

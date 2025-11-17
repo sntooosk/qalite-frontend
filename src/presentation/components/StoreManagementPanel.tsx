@@ -18,6 +18,7 @@ import {
   CRITICALITY_OPTIONS,
   getCriticalityClassName,
 } from '../constants/scenarioOptions';
+import { sortScenarioList } from '../utils/scenarioSorting';
 
 interface StoreManagementPanelProps {
   organizationId: string;
@@ -70,7 +71,7 @@ export const StoreManagementPanel = ({
   const [editingCategoryName, setEditingCategoryName] = useState('');
   const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
-  const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(false);
+  const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const canUseScenarioForm = canManageScenarios && showScenarioForm !== false;
@@ -86,6 +87,8 @@ export const StoreManagementPanel = ({
       ),
     [scenarios],
   );
+
+  const sortedScenarios = useMemo(() => sortScenarioList(scenarios), [scenarios]);
 
   const persistedCategoryNames = useMemo(
     () =>
@@ -1196,7 +1199,7 @@ export const StoreManagementPanel = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {scenarios.map((scenario) => (
+                    {sortedScenarios.map((scenario) => (
                       <tr key={scenario.id}>
                         <td>{scenario.title}</td>
                         <td>{scenario.category}</td>

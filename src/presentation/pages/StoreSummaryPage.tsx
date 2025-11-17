@@ -28,6 +28,7 @@ import {
   getCriticalityClassName,
 } from '../constants/scenarioOptions';
 import { EnvironmentKanban } from '../components/environments/EnvironmentKanban';
+import { compareScenarioPriority, sortScenarioList } from '../utils/scenarioSorting';
 
 const emptyScenarioForm: StoreScenarioInput = {
   title: '',
@@ -58,12 +59,14 @@ const emptyScenarioFilters: ScenarioFilters = {
 
 const filterScenarios = (list: StoreScenario[], filters: ScenarioFilters) => {
   const searchValue = filters.search.trim().toLowerCase();
-  return list.filter((scenario) => {
+  const filtered = list.filter((scenario) => {
     const matchesSearch = !searchValue || scenario.title.toLowerCase().includes(searchValue);
     const matchesCategory = !filters.category || scenario.category === filters.category;
     const matchesCriticality = !filters.criticality || scenario.criticality === filters.criticality;
     return matchesSearch && matchesCategory && matchesCriticality;
   });
+
+  return sortScenarioList(filtered);
 };
 
 export const StoreSummaryPage = () => {
@@ -94,7 +97,7 @@ export const StoreSummaryPage = () => {
   const [editingCategoryName, setEditingCategoryName] = useState('');
   const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
-  const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(false);
+  const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
   const [suiteForm, setSuiteForm] = useState<StoreSuiteInput>(emptySuiteForm);
   const [suiteFormError, setSuiteFormError] = useState<string | null>(null);
@@ -220,6 +223,27 @@ export const StoreSummaryPage = () => {
       scenario: scenarioMap.get(scenarioId) ?? null,
     }));
   }, [scenarioMap, selectedSuitePreview]);
+
+  const sortedSuitePreviewEntries = useMemo(
+    () =>
+      selectedSuitePreviewEntries.slice().sort((first, second) =>
+        compareScenarioPriority(
+          {
+            criticality: first.scenario?.criticality ?? '',
+            category: first.scenario?.category ?? '',
+            automation: first.scenario?.automation ?? '',
+            title: first.scenario?.title ?? '',
+          },
+          {
+            criticality: second.scenario?.criticality ?? '',
+            category: second.scenario?.category ?? '',
+            automation: second.scenario?.automation ?? '',
+            title: second.scenario?.title ?? '',
+          },
+        ),
+      ),
+    [selectedSuitePreviewEntries],
+  );
 
   useEffect(() => {
     if (isInitializing) {
@@ -1474,7 +1498,7 @@ export const StoreSummaryPage = () => {
                             <p className="section-subtitle">
                               Clique em um card para visualizar os cenários associados.
                             </p>
-                          ) : selectedSuitePreviewEntries.length === 0 ? (
+                          ) : sortedSuitePreviewEntries.length === 0 ? (
                             <p className="section-subtitle">
                               Esta suíte não possui cenários cadastrados ou alguns itens foram
                               removidos.
@@ -1491,7 +1515,7 @@ export const StoreSummaryPage = () => {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {selectedSuitePreviewEntries.map(({ scenarioId, scenario }) => (
+                                  {sortedSuitePreviewEntries.map(({ scenarioId, scenario }) => (
                                     <tr key={`${selectedSuitePreview.id}-${scenarioId}`}>
                                       <td>{scenario?.title ?? 'Cenário removido'}</td>
                                       <td>{scenario?.category ?? 'N/A'}</td>

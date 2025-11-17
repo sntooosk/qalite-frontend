@@ -1,7 +1,8 @@
-import type { ChangeEvent } from 'react';
+import { type ChangeEvent, useMemo } from 'react';
 
 import type { Environment, EnvironmentScenarioStatus } from '../../../domain/entities/Environment';
 import { useScenarioEvidence } from '../../hooks/useScenarioEvidence';
+import { compareScenarioPriority } from '../../utils/scenarioSorting';
 
 interface EnvironmentEvidenceTableProps {
   environment: Environment;
@@ -25,7 +26,30 @@ export const EnvironmentEvidenceTable = ({
   const { isUpdating, handleEvidenceUpload, changeScenarioStatus } = useScenarioEvidence(
     environment.id,
   );
-  const scenarioEntries = Object.entries(environment.scenarios ?? {});
+  const scenarioEntries = useMemo(
+    () => Object.entries(environment.scenarios ?? {}),
+    [environment.scenarios],
+  );
+  const sortedScenarioEntries = useMemo(
+    () =>
+      scenarioEntries.slice().sort(([, first], [, second]) =>
+        compareScenarioPriority(
+          {
+            criticality: first.criticidade,
+            category: first.categoria,
+            automation: null,
+            title: first.titulo,
+          },
+          {
+            criticality: second.criticidade,
+            category: second.categoria,
+            automation: null,
+            title: second.titulo,
+          },
+        ),
+      ),
+    [scenarioEntries],
+  );
   const isReadOnly = Boolean(isLocked || readOnly);
 
   const handleStatusChange = async (scenarioId: string, status: EnvironmentScenarioStatus) => {
@@ -63,7 +87,7 @@ export const EnvironmentEvidenceTable = ({
           </tr>
         </thead>
         <tbody>
-          {scenarioEntries.map(([scenarioId, data]) => (
+          {sortedScenarioEntries.map(([scenarioId, data]) => (
             <tr key={scenarioId}>
               <td>{data.titulo}</td>
               <td>{data.categoria}</td>
