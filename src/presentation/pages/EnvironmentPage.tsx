@@ -111,6 +111,16 @@ export const EnvironmentPage = () => {
     return { total: scenarios.length, concluded, pending, running };
   }, [environment]);
 
+  const dualPlatformScenarioStats = useMemo(
+    () => ({
+      total: scenarioStats.total * 2,
+      concluded: scenarioStats.concluded * 2,
+      pending: scenarioStats.pending * 2,
+      running: scenarioStats.running * 2,
+    }),
+    [scenarioStats],
+  );
+
   const progressPercentage = useMemo(() => {
     if (scenarioStats.total === 0) {
       return 0;
@@ -120,9 +130,9 @@ export const EnvironmentPage = () => {
   }, [scenarioStats.concluded, scenarioStats.total]);
 
   const progressLabel =
-    scenarioStats.total === 0
+    dualPlatformScenarioStats.total === 0
       ? 'Nenhum cenário cadastrado ainda.'
-      : `${scenarioStats.concluded} de ${scenarioStats.total} concluídos`;
+      : `${dualPlatformScenarioStats.concluded} de ${dualPlatformScenarioStats.total} concluídos`;
 
   const handleStatusTransition = async (target: EnvironmentStatus) => {
     if (!environment) {
@@ -313,21 +323,24 @@ export const EnvironmentPage = () => {
             <div className="summary-card__metrics summary-card__metrics--pill">
               <div className="summary-pill">
                 <span>Total de cenários</span>
-                <strong>{scenarioStats.total}</strong>
+                <strong>{dualPlatformScenarioStats.total}</strong>
               </div>
               <div className="summary-pill">
                 <span>Concluídos</span>
-                <strong>{scenarioStats.concluded}</strong>
+                <strong>{dualPlatformScenarioStats.concluded}</strong>
               </div>
               <div className="summary-pill">
                 <span>Em andamento</span>
-                <strong>{scenarioStats.running}</strong>
+                <strong>{dualPlatformScenarioStats.running}</strong>
               </div>
               <div className="summary-pill">
                 <span>Pendentes</span>
-                <strong>{scenarioStats.pending}</strong>
+                <strong>{dualPlatformScenarioStats.pending}</strong>
               </div>
             </div>
+            <p className="summary-card__footnote">
+              A contagem considera execuções em Mobile e Desktop.
+            </p>
             <div className="summary-card__details">
               <div className="summary-card__detail">
                 <span className="summary-card__detail-label">Tempo total</span>

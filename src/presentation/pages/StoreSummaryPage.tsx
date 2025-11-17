@@ -94,6 +94,7 @@ export const StoreSummaryPage = () => {
   const [editingCategoryName, setEditingCategoryName] = useState('');
   const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+  const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(false);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
   const [suiteForm, setSuiteForm] = useState<StoreSuiteInput>(emptySuiteForm);
   const [suiteFormError, setSuiteFormError] = useState<string | null>(null);
@@ -126,6 +127,8 @@ export const StoreSummaryPage = () => {
 
   const canManageScenarios = Boolean(user);
   const canManageStoreSettings = user?.role === 'admin';
+  const canToggleCategoryList =
+    !isLoadingCategories && !isSyncingLegacyCategories && categories.length > 0;
 
   const scenarioMap = useMemo(() => {
     const map = new Map<string, StoreScenario>();
@@ -280,6 +283,10 @@ export const StoreSummaryPage = () => {
       setIsScenarioTableCollapsed(false);
     }
   }, [scenarios.length]);
+
+  useEffect(() => {
+    setIsCategoryListCollapsed(false);
+  }, [storeId]);
 
   const openStoreSettings = () => {
     if (!store || !canManageStoreSettings) {
@@ -1111,12 +1118,26 @@ export const StoreSummaryPage = () => {
                     </div>
                     <div className="category-manager">
                       <div className="category-manager-header">
-                        <p className="field-label">Categorias disponíveis</p>
-                        <p className="category-manager-description">
-                          Cadastre, edite ou remova as categorias utilizadas para organizar a massa
-                          de cenários. Uma categoria só pode ser removida se não estiver associada a
-                          nenhum cenário.
-                        </p>
+                        <div className="category-manager-header-text">
+                          <p className="field-label">Categorias disponíveis</p>
+                          <p className="category-manager-description">
+                            Cadastre, edite ou remova as categorias utilizadas para organizar a
+                            massa de cenários. Uma categoria só pode ser removida se não estiver
+                            associada a nenhum cenário.
+                          </p>
+                        </div>
+                        {canToggleCategoryList && (
+                          <button
+                            type="button"
+                            className="category-manager-toggle"
+                            onClick={() =>
+                              setIsCategoryListCollapsed((previousState) => !previousState)
+                            }
+                            aria-expanded={!isCategoryListCollapsed}
+                          >
+                            {isCategoryListCollapsed ? 'Maximizar lista' : 'Minimizar lista'}
+                          </button>
+                        )}
                       </div>
                       <div className="category-manager-actions">
                         <input
@@ -1146,6 +1167,10 @@ export const StoreSummaryPage = () => {
                       )}
                       {isLoadingCategories || isSyncingLegacyCategories ? (
                         <p className="category-manager-description">Carregando categorias...</p>
+                      ) : isCategoryListCollapsed && categories.length > 0 ? (
+                        <p className="category-manager-description category-manager-collapsed-message">
+                          Lista minimizada. Utilize o botão acima para visualizar novamente.
+                        </p>
                       ) : categories.length > 0 ? (
                         <ul className="category-manager-list">
                           {categories.map((category) => {
