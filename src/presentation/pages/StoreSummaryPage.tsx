@@ -66,7 +66,7 @@ const filterScenarios = (list: StoreScenario[], filters: ScenarioFilters) => {
     return matchesSearch && matchesCategory && matchesCriticality;
   });
 
-  return sortScenarioList(filtered);
+  return filtered;
 };
 
 export const StoreSummaryPage = () => {
@@ -99,6 +99,7 @@ export const StoreSummaryPage = () => {
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
   const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
+  const [isScenarioSortEnabled, setIsScenarioSortEnabled] = useState(false);
   const [suiteForm, setSuiteForm] = useState<StoreSuiteInput>(emptySuiteForm);
   const [suiteFormError, setSuiteFormError] = useState<string | null>(null);
   const [editingSuiteId, setEditingSuiteId] = useState<string | null>(null);
@@ -107,7 +108,9 @@ export const StoreSummaryPage = () => {
   const [scenarioFilters, setScenarioFilters] = useState<ScenarioFilters>(emptyScenarioFilters);
   const [suiteScenarioFilters, setSuiteScenarioFilters] =
     useState<ScenarioFilters>(emptyScenarioFilters);
+  const [isSuiteScenarioSortEnabled, setIsSuiteScenarioSortEnabled] = useState(false);
   const [selectedSuitePreviewId, setSelectedSuitePreviewId] = useState<string | null>(null);
+  const [isSuitePreviewSortEnabled, setIsSuitePreviewSortEnabled] = useState(false);
   const [isViewingSuitesOnly, setIsViewingSuitesOnly] = useState(false);
   const suiteListRef = useRef<HTMLDivElement | null>(null);
   const [isStoreSettingsOpen, setIsStoreSettingsOpen] = useState(false);
@@ -202,10 +205,21 @@ export const StoreSummaryPage = () => {
     () => filterScenarios(scenarios, scenarioFilters),
     [scenarioFilters, scenarios],
   );
+  const orderedFilteredScenarios = useMemo(
+    () => (isScenarioSortEnabled ? sortScenarioList(filteredScenarios) : filteredScenarios),
+    [filteredScenarios, isScenarioSortEnabled],
+  );
 
   const filteredSuiteScenarios = useMemo(
     () => filterScenarios(scenarios, suiteScenarioFilters),
     [scenarios, suiteScenarioFilters],
+  );
+  const orderedSuiteScenarios = useMemo(
+    () =>
+      isSuiteScenarioSortEnabled
+        ? sortScenarioList(filteredSuiteScenarios)
+        : filteredSuiteScenarios,
+    [filteredSuiteScenarios, isSuiteScenarioSortEnabled],
   );
 
   const selectedSuitePreview = useMemo(
@@ -224,26 +238,28 @@ export const StoreSummaryPage = () => {
     }));
   }, [scenarioMap, selectedSuitePreview]);
 
-  const sortedSuitePreviewEntries = useMemo(
-    () =>
-      selectedSuitePreviewEntries.slice().sort((first, second) =>
-        compareScenarioPriority(
-          {
-            criticality: first.scenario?.criticality ?? '',
-            category: first.scenario?.category ?? '',
-            automation: first.scenario?.automation ?? '',
-            title: first.scenario?.title ?? '',
-          },
-          {
-            criticality: second.scenario?.criticality ?? '',
-            category: second.scenario?.category ?? '',
-            automation: second.scenario?.automation ?? '',
-            title: second.scenario?.title ?? '',
-          },
-        ),
+  const orderedSuitePreviewEntries = useMemo(() => {
+    if (!isSuitePreviewSortEnabled) {
+      return selectedSuitePreviewEntries;
+    }
+
+    return selectedSuitePreviewEntries.slice().sort((first, second) =>
+      compareScenarioPriority(
+        {
+          criticality: first.scenario?.criticality ?? '',
+          category: first.scenario?.category ?? '',
+          automation: first.scenario?.automation ?? '',
+          title: first.scenario?.title ?? '',
+        },
+        {
+          criticality: second.scenario?.criticality ?? '',
+          category: second.scenario?.category ?? '',
+          automation: second.scenario?.automation ?? '',
+          title: second.scenario?.title ?? '',
+        },
       ),
-    [selectedSuitePreviewEntries],
-  );
+    );
+  }, [isSuitePreviewSortEnabled, selectedSuitePreviewEntries]);
 
   useEffect(() => {
     if (isInitializing) {
@@ -309,7 +325,10 @@ export const StoreSummaryPage = () => {
   }, [scenarios.length]);
 
   useEffect(() => {
-    setIsCategoryListCollapsed(false);
+    setIsCategoryListCollapsed(true);
+    setIsScenarioSortEnabled(false);
+    setIsSuiteScenarioSortEnabled(false);
+    setIsSuitePreviewSortEnabled(false);
   }, [storeId]);
 
   const openStoreSettings = () => {
@@ -1395,14 +1414,29 @@ export const StoreSummaryPage = () => {
                                 <th>Título</th>
                                 <th>Categoria</th>
                                 <th>Automação</th>
-                                <th>Criticidade</th>
+                                <th>
+                                  <button
+                                    type="button"
+                                    className="scenario-sort-toggle"
+                                    onClick={() =>
+                                      setIsScenarioSortEnabled((previousState) => !previousState)
+                                    }
+                                    aria-pressed={isScenarioSortEnabled}
+                                    title="Ordena por criticidade, categoria e automação"
+                                  >
+                                    Criticidade
+                                    <span className="scenario-sort-toggle-status">
+                                      {isScenarioSortEnabled ? 'Ordenação ativa' : 'Padrão'}
+                                    </span>
+                                  </button>
+                                </th>
                                 <th>Observação</th>
                                 <th>BDD</th>
                                 {canManageScenarios && <th>Ações</th>}
                               </tr>
                             </thead>
                             <tbody>
-                              {filteredScenarios.map((scenario) => (
+                              {orderedFilteredScenarios.map((scenario) => (
                                 <tr key={scenario.id}>
                                   <td>{scenario.title}</td>
                                   <td>{scenario.category}</td>
@@ -1498,7 +1532,7 @@ export const StoreSummaryPage = () => {
                             <p className="section-subtitle">
                               Clique em um card para visualizar os cenários associados.
                             </p>
-                          ) : sortedSuitePreviewEntries.length === 0 ? (
+                          ) : orderedSuitePreviewEntries.length === 0 ? (
                             <p className="section-subtitle">
                               Esta suíte não possui cenários cadastrados ou alguns itens foram
                               removidos.
@@ -1511,11 +1545,28 @@ export const StoreSummaryPage = () => {
                                     <th>Cenário</th>
                                     <th>Categoria</th>
                                     <th>Automação</th>
-                                    <th>Criticidade</th>
+                                    <th>
+                                      <button
+                                        type="button"
+                                        className="scenario-sort-toggle"
+                                        onClick={() =>
+                                          setIsSuitePreviewSortEnabled(
+                                            (previousState) => !previousState,
+                                          )
+                                        }
+                                        aria-pressed={isSuitePreviewSortEnabled}
+                                        title="Ordena por criticidade, categoria e automação"
+                                      >
+                                        Criticidade
+                                        <span className="scenario-sort-toggle-status">
+                                          {isSuitePreviewSortEnabled ? 'Ordenação ativa' : 'Padrão'}
+                                        </span>
+                                      </button>
+                                    </th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {sortedSuitePreviewEntries.map(({ scenarioId, scenario }) => (
+                                  {orderedSuitePreviewEntries.map(({ scenarioId, scenario }) => (
                                     <tr key={`${selectedSuitePreview.id}-${scenarioId}`}>
                                       <td>{scenario?.title ?? 'Cenário removido'}</td>
                                       <td>{scenario?.category ?? 'N/A'}</td>
@@ -1679,12 +1730,31 @@ export const StoreSummaryPage = () => {
                                               <th>Título</th>
                                               <th>Categoria</th>
                                               <th>Automação</th>
-                                              <th>Criticidade</th>
+                                              <th>
+                                                <button
+                                                  type="button"
+                                                  className="scenario-sort-toggle"
+                                                  onClick={() =>
+                                                    setIsSuiteScenarioSortEnabled(
+                                                      (previousState) => !previousState,
+                                                    )
+                                                  }
+                                                  aria-pressed={isSuiteScenarioSortEnabled}
+                                                  title="Ordena por criticidade, categoria e automação"
+                                                >
+                                                  Criticidade
+                                                  <span className="scenario-sort-toggle-status">
+                                                    {isSuiteScenarioSortEnabled
+                                                      ? 'Ordenação ativa'
+                                                      : 'Padrão'}
+                                                  </span>
+                                                </button>
+                                              </th>
                                               <th>Observação</th>
                                             </tr>
                                           </thead>
                                           <tbody>
-                                            {filteredSuiteScenarios.map((scenario) => {
+                                            {orderedSuiteScenarios.map((scenario) => {
                                               const isSelected = suiteForm.scenarioIds.includes(
                                                 scenario.id,
                                               );

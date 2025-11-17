@@ -73,6 +73,7 @@ export const StoreManagementPanel = ({
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
   const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
+  const [isScenarioSortEnabled, setIsScenarioSortEnabled] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const canUseScenarioForm = canManageScenarios && showScenarioForm !== false;
   const canToggleCategoryList =
@@ -88,7 +89,10 @@ export const StoreManagementPanel = ({
     [scenarios],
   );
 
-  const sortedScenarios = useMemo(() => sortScenarioList(scenarios), [scenarios]);
+  const displayedScenarios = useMemo(
+    () => (isScenarioSortEnabled ? sortScenarioList(scenarios) : scenarios),
+    [isScenarioSortEnabled, scenarios],
+  );
 
   const persistedCategoryNames = useMemo(
     () =>
@@ -215,7 +219,8 @@ export const StoreManagementPanel = ({
   }, [selectedStore, showToast]);
 
   useEffect(() => {
-    setIsCategoryListCollapsed(false);
+    setIsCategoryListCollapsed(true);
+    setIsScenarioSortEnabled(false);
   }, [selectedStoreId]);
 
   useEffect(() => {
@@ -1192,14 +1197,29 @@ export const StoreManagementPanel = ({
                       <th>Título</th>
                       <th>Categoria</th>
                       <th>Automação</th>
-                      <th>Criticidade</th>
+                      <th>
+                        <button
+                          type="button"
+                          className="scenario-sort-toggle"
+                          onClick={() =>
+                            setIsScenarioSortEnabled((previousState) => !previousState)
+                          }
+                          aria-pressed={isScenarioSortEnabled}
+                          title="Ordena por criticidade, categoria e automação"
+                        >
+                          Criticidade
+                          <span className="scenario-sort-toggle-status">
+                            {isScenarioSortEnabled ? 'Ordenação ativa' : 'Padrão'}
+                          </span>
+                        </button>
+                      </th>
                       <th>Observação</th>
                       <th>BDD</th>
                       {canUseScenarioForm && <th>Ações</th>}
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedScenarios.map((scenario) => (
+                    {displayedScenarios.map((scenario) => (
                       <tr key={scenario.id}>
                         <td>{scenario.title}</td>
                         <td>{scenario.category}</td>

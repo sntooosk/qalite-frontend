@@ -1,4 +1,4 @@
-import { type ChangeEvent, useMemo } from 'react';
+import { type ChangeEvent, useMemo, useState } from 'react';
 
 import type { Environment, EnvironmentScenarioStatus } from '../../../domain/entities/Environment';
 import { useScenarioEvidence } from '../../hooks/useScenarioEvidence';
@@ -26,30 +26,33 @@ export const EnvironmentEvidenceTable = ({
   const { isUpdating, handleEvidenceUpload, changeScenarioStatus } = useScenarioEvidence(
     environment.id,
   );
+  const [isScenarioSortEnabled, setIsScenarioSortEnabled] = useState(false);
   const scenarioEntries = useMemo(
     () => Object.entries(environment.scenarios ?? {}),
     [environment.scenarios],
   );
-  const sortedScenarioEntries = useMemo(
-    () =>
-      scenarioEntries.slice().sort(([, first], [, second]) =>
-        compareScenarioPriority(
-          {
-            criticality: first.criticidade,
-            category: first.categoria,
-            automation: null,
-            title: first.titulo,
-          },
-          {
-            criticality: second.criticidade,
-            category: second.categoria,
-            automation: null,
-            title: second.titulo,
-          },
-        ),
+  const orderedScenarioEntries = useMemo(() => {
+    if (!isScenarioSortEnabled) {
+      return scenarioEntries;
+    }
+
+    return scenarioEntries.slice().sort(([, first], [, second]) =>
+      compareScenarioPriority(
+        {
+          criticality: first.criticidade,
+          category: first.categoria,
+          automation: null,
+          title: first.titulo,
+        },
+        {
+          criticality: second.criticidade,
+          category: second.categoria,
+          automation: null,
+          title: second.titulo,
+        },
       ),
-    [scenarioEntries],
-  );
+    );
+  }, [isScenarioSortEnabled, scenarioEntries]);
   const isReadOnly = Boolean(isLocked || readOnly);
 
   const handleStatusChange = async (scenarioId: string, status: EnvironmentScenarioStatus) => {
@@ -81,13 +84,26 @@ export const EnvironmentEvidenceTable = ({
           <tr>
             <th>Título</th>
             <th>Categoria</th>
-            <th>Criticidade</th>
+            <th>
+              <button
+                type="button"
+                className="scenario-sort-toggle"
+                onClick={() => setIsScenarioSortEnabled((previousState) => !previousState)}
+                aria-pressed={isScenarioSortEnabled}
+                title="Ordena por criticidade, categoria e automação"
+              >
+                Criticidade
+                <span className="scenario-sort-toggle-status">
+                  {isScenarioSortEnabled ? 'Ordenação ativa' : 'Padrão'}
+                </span>
+              </button>
+            </th>
             <th>Status</th>
             <th>Evidência</th>
           </tr>
         </thead>
         <tbody>
-          {sortedScenarioEntries.map(([scenarioId, data]) => (
+          {orderedScenarioEntries.map(([scenarioId, data]) => (
             <tr key={scenarioId}>
               <td>{data.titulo}</td>
               <td>{data.categoria}</td>
