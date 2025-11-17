@@ -33,6 +33,14 @@ export const EnvironmentCard = ({
   const resolveDisplayName = (participant: UserSummary) =>
     participant.displayName || participant.email || 'Usuário';
 
+  const resolveInitials = (name: string) =>
+    name
+      .split(' ')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase())
+      .slice(0, 2)
+      .join('') || 'U';
+
   const handleOpen = () => onOpen(environment);
 
   return (
@@ -66,12 +74,12 @@ export const EnvironmentCard = ({
 
       <div className="environment-card-avatars" aria-label="Participantes">
         {hasParticipants ? (
-          <ul className="environment-card-avatar-list">
+          <ul className="environment-card-participant-list">
             {participants.map((user) => {
               const readableName = resolveDisplayName(user);
-              const initials = readableName.charAt(0).toUpperCase();
+              const initials = resolveInitials(readableName);
               return (
-                <li key={user.id} title={readableName}>
+                <li key={user.id} className="environment-card-participant">
                   {user.photoURL ? (
                     <img
                       src={user.photoURL}
@@ -86,6 +94,7 @@ export const EnvironmentCard = ({
                       {initials}
                     </span>
                   )}
+                  <span className="environment-card-participant-name">{readableName}</span>
                 </li>
               );
             })}
