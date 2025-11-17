@@ -6,6 +6,7 @@ import type { Store } from '../../domain/entities/Store';
 import { organizationService } from '../../main/factories/organizationServiceFactory';
 import { storeService } from '../../main/factories/storeServiceFactory';
 import { useToast } from '../context/ToastContext';
+import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
@@ -39,6 +40,7 @@ const initialOrganizationForm: OrganizationFormState = {
 export const AdminStoresPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { setActiveOrganization } = useOrganizationBranding();
   const [searchParams, setSearchParams] = useSearchParams();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
@@ -123,6 +125,12 @@ export const AdminStoresPage = () => {
     () => organizations.find((organization) => organization.id === selectedOrganizationId) ?? null,
     [organizations, selectedOrganizationId],
   );
+
+  useEffect(() => {
+    setActiveOrganization(selectedOrganization ?? null);
+  }, [selectedOrganization, setActiveOrganization]);
+
+  useEffect(() => () => setActiveOrganization(null), [setActiveOrganization]);
 
   const openCreateModal = () => {
     setStoreForm(initialStoreForm);
@@ -230,11 +238,7 @@ export const AdminStoresPage = () => {
       });
 
       setOrganizations((previous) =>
-        previous.map((organization) =>
-          organization.id === updated.id
-            ? { ...organization, name: updated.name, description: updated.description }
-            : organization,
-        ),
+        previous.map((organization) => (organization.id === updated.id ? updated : organization)),
       );
       showToast({ type: 'success', message: 'Organização atualizada com sucesso.' });
       closeOrganizationModal();

@@ -13,6 +13,7 @@ import { organizationService } from '../../main/factories/organizationServiceFac
 import { storeService } from '../../main/factories/storeServiceFactory';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../context/ToastContext';
+import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
@@ -68,6 +69,7 @@ export const StoreSummaryPage = () => {
   const { storeId } = useParams<{ storeId: string }>();
   const { user, isInitializing } = useAuth();
   const { showToast } = useToast();
+  const { setActiveOrganization } = useOrganizationBranding();
 
   const [store, setStore] = useState<Store | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -421,6 +423,12 @@ export const StoreSummaryPage = () => {
     (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
       setScenarioForm((previous) => ({ ...previous, [field]: event.target.value }));
     };
+
+  useEffect(() => {
+    setActiveOrganization(organization);
+  }, [organization, setActiveOrganization]);
+
+  useEffect(() => () => setActiveOrganization(null), [setActiveOrganization]);
 
   const handleAddCategory = () => {
     const trimmedCategory = newCategoryName.trim();

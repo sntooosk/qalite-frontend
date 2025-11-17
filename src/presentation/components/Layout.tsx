@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { Organization } from '../../domain/entities/Organization';
 import { organizationService } from '../../main/factories/organizationServiceFactory';
 import { useAuth } from '../hooks/useAuth';
+import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Button } from './Button';
 import { UserAvatar } from './UserAvatar';
 import { LogoutIcon, UserIcon } from './icons';
@@ -14,6 +15,7 @@ interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   const { user, logout } = useAuth();
+  const { activeOrganization } = useOrganizationBranding();
   const navigate = useNavigate();
   const displayName = user?.displayName || user?.email || '';
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -53,8 +55,9 @@ export const Layout = ({ children }: LayoutProps) => {
     };
   }, [user?.organizationId]);
 
-  const brandName = organization?.name || 'QaLite';
-  const brandLogo = organization?.logoUrl || null;
+  const brandSource = activeOrganization ?? organization;
+  const brandName = brandSource?.name || 'QaLite';
+  const brandLogo = brandSource?.logoUrl || null;
 
   return (
     <div className="app-shell">
@@ -70,7 +73,7 @@ export const Layout = ({ children }: LayoutProps) => {
           ) : (
             <span className="app-logo">{brandName}</span>
           )}
-          {organization?.name && <span className="app-brand-name">{organization.name}</span>}
+          {brandSource?.name && <span className="app-brand-name">{brandSource.name}</span>}
         </Link>
         <nav className="header-actions">
           {user ? (
