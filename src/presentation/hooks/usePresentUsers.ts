@@ -6,12 +6,14 @@ interface UsePresentUsersParams {
   environmentId: string | null | undefined;
   presentUsersIds: string[];
   isLocked: boolean;
+  shouldAutoJoin?: boolean;
 }
 
 export const usePresentUsers = ({
   environmentId,
   presentUsersIds,
   isLocked,
+  shouldAutoJoin = true,
 }: UsePresentUsersParams) => {
   const { user } = useAuth();
   const hasJoinedRef = useRef(false);
@@ -26,6 +28,7 @@ export const usePresentUsers = ({
       hasJoinedRef.current = true;
     } catch (error) {
       console.error(error);
+      throw error;
     }
   }, [environmentId, isLocked, user?.uid]);
 
@@ -38,21 +41,24 @@ export const usePresentUsers = ({
       await environmentService.removeUser(environmentId, user.uid);
     } catch (error) {
       console.error(error);
+      throw error;
     } finally {
       hasJoinedRef.current = false;
     }
   }, [environmentId, user?.uid]);
 
   useEffect(() => {
-    if (!environmentId || !user?.uid || isLocked) {
+    if (!environmentId || !user?.uid || isLocked || !shouldAutoJoin) {
       return undefined;
     }
 
-    void joinEnvironment();
+    void joinEnvironment().catch(() => undefined);
     return () => {
-      void leaveEnvironment();
+      if (hasJoinedRef.current) {
+        void leaveEnvironment().catch(() => undefined);
+      }
     };
-  }, [environmentId, isLocked, joinEnvironment, leaveEnvironment, user?.uid]);
+  }, [environmentId, isLocked, joinEnvironment, leaveEnvironment, shouldAutoJoin, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid) {

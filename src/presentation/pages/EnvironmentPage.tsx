@@ -69,7 +69,8 @@ export const EnvironmentPage = () => {
   const { isCurrentUserPresent, joinEnvironment, leaveEnvironment } = usePresentUsers({
     environmentId: environment?.id ?? null,
     presentUsersIds: environment?.presentUsersIds ?? [],
-    isLocked: Boolean(isLocked) || !hasEnteredEnvironment,
+    isLocked: Boolean(isLocked),
+    shouldAutoJoin: hasEnteredEnvironment && !isLocked,
   });
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
@@ -291,15 +292,14 @@ export const EnvironmentPage = () => {
       return;
     }
 
-    setHasEnteredEnvironment(true);
     setIsJoiningEnvironment(true);
 
     try {
       await joinEnvironment();
+      setHasEnteredEnvironment(true);
     } catch (error) {
       console.error(error);
       showToast({ type: 'error', message: 'Não foi possível entrar no ambiente.' });
-      setHasEnteredEnvironment(false);
     } finally {
       setIsJoiningEnvironment(false);
     }
@@ -395,18 +395,9 @@ export const EnvironmentPage = () => {
                   </Button>
                 )}
                 {environment.status === 'in_progress' && (
-                  <>
-                    <Button type="button" onClick={() => handleStatusTransition('done')}>
-                      Concluir ambiente
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => handleStatusTransition('backlog')}
-                    >
-                      Retornar ao backlog
-                    </Button>
-                  </>
+                  <Button type="button" onClick={() => handleStatusTransition('done')}>
+                    Concluir ambiente
+                  </Button>
                 )}
                 {environment.status !== 'done' && (
                   <>
