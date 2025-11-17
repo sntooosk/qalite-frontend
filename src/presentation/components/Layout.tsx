@@ -1,6 +1,8 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+import type { Organization } from '../../domain/entities/Organization';
+import { organizationService } from '../../main/factories/organizationServiceFactory';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from './Button';
 import { UserAvatar } from './UserAvatar';
@@ -14,13 +16,61 @@ export const Layout = ({ children }: LayoutProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const displayName = user?.displayName || user?.email || '';
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [isLoadingOrganization, setIsLoadingOrganization] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchOrganization = async () => {
+      if (!user?.organizationId) {
+        setOrganization(null);
+        return;
+      }
+
+      setIsLoadingOrganization(true);
+      try {
+        const data = await organizationService.getById(user.organizationId);
+        if (isMounted) {
+          setOrganization(data);
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setOrganization(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingOrganization(false);
+        }
+      }
+    };
+
+    void fetchOrganization();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.organizationId]);
+
+  const brandName = organization?.name || 'QaLite';
+  const brandLogo = organization?.logoUrl || null;
 
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Link to="/" className="app-brand" aria-label="Página inicial da QaLite">
-          <span className="app-logo">QaLite</span>
-          <span className="app-brand-subtitle">Plataforma de Experiências</span>
+        <Link to="/" className="app-brand" aria-label={`Página inicial da ${brandName}`}>
+          {brandLogo ? (
+            <img
+              src={brandLogo}
+              alt={`Logo da ${brandName}`}
+              className="app-brand-logo"
+              aria-hidden={isLoadingOrganization}
+            />
+          ) : (
+            <span className="app-logo">{brandName}</span>
+          )}
+          {organization?.name && <span className="app-brand-name">{organization.name}</span>}
         </Link>
         <nav className="header-actions">
           {user ? (

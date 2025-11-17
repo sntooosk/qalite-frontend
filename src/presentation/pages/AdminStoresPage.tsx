@@ -19,9 +19,21 @@ interface StoreForm {
   site: string;
 }
 
+interface OrganizationFormState {
+  name: string;
+  description: string;
+  logoFile: File | null;
+}
+
 const initialStoreForm: StoreForm = {
   name: '',
   site: '',
+};
+
+const initialOrganizationForm: OrganizationFormState = {
+  name: '',
+  description: '',
+  logoFile: null,
 };
 
 export const AdminStoresPage = () => {
@@ -39,7 +51,8 @@ export const AdminStoresPage = () => {
   const [isSavingStore, setIsSavingStore] = useState(false);
   const [storeError, setStoreError] = useState<string | null>(null);
   const [isOrganizationModalOpen, setIsOrganizationModalOpen] = useState(false);
-  const [organizationForm, setOrganizationForm] = useState({ name: '', description: '' });
+  const [organizationForm, setOrganizationForm] =
+    useState<OrganizationFormState>(initialOrganizationForm);
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [memberEmail, setMemberEmail] = useState('');
   const [memberError, setMemberError] = useState<string | null>(null);
@@ -131,6 +144,7 @@ export const AdminStoresPage = () => {
     setOrganizationForm({
       name: selectedOrganization.name,
       description: selectedOrganization.description,
+      logoFile: null,
     });
     setOrganizationError(null);
     setMemberEmail('');
@@ -143,6 +157,7 @@ export const AdminStoresPage = () => {
     setOrganizationError(null);
     setMemberEmail('');
     setMemberError(null);
+    setOrganizationForm(initialOrganizationForm);
   };
 
   const handleStoreSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -211,6 +226,7 @@ export const AdminStoresPage = () => {
       const updated = await organizationService.update(selectedOrganization.id, {
         name: trimmedName,
         description: trimmedDescription,
+        logoFile: organizationForm.logoFile,
       });
 
       setOrganizations((previous) =>
@@ -550,6 +566,23 @@ export const AdminStoresPage = () => {
               }
               placeholder="Resuma o objetivo principal desta organização"
             />
+            <label className="upload-label" htmlFor="organization-update-logo">
+              <span>Logo da organização</span>
+              <span className="upload-trigger">Atualizar logo</span>
+              <input
+                id="organization-update-logo"
+                className="upload-input"
+                type="file"
+                accept="image/*"
+                onChange={(event) =>
+                  setOrganizationForm((previous) => ({
+                    ...previous,
+                    logoFile: event.target.files?.[0] ?? null,
+                  }))
+                }
+              />
+              <span className="upload-hint">Envie um arquivo PNG, JPG ou SVG até 5MB.</span>
+            </label>
             <div className="form-actions">
               <Button type="submit" isLoading={isSavingOrganization} loadingText="Salvando...">
                 Salvar alterações

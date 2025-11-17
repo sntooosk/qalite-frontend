@@ -9,6 +9,7 @@ export interface Organization {
   id: string;
   name: string;
   description: string;
+  logoUrl: string | null;
   members: OrganizationMember[];
   memberIds: string[];
   createdAt: Date | null;

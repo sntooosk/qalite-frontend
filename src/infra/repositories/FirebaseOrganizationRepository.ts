@@ -13,8 +13,9 @@ import {
   serverTimestamp,
   updateDoc,
   where,
-  writeBatch
+  writeBatch,
 } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import type { Organization, OrganizationMember } from '../../domain/entities/Organization';
 import type {
@@ -22,20 +23,23 @@ import type {
   CreateOrganizationPayload,
   IOrganizationRepository,
   RemoveUserFromOrganizationPayload,
-  UpdateOrganizationPayload
+  UpdateOrganizationPayload,
 } from '../../domain/repositories/OrganizationRepository';
-import { firebaseFirestore } from '../firebase/firebaseConfig';
+import { firebaseFirestore, firebaseStorage } from '../firebase/firebaseConfig';
 
 const ORGANIZATIONS_COLLECTION = 'organizations';
 const USERS_COLLECTION = 'users';
 
 export class FirebaseOrganizationRepository implements IOrganizationRepository {
-  private readonly organizationsCollection = collection(firebaseFirestore, ORGANIZATIONS_COLLECTION);
+  private readonly organizationsCollection = collection(
+    firebaseFirestore,
+    ORGANIZATIONS_COLLECTION,
+  );
 
   async list(): Promise<Organization[]> {
     const snapshot = await getDocs(this.organizationsCollection);
     const organizations = await Promise.all(
-      snapshot.docs.map((docSnapshot) => this.mapOrganization(docSnapshot.id, docSnapshot.data()))
+      snapshot.docs.map((docSnapshot) => this.mapOrganization(docSnapshot.id, docSnapshot.data())),
     );
 
     return organizations.sort((a, b) => a.name.localeCompare(b.name));
@@ -59,10 +63,19 @@ export class FirebaseOrganizationRepository implements IOrganizationRepository {
     const docRef = await addDoc(this.organizationsCollection, {
       name: trimmedName,
       description: trimmedDescription,
+      logoUrl: null,
       members: [],
       createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      updatedAt: serverTimestamp(),
     });
+
+    if (payload.logoFile) {
+      const logoUrl = await this.uploadOrganizationLogo(docRef.id, payload.logoFile);
+      await updateDoc(docRef, {
+        logoUrl,
+        updatedAt: serverTimestamp(),
+      });
+    }
 
     const snapshot = await getDoc(docRef);
     return this.mapOrganization(snapshot.id, snapshot.data() ?? {});
@@ -71,11 +84,18 @@ export class FirebaseOrganizationRepository implements IOrganizationRepository {
   async update(id: string, payload: UpdateOrganizationPayload): Promise<Organization> {
     const organizationRef = doc(firebaseFirestore, ORGANIZATIONS_COLLECTION, id);
 
-    await updateDoc(organizationRef, {
+    const updatePayload: Record<string, unknown> = {
       name: payload.name.trim(),
       description: payload.description.trim(),
-      updatedAt: serverTimestamp()
-    });
+      updatedAt: serverTimestamp(),
+    };
+
+    if (payload.logoFile) {
+      const logoUrl = await this.uploadOrganizationLogo(id, payload.logoFile);
+      updatePayload.logoUrl = logoUrl;
+    }
+
+    await updateDoc(organizationRef, updatePayload);
 
     const snapshot = await getDoc(organizationRef);
     return this.mapOrganization(snapshot.id, snapshot.data() ?? {});
@@ -98,9 +118,9 @@ export class FirebaseOrganizationRepository implements IOrganizationRepository {
         userRef,
         {
           organizationId: null,
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         },
-        { merge: true }
+        { merge: true },
       );
     });
 
@@ -115,7 +135,11 @@ export class FirebaseOrganizationRepository implements IOrganizationRepository {
     }
 
     return runTransaction(firebaseFirestore, async (transaction) => {
-      const organizationRef = doc(firebaseFirestore, ORGANIZATIONS_COLLECTION, payload.organizationId);
+      const organizationRef = doc(
+        firebaseFirestore,
+        ORGANIZATIONS_COLLECTION,
+        payload.organizationId,
+      );
       const organizationSnapshot = await transaction.get(organizationRef);
 
       if (!organizationSnapshot.exists()) {
@@ -147,7 +171,7 @@ export class FirebaseOrganizationRepository implements IOrganizationRepository {
 
       transaction.update(organizationRef, {
         members: arrayUnion(userId),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       const userRef = doc(firebaseFirestore, USERS_COLLECTION, userId);
@@ -155,22 +179,26 @@ export class FirebaseOrganizationRepository implements IOrganizationRepository {
         userRef,
         {
           organizationId: payload.organizationId,
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         },
-        { merge: true }
+        { merge: true },
       );
 
       return {
         uid: userId,
         email: (userData.email as string) ?? normalizedEmail,
         displayName: (userData.displayName as string) ?? normalizedEmail,
-        photoURL: (userData.photoURL as string | null) ?? null
+        photoURL: (userData.photoURL as string | null) ?? null,
       };
     });
   }
 
   async removeUser(payload: RemoveUserFromOrganizationPayload): Promise<void> {
-    const organizationRef = doc(firebaseFirestore, ORGANIZATIONS_COLLECTION, payload.organizationId);
+    const organizationRef = doc(
+      firebaseFirestore,
+      ORGANIZATIONS_COLLECTION,
+      payload.organizationId,
+    );
     const userRef = doc(firebaseFirestore, USERS_COLLECTION, payload.userId);
 
     await runTransaction(firebaseFirestore, async (transaction) => {
@@ -182,7 +210,7 @@ export class FirebaseOrganizationRepository implements IOrganizationRepository {
 
       transaction.update(organizationRef, {
         members: arrayRemove(payload.userId),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       });
 
       const userSnapshot = await transaction.get(userRef);
@@ -195,9 +223,9 @@ export class FirebaseOrganizationRepository implements IOrganizationRepository {
             userRef,
             {
               organizationId: null,
-              updatedAt: serverTimestamp()
+              updatedAt: serverTimestamp(),
             },
-            { merge: true }
+            { merge: true },
           );
         }
       }
@@ -222,7 +250,7 @@ export class FirebaseOrganizationRepository implements IOrganizationRepository {
 
   private async mapOrganization(
     id: string,
-    data: Record<string, unknown> | undefined
+    data: Record<string, unknown> | undefined,
   ): Promise<Organization> {
     const memberIds = (data?.members as string[] | undefined) ?? [];
     const members = await this.fetchMembers(memberIds);
@@ -231,10 +259,11 @@ export class FirebaseOrganizationRepository implements IOrganizationRepository {
       id,
       name: ((data?.name as string) ?? '').trim(),
       description: ((data?.description as string) ?? '').trim(),
+      logoUrl: ((data?.logoUrl as string) ?? '').trim() || null,
       members,
       memberIds,
       createdAt: this.timestampToDate(data?.createdAt),
-      updatedAt: this.timestampToDate(data?.updatedAt)
+      updatedAt: this.timestampToDate(data?.updatedAt),
     };
   }
 
@@ -265,11 +294,23 @@ export class FirebaseOrganizationRepository implements IOrganizationRepository {
           uid,
           email: (data.email as string) ?? '',
           displayName: (data.displayName as string) ?? '',
-          photoURL: (data.photoURL as string | null) ?? null
+          photoURL: (data.photoURL as string | null) ?? null,
         };
-      })
+      }),
     );
 
     return members.filter((member): member is OrganizationMember => Boolean(member));
+  }
+
+  private async uploadOrganizationLogo(organizationId: string, file: File): Promise<string> {
+    const extension = file.name.split('.').pop();
+    const sanitizedExtension = extension ? extension.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+    const fileName = sanitizedExtension ? `logo.${sanitizedExtension}` : 'logo';
+    const storageRef = ref(
+      firebaseStorage,
+      `${ORGANIZATIONS_COLLECTION}/${organizationId}/${fileName}`,
+    );
+    await uploadBytes(storageRef, file);
+    return getDownloadURL(storageRef);
   }
 }
