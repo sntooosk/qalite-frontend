@@ -199,7 +199,7 @@ export const EnvironmentPage = () => {
             <button type="button" className="link-button" onClick={() => navigate(-1)}>
               &larr; Voltar
             </button>
-            <div className="environment-page__title">
+            <div>
               {environmentOrganization && (
                 <div>
                   {environmentOrganization.logoUrl ? (
@@ -287,7 +287,7 @@ export const EnvironmentPage = () => {
         {!isLoading && environment && (
           <>
             {!hasEnteredEnvironment && (
-              <p className="environment-locked-message">
+              <p>
                 Você pode visualizar os dados do ambiente sem entrar. Entre no ambiente apenas se
                 precisar interagir com as funcionalidades.
               </p>

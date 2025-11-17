@@ -3087,12 +3087,6 @@ a.text-link:hover {
   gap: 1rem;
 }
 
-.environment-page__title {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
 .environment-organization-branding__logo,
 .environment-organization-branding__placeholder {
   width: 40px;
@@ -3190,16 +3184,6 @@ a.text-link:hover {
   font-size: clamp(1.5rem, 3vw, 2.25rem);
   font-weight: 700;
   letter-spacing: 0.02em;
-}
-
-.environment-locked-message {
-  background: var(--color-surface-alt);
-  border-radius: 1rem;
-  padding: 0.85rem 1.1rem;
-  border: 1px dashed var(--color-border);
-  color: var(--color-text-muted);
-  max-width: 32rem;
-  margin-bottom: 1rem;
 }
 
 .summary-card__metrics {

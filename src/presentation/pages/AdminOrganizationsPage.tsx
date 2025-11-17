@@ -108,7 +108,6 @@ export const AdminOrganizationsPage = () => {
       <section className="page-container">
         <div className="page-header">
           <div>
-            <span className="badge">Painel do administrador</span>
             <h1 className="section-title">Organizações cadastradas</h1>
             <p className="section-subtitle">
               Gerencie as organizações e mantenha os membros atualizados em um só lugar.

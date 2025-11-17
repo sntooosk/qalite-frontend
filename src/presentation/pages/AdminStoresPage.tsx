@@ -403,7 +403,6 @@ export const AdminStoresPage = () => {
             <button type="button" className="link-button" onClick={() => navigate('/admin')}>
               &larr; Voltar
             </button>
-            <span className="badge">Painel do administrador</span>
             <h1 className="section-title">
               {selectedOrganization
                 ? `Lojas da organização ${selectedOrganization.name}`
@@ -418,9 +417,7 @@ export const AdminStoresPage = () => {
           <div className="page-actions">
             {isOrganizationLocked ? (
               <div className="selected-organization-info">
-                <span className="badge">
-                  {selectedOrganization?.name ?? 'Organização selecionada'}
-                </span>
+                <strong>{selectedOrganization?.name ?? 'Organização selecionada'}</strong>
               </div>
             ) : (
               <SelectInput

@@ -91,7 +91,7 @@ export const PublicEnvironmentPage = () => {
     <Layout>
       <section className="page-container environment-page environment-page--public">
         <div className="environment-page__header">
-          <div className="environment-page__title">
+          <div>
             <span className={`status-pill status-pill--${environment.status}`}>
               {STATUS_LABEL[environment.status]}
             </span>
