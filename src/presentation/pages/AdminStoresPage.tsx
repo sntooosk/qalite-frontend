@@ -13,6 +13,7 @@ import { TextInput } from '../components/TextInput';
 import { Modal } from '../components/Modal';
 import { UserAvatar } from '../components/UserAvatar';
 import { SimpleBarChart } from '../components/SimpleBarChart';
+import { BarChartIcon, SparklesIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
 
 interface StoreForm {
   name: string;
@@ -511,15 +512,29 @@ export const AdminStoresPage = () => {
                   }
                 >
                   <div className="card-header">
-                    <div>
-                      <h2 className="card-title">{store.name}</h2>
-                      <p className="card-subtitle">{selectedOrganization?.name ?? 'Organização'}</p>
+                    <div className="card-title-group">
+                      <span className="card-title-icon" aria-hidden>
+                        <StorefrontIcon className="icon icon--lg" />
+                      </span>
+                      <div>
+                        <h2 className="card-title">{store.name}</h2>
+                        <p className="card-subtitle">
+                          {selectedOrganization?.name ?? 'Organização'}
+                        </p>
+                      </div>
                     </div>
                     <span className="badge">{store.scenarioCount} cenários</span>
                   </div>
                   <p className="card-description">
                     <span>
-                      <strong>Site:</strong> {store.site || 'Não informado'}
+                      <strong>Site:</strong>{' '}
+                      {store.site ? (
+                        <a href={store.site} className="card-link" target="_blank" rel="noreferrer">
+                          {store.site}
+                        </a>
+                      ) : (
+                        'Não informado'
+                      )}
                     </span>
                   </p>
                   <div className="card-link-hint">
@@ -534,11 +549,16 @@ export const AdminStoresPage = () => {
               {selectedOrganization && (
                 <section className="organization-collaborators-card">
                   <div className="organization-collaborators-card__header">
-                    <div>
-                      <h3>Colaboradores da organização</h3>
-                      <p className="section-subtitle">
-                        Visualize rapidamente quem tem acesso a esta organização.
-                      </p>
+                    <div className="section-heading">
+                      <span className="section-heading__icon" aria-hidden>
+                        <UsersGroupIcon className="icon icon--lg" />
+                      </span>
+                      <div>
+                        <h3>Colaboradores da organização</h3>
+                        <p className="section-subtitle">
+                          Visualize rapidamente quem tem acesso a esta organização.
+                        </p>
+                      </div>
                     </div>
                     <span className="badge">
                       {selectedOrganization.members.length} colaborad
@@ -557,10 +577,10 @@ export const AdminStoresPage = () => {
                           <UserAvatar
                             name={member.displayName || member.email}
                             photoURL={member.photoURL ?? undefined}
+                            size="sm"
                           />
                           <div className="collaborator-card__details">
                             <strong>{member.displayName || member.email}</strong>
-                            <span>{member.email}</span>
                           </div>
                         </li>
                       ))}
@@ -575,6 +595,7 @@ export const AdminStoresPage = () => {
                   description="Total de cenários cadastrados em cada loja desta organização."
                   data={scenariosPerStoreData}
                   emptyMessage="Cadastre lojas e cenários para visualizar este gráfico."
+                  icon={<BarChartIcon aria-hidden className="icon icon--lg" />}
                 />
                 <SimpleBarChart
                   title="Cenários automatizados"
@@ -583,6 +604,7 @@ export const AdminStoresPage = () => {
                   emptyMessage="Ainda não identificamos cenários automatizados nas lojas desta organização."
                   isLoading={isLoadingAutomationStats}
                   variant="info"
+                  icon={<SparklesIcon aria-hidden className="icon icon--lg" />}
                 />
               </section>
             </div>
