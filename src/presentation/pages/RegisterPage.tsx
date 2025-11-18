@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { AuthLayout } from '../components/AuthLayout';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
+import { PasswordInput } from '../components/PasswordInput';
 import { ALLOWED_EMAIL_DOMAINS_LABEL } from '../../shared/constants/auth';
 import { isAllowedEmailDomain } from '../../shared/utils/email';
 
@@ -95,21 +96,21 @@ export const RegisterPage = () => {
           required
         />
         <p className="form-hint">Use um e-mail corporativo ({ALLOWED_EMAIL_DOMAINS_LABEL}).</p>
-        <TextInput
+        <PasswordInput
           id="password"
           label="Senha"
-          type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
+          autoComplete="new-password"
         />
-        <TextInput
+        <PasswordInput
           id="confirmPassword"
           label="Confirme a senha"
-          type="password"
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           required
+          autoComplete="new-password"
         />
         <p className={`form-hint ${isPasswordStrong ? 'form-hint--success' : 'form-hint--danger'}`}>
           Senha com no mínimo {MIN_PASSWORD_LENGTH} caracteres.
