@@ -2468,11 +2468,13 @@ button.store-summary-highlight:focus-visible {
   flex-direction: column;
   gap: 1.5rem;
   width: 100%;
+  min-width: 0;
   padding: 0;
 }
 
 .suite-form > .suite-card {
   width: 100%;
+  min-width: 0;
 }
 
 @media (min-width: 960px) {
@@ -2649,9 +2651,15 @@ button.store-summary-highlight:focus-visible {
 
 .suite-scenario-table-wrapper {
   max-height: 360px;
-  overflow: auto;
   border-radius: 1.5rem;
   padding: 0.35rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.suite-scenario-table-wrapper.table-scroll-area {
+  overflow-y: auto;
+  padding-bottom: 0.35rem;
 }
 
 .suite-scenario-table {

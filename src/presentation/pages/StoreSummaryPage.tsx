@@ -1862,7 +1862,7 @@ export const StoreSummaryPage = () => {
                                         Nenhum cenário corresponde aos filtros aplicados.
                                       </p>
                                     ) : (
-                                      <div className="suite-scenario-table-wrapper">
+                                      <div className="suite-scenario-table-wrapper table-scroll-area">
                                         <table className="scenario-table suite-scenario-table data-table">
                                           <thead>
                                             <tr>
