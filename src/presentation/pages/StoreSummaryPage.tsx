@@ -33,6 +33,7 @@ import {
   sortScenarioList,
   type ScenarioSortConfig,
 } from '../components/ScenarioColumnSortControl';
+import { useStoreEnvironments } from '../hooks/useStoreEnvironments';
 
 const emptyScenarioForm: StoreScenarioInput = {
   title: '',
@@ -53,6 +54,15 @@ interface ScenarioFilters {
   search: string;
   category: string;
   criticality: string;
+}
+
+interface StoreHighlight {
+  id: string;
+  label: string;
+  value: string;
+  description?: string;
+  isActive?: boolean;
+  onClick?: () => void;
 }
 
 const emptyScenarioFilters: ScenarioFilters = {
@@ -134,6 +144,11 @@ export const StoreSummaryPage = () => {
   const [storeSettingsError, setStoreSettingsError] = useState<string | null>(null);
   const [isUpdatingStore, setIsUpdatingStore] = useState(false);
   const [isDeletingStore, setIsDeletingStore] = useState(false);
+  const {
+    environments,
+    isLoading: isLoadingEnvironments,
+    statusCounts: environmentStatusCounts,
+  } = useStoreEnvironments(storeId);
   const selectedSuiteScenarioCount = suiteForm.scenarioIds.length;
   const suiteSelectionSummary =
     selectedSuiteScenarioCount === 0
@@ -151,6 +166,68 @@ export const StoreSummaryPage = () => {
   const canManageStoreSettings = user?.role === 'admin';
   const canToggleCategoryList =
     !isLoadingCategories && !isSyncingLegacyCategories && categories.length > 0;
+  const automatedScenarioCount = useMemo(
+    () =>
+      scenarios.filter((scenario) => scenario.automation.toLowerCase().includes('automatizado'))
+        .length,
+    [scenarios],
+  );
+  const suitesWithScenariosCount = useMemo(
+    () => suites.filter((suite) => suite.scenarioIds.length > 0).length,
+    [suites],
+  );
+  const environmentInProgressCount = environmentStatusCounts.in_progress;
+  const environmentTotalCount = environmentStatusCounts.total;
+  const storeHighlights = useMemo<StoreHighlight[]>(() => {
+    const scenarioDescription = `${automatedScenarioCount} automatizado${
+      automatedScenarioCount === 1 ? '' : 's'
+    }`;
+    const suitesDescription = `${suitesWithScenariosCount} com cenário${
+      suitesWithScenariosCount === 1 ? '' : 's'
+    }`;
+    const environmentDescription = isLoadingEnvironments
+      ? 'Sincronizando ambientes...'
+      : `${environmentInProgressCount} em andamento`;
+
+    return [
+      {
+        id: 'scenarios',
+        label: 'Massa de cenários',
+        value: scenarios.length.toString(),
+        description: scenarioDescription,
+        isActive: viewMode === 'scenarios',
+        onClick: () => {
+          setViewMode('scenarios');
+          setIsViewingSuitesOnly(false);
+        },
+      },
+      {
+        id: 'suites',
+        label: 'Suítes de testes',
+        value: suites.length.toString(),
+        description: suitesDescription,
+        isActive: viewMode === 'suites',
+        onClick: () => setViewMode('suites'),
+      },
+      {
+        id: 'environments',
+        label: 'Ambientes',
+        value: isLoadingEnvironments ? '...' : environmentTotalCount.toString(),
+        description: environmentDescription,
+      },
+    ];
+  }, [
+    automatedScenarioCount,
+    environmentInProgressCount,
+    environmentTotalCount,
+    isLoadingEnvironments,
+    scenarios.length,
+    suites.length,
+    suitesWithScenariosCount,
+    viewMode,
+    setViewMode,
+    setIsViewingSuitesOnly,
+  ]);
 
   const scenarioMap = useMemo(() => {
     const map = new Map<string, StoreScenario>();
@@ -1099,16 +1176,9 @@ export const StoreSummaryPage = () => {
             ) : (
               <div className="store-summary">
                 <div className="store-summary-meta">
-                  <div>
-                    <span className="badge">Resumo</span>
-                    <h2 className="text-xl font-semibold text-primary">Informações gerais</h2>
-                  </div>
-                  <div className="store-summary-stats">
+                  <div className="store-summary-context">
+                    {organization?.name && <span>{organization.name}</span>}
                     <span>
-                      <strong>Cenários:</strong> {scenarios.length}
-                    </span>
-                    <span>
-                      <strong>Site:</strong>{' '}
                       {storeSiteInfo.href ? (
                         <a href={storeSiteInfo.href} target="_blank" rel="noreferrer noopener">
                           {storeSiteInfo.label}
@@ -1118,25 +1188,44 @@ export const StoreSummaryPage = () => {
                       )}
                     </span>
                   </div>
-                </div>
+                  <div
+                    className="store-summary-highlights"
+                    role="group"
+                    aria-label="Resumo da loja"
+                  >
+                    {storeHighlights.map((highlight) => {
+                      const content = (
+                        <>
+                          <span className="store-summary-highlight__value">{highlight.value}</span>
+                          <span className="store-summary-highlight__label">{highlight.label}</span>
+                          {highlight.description && (
+                            <span className="store-summary-highlight__description">
+                              {highlight.description}
+                            </span>
+                          )}
+                        </>
+                      );
 
-                <div className="scenario-view-toggle" aria-label="Alternar visualização">
-                  <span>Visualizar</span>
-                  <div className="scenario-view-toggle-buttons">
-                    <button
-                      type="button"
-                      className={viewMode === 'scenarios' ? 'is-active' : ''}
-                      onClick={() => setViewMode('scenarios')}
-                    >
-                      Massa de cenários
-                    </button>
-                    <button
-                      type="button"
-                      className={viewMode === 'suites' ? 'is-active' : ''}
-                      onClick={() => setViewMode('suites')}
-                    >
-                      Suítes de testes
-                    </button>
+                      return highlight.onClick ? (
+                        <button
+                          key={highlight.id}
+                          type="button"
+                          className={`store-summary-highlight${highlight.isActive ? ' is-active' : ''}`}
+                          onClick={highlight.onClick}
+                          aria-pressed={highlight.isActive}
+                        >
+                          {content}
+                        </button>
+                      ) : (
+                        <div
+                          key={highlight.id}
+                          className="store-summary-highlight"
+                          aria-live="polite"
+                        >
+                          {content}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1862,7 +1951,13 @@ export const StoreSummaryPage = () => {
         {storeId && (
           <section className="page-container">
             <div className="card">
-              <EnvironmentKanban storeId={storeId} suites={suites} scenarios={scenarios} />
+              <EnvironmentKanban
+                storeId={storeId}
+                suites={suites}
+                scenarios={scenarios}
+                environments={environments}
+                isLoading={isLoadingEnvironments}
+              />
             </div>
           </section>
         )}
