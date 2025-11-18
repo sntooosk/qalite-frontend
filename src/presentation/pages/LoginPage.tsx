@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { AuthLayout } from '../components/AuthLayout';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
+import { PasswordInput } from '../components/PasswordInput';
 import { ALLOWED_EMAIL_DOMAINS_LABEL } from '../../shared/constants/auth';
 import { isAllowedEmailDomain } from '../../shared/utils/email';
 
@@ -13,7 +14,6 @@ export const LoginPage = () => {
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -78,28 +78,14 @@ export const LoginPage = () => {
           required
         />
         <p className="form-hint">Use um e-mail corporativo ({ALLOWED_EMAIL_DOMAINS_LABEL}).</p>
-        <label htmlFor="password" className="field">
-          <span className="field-label">Senha</span>
-          <div className="field-input-wrapper">
-            <input
-              id="password"
-              name="password"
-              type={isPasswordVisible ? 'text' : 'password'}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              className="field-input field-input--with-action"
-            />
-            <button
-              type="button"
-              className="field-input-action"
-              onClick={() => setIsPasswordVisible((previous) => !previous)}
-              aria-label={isPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
-            >
-              {isPasswordVisible ? 'Ocultar' : 'Mostrar'}
-            </button>
-          </div>
-        </label>
+        <PasswordInput
+          id="password"
+          label="Senha"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          required
+          autoComplete="current-password"
+        />
         <Button type="submit" isLoading={isLoading} loadingText="Autenticando...">
           Entrar
         </Button>

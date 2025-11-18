@@ -90,3 +90,20 @@ export const SparklesIcon = (props: SVGProps<SVGSVGElement>) => (
     <path d="m20 16 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z" />
   </svg>
 );
+
+export const EyeIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...baseProps} {...strokeProps} {...props}>
+    <path d="M1.5 12s4.5-7.5 10.5-7.5S22.5 12 22.5 12s-4.5 7.5-10.5 7.5S1.5 12 1.5 12Z" />
+    <path d="M12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" />
+  </svg>
+);
+
+export const EyeSlashIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...baseProps} {...strokeProps} {...props}>
+    <path d="m3 3 18 18" />
+    <path d="M10.37 10.37A3 3 0 0 0 9 13.5a3 3 0 0 0 3.75 2.88" />
+    <path d="M14.32 9.68A3 3 0 0 0 9.68 14.32" />
+    <path d="M21 12s-3.5-6-9-6a9.45 9.45 0 0 0-3.5.69" />
+    <path d="M3 12s3.5 6 9 6a9.45 9.45 0 0 0 3.5-.69" />
+  </svg>
+);

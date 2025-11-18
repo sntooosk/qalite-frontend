@@ -1245,6 +1245,19 @@ button.store-summary-highlight:focus-visible {
     border-color var(--transition-base);
 }
 
+.field-input-action--icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0.35rem;
+  justify-content: center;
+  gap: 0;
+}
+
+.field-input-action--icon .icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
 .field-input-action:hover {
   color: var(--color-primary);
 }
