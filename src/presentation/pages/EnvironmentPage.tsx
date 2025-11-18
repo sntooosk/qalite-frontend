@@ -2,10 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { EnvironmentStatusError } from '../../application/errors/EnvironmentStatusError';
-import type {
-  EnvironmentScenarioPlatform,
-  EnvironmentStatus,
-} from '../../domain/entities/Environment';
+import type { EnvironmentStatus } from '../../domain/entities/Environment';
 import { environmentService } from '../../services';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
@@ -22,16 +19,12 @@ import { useStoreOrganizationBranding } from '../hooks/useStoreOrganizationBrand
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { PageLoader } from '../components/PageLoader';
 import { useUserProfiles } from '../hooks/useUserProfiles';
-import { getReadableUserName, getUserInitials } from '../utils/userDisplay';
 import { useEnvironmentBugs } from '../hooks/useEnvironmentBugs';
 import { EnvironmentBugModal } from '../components/environments/EnvironmentBugModal';
 import type { EnvironmentBug } from '../../domain/entities/EnvironmentBug';
 import { useEnvironmentDetails } from '../hooks/useEnvironmentDetails';
 import { useEnvironmentEngagement } from '../hooks/useEnvironmentEngagement';
-import {
-  ENVIRONMENT_PLATFORM_LABEL,
-  ENVIRONMENT_STATUS_LABEL,
-} from '../../shared/constants/environmentLabels';
+import { EnvironmentSummaryCard } from '../components/environments/EnvironmentSummaryCard';
 
 export const EnvironmentPage = () => {
   const { environmentId } = useParams<{ environmentId: string }>();
@@ -65,7 +58,6 @@ export const EnvironmentPage = () => {
   } = useEnvironmentEngagement(environment);
   const {
     bugCountByScenario,
-    platformScenarioStats,
     progressPercentage,
     progressLabel,
     scenarioCount,
@@ -288,147 +280,17 @@ export const EnvironmentPage = () => {
         </div>
 
         <div className="environment-summary-grid">
-          <div className="summary-card summary-card--environment">
-            <h3>Resumo do ambiente</h3>
-            <div className="summary-card__status">
-              <span className="summary-card__status-label">Status atual</span>
-              <span
-                className={`summary-card__status-badge summary-card__status-badge--${environment.status}`}
-              >
-                {ENVIRONMENT_STATUS_LABEL[environment.status]}
-              </span>
-            </div>
-            <div className="summary-card__highlight" aria-live="polite">
-              <div>
-                <span className="summary-card__highlight-label">Progresso geral</span>
-                <strong>{progressPercentage}%</strong>
-                <p>{progressLabel}</p>
-              </div>
-              <div className="summary-card__progress" aria-hidden>
-                <span style={{ width: `${progressPercentage}%` }} />
-              </div>
-            </div>
-            <div className="summary-card__section">
-              <span className="summary-card__label">Status por plataforma</span>
-              <div className="summary-card__platform-grid">
-                {(['mobile', 'desktop'] as EnvironmentScenarioPlatform[]).map((platform) => {
-                  const stats = platformScenarioStats[platform];
-                  return (
-                    <div key={platform} className="summary-card__platform-column">
-                      <span className="summary-card__platform-title">
-                        {ENVIRONMENT_PLATFORM_LABEL[platform]}
-                      </span>
-                      <div className="summary-card__metrics summary-card__metrics--pill">
-                        <div className="summary-pill">
-                          <span>Total</span>
-                          <strong>{stats.total}</strong>
-                        </div>
-                        <div className="summary-pill">
-                          <span>Concluídos</span>
-                          <strong>{stats.concluded}</strong>
-                        </div>
-                        <div className="summary-pill">
-                          <span>Em andamento</span>
-                          <strong>{stats.running}</strong>
-                        </div>
-                        <div className="summary-pill">
-                          <span>Pendentes</span>
-                          <strong>{stats.pending}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <p className="summary-card__footnote">
-              {scenarioCount === 0
-                ? 'Nenhum cenário carregado a partir da suíte selecionada.'
-                : `${scenarioCount} cenário${scenarioCount !== 1 ? 's' : ''} executados em Mobile e Desktop.`}
-            </p>
-            <div className="summary-card__details">
-              <div className="summary-card__detail">
-                <span className="summary-card__detail-label">Tempo total</span>
-                <strong className="summary-card__detail-value">{formattedTime}</strong>
-              </div>
-              <div className="summary-card__detail">
-                <span className="summary-card__detail-label">Jira</span>
-                <strong className="summary-card__detail-value">
-                  {environment.jiraTask || 'Não informado'}
-                </strong>
-              </div>
-              {environment.momento && (
-                <div className="summary-card__detail">
-                  <span className="summary-card__detail-label">Momento</span>
-                  <strong className="summary-card__detail-value">{environment.momento}</strong>
-                </div>
-              )}
-              {environment.release && (
-                <div className="summary-card__detail">
-                  <span className="summary-card__detail-label">Release</span>
-                  <strong className="summary-card__detail-value">{environment.release}</strong>
-                </div>
-              )}
-              <div className="summary-card__detail">
-                <span className="summary-card__detail-label">Suíte</span>
-                <strong className="summary-card__detail-value">
-                  {suiteDescription}
-                  {scenarioCount > 0 && (
-                    <span className="summary-card__detail-hint">
-                      {scenarioCount} cenário{scenarioCount > 1 ? 's' : ''}
-                    </span>
-                  )}
-                </strong>
-              </div>
-            </div>
-            <div className="summary-card__section">
-              <span className="summary-card__label">URLs monitoradas</span>
-              {urls.length === 0 ? (
-                <p className="summary-card__empty">Nenhuma URL adicionada.</p>
-              ) : (
-                <ul className="environment-url-list summary-card__urls-list">
-                  {urls.map((url) => (
-                    <li key={url}>
-                      <a href={url} className="text-link" target="_blank" rel="noreferrer noopener">
-                        {url}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="summary-card__section">
-              <span className="summary-card__label">Participantes</span>
-              {participantProfiles.length === 0 ? (
-                <p className="summary-card__empty">Nenhum participante registrado.</p>
-              ) : (
-                <ul className="environment-summary-participants">
-                  {participantProfiles.map((participant) => {
-                    const readableName = getReadableUserName(participant);
-                    const initials = getUserInitials(readableName);
-                    return (
-                      <li key={participant.id} className="environment-summary-participant">
-                        {participant.photoURL ? (
-                          <img
-                            src={participant.photoURL}
-                            alt={readableName}
-                            className="environment-card-avatar"
-                          />
-                        ) : (
-                          <span className="environment-card-avatar environment-card-avatar--initials">
-                            {initials}
-                          </span>
-                        )}
-                        <div className="environment-summary-participant-info">
-                          <strong>{readableName}</strong>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          </div>
+          <EnvironmentSummaryCard
+            environment={environment}
+            progressPercentage={progressPercentage}
+            progressLabel={progressLabel}
+            suiteDescription={suiteDescription}
+            scenarioCount={scenarioCount}
+            formattedTime={formattedTime}
+            urls={urls}
+            participants={participantProfiles}
+            bugsCount={bugs.length}
+          />
           <div className="summary-card">
             <h3>Compartilhamento e exportação</h3>
             <div className="share-actions">

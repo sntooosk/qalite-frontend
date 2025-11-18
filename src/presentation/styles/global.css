@@ -3625,6 +3625,156 @@ a.text-link:hover {
   gap: 0.75rem;
 }
 
+.summary-card--compact {
+  gap: 1rem;
+}
+
+.summary-card__minimal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.summary-card__progress-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+}
+
+.summary-card__progress-value {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.summary-card__progress-caption {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.summary-card__meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.summary-card__meta-grid--columns {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.summary-card__meta-item {
+  border: 1px solid var(--color-border);
+  border-radius: 0.9rem;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--color-surface-alt);
+}
+
+.summary-card__meta-item strong {
+  font-size: 1.1rem;
+}
+
+.summary-card__meta-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.summary-card__meta-hint {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.summary-card__meta-item--full {
+  grid-column: 1 / -1;
+}
+
+.summary-card__chips-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summary-card__chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.summary-card__chip {
+  border: 1px solid var(--color-border);
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: var(--color-text-primary);
+  background: var(--color-surface-alt);
+  text-decoration: none;
+}
+
+.summary-card__chip:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.summary-card__chip--muted {
+  color: var(--color-text-muted);
+}
+
+.summary-card__participants {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summary-card__avatar-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.summary-card__avatar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  font-size: 0.9rem;
+}
+
+.summary-card__avatar-item img {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.summary-card__avatar-fallback {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.summary-card__avatar-item--muted {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
 .environment-status-card {
   margin: 1.5rem 0 0.5rem;
   padding: clamp(1rem, 2vw, 1.75rem);
