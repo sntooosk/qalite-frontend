@@ -1,11 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { EnvironmentStatusError } from '../../application/errors/EnvironmentStatusError';
-import {
-  getScenarioPlatformStatuses,
-  SCENARIO_COMPLETED_STATUSES,
-} from '../../domain/entities/Environment';
 import type {
   EnvironmentScenarioPlatform,
   EnvironmentStatus,
@@ -15,7 +11,6 @@ import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { useToast } from '../context/ToastContext';
 import { useEnvironmentRealtime } from '../hooks/useEnvironmentRealtime';
-import { usePresentUsers } from '../hooks/usePresentUsers';
 import { useTimeTracking } from '../hooks/useTimeTracking';
 import { useAuth } from '../hooks/useAuth';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
@@ -31,6 +26,8 @@ import { getReadableUserName, getUserInitials } from '../utils/userDisplay';
 import { useEnvironmentBugs } from '../hooks/useEnvironmentBugs';
 import { EnvironmentBugModal } from '../components/environments/EnvironmentBugModal';
 import type { EnvironmentBug } from '../../domain/entities/EnvironmentBug';
+import { useEnvironmentDetails } from '../hooks/useEnvironmentDetails';
+import { useEnvironmentEngagement } from '../hooks/useEnvironmentEngagement';
 
 const STATUS_LABEL: Record<EnvironmentStatus, string> = {
   backlog: 'Backlog',
@@ -57,34 +54,33 @@ export const EnvironmentPage = () => {
   const [isBugModalOpen, setIsBugModalOpen] = useState(false);
   const [editingBug, setEditingBug] = useState<EnvironmentBug | null>(null);
   const [defaultBugScenarioId, setDefaultBugScenarioId] = useState<string | null>(null);
-  const [hasEnteredEnvironment, setHasEnteredEnvironment] = useState(false);
-  const [isJoiningEnvironment, setIsJoiningEnvironment] = useState(false);
-  const [isLeavingEnvironment, setIsLeavingEnvironment] = useState(false);
   const [isCopyingMarkdown, setIsCopyingMarkdown] = useState(false);
-  const isLocked = environment?.status === 'done';
-  const isScenarioLocked = environment?.status !== 'in_progress' || !hasEnteredEnvironment;
-  const isInteractionLocked = !hasEnteredEnvironment || Boolean(isLocked);
-  const canCopyPublicLink = hasEnteredEnvironment;
-  const isShareDisabled = !hasEnteredEnvironment;
-
-  const { isCurrentUserPresent, joinEnvironment } = usePresentUsers({
-    environmentId: environment?.id ?? null,
-    presentUsersIds: environment?.presentUsersIds ?? [],
-    status: environment?.status ?? null,
-    shouldAutoJoin: hasEnteredEnvironment && !isLocked,
-  });
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
   const { bugs, isLoading: isLoadingBugs } = useEnvironmentBugs(environment?.id ?? null);
-  const bugCountByScenario = useMemo(() => {
-    return bugs.reduce<Record<string, number>>((acc, bug) => {
-      if (!bug.scenarioId) {
-        return acc;
-      }
-      acc[bug.scenarioId] = (acc[bug.scenarioId] ?? 0) + 1;
-      return acc;
-    }, {});
-  }, [bugs]);
+  const {
+    hasEnteredEnvironment,
+    isLocked,
+    isScenarioLocked,
+    isInteractionLocked,
+    canCopyPublicLink,
+    isShareDisabled,
+    isJoiningEnvironment,
+    isLeavingEnvironment,
+    enterEnvironment,
+    leaveEnvironment,
+  } = useEnvironmentEngagement(environment);
+  const {
+    bugCountByScenario,
+    platformScenarioStats,
+    progressPercentage,
+    progressLabel,
+    scenarioCount,
+    suiteDescription,
+    headerMeta,
+    urls,
+    shareLinks,
+  } = useEnvironmentDetails(environment, bugs);
 
   useEffect(() => {
     setActiveOrganization(environmentOrganization ?? null);
@@ -94,108 +90,10 @@ export const EnvironmentPage = () => {
     };
   }, [environmentOrganization, setActiveOrganization]);
 
-  useEffect(() => {
-    if (isCurrentUserPresent) {
-      setHasEnteredEnvironment(true);
-    }
-  }, [isCurrentUserPresent]);
-
-  useEffect(() => {
-    if (!environment?.id || !user?.uid) {
-      setHasEnteredEnvironment(false);
-      return;
-    }
-
-    const hasPersistedEntry = environment.participants?.includes(user.uid) ?? false;
-    if (hasPersistedEntry && !hasEnteredEnvironment) {
-      setHasEnteredEnvironment(true);
-      return;
-    }
-
-    if (!hasPersistedEntry && !isCurrentUserPresent) {
-      setHasEnteredEnvironment(false);
-    }
-  }, [
-    environment?.id,
-    environment?.participants,
-    hasEnteredEnvironment,
-    isCurrentUserPresent,
-    user?.uid,
-  ]);
-
   const { formattedTime } = useTimeTracking(
     environment?.timeTracking ?? null,
     environment?.status === 'in_progress',
   );
-
-  const urls = useMemo(() => environment?.urls ?? [], [environment?.urls]);
-  const suiteDescription = environment?.suiteName ?? 'Suíte não informada';
-
-  const platformScenarioStats = useMemo(() => {
-    const base = {
-      mobile: { total: 0, concluded: 0, pending: 0, running: 0 },
-      desktop: { total: 0, concluded: 0, pending: 0, running: 0 },
-    } satisfies Record<
-      EnvironmentScenarioPlatform,
-      {
-        total: number;
-        concluded: number;
-        pending: number;
-        running: number;
-      }
-    >;
-
-    if (!environment) {
-      return base;
-    }
-
-    Object.values(environment.scenarios ?? {}).forEach((scenario) => {
-      const statuses = getScenarioPlatformStatuses(scenario);
-      (['mobile', 'desktop'] as EnvironmentScenarioPlatform[]).forEach((platform) => {
-        base[platform].total += 1;
-        const status = statuses[platform];
-
-        if (SCENARIO_COMPLETED_STATUSES.includes(status)) {
-          base[platform].concluded += 1;
-          return;
-        }
-
-        if (status === 'em_andamento') {
-          base[platform].running += 1;
-          return;
-        }
-
-        base[platform].pending += 1;
-      });
-    });
-
-    return base;
-  }, [environment]);
-
-  const combinedScenarioStats = useMemo(
-    () => ({
-      total: platformScenarioStats.mobile.total + platformScenarioStats.desktop.total,
-      concluded: platformScenarioStats.mobile.concluded + platformScenarioStats.desktop.concluded,
-      pending: platformScenarioStats.mobile.pending + platformScenarioStats.desktop.pending,
-      running: platformScenarioStats.mobile.running + platformScenarioStats.desktop.running,
-    }),
-    [platformScenarioStats],
-  );
-
-  const scenarioCount = platformScenarioStats.mobile.total;
-
-  const progressPercentage = useMemo(() => {
-    if (combinedScenarioStats.total === 0) {
-      return 0;
-    }
-
-    return Math.round((combinedScenarioStats.concluded / combinedScenarioStats.total) * 100);
-  }, [combinedScenarioStats.concluded, combinedScenarioStats.total]);
-
-  const progressLabel =
-    combinedScenarioStats.total === 0
-      ? 'Nenhum cenário cadastrado ainda.'
-      : `${combinedScenarioStats.concluded} de ${combinedScenarioStats.total} concluídos`;
 
   const handleStatusTransition = async (target: EnvironmentStatus) => {
     if (!environment) {
@@ -289,45 +187,23 @@ export const EnvironmentPage = () => {
   };
 
   const handleEnterEnvironment = async () => {
-    if (hasEnteredEnvironment || isLocked || isJoiningEnvironment) {
-      return;
-    }
-
-    setIsJoiningEnvironment(true);
-
     try {
-      await joinEnvironment();
-      setHasEnteredEnvironment(true);
+      await enterEnvironment();
     } catch (error) {
       console.error(error);
       showToast({ type: 'error', message: 'Não foi possível entrar no ambiente.' });
-    } finally {
-      setIsJoiningEnvironment(false);
     }
   };
 
   const handleLeaveEnvironment = async () => {
-    if (!environment?.id || !user?.uid || isLocked || isLeavingEnvironment) {
-      return;
-    }
-
-    setIsLeavingEnvironment(true);
-
     try {
-      await environmentService.removeUser(environment.id, user.uid);
-      setHasEnteredEnvironment(false);
+      await leaveEnvironment();
       showToast({ type: 'success', message: 'Você saiu do ambiente.' });
     } catch (error) {
       console.error(error);
       showToast({ type: 'error', message: 'Não foi possível sair do ambiente.' });
-    } finally {
-      setIsLeavingEnvironment(false);
     }
   };
-
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const privateLink = environment ? `${origin}/environments/${environment.id}` : '';
-  const publicLink = environment ? `${origin}/environments/${environment.id}/public` : '';
 
   if (isLoading) {
     return (
@@ -350,14 +226,6 @@ export const EnvironmentPage = () => {
         </section>
       </Layout>
     );
-  }
-
-  const headerMeta: string[] = [];
-  if (environment.momento) {
-    headerMeta.push(`Momento: ${environment.momento}`);
-  }
-  if (environment.release) {
-    headerMeta.push(`Release: ${environment.release}`);
   }
 
   return (
@@ -574,7 +442,7 @@ export const EnvironmentPage = () => {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => handleCopyLink(privateLink)}
+                onClick={() => handleCopyLink(shareLinks.private)}
                 disabled={isShareDisabled}
               >
                 Copiar link do ambiente
@@ -582,7 +450,7 @@ export const EnvironmentPage = () => {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => handleCopyLink(publicLink)}
+                onClick={() => handleCopyLink(shareLinks.public)}
                 disabled={!canCopyPublicLink}
               >
                 Copiar link público
