@@ -194,48 +194,14 @@ export const EnvironmentKanban = ({
   const doneEnvironments = grouped.done;
   const activeDoneEnvironments = doneEnvironments.slice(0, 5);
   const archivedEnvironments = doneEnvironments.slice(5);
-  const statusSummary = useMemo(
-    () => [
-      { label: 'Backlog', value: grouped.backlog.length },
-      { label: 'Em andamento', value: grouped.in_progress.length },
-      { label: 'Concluído', value: grouped.done.length },
-    ],
-    [grouped],
-  );
-  const hasArchivedEnvironments = archivedEnvironments.length > 0;
-
   return (
     <section className="environment-kanban">
       <header className="environment-kanban-header">
-        <div>
-          <span className="badge">Status dos ambientes</span>
-          <h3 className="section-title">Ambientes</h3>
-          <p className="environment-kanban-description">
-            Acompanhe o fluxo de validação e mova os ambientes por status.
-          </p>
-        </div>
+        <h3 className="section-title">Ambientes</h3>
         <Button type="button" onClick={() => setIsCreateOpen(true)}>
           Criar ambiente
         </Button>
       </header>
-
-      <div className="environment-kanban-summary" aria-live="polite">
-        {statusSummary.map((item) => (
-          <div key={item.label} className="environment-kanban-summary-item">
-            <span className="environment-kanban-summary-value">{item.value}</span>
-            <span className="environment-kanban-summary-label">{item.label}</span>
-          </div>
-        ))}
-      </div>
-
-      {hasArchivedEnvironments && (
-        <p className="environment-kanban-archive-hint">
-          {archivedEnvironments.length} ambiente
-          {archivedEnvironments.length === 1 ? '' : 's'} arquivado
-          {archivedEnvironments.length === 1 ? '' : 's'} pode ser consultado
-          {archivedEnvironments.length === 1 ? '' : 's'} abaixo do quadro.
-        </p>
-      )}
 
       {isLoading ? (
         <p className="section-subtitle">Carregando ambientes...</p>

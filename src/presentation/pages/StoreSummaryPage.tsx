@@ -1695,14 +1695,10 @@ export const StoreSummaryPage = () => {
                                 <tbody>
                                   {orderedSuitePreviewEntries.map(({ scenarioId, scenario }) => (
                                     <tr key={`${selectedSuitePreview.id}-${scenarioId}`}>
-                                      <td data-label="Cenário">
-                                        {scenario?.title ?? 'Cenário removido'}
-                                      </td>
-                                      <td data-label="Categoria">{scenario?.category ?? 'N/A'}</td>
-                                      <td data-label="Automação">{scenario?.automation ?? '-'}</td>
-                                      <td data-label="Criticidade">
-                                        {scenario?.criticality ?? '-'}
-                                      </td>
+                                      <td>{scenario?.title ?? 'Cenário removido'}</td>
+                                      <td>{scenario?.category ?? 'N/A'}</td>
+                                      <td>{scenario?.automation ?? '-'}</td>
+                                      <td>{scenario?.criticality ?? '-'}</td>
                                     </tr>
                                   ))}
                                 </tbody>
@@ -1897,10 +1893,7 @@ export const StoreSummaryPage = () => {
                                                   key={scenario.id}
                                                   className={isSelected ? 'is-selected' : ''}
                                                 >
-                                                  <td
-                                                    className="suite-scenario-checkbox"
-                                                    data-label="Selecionar"
-                                                  >
+                                                  <td className="suite-scenario-checkbox">
                                                     <input
                                                       type="checkbox"
                                                       checked={isSelected}
@@ -1910,14 +1903,10 @@ export const StoreSummaryPage = () => {
                                                       aria-label={`Selecionar cenário ${scenario.title}`}
                                                     />
                                                   </td>
-                                                  <td data-label="Título">{scenario.title}</td>
-                                                  <td data-label="Categoria">
-                                                    {scenario.category}
-                                                  </td>
-                                                  <td data-label="Automação">
-                                                    {scenario.automation}
-                                                  </td>
-                                                  <td data-label="Criticidade">
+                                                  <td>{scenario.title}</td>
+                                                  <td>{scenario.category}</td>
+                                                  <td>{scenario.automation}</td>
+                                                  <td>
                                                     <span
                                                       className={`criticality-badge ${getCriticalityClassName(
                                                         scenario.criticality,
@@ -1926,10 +1915,7 @@ export const StoreSummaryPage = () => {
                                                       {scenario.criticality}
                                                     </span>
                                                   </td>
-                                                  <td
-                                                    className="scenario-observation"
-                                                    data-label="Observação"
-                                                  >
+                                                  <td className="scenario-observation">
                                                     {scenario.observation}
                                                   </td>
                                                 </tr>
