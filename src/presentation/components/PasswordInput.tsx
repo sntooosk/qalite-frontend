@@ -27,11 +27,12 @@ export const PasswordInput = ({
 }: PasswordInputProps) => {
   const [isVisible, setIsVisible] = useState(false);
   const toggleVisibility = () => setIsVisible((previous) => !previous);
+  const fieldClassName = `password-field${disabled ? ' password-field--disabled' : ''}`;
 
   return (
     <label htmlFor={id} className="field">
       <span className="field-label">{label}</span>
-      <div className="field-input-wrapper">
+      <div className={fieldClassName}>
         <input
           id={id}
           name={id}
@@ -43,14 +44,15 @@ export const PasswordInput = ({
           disabled={disabled}
           readOnly={readOnly}
           autoComplete={autoComplete}
-          className="field-input field-input--with-action"
+          className="password-field-input"
         />
         <button
           type="button"
-          className="field-input-action field-input-action--icon"
+          className="password-field-toggle"
           onClick={toggleVisibility}
           aria-label={isVisible ? 'Ocultar senha' : 'Mostrar senha'}
           aria-pressed={isVisible}
+          disabled={disabled}
         >
           {isVisible ? (
             <EyeSlashIcon aria-hidden className="icon" />
