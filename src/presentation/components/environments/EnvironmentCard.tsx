@@ -3,6 +3,7 @@ import type { DragEvent } from 'react';
 import type { Environment } from '../../../domain/entities/Environment';
 import type { UserSummary } from '../../../domain/entities/UserSummary';
 import { getReadableUserName, getUserInitials } from '../../utils/userDisplay';
+import { ENVIRONMENT_STATUS_LABEL } from '../../../shared/constants/environmentLabels';
 
 interface EnvironmentCardProps {
   environment: Environment;
@@ -12,12 +13,6 @@ interface EnvironmentCardProps {
   draggable?: boolean;
   onDragStart?: (event: DragEvent<HTMLDivElement>, environmentId: string) => void;
 }
-
-const STATUS_LABEL: Record<Environment['status'], string> = {
-  backlog: 'Backlog',
-  in_progress: 'Em andamento',
-  done: 'Concluído',
-};
 
 export const EnvironmentCard = ({
   environment,
@@ -59,7 +54,7 @@ export const EnvironmentCard = ({
         <span
           className={`environment-card-status-dot environment-card-status-dot--${environment.status}`}
         >
-          {STATUS_LABEL[environment.status]}
+          {ENVIRONMENT_STATUS_LABEL[environment.status]}
         </span>
       </div>
 

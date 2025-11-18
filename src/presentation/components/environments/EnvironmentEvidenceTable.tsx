@@ -11,6 +11,7 @@ import {
   createScenarioSortComparator,
   type ScenarioSortConfig,
 } from '../ScenarioColumnSortControl';
+import { ENVIRONMENT_PLATFORM_LABEL } from '../../../shared/constants/environmentLabels';
 
 interface EnvironmentEvidenceTableProps {
   environment: Environment;
@@ -27,11 +28,6 @@ const STATUS_OPTIONS: { value: EnvironmentScenarioStatus; label: string }[] = [
   { value: 'concluido_automatizado', label: 'Concluído automatizado' },
   { value: 'nao_se_aplica', label: 'Não se aplica' },
 ];
-
-const PLATFORM_LABEL: Record<EnvironmentScenarioPlatform, string> = {
-  mobile: 'Mobile',
-  desktop: 'Desktop',
-};
 
 export const EnvironmentEvidenceTable = ({
   environment,
@@ -154,13 +150,13 @@ export const EnvironmentEvidenceTable = ({
                 return (
                   <td key={selectId} className="scenario-status-column">
                     <div className="scenario-status-cell">
-                      <label htmlFor={selectId}>{PLATFORM_LABEL[platform]}</label>
+                      <label htmlFor={selectId}>{ENVIRONMENT_PLATFORM_LABEL[platform]}</label>
                       <select
                         id={selectId}
                         className={`scenario-status-select scenario-status-select--${currentStatus}`}
                         value={currentStatus}
                         disabled={isReadOnly}
-                        aria-label={`Status ${PLATFORM_LABEL[platform]} do cenário ${data.titulo}`}
+                        aria-label={`Status ${ENVIRONMENT_PLATFORM_LABEL[platform]} do cenário ${data.titulo}`}
                         onChange={(event) =>
                           handleStatusChange(
                             scenarioId,
