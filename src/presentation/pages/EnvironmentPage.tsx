@@ -28,17 +28,10 @@ import { EnvironmentBugModal } from '../components/environments/EnvironmentBugMo
 import type { EnvironmentBug } from '../../domain/entities/EnvironmentBug';
 import { useEnvironmentDetails } from '../hooks/useEnvironmentDetails';
 import { useEnvironmentEngagement } from '../hooks/useEnvironmentEngagement';
-
-const STATUS_LABEL: Record<EnvironmentStatus, string> = {
-  backlog: 'Backlog',
-  in_progress: 'Em andamento',
-  done: 'Concluído',
-};
-
-const PLATFORM_LABEL: Record<EnvironmentScenarioPlatform, string> = {
-  mobile: 'Mobile',
-  desktop: 'Desktop',
-};
+import {
+  ENVIRONMENT_PLATFORM_LABEL,
+  ENVIRONMENT_STATUS_LABEL,
+} from '../../shared/constants/environmentLabels';
 
 export const EnvironmentPage = () => {
   const { environmentId } = useParams<{ environmentId: string }>();
@@ -302,7 +295,7 @@ export const EnvironmentPage = () => {
               <span
                 className={`summary-card__status-badge summary-card__status-badge--${environment.status}`}
               >
-                {STATUS_LABEL[environment.status]}
+                {ENVIRONMENT_STATUS_LABEL[environment.status]}
               </span>
             </div>
             <div className="summary-card__highlight" aria-live="polite">
@@ -323,7 +316,7 @@ export const EnvironmentPage = () => {
                   return (
                     <div key={platform} className="summary-card__platform-column">
                       <span className="summary-card__platform-title">
-                        {PLATFORM_LABEL[platform]}
+                        {ENVIRONMENT_PLATFORM_LABEL[platform]}
                       </span>
                       <div className="summary-card__metrics summary-card__metrics--pill">
                         <div className="summary-pill">

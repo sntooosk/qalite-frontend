@@ -2,12 +2,7 @@ import type { Environment } from '../../../domain/entities/Environment';
 import type { EnvironmentBug } from '../../../domain/entities/EnvironmentBug';
 import { environmentService } from '../../../services';
 import { useToast } from '../../context/ToastContext';
-
-const BUG_STATUS_LABEL: Record<EnvironmentBug['status'], string> = {
-  aberto: 'Aberto',
-  em_andamento: 'Em andamento',
-  resolvido: 'Resolvido',
-};
+import { BUG_STATUS_LABEL } from '../../../shared/constants/environmentLabels';
 
 interface EnvironmentBugListProps {
   environment: Environment;
