@@ -2438,22 +2438,46 @@ button.store-summary-highlight:focus-visible {
 }
 
 .suite-manager {
+  width: 100%;
+}
+
+.suite-manager--suites-only {
+  display: flex;
+  justify-content: center;
+}
+
+.suite-layout {
   display: grid;
   gap: 1.5rem;
 }
 
-.suite-manager--suites-only {
-  grid-template-columns: minmax(0, 1fr);
+@media (min-width: 1024px) {
+  .suite-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
 }
 
-@media (min-width: 960px) {
-  .suite-manager {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.suite-panel {
+  width: 100%;
+}
 
-  .suite-manager--suites-only {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
+.suite-panel--cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .suite-panel--cards {
+    position: sticky;
+    top: 1rem;
   }
+}
+
+.suite-panel--form {
+  display: flex;
+  flex-direction: column;
 }
 
 .suite-form {
@@ -2466,12 +2490,6 @@ button.store-summary-highlight:focus-visible {
 
 .suite-form > .suite-card {
   width: 100%;
-}
-
-@media (min-width: 960px) {
-  .suite-manager > .suite-form {
-    grid-column: 1 / -1;
-  }
 }
 
 @media (min-width: 768px) {
@@ -2687,6 +2705,17 @@ button.store-summary-highlight:focus-visible {
   flex-direction: column;
   gap: clamp(0.85rem, 2vw, 1.25rem);
   width: 100%;
+  flex: 1 1 auto;
+}
+
+.suite-cards-view--embedded {
+  height: 100%;
+}
+
+.suite-cards-view--standalone {
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .suite-cards-grid {
@@ -2711,6 +2740,15 @@ button.store-summary-highlight:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+}
+
+@media (max-width: 540px) {
+  .suite-card-trigger {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
 }
 
 .suite-card-trigger__title {
@@ -3206,33 +3244,6 @@ button.store-summary-highlight:focus-visible {
 
 .environment-kanban-description {
   margin: 0.25rem 0 0;
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-}
-
-.environment-kanban-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 0.75rem;
-}
-
-.environment-kanban-summary-item {
-  border: 1px dashed var(--color-border);
-  border-radius: 12px;
-  padding: 0.75rem 1rem;
-  background: var(--color-surface-alt);
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.environment-kanban-summary-value {
-  font-size: 1.4rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.environment-kanban-summary-label {
   font-size: 0.9rem;
   color: var(--color-text-secondary);
 }

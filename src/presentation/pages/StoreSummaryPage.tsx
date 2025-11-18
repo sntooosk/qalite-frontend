@@ -1003,6 +1003,141 @@ export const StoreSummaryPage = () => {
     setIsViewingSuitesOnly(false);
   };
 
+  const renderSuiteCardsPanel = (displayMode: 'embedded' | 'standalone') => {
+    const isStandalone = displayMode === 'standalone';
+
+    return (
+      <section
+        className={`suite-cards-view ${
+          isStandalone ? 'suite-cards-view--standalone' : 'suite-cards-view--embedded'
+        }`}
+      >
+        <div className="suite-table-header">
+          <span className="suite-preview-title">Suítes cadastradas</span>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={isStandalone ? handleBackToSuiteForm : handleShowSuitesOnly}
+          >
+            {isStandalone ? 'Voltar para formulário' : 'Tela cheia'}
+          </Button>
+        </div>
+        {isLoadingSuites ? (
+          <p className="section-subtitle">Carregando suítes de testes...</p>
+        ) : suites.length === 0 ? (
+          <p className="section-subtitle">
+            Nenhuma suíte cadastrada ainda. Utilize o formulário para criar sua primeira seleção.
+          </p>
+        ) : (
+          <div className="suite-cards-grid">
+            {suites
+              .slice()
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((suite) => {
+                const isActive = selectedSuitePreviewId === suite.id;
+                return (
+                  <button
+                    key={suite.id}
+                    type="button"
+                    className={`suite-card-trigger ${isActive ? 'is-active' : ''}`}
+                    onClick={() =>
+                      setSelectedSuitePreviewId((previous) =>
+                        previous === suite.id ? null : suite.id,
+                      )
+                    }
+                  >
+                    <span className="suite-card-trigger__title">{suite.name}</span>
+                    <span className="suite-card-trigger__count">
+                      {suite.scenarioIds.length} cenário
+                      {suite.scenarioIds.length === 1 ? '' : 's'}
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
+        )}
+
+        {suites.length > 0 &&
+          (!selectedSuitePreview ? (
+            <p className="section-subtitle">
+              Clique em um card para visualizar os cenários associados.
+            </p>
+          ) : orderedSuitePreviewEntries.length === 0 ? (
+            <p className="section-subtitle">
+              Esta suíte não possui cenários cadastrados ou alguns itens foram removidos.
+            </p>
+          ) : (
+            <div className="suite-preview suite-preview--cards">
+              <table className="suite-preview-table data-table">
+                <thead>
+                  <tr>
+                    <th>Cenário</th>
+                    <th>
+                      <ScenarioColumnSortControl
+                        label="Categoria"
+                        field="category"
+                        sort={suitePreviewSort}
+                        onChange={setSuitePreviewSort}
+                      />
+                    </th>
+                    <th>
+                      <ScenarioColumnSortControl
+                        label="Automação"
+                        field="automation"
+                        sort={suitePreviewSort}
+                        onChange={setSuitePreviewSort}
+                      />
+                    </th>
+                    <th>
+                      <ScenarioColumnSortControl
+                        label="Criticidade"
+                        field="criticality"
+                        sort={suitePreviewSort}
+                        onChange={setSuitePreviewSort}
+                      />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orderedSuitePreviewEntries.map(({ scenarioId, scenario }) => (
+                    <tr key={`${selectedSuitePreview.id}-${scenarioId}`}>
+                      <td>{scenario?.title ?? 'Cenário removido'}</td>
+                      <td>{scenario?.category ?? 'N/A'}</td>
+                      <td>{scenario?.automation ?? '-'}</td>
+                      <td>{scenario?.criticality ?? '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+
+        {selectedSuitePreview && canManageScenarios && (
+          <div className="suite-preview-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => handleEditSuite(selectedSuitePreview)}
+              disabled={isSavingSuite}
+              className="suite-edit"
+            >
+              Editar suíte
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => void handleDeleteSuite(selectedSuitePreview)}
+              disabled={isSavingSuite}
+              className="suite-delete"
+            >
+              Excluir suíte
+            </Button>
+          </div>
+        )}
+      </section>
+    );
+  };
+
   const handleScenarioFilterChange =
     (field: keyof ScenarioFilters) =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -1607,339 +1742,220 @@ export const StoreSummaryPage = () => {
                       className={`suite-manager ${isViewingSuitesOnly ? 'suite-manager--suites-only' : ''}`}
                     >
                       {isViewingSuitesOnly ? (
-                        <div className="suite-cards-view">
-                          <div className="suite-table-header">
-                            <span className="suite-preview-title">Suítes cadastradas</span>
-                            <Button type="button" variant="ghost" onClick={handleBackToSuiteForm}>
-                              Voltar para formulário
-                            </Button>
-                          </div>
-                          {isLoadingSuites ? (
-                            <p className="section-subtitle">Carregando suítes de testes...</p>
-                          ) : suites.length === 0 ? (
-                            <p className="section-subtitle">
-                              Nenhuma suíte cadastrada ainda. Utilize o formulário para criar sua
-                              primeira seleção.
-                            </p>
-                          ) : (
-                            <div className="suite-cards-grid">
-                              {suites
-                                .slice()
-                                .sort((a, b) => a.name.localeCompare(b.name))
-                                .map((suite) => {
-                                  const isActive = selectedSuitePreviewId === suite.id;
-                                  return (
-                                    <button
-                                      key={suite.id}
-                                      type="button"
-                                      className={`suite-card-trigger ${isActive ? 'is-active' : ''}`}
-                                      onClick={() =>
-                                        setSelectedSuitePreviewId((previous) =>
-                                          previous === suite.id ? null : suite.id,
-                                        )
-                                      }
-                                    >
-                                      <span className="suite-card-trigger__title">
-                                        {suite.name}
-                                      </span>
-                                      <span className="suite-card-trigger__count">
-                                        {suite.scenarioIds.length} cenário
-                                        {suite.scenarioIds.length === 1 ? '' : 's'}
-                                      </span>
-                                    </button>
-                                  );
-                                })}
-                            </div>
-                          )}
-                          {!selectedSuitePreview ? (
-                            <p className="section-subtitle">
-                              Clique em um card para visualizar os cenários associados.
-                            </p>
-                          ) : orderedSuitePreviewEntries.length === 0 ? (
-                            <p className="section-subtitle">
-                              Esta suíte não possui cenários cadastrados ou alguns itens foram
-                              removidos.
-                            </p>
-                          ) : (
-                            <div className="suite-preview suite-preview--cards">
-                              <table className="suite-preview-table data-table">
-                                <thead>
-                                  <tr>
-                                    <th>Cenário</th>
-                                    <th>
-                                      <ScenarioColumnSortControl
-                                        label="Categoria"
-                                        field="category"
-                                        sort={suitePreviewSort}
-                                        onChange={setSuitePreviewSort}
-                                      />
-                                    </th>
-                                    <th>
-                                      <ScenarioColumnSortControl
-                                        label="Automação"
-                                        field="automation"
-                                        sort={suitePreviewSort}
-                                        onChange={setSuitePreviewSort}
-                                      />
-                                    </th>
-                                    <th>
-                                      <ScenarioColumnSortControl
-                                        label="Criticidade"
-                                        field="criticality"
-                                        sort={suitePreviewSort}
-                                        onChange={setSuitePreviewSort}
-                                      />
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {orderedSuitePreviewEntries.map(({ scenarioId, scenario }) => (
-                                    <tr key={`${selectedSuitePreview.id}-${scenarioId}`}>
-                                      <td>{scenario?.title ?? 'Cenário removido'}</td>
-                                      <td>{scenario?.category ?? 'N/A'}</td>
-                                      <td>{scenario?.automation ?? '-'}</td>
-                                      <td>{scenario?.criticality ?? '-'}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                          {selectedSuitePreview && canManageScenarios && (
-                            <div className="suite-preview-actions">
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                onClick={() => handleEditSuite(selectedSuitePreview)}
-                                disabled={isSavingSuite}
-                                className="suite-edit"
-                              >
-                                Editar suíte
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={() => void handleDeleteSuite(selectedSuitePreview)}
-                                disabled={isSavingSuite}
-                                className="suite-delete"
-                              >
-                                Excluir suíte
-                              </Button>
-                            </div>
-                          )}
-                        </div>
+                        renderSuiteCardsPanel('standalone')
                       ) : (
-                        <>
-                          <div className="suite-form">
-                            <form
-                              className="card suite-card suite-editor-card"
-                              onSubmit={handleSuiteSubmit}
-                            >
-                              <div className="suite-form-header-actions suite-editor-actions">
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  onClick={handleShowSuitesOnly}
-                                >
-                                  Ir para cadastradas
-                                </Button>
-                                {editingSuiteId && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    onClick={handleCancelSuiteEdit}
-                                    disabled={isSavingSuite}
-                                  >
-                                    Cancelar edição
-                                  </Button>
-                                )}
-                              </div>
-                              <div className="suite-form-header">
-                                <div>
-                                  <h3 className="form-title">
-                                    {editingSuiteId
-                                      ? 'Editar suíte de testes'
-                                      : 'Nova suíte de testes'}
-                                  </h3>
-                                </div>
-                              </div>
-                              {suiteFormError && (
-                                <p className="form-message form-message--error">{suiteFormError}</p>
-                              )}
-                              <div className="suite-basic-info">
-                                <TextInput
-                                  id="suite-name"
-                                  label="Nome da suíte"
-                                  value={suiteForm.name}
-                                  onChange={handleSuiteFormChange('name')}
-                                  required
-                                />
-                                <TextArea
-                                  id="suite-description"
-                                  label="Descrição"
-                                  value={suiteForm.description}
-                                  onChange={handleSuiteFormChange('description')}
-                                  required
-                                />
-                              </div>
-                              <div className="suite-scenario-selector">
-                                <div className="suite-scenario-selector-header">
-                                  <p className="field-label">Seleção de cenários</p>
-                                  {scenarios.length === 0 && (
-                                    <p className="suite-scenario-selector-description">
-                                      Cadastre cenários na seção acima para começar a criar suítes.
-                                    </p>
+                        <div className="suite-layout">
+                          <div className="suite-panel suite-panel--cards">
+                            {renderSuiteCardsPanel('embedded')}
+                          </div>
+                          <div className="suite-panel suite-panel--form">
+                            <div className="suite-form">
+                              <form
+                                className="card suite-card suite-editor-card"
+                                onSubmit={handleSuiteSubmit}
+                              >
+                                <div className="suite-form-header-actions suite-editor-actions">
+                                  {editingSuiteId && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      onClick={handleCancelSuiteEdit}
+                                      disabled={isSavingSuite}
+                                    >
+                                      Cancelar edição
+                                    </Button>
                                   )}
                                 </div>
-                                <p className="suite-selection-summary">{suiteSelectionSummary}</p>
-                                {scenarios.length === 0 ? (
-                                  <p className="category-manager-empty">
-                                    Nenhum cenário disponível para seleção no momento.
+                                <div className="suite-form-header">
+                                  <div>
+                                    <h3 className="form-title">
+                                      {editingSuiteId
+                                        ? 'Editar suíte de testes'
+                                        : 'Nova suíte de testes'}
+                                    </h3>
+                                  </div>
+                                </div>
+                                {suiteFormError && (
+                                  <p className="form-message form-message--error">
+                                    {suiteFormError}
                                   </p>
-                                ) : (
-                                  <>
-                                    <div className="scenario-filter-bar suite-scenario-filters">
-                                      <input
-                                        type="text"
-                                        className="scenario-filter-input"
-                                        placeholder="Busque pelo título do cenário"
-                                        value={suiteScenarioFilters.search}
-                                        onChange={handleSuiteScenarioFilterChange('search')}
-                                        aria-label="Buscar cenários por título"
-                                      />
-                                      <select
-                                        className="scenario-filter-input"
-                                        value={suiteScenarioFilters.category}
-                                        onChange={handleSuiteScenarioFilterChange('category')}
-                                        aria-label="Filtrar por categoria"
-                                      >
-                                        {categoryFilterOptions.map((option) => (
-                                          <option key={option.value} value={option.value}>
-                                            {option.label}
-                                          </option>
-                                        ))}
-                                      </select>
-                                      <select
-                                        className="scenario-filter-input"
-                                        value={suiteScenarioFilters.criticality}
-                                        onChange={handleSuiteScenarioFilterChange('criticality')}
-                                        aria-label="Filtrar por criticidade"
-                                      >
-                                        {criticalityFilterOptions.map((option) => (
-                                          <option key={option.value} value={option.value}>
-                                            {option.label}
-                                          </option>
-                                        ))}
-                                      </select>
-                                      {(suiteScenarioFilters.search ||
-                                        suiteScenarioFilters.category ||
-                                        suiteScenarioFilters.criticality) && (
-                                        <button
-                                          type="button"
-                                          className="scenario-filter-clear"
-                                          onClick={handleClearSuiteScenarioFilters}
-                                        >
-                                          Limpar filtros
-                                        </button>
-                                      )}
-                                    </div>
-                                    {filteredSuiteScenarios.length === 0 ? (
-                                      <p className="category-manager-empty">
-                                        Nenhum cenário corresponde aos filtros aplicados.
-                                      </p>
-                                    ) : (
-                                      <div className="suite-scenario-table-wrapper">
-                                        <table className="scenario-table suite-scenario-table data-table">
-                                          <thead>
-                                            <tr>
-                                              <th className="suite-scenario-checkbox">
-                                                Selecionar
-                                              </th>
-                                              <th>Título</th>
-                                              <th>
-                                                <ScenarioColumnSortControl
-                                                  label="Categoria"
-                                                  field="category"
-                                                  sort={suiteScenarioSort}
-                                                  onChange={setSuiteScenarioSort}
-                                                />
-                                              </th>
-                                              <th>
-                                                <ScenarioColumnSortControl
-                                                  label="Automação"
-                                                  field="automation"
-                                                  sort={suiteScenarioSort}
-                                                  onChange={setSuiteScenarioSort}
-                                                />
-                                              </th>
-                                              <th>
-                                                <ScenarioColumnSortControl
-                                                  label="Criticidade"
-                                                  field="criticality"
-                                                  sort={suiteScenarioSort}
-                                                  onChange={setSuiteScenarioSort}
-                                                />
-                                              </th>
-                                              <th>Observação</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {orderedSuiteScenarios.map((scenario) => {
-                                              const isSelected = suiteForm.scenarioIds.includes(
-                                                scenario.id,
-                                              );
-                                              return (
-                                                <tr
-                                                  key={scenario.id}
-                                                  className={isSelected ? 'is-selected' : ''}
-                                                >
-                                                  <td className="suite-scenario-checkbox">
-                                                    <input
-                                                      type="checkbox"
-                                                      checked={isSelected}
-                                                      onChange={() =>
-                                                        handleSuiteScenarioToggle(scenario.id)
-                                                      }
-                                                      aria-label={`Selecionar cenário ${scenario.title}`}
-                                                    />
-                                                  </td>
-                                                  <td>{scenario.title}</td>
-                                                  <td>{scenario.category}</td>
-                                                  <td>{scenario.automation}</td>
-                                                  <td>
-                                                    <span
-                                                      className={`criticality-badge ${getCriticalityClassName(
-                                                        scenario.criticality,
-                                                      )}`}
-                                                    >
-                                                      {scenario.criticality}
-                                                    </span>
-                                                  </td>
-                                                  <td className="scenario-observation">
-                                                    {scenario.observation}
-                                                  </td>
-                                                </tr>
-                                              );
-                                            })}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    )}
-                                  </>
                                 )}
-                              </div>
-                              <div className="suite-form-actions">
-                                <Button
-                                  type="submit"
-                                  isLoading={isSavingSuite}
-                                  loadingText="Salvando..."
-                                >
-                                  {editingSuiteId ? 'Atualizar suíte' : 'Salvar suíte'}
-                                </Button>
-                              </div>
-                            </form>
+                                <div className="suite-basic-info">
+                                  <TextInput
+                                    id="suite-name"
+                                    label="Nome da suíte"
+                                    value={suiteForm.name}
+                                    onChange={handleSuiteFormChange('name')}
+                                    required
+                                  />
+                                  <TextArea
+                                    id="suite-description"
+                                    label="Descrição"
+                                    value={suiteForm.description}
+                                    onChange={handleSuiteFormChange('description')}
+                                    required
+                                  />
+                                </div>
+                                <div className="suite-scenario-selector">
+                                  <div className="suite-scenario-selector-header">
+                                    <p className="field-label">Seleção de cenários</p>
+                                    {scenarios.length === 0 && (
+                                      <p className="suite-scenario-selector-description">
+                                        Cadastre cenários na seção acima para começar a criar
+                                        suítes.
+                                      </p>
+                                    )}
+                                  </div>
+                                  <p className="suite-selection-summary">{suiteSelectionSummary}</p>
+                                  {scenarios.length === 0 ? (
+                                    <p className="category-manager-empty">
+                                      Nenhum cenário disponível para seleção no momento.
+                                    </p>
+                                  ) : (
+                                    <>
+                                      <div className="scenario-filter-bar suite-scenario-filters">
+                                        <input
+                                          type="text"
+                                          className="scenario-filter-input"
+                                          placeholder="Busque pelo título do cenário"
+                                          value={suiteScenarioFilters.search}
+                                          onChange={handleSuiteScenarioFilterChange('search')}
+                                          aria-label="Buscar cenários por título"
+                                        />
+                                        <select
+                                          className="scenario-filter-input"
+                                          value={suiteScenarioFilters.category}
+                                          onChange={handleSuiteScenarioFilterChange('category')}
+                                          aria-label="Filtrar por categoria"
+                                        >
+                                          {categoryFilterOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                              {option.label}
+                                            </option>
+                                          ))}
+                                        </select>
+                                        <select
+                                          className="scenario-filter-input"
+                                          value={suiteScenarioFilters.criticality}
+                                          onChange={handleSuiteScenarioFilterChange('criticality')}
+                                          aria-label="Filtrar por criticidade"
+                                        >
+                                          {criticalityFilterOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                              {option.label}
+                                            </option>
+                                          ))}
+                                        </select>
+                                        {(suiteScenarioFilters.search ||
+                                          suiteScenarioFilters.category ||
+                                          suiteScenarioFilters.criticality) && (
+                                          <button
+                                            type="button"
+                                            className="scenario-filter-clear"
+                                            onClick={handleClearSuiteScenarioFilters}
+                                          >
+                                            Limpar filtros
+                                          </button>
+                                        )}
+                                      </div>
+                                      {filteredSuiteScenarios.length === 0 ? (
+                                        <p className="category-manager-empty">
+                                          Nenhum cenário corresponde aos filtros aplicados.
+                                        </p>
+                                      ) : (
+                                        <div className="suite-scenario-table-wrapper">
+                                          <table className="scenario-table suite-scenario-table data-table">
+                                            <thead>
+                                              <tr>
+                                                <th className="suite-scenario-checkbox">
+                                                  Selecionar
+                                                </th>
+                                                <th>Título</th>
+                                                <th>
+                                                  <ScenarioColumnSortControl
+                                                    label="Categoria"
+                                                    field="category"
+                                                    sort={suiteScenarioSort}
+                                                    onChange={setSuiteScenarioSort}
+                                                  />
+                                                </th>
+                                                <th>
+                                                  <ScenarioColumnSortControl
+                                                    label="Automação"
+                                                    field="automation"
+                                                    sort={suiteScenarioSort}
+                                                    onChange={setSuiteScenarioSort}
+                                                  />
+                                                </th>
+                                                <th>
+                                                  <ScenarioColumnSortControl
+                                                    label="Criticidade"
+                                                    field="criticality"
+                                                    sort={suiteScenarioSort}
+                                                    onChange={setSuiteScenarioSort}
+                                                  />
+                                                </th>
+                                                <th>Observação</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {orderedSuiteScenarios.map((scenario) => {
+                                                const isSelected = suiteForm.scenarioIds.includes(
+                                                  scenario.id,
+                                                );
+                                                return (
+                                                  <tr
+                                                    key={scenario.id}
+                                                    className={isSelected ? 'is-selected' : ''}
+                                                  >
+                                                    <td className="suite-scenario-checkbox">
+                                                      <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() =>
+                                                          handleSuiteScenarioToggle(scenario.id)
+                                                        }
+                                                        aria-label={`Selecionar cenário ${scenario.title}`}
+                                                      />
+                                                    </td>
+                                                    <td>{scenario.title}</td>
+                                                    <td>{scenario.category}</td>
+                                                    <td>{scenario.automation}</td>
+                                                    <td>
+                                                      <span
+                                                        className={`criticality-badge ${getCriticalityClassName(
+                                                          scenario.criticality,
+                                                        )}`}
+                                                      >
+                                                        {scenario.criticality}
+                                                      </span>
+                                                    </td>
+                                                    <td className="scenario-observation">
+                                                      {scenario.observation}
+                                                    </td>
+                                                  </tr>
+                                                );
+                                              })}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                                <div className="suite-form-actions">
+                                  <Button
+                                    type="submit"
+                                    isLoading={isSavingSuite}
+                                    loadingText="Salvando..."
+                                  >
+                                    {editingSuiteId ? 'Atualizar suíte' : 'Salvar suíte'}
+                                  </Button>
+                                </div>
+                              </form>
+                            </div>
                           </div>
-                        </>
+                        </div>
                       )}
                     </div>
                   )}
