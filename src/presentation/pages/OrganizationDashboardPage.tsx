@@ -16,6 +16,7 @@ export const OrganizationDashboardPage = () => {
   const { showToast } = useToast();
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
 
   useEffect(() => {
     if (isInitializing) {
@@ -111,7 +112,7 @@ export const OrganizationDashboardPage = () => {
         </div>
       </section>
 
-      {!isLoading && organization && user?.role === 'admin' && (
+      {!isLoading && organization && isAdmin && (
         <OrganizationLogPanel organizationId={organization.id} />
       )}
 
@@ -119,7 +120,7 @@ export const OrganizationDashboardPage = () => {
         <StoreManagementPanel
           organizationId={organization.id}
           organizationName={organization.name}
-          canManageStores={user?.role === 'admin'}
+          canManageStores={isAdmin}
           canManageScenarios={Boolean(user)}
         />
       )}
