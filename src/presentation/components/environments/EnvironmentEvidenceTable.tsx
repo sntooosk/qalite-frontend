@@ -61,6 +61,13 @@ export const EnvironmentEvidenceTable = ({
   const { user } = useAuth();
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const [scenarioStartTimes, setScenarioStartTimes] = useState<Record<string, number>>({});
+  const environmentStartTimestamp = useMemo(() => {
+    if (!environment?.timeTracking?.start) {
+      return null;
+    }
+
+    return new Date(environment.timeTracking.start).getTime();
+  }, [environment?.timeTracking?.start]);
   useEffect(() => {
     if (!environment?.scenarios || Object.keys(environment.scenarios).length === 0) {
       setScenarioStartTimes((previous) => {
@@ -90,7 +97,7 @@ export const EnvironmentEvidenceTable = ({
             next = { ...previous };
             hasChanges = true;
           }
-          next[scenarioId] = Date.now();
+          next[scenarioId] = environmentStartTimestamp ?? Date.now();
         }
 
         if (!isRunning && hasStartTime) {
@@ -114,7 +121,7 @@ export const EnvironmentEvidenceTable = ({
 
       return hasChanges ? next : previous;
     });
-  }, [environment?.scenarios]);
+  }, [environment?.scenarios, environmentStartTimestamp]);
   const scenarioEntries = useMemo(() => {
     const entries = Object.entries(environment.scenarios ?? {});
 
@@ -198,14 +205,7 @@ export const EnvironmentEvidenceTable = ({
       return;
     }
 
-    const startedAt = scenarioStartTimes[scenarioId];
-    if (!startedAt) {
-      showToast({
-        type: 'info',
-        message: 'Marque o cenário como "Em andamento" para iniciar a contagem antes de concluir.',
-      });
-      return;
-    }
+    const startedAt = scenarioStartTimes[scenarioId] ?? environmentStartTimestamp ?? Date.now();
 
     if (!organizationId) {
       showToast({
