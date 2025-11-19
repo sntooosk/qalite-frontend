@@ -12,8 +12,10 @@ export interface SlackEnvironmentSummary {
   totalTime: string;
   scenariosCount: number;
   executedScenariosMessage: string;
-  storyfixCount: number;
-  bugCount: number;
+  fix: {
+    type: string;
+    value: number;
+  };
   jira: string;
   suiteName: string;
   suiteDetails: string;

@@ -145,16 +145,17 @@ const buildSlackTaskSummaryPayload = (
   const normalizedEnvironmentType = environment.tipoAmbiente?.trim().toUpperCase();
   const isWorkspaceEnvironment = normalizedEnvironmentType === 'WS';
   const bugsCount = options.bugsCount;
-  const storyfixCount = isWorkspaceEnvironment ? bugsCount : 0;
-  const bugCount = isWorkspaceEnvironment ? 0 : bugsCount;
+  const fix = {
+    type: isWorkspaceEnvironment ? 'storyfix' : 'bug',
+    value: bugsCount,
+  } as const;
 
   return {
     environmentSummary: {
       totalTime: options.formattedTime || '00:00:00',
       scenariosCount: options.scenarioCount,
       executedScenariosMessage: formatExecutedScenariosMessage(options.scenarioCount),
-      storyfixCount,
-      bugCount,
+      fix,
       jira: environment.jiraTask?.trim() || 'Não informado',
       suiteName: options.suiteDescription,
       suiteDetails: buildSuiteDetails(options.scenarioCount),
