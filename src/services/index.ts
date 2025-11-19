@@ -70,7 +70,6 @@ import {
   updateUserProfile,
 } from '../lib/auth';
 import { getUserSummariesByIds } from '../lib/users';
-import { sendEnvironmentSummaryToSlack } from '../lib/slack';
 
 export const authService = {
   register: registerUser,
@@ -150,8 +149,4 @@ export const scenarioExecutionService = {
   getStoreScenarioAverages,
   listByStore: listScenarioExecutionsByStore,
   create: createScenarioExecution,
-};
-
-export const slackService = {
-  sendTaskSummary: sendEnvironmentSummaryToSlack,
 };
