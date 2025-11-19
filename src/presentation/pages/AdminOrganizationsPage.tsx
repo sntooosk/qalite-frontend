@@ -1,5 +1,5 @@
 import { FormEvent, KeyboardEvent, useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import type { Organization } from '../../lib/types';
 import { organizationService } from '../../services';
@@ -8,7 +8,6 @@ import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
 import { Modal } from '../components/Modal';
-import { OrganizationLogPanel } from '../components/OrganizationLogPanel';
 
 interface OrganizationFormState {
   name: string;
@@ -22,7 +21,6 @@ const initialOrganizationForm: OrganizationFormState = {
 
 export const AdminOrganizationsPage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { showToast } = useToast();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,11 +29,6 @@ export const AdminOrganizationsPage = () => {
     useState<OrganizationFormState>(initialOrganizationForm);
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const selectedOrganizationId = searchParams.get('organizationId');
-  const selectedOrganization = organizations.find(
-    (organization) => organization.id === selectedOrganizationId,
-  );
-
   const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>, callback: () => void) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -135,12 +128,6 @@ export const AdminOrganizationsPage = () => {
           </div>
         ) : (
           <>
-            {selectedOrganization && (
-              <div className="page-section">
-                <OrganizationLogPanel organizationId={selectedOrganization.id} />
-              </div>
-            )}
-
             <div className="dashboard-grid">
               {organizations.map((organization) => (
                 <div
