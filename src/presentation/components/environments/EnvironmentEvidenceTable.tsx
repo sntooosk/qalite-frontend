@@ -1,10 +1,11 @@
-import { type ChangeEvent, useMemo, useState } from 'react';
+import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
 
 import type {
   Environment,
   EnvironmentScenario,
   EnvironmentScenarioPlatform,
   EnvironmentScenarioStatus,
+  getScenarioPlatformStatuses,
 } from '../../../domain/entities/Environment';
 import { useScenarioEvidence } from '../../hooks/useScenarioEvidence';
 import {
@@ -60,6 +61,60 @@ export const EnvironmentEvidenceTable = ({
   const { user } = useAuth();
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const [scenarioStartTimes, setScenarioStartTimes] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!environment?.scenarios || Object.keys(environment.scenarios).length === 0) {
+      setScenarioStartTimes((previous) => {
+        if (Object.keys(previous).length === 0) {
+          return previous;
+        }
+        return {};
+      });
+      return;
+    }
+
+    setScenarioStartTimes((previous) => {
+      let next = previous;
+      let hasChanges = false;
+      const activeScenarioIds = new Set<string>();
+
+      Object.entries(environment.scenarios ?? {}).forEach(([scenarioId, data]) => {
+        activeScenarioIds.add(scenarioId);
+        const platformStatuses = getScenarioPlatformStatuses(data);
+        const isRunning = Object.values(platformStatuses).some(
+          (status) => status === 'em_andamento',
+        );
+        const hasStartTime = Boolean(previous[scenarioId]);
+
+        if (isRunning && !hasStartTime) {
+          if (!hasChanges) {
+            next = { ...previous };
+            hasChanges = true;
+          }
+          next[scenarioId] = Date.now();
+        }
+
+        if (!isRunning && hasStartTime) {
+          if (!hasChanges) {
+            next = { ...previous };
+            hasChanges = true;
+          }
+          delete next[scenarioId];
+        }
+      });
+
+      Object.keys(previous).forEach((scenarioId) => {
+        if (!activeScenarioIds.has(scenarioId)) {
+          if (!hasChanges) {
+            next = { ...previous };
+            hasChanges = true;
+          }
+          delete next[scenarioId];
+        }
+      });
+
+      return hasChanges ? next : previous;
+    });
+  }, [environment?.scenarios]);
   const scenarioEntries = useMemo(() => {
     const entries = Object.entries(environment.scenarios ?? {});
 
