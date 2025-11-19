@@ -479,6 +479,17 @@ export const AdminStoresPage = () => {
                 Gerenciar organização
               </Button>
             )}
+            {selectedOrganizationId && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() =>
+                  navigate(`/admin/organization?organizationId=${selectedOrganizationId}`)
+                }
+              >
+                Ver métricas
+              </Button>
+            )}
             <Button type="button" onClick={openCreateModal} disabled={!selectedOrganizationId}>
               Nova loja
             </Button>

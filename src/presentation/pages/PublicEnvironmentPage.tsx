@@ -105,6 +105,7 @@ export const PublicEnvironmentPage = () => {
             isLocked
             readOnly
             bugCountByScenario={bugCountByScenario}
+            organizationId={environmentOrganization?.id ?? null}
           />
         </div>
         <EnvironmentBugList

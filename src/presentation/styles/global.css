@@ -3836,6 +3836,26 @@ button.store-summary-highlight:focus-visible {
   gap: 1rem;
 }
 
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.metric-highlight {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+}
+
+.metric-highlight strong {
+  font-size: 1.1rem;
+  color: var(--color-text-secondary);
+}
+
 .summary-card {
   border: 1px solid var(--color-border);
   border-radius: 16px;
@@ -4304,6 +4324,62 @@ button.store-summary-highlight:focus-visible {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--color-text-secondary);
+}
+
+.scenario-timer-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.scenario-timer-display {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.scenario-timer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.scenario-timer-button {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text-primary);
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition-base),
+    color var(--transition-base);
+}
+
+.scenario-timer-button--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: transparent;
+}
+
+.scenario-timer-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.scenario-timer-button:not(:disabled):hover,
+.scenario-timer-button:not(:disabled):focus-visible {
+  background: var(--color-primary-hover);
+  color: var(--color-on-primary);
+  outline: none;
+}
+
+.scenario-timer-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
 }
 
 .scenario-evidence-cell {

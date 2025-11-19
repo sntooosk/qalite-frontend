@@ -1,16 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { EnvironmentTimeTracking } from '../../domain/entities/Environment';
-
-const formatDuration = (milliseconds: number) => {
-  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  const parts = [hours, minutes, seconds].map((value) => String(value).padStart(2, '0'));
-  return `${parts[0]}:${parts[1]}:${parts[2]}`;
-};
+import { formatDurationFromMs } from '../../shared/utils/time';
 
 export const useTimeTracking = (
   timeTracking: EnvironmentTimeTracking | null | undefined,
@@ -40,5 +31,5 @@ export const useTimeTracking = (
     return timeTracking.totalMs;
   }, [isRunning, now, timeTracking]);
 
-  return { totalMs, formattedTime: formatDuration(totalMs) };
+  return { totalMs, formattedTime: formatDurationFromMs(totalMs) };
 };
