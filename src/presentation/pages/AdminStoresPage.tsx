@@ -67,7 +67,10 @@ export const AdminStoresPage = () => {
   const [isManagingMembers, setIsManagingMembers] = useState(false);
   const [storeAutomationCounts, setStoreAutomationCounts] = useState<Record<string, number>>({});
   const [isLoadingAutomationStats, setIsLoadingAutomationStats] = useState(false);
-  const [metrics, setMetrics] = useState<ScenarioExecutionMetrics | null>(null);
+  const [organizationMetrics, setOrganizationMetrics] = useState<ScenarioExecutionMetrics | null>(
+    null,
+  );
+  const [storeMetrics, setStoreMetrics] = useState<Record<string, ScenarioExecutionMetrics>>({});
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
   const [metricsError, setMetricsError] = useState<string | null>(null);
 
@@ -106,7 +109,8 @@ export const AdminStoresPage = () => {
     if (!selectedOrganizationId) {
       setStores([]);
       setStoreAutomationCounts({});
-      setMetrics(null);
+      setOrganizationMetrics(null);
+      setStoreMetrics({});
       setMetricsError(null);
       return;
     }
@@ -153,9 +157,11 @@ export const AdminStoresPage = () => {
 
     const fetchMetrics = async () => {
       try {
-        const data = await scenarioExecutionService.getOrganizationMetrics(selectedOrganizationId);
+        const data =
+          await scenarioExecutionService.getOrganizationMetricsWithStores(selectedOrganizationId);
         if (isMounted) {
-          setMetrics(data);
+          setOrganizationMetrics(data.organization);
+          setStoreMetrics(data.stores);
         }
       } catch (error) {
         console.error(error);
@@ -501,10 +507,24 @@ export const AdminStoresPage = () => {
     }
   };
 
-  const qaRanking = metrics?.qaRanking ?? [];
-  const scenarioRanking = metrics?.scenarioRanking ?? [];
+  const qaRanking = organizationMetrics?.qaRanking ?? [];
+  const scenarioRanking = organizationMetrics?.scenarioRanking ?? [];
   const fastestScenario = scenarioRanking[0] ?? null;
-  const hasExecutions = (metrics?.totalExecutions ?? 0) > 0;
+  const hasExecutions = (organizationMetrics?.totalExecutions ?? 0) > 0;
+
+  const memberLookup = useMemo(() => {
+    if (!selectedOrganization) {
+      return {} as Record<string, OrganizationMember>;
+    }
+
+    return selectedOrganization.members.reduce<Record<string, OrganizationMember>>(
+      (accumulator, member) => {
+        accumulator[member.uid] = member;
+        return accumulator;
+      },
+      {},
+    );
+  }, [selectedOrganization]);
 
   return (
     <Layout>
@@ -537,169 +557,10 @@ export const AdminStoresPage = () => {
           </div>
         </div>
 
-        {selectedOrganizationId && (
-          <section className="organization-metrics">
-            <div className="organization-metrics__header">
-              <div>
-                <p className="organization-metrics__kicker">Performance desta organização</p>
-                <h2 className="organization-metrics__title">Ranking elegante de QAs</h2>
-                <p className="organization-metrics__subtitle">
-                  Acompanhe os tempos médios e melhores execuções registrados pelos times de QA.
-                </p>
-              </div>
-              <div className="organization-metrics__meta">
-                <span className="metrics-chip">
-                  {isLoadingMetrics
-                    ? 'Carregando...'
-                    : `${metrics?.totalExecutions ?? 0} execução${
-                        (metrics?.totalExecutions ?? 0) === 1 ? '' : 'es'
-                      }`}
-                </span>
-                {fastestScenario && (
-                  <span className="metrics-chip metrics-chip--muted">
-                    Cenário destaque: {fastestScenario.scenarioTitle}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {metricsError && (
-              <p className="form-message form-message--error" style={{ marginBottom: '1rem' }}>
-                {metricsError}
-              </p>
-            )}
-
-            {isLoadingMetrics ? (
-              <p className="section-subtitle">Coletando métricas e rankings...</p>
-            ) : !metrics || !hasExecutions ? (
-              <p className="organization-metrics__empty">
-                Registre execuções dos cenários para desbloquear o ranking de QAs e cenários.
-              </p>
-            ) : (
-              <>
-                <div className="qa-podium card">
-                  <div className="qa-podium__header">
-                    <div>
-                      <p className="qa-podium__kicker">Top 3 QAs</p>
-                      <h3>Quem está no pódio?</h3>
-                    </div>
-                    <TrophyIcon className="qa-podium__icon" />
-                  </div>
-                  <div className="qa-podium__grid">
-                    {[
-                      { label: '2º lugar', index: 1, modifier: 'second' as const },
-                      { label: '1º lugar', index: 0, modifier: 'first' as const },
-                      { label: '3º lugar', index: 2, modifier: 'third' as const },
-                    ].map((slot) => {
-                      const entry = qaRanking[slot.index];
-                      return (
-                        <div
-                          key={slot.label}
-                          className={`qa-podium__item qa-podium__item--${slot.modifier}`}
-                        >
-                          <span className="qa-podium__label">{slot.label}</span>
-                          {entry ? (
-                            <>
-                              <strong className="qa-podium__name">{entry.qaName}</strong>
-                              <span className="qa-podium__time">
-                                Média {formatDurationFromMs(entry.averageMs)}
-                              </span>
-                              <span className="qa-podium__time qa-podium__time--muted">
-                                Melhor {formatDurationFromMs(entry.bestMs)}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="qa-podium__placeholder">Aguardando execuções</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="metrics-card-grid">
-                  <div className="metrics-card card">
-                    <div className="metrics-card__header">
-                      <h3>Ranking completo de QAs</h3>
-                      <span>Tempo médio, melhor tempo e volume de execuções</span>
-                    </div>
-                    <div className="metrics-table-wrapper">
-                      <table className="metrics-table">
-                        <thead>
-                          <tr>
-                            <th>Posição</th>
-                            <th>QA</th>
-                            <th>Média</th>
-                            <th>Melhor tempo</th>
-                            <th>Execuções</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {qaRanking.map((entry, index) => (
-                            <tr key={`${entry.qaId ?? entry.qaName}-${index}`}>
-                              <td>{index + 1}</td>
-                              <td>{entry.qaName}</td>
-                              <td>{formatDurationFromMs(entry.averageMs)}</td>
-                              <td>{formatDurationFromMs(entry.bestMs)}</td>
-                              <td>{entry.executions}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  <div className="metrics-card card">
-                    <div className="metrics-card__header">
-                      <h3>Cenários mais rápidos</h3>
-                      <span>Identifique oportunidades de aceleração</span>
-                    </div>
-
-                    {fastestScenario && (
-                      <div className="scenario-highlight">
-                        <SparklesIcon className="scenario-highlight__icon" />
-                        <div>
-                          <p className="scenario-highlight__label">Cenário destaque</p>
-                          <strong className="scenario-highlight__title">
-                            {fastestScenario.scenarioTitle}
-                          </strong>
-                          <p className="scenario-highlight__meta">
-                            Média {formatDurationFromMs(fastestScenario.averageMs)} • Melhor tempo{' '}
-                            {formatDurationFromMs(fastestScenario.bestMs)}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="metrics-table-wrapper">
-                      <table className="metrics-table">
-                        <thead>
-                          <tr>
-                            <th>Posição</th>
-                            <th>Cenário</th>
-                            <th>Média</th>
-                            <th>Melhor tempo</th>
-                            <th>Execuções</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {scenarioRanking.map((entry, index) => (
-                            <tr key={`${entry.scenarioId}-${index}`}>
-                              <td>{index + 1}</td>
-                              <td>{entry.scenarioTitle}</td>
-                              <td>{formatDurationFromMs(entry.averageMs)}</td>
-                              <td>{formatDurationFromMs(entry.bestMs)}</td>
-                              <td>{entry.executions}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </section>
+        {metricsError && (
+          <p className="form-message form-message--error" style={{ marginBottom: '1.5rem' }}>
+            {metricsError}
+          </p>
         )}
 
         {isLoadingStores ? (
@@ -716,35 +577,213 @@ export const AdminStoresPage = () => {
           </div>
         ) : (
           <>
-            <div className="dashboard-grid">
-              {stores.map((store) => (
-                <div
-                  key={store.id}
-                  className="card card-clickable"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate(`/stores/${store.id}`)}
-                  onKeyDown={(event) =>
-                    handleCardKeyDown(event, () => navigate(`/stores/${store.id}`))
-                  }
-                >
-                  <div className="card-header">
-                    <div className="card-title-group">
-                      <span className="card-title-icon" aria-hidden>
-                        <StorefrontIcon className="icon icon--lg" />
-                      </span>
-                      <div>
-                        <h2 className="card-title">{store.name}</h2>
-                      </div>
+            <div className="dashboard-grid store-dashboard-grid">
+              {hasExecutions && !metricsError && (
+                <div className="card organization-ranking-card">
+                  <div className="organization-ranking-card__header">
+                    <div>
+                      <p className="organization-ranking-card__kicker">
+                        Ranking geral da organização
+                      </p>
+                      <h3>QAs mais rápidos</h3>
                     </div>
-                    <span className="badge">{store.scenarioCount} cenários</span>
+                    <div className="organization-ranking-card__meta">
+                      <span className="badge">
+                        {isLoadingMetrics
+                          ? 'Carregando...'
+                          : `${organizationMetrics?.totalExecutions ?? 0} execução${
+                              (organizationMetrics?.totalExecutions ?? 0) === 1 ? '' : 'es'
+                            }`}
+                      </span>
+                      {fastestScenario && (
+                        <span className="metrics-chip metrics-chip--muted">
+                          Cenário destaque: {fastestScenario.scenarioTitle}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="card-link-hint">
-                    <span>Abrir loja</span>
-                    <span aria-hidden>&rarr;</span>
+                  <div className="organization-ranking-card__podium">
+                    {isLoadingMetrics ? (
+                      <p className="store-ranking__empty">Carregando ranking geral...</p>
+                    ) : (
+                      qaRanking.slice(0, 3).map((entry, index) => {
+                        const tier = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
+                        const member = entry.qaId ? memberLookup[entry.qaId] : undefined;
+                        const displayName =
+                          entry.qaName || member?.displayName || member?.email || 'QA';
+
+                        return (
+                          <div
+                            key={`${entry.qaId ?? entry.qaName}-${tier}`}
+                            className="organization-ranking-card__podium-entry"
+                          >
+                            <span
+                              className={`trophy-badge trophy-badge--${tier}`}
+                              aria-label={`${index + 1}º lugar`}
+                            >
+                              <TrophyIcon className="trophy-badge__icon" />
+                            </span>
+                            <div className="organization-ranking-card__podium-body">
+                              <UserAvatar
+                                name={displayName}
+                                photoURL={member?.photoURL ?? undefined}
+                                size="sm"
+                              />
+                              <div>
+                                <strong>{displayName}</strong>
+                                <span>Média {formatDurationFromMs(entry.averageMs)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
+                  {!isLoadingMetrics && qaRanking.length > 0 && (
+                    <div className="metrics-table-wrapper organization-ranking-card__table">
+                      <table className="metrics-table">
+                        <thead>
+                          <tr>
+                            <th>Posição</th>
+                            <th>QA</th>
+                            <th>Média</th>
+                            <th>Melhor tempo</th>
+                            <th>Execuções</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {qaRanking.map((entry, index) => {
+                            const member = entry.qaId ? memberLookup[entry.qaId] : undefined;
+                            const displayName =
+                              entry.qaName || member?.displayName || member?.email || 'QA';
+                            return (
+                              <tr key={`${entry.qaId ?? entry.qaName}-${index}`}>
+                                <td>{index + 1}</td>
+                                <td>
+                                  <div className="qa-table-entry">
+                                    <UserAvatar
+                                      name={displayName}
+                                      photoURL={member?.photoURL ?? undefined}
+                                      size="xs"
+                                    />
+                                    <div>
+                                      <strong>{displayName}</strong>
+                                      <span>{entry.executions} exec.</span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>{formatDurationFromMs(entry.averageMs)}</td>
+                                <td>{formatDurationFromMs(entry.bestMs)}</td>
+                                <td>{entry.executions}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
-              ))}
+              )}
+
+              {stores.map((store) => {
+                const storeMetric = storeMetrics[store.id];
+                const storeRankingEntries = storeMetric?.qaRanking.slice(0, 3) ?? [];
+                const storeHasExecutions = (storeMetric?.totalExecutions ?? 0) > 0;
+
+                return (
+                  <div
+                    key={store.id}
+                    className="card card-clickable store-card"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/stores/${store.id}`)}
+                    onKeyDown={(event) =>
+                      handleCardKeyDown(event, () => navigate(`/stores/${store.id}`))
+                    }
+                  >
+                    <div className="card-header">
+                      <div className="card-title-group">
+                        <span className="card-title-icon" aria-hidden>
+                          <StorefrontIcon className="icon icon--lg" />
+                        </span>
+                        <div>
+                          <h2 className="card-title">{store.name}</h2>
+                          <p className="store-card__subtitle">
+                            {store.scenarioCount} cenários publicados
+                          </p>
+                        </div>
+                      </div>
+                      <span className="badge">
+                        {isLoadingMetrics
+                          ? 'Métricas...'
+                          : `${storeMetric?.totalExecutions ?? 0} execução${
+                              (storeMetric?.totalExecutions ?? 0) === 1 ? '' : 'es'
+                            }`}
+                      </span>
+                    </div>
+
+                    <div className="store-card__metrics">
+                      <div className="store-card__metrics-header">
+                        <div>
+                          <p className="store-card__metrics-kicker">Ranking por loja</p>
+                          <h3>Top QAs nesta loja</h3>
+                        </div>
+                      </div>
+
+                      {isLoadingMetrics ? (
+                        <p className="store-ranking__empty">Coletando dados desta loja...</p>
+                      ) : !storeHasExecutions ? (
+                        <p className="store-ranking__empty">
+                          Registre execuções para descobrir quem lidera esta loja.
+                        </p>
+                      ) : (
+                        <ul className="store-ranking">
+                          {storeRankingEntries.map((entry, index) => {
+                            const tier = index === 0 ? 'gold' : index === 1 ? 'silver' : 'bronze';
+                            const member = entry.qaId ? memberLookup[entry.qaId] : undefined;
+                            const displayName =
+                              entry.qaName || member?.displayName || member?.email || 'QA';
+
+                            return (
+                              <li
+                                key={`${store.id}-${entry.qaId ?? entry.qaName}-${tier}`}
+                                className="store-ranking__entry"
+                              >
+                                <div className="store-ranking__qa">
+                                  <span
+                                    className={`trophy-badge trophy-badge--${tier}`}
+                                    aria-label={`${index + 1}º lugar`}
+                                  >
+                                    <TrophyIcon className="trophy-badge__icon" />
+                                  </span>
+                                  <UserAvatar
+                                    name={displayName}
+                                    photoURL={member?.photoURL ?? undefined}
+                                    size="sm"
+                                  />
+                                  <div className="store-ranking__details">
+                                    <strong>{displayName}</strong>
+                                    <span>Média {formatDurationFromMs(entry.averageMs)}</span>
+                                  </div>
+                                </div>
+                                <div className="store-ranking__stats">
+                                  <span>Melhor {formatDurationFromMs(entry.bestMs)}</span>
+                                  <span>{entry.executions} exec.</span>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="card-link-hint">
+                      <span>Abrir loja</span>
+                      <span aria-hidden>&rarr;</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             <div className="organization-extra">
@@ -788,6 +827,44 @@ export const AdminStoresPage = () => {
                       ))}
                     </ul>
                   )}
+                </section>
+              )}
+
+              {hasExecutions && !metricsError && (
+                <section className="scenario-ranking-card card">
+                  <div className="scenario-ranking-card__header">
+                    <div>
+                      <p className="scenario-ranking-card__kicker">Cenários em evidência</p>
+                      <h3>Cenários mais rápidos</h3>
+                    </div>
+                    {fastestScenario && (
+                      <span className="badge">Destaque: {fastestScenario.scenarioTitle}</span>
+                    )}
+                  </div>
+                  <div className="metrics-table-wrapper">
+                    <table className="metrics-table">
+                      <thead>
+                        <tr>
+                          <th>Posição</th>
+                          <th>Cenário</th>
+                          <th>Média</th>
+                          <th>Melhor tempo</th>
+                          <th>Execuções</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {scenarioRanking.map((entry, index) => (
+                          <tr key={`${entry.scenarioId}-${index}`}>
+                            <td>{index + 1}</td>
+                            <td>{entry.scenarioTitle}</td>
+                            <td>{formatDurationFromMs(entry.averageMs)}</td>
+                            <td>{formatDurationFromMs(entry.bestMs)}</td>
+                            <td>{entry.executions}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </section>
               )}
 

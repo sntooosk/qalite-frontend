@@ -670,11 +670,257 @@ a.text-link:hover {
   }
 }
 
+.store-dashboard-grid {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+@media (min-width: 1400px) {
+  .store-dashboard-grid {
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  }
+}
+
 .organization-extra {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   margin-top: 2rem;
+}
+
+.store-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.store-card__subtitle {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.store-card__metrics {
+  border-radius: 1rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 1.25rem;
+  background: linear-gradient(145deg, rgba(14, 165, 233, 0.06), rgba(14, 165, 233, 0.02));
+}
+
+[data-theme='dark'] .store-card__metrics {
+  border-color: rgba(226, 232, 240, 0.15);
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.02));
+}
+
+.store-card__metrics-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.store-card__metrics-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.store-ranking {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.store-ranking__entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.875rem;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: var(--shadow-xs);
+}
+
+[data-theme='dark'] .store-ranking__entry {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.store-ranking__qa {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.store-ranking__details {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.store-ranking__details strong {
+  color: var(--color-text-primary);
+}
+
+.store-ranking__stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+}
+
+.store-ranking__empty {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.trophy-badge {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.trophy-badge__icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #fff;
+}
+
+.trophy-badge--gold {
+  background: linear-gradient(135deg, #fbbf24, #f97316);
+}
+
+.trophy-badge--silver {
+  background: linear-gradient(135deg, #cbd5f5, #94a3b8);
+}
+
+.trophy-badge--bronze {
+  background: linear-gradient(135deg, #f4a261, #c56a1e);
+}
+
+.organization-ranking-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+@media (min-width: 992px) {
+  .organization-ranking-card {
+    grid-column: span 2;
+  }
+}
+
+.organization-ranking-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.organization-ranking-card__kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.08em;
+  margin-bottom: 0.25rem;
+}
+
+.organization-ranking-card__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+@media (min-width: 600px) {
+  .organization-ranking-card__meta {
+    align-items: flex-start;
+  }
+}
+
+.organization-ranking-card__podium {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 600px) {
+  .organization-ranking-card__podium {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+}
+
+.organization-ranking-card__podium-entry {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  background: rgba(15, 118, 110, 0.04);
+}
+
+[data-theme='dark'] .organization-ranking-card__podium-entry {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.organization-ranking-card__podium-body {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.organization-ranking-card__table {
+  margin-top: 0.5rem;
+}
+
+.qa-table-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.qa-table-entry strong {
+  display: block;
+  color: var(--color-text-primary);
+}
+
+.qa-table-entry span {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.scenario-ranking-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.scenario-ranking-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.scenario-ranking-card__kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
 }
 
 .organization-collaborators-card {

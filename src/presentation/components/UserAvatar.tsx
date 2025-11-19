@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 interface UserAvatarProps {
   name: string;
   photoURL?: string;
-  size?: 'sm' | 'md';
+  size?: 'xs' | 'sm' | 'md';
   onClick?: () => void;
 }
 
@@ -14,7 +14,12 @@ const getInitials = (name: string) => {
 };
 
 export const UserAvatar = ({ name, photoURL, size = 'md', onClick }: UserAvatarProps) => {
-  const dimension = size === 'sm' ? '2.5rem' : '3rem';
+  const dimensionMap: Record<Required<UserAvatarProps>['size'], string> = {
+    xs: '2rem',
+    sm: '2.5rem',
+    md: '3rem',
+  };
+  const dimension = dimensionMap[size];
   const [hasImageError, setHasImageError] = useState(false);
   const shouldShowImage = Boolean(photoURL) && !hasImageError;
 

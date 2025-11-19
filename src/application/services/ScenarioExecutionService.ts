@@ -27,6 +27,11 @@ export interface ScenarioExecutionMetrics {
   fastestQa: QaRankingEntry | null;
 }
 
+export interface OrganizationMetricsDashboard {
+  organization: ScenarioExecutionMetrics;
+  stores: Record<string, ScenarioExecutionMetrics>;
+}
+
 export class ScenarioExecutionService {
   constructor(private readonly repository: IScenarioExecutionRepository) {}
 
@@ -44,6 +49,24 @@ export class ScenarioExecutionService {
     }
 
     const executions = await this.repository.listByOrganization(organizationId);
+    return this.buildMetricsFromExecutions(executions);
+  }
+
+  async getOrganizationMetricsWithStores(
+    organizationId: string,
+  ): Promise<OrganizationMetricsDashboard> {
+    if (!organizationId) {
+      throw new Error('Organização inválida para consultar métricas.');
+    }
+
+    const executions = await this.repository.listByOrganization(organizationId);
+    return {
+      organization: this.buildMetricsFromExecutions(executions),
+      stores: this.buildStoreMetrics(executions),
+    };
+  }
+
+  private buildMetricsFromExecutions(executions: ScenarioExecution[]): ScenarioExecutionMetrics {
     const qaRanking = this.buildQaRanking(executions);
     const scenarioRanking = this.buildScenarioRanking(executions);
 
@@ -53,6 +76,29 @@ export class ScenarioExecutionService {
       scenarioRanking,
       fastestQa: qaRanking[0] ?? null,
     };
+  }
+
+  private buildStoreMetrics(
+    executions: ScenarioExecution[],
+  ): Record<string, ScenarioExecutionMetrics> {
+    const result: Record<string, ScenarioExecutionMetrics> = {};
+    const storeMap = new Map<string, ScenarioExecution[]>();
+
+    executions.forEach((execution) => {
+      const existing = storeMap.get(execution.storeId);
+      if (!existing) {
+        storeMap.set(execution.storeId, [execution]);
+        return;
+      }
+
+      existing.push(execution);
+    });
+
+    storeMap.forEach((storeExecutions, storeId) => {
+      result[storeId] = this.buildMetricsFromExecutions(storeExecutions);
+    });
+
+    return result;
   }
 
   private buildQaRanking(executions: ScenarioExecution[]): QaRankingEntry[] {
