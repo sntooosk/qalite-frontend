@@ -20,6 +20,8 @@ export interface ScenarioRankingEntry {
   bestMs: number;
 }
 
+export type ScenarioAverageMap = Record<string, ScenarioRankingEntry>;
+
 export interface ScenarioExecutionMetrics {
   totalExecutions: number;
   qaRanking: QaRankingEntry[];
@@ -64,6 +66,15 @@ export class ScenarioExecutionService {
       organization: this.buildMetricsFromExecutions(executions),
       stores: this.buildStoreMetrics(executions),
     };
+  }
+
+  async getStoreScenarioAverages(storeId: string): Promise<ScenarioAverageMap> {
+    if (!storeId) {
+      throw new Error('Loja inválida para consultar métricas.');
+    }
+
+    const executions = await this.repository.listByStore(storeId);
+    return this.buildScenarioAverageMap(executions);
   }
 
   private buildMetricsFromExecutions(executions: ScenarioExecution[]): ScenarioExecutionMetrics {
@@ -165,5 +176,16 @@ export class ScenarioExecutionService {
     return Array.from(map.values())
       .map(({ entry }) => entry)
       .sort((a, b) => a.averageMs - b.averageMs);
+  }
+
+  private buildScenarioAverageMap(executions: ScenarioExecution[]): ScenarioAverageMap {
+    const ranking = this.buildScenarioRanking(executions);
+    return ranking.reduce<ScenarioAverageMap>((accumulator, entry) => {
+      const key = entry.scenarioId || entry.scenarioTitle;
+      if (key) {
+        accumulator[key] = entry;
+      }
+      return accumulator;
+    }, {});
   }
 }
