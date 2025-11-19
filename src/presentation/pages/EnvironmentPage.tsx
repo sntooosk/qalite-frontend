@@ -346,6 +346,7 @@ export const EnvironmentPage = () => {
             isLocked={Boolean(isScenarioLocked)}
             onRegisterBug={handleScenarioBugRequest}
             bugCountByScenario={bugCountByScenario}
+            organizationId={environmentOrganization?.id ?? null}
           />
         </div>
 

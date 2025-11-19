@@ -1,10 +1,11 @@
-import { type ChangeEvent, useMemo, useState } from 'react';
+import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
 
-import type {
+import {
   Environment,
   EnvironmentScenario,
   EnvironmentScenarioPlatform,
   EnvironmentScenarioStatus,
+  getScenarioPlatformStatuses,
 } from '../../../domain/entities/Environment';
 import { useScenarioEvidence } from '../../hooks/useScenarioEvidence';
 import {
@@ -14,6 +15,9 @@ import {
 } from '../ScenarioColumnSortControl';
 import { ENVIRONMENT_PLATFORM_LABEL } from '../../../shared/constants/environmentLabels';
 import { isAutomatedScenario } from '../../../shared/utils/automation';
+import { useToast } from '../../context/ToastContext';
+import { scenarioExecutionService } from '../../../services';
+import { useAuth } from '../../hooks/useAuth';
 
 interface EnvironmentEvidenceTableProps {
   environment: Environment;
@@ -21,6 +25,7 @@ interface EnvironmentEvidenceTableProps {
   readOnly?: boolean;
   onRegisterBug?: (scenarioId: string) => void;
   bugCountByScenario?: Record<string, number>;
+  organizationId?: string | null;
 }
 
 const BASE_STATUS_OPTIONS: { value: EnvironmentScenarioStatus; label: string }[] = [
@@ -47,11 +52,76 @@ export const EnvironmentEvidenceTable = ({
   readOnly,
   onRegisterBug,
   bugCountByScenario,
+  organizationId,
 }: EnvironmentEvidenceTableProps) => {
   const { isUpdating, handleEvidenceUpload, changeScenarioStatus } = useScenarioEvidence(
     environment.id,
   );
+  const { showToast } = useToast();
+  const { user } = useAuth();
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
+  const [scenarioStartTimes, setScenarioStartTimes] = useState<Record<string, number>>({});
+  const environmentStartTimestamp = useMemo(() => {
+    if (!environment?.timeTracking?.start) {
+      return null;
+    }
+
+    return new Date(environment.timeTracking.start).getTime();
+  }, [environment?.timeTracking?.start]);
+  useEffect(() => {
+    if (!environment?.scenarios || Object.keys(environment.scenarios).length === 0) {
+      setScenarioStartTimes((previous) => {
+        if (Object.keys(previous).length === 0) {
+          return previous;
+        }
+        return {};
+      });
+      return;
+    }
+
+    setScenarioStartTimes((previous) => {
+      let next = previous;
+      let hasChanges = false;
+      const activeScenarioIds = new Set<string>();
+
+      Object.entries(environment.scenarios ?? {}).forEach(([scenarioId, data]) => {
+        activeScenarioIds.add(scenarioId);
+        const platformStatuses = getScenarioPlatformStatuses(data);
+        const isRunning = Object.values(platformStatuses).some(
+          (status) => status === 'em_andamento',
+        );
+        const hasStartTime = Boolean(previous[scenarioId]);
+
+        if (isRunning && !hasStartTime) {
+          if (!hasChanges) {
+            next = { ...previous };
+            hasChanges = true;
+          }
+          next[scenarioId] = environmentStartTimestamp ?? Date.now();
+        }
+
+        if (!isRunning && hasStartTime) {
+          if (!hasChanges) {
+            next = { ...previous };
+            hasChanges = true;
+          }
+          delete next[scenarioId];
+        }
+      });
+
+      Object.keys(previous).forEach((scenarioId) => {
+        if (!activeScenarioIds.has(scenarioId)) {
+          if (!hasChanges) {
+            next = { ...previous };
+            hasChanges = true;
+          }
+          delete next[scenarioId];
+        }
+      });
+
+      return hasChanges ? next : previous;
+    });
+  }, [environment?.scenarios, environmentStartTimestamp]);
   const scenarioEntries = useMemo(() => {
     const entries = Object.entries(environment.scenarios ?? {});
 
@@ -92,7 +162,6 @@ export const EnvironmentEvidenceTable = ({
     );
   }, [scenarioEntries, scenarioSort]);
   const isReadOnly = Boolean(isLocked || readOnly);
-
   const handleStatusChange = async (
     scenarioId: string,
     platform: EnvironmentScenarioPlatform,
@@ -102,7 +171,74 @@ export const EnvironmentEvidenceTable = ({
       return;
     }
 
+    const scenario = environment.scenarios?.[scenarioId];
+    if (!scenario) {
+      showToast({ type: 'error', message: 'Cenário não encontrado para registrar o tempo.' });
+      return;
+    }
+
     await changeScenarioStatus(scenarioId, status, platform);
+
+    if (status === 'em_andamento') {
+      setScenarioStartTimes((previous) => {
+        if (previous[scenarioId]) {
+          return previous;
+        }
+        return { ...previous, [scenarioId]: Date.now() };
+      });
+      return;
+    }
+
+    if (status === 'bloqueado' || status === 'nao_se_aplica' || status === 'pendente') {
+      setScenarioStartTimes((previous) => {
+        if (!previous[scenarioId]) {
+          return previous;
+        }
+        const next = { ...previous };
+        delete next[scenarioId];
+        return next;
+      });
+      return;
+    }
+
+    if (status !== 'concluido' && status !== 'concluido_automatizado') {
+      return;
+    }
+
+    const startedAt = scenarioStartTimes[scenarioId] ?? environmentStartTimestamp ?? Date.now();
+
+    if (!organizationId) {
+      showToast({
+        type: 'error',
+        message: 'Associe a loja a uma organização para registrar o tempo do cenário.',
+      });
+      return;
+    }
+
+    const payload = {
+      organizationId,
+      storeId: environment.storeId,
+      environmentId: environment.id,
+      scenarioId,
+      scenarioTitle: scenario.titulo,
+      qaId: user?.uid ?? null,
+      qaName: user?.displayName || user?.email || null,
+      totalMs: Date.now() - startedAt,
+      executedAt: new Date().toISOString(),
+    };
+
+    try {
+      await scenarioExecutionService.logExecution(payload);
+      showToast({ type: 'success', message: 'Tempo registrado com sucesso.' });
+      setScenarioStartTimes((previous) => {
+        const next = { ...previous };
+        delete next[scenarioId];
+        return next;
+      });
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: 'Não foi possível registrar o tempo do cenário.' });
+    }
   };
 
   const handleFileChange = async (scenarioId: string, event: ChangeEvent<HTMLInputElement>) => {
