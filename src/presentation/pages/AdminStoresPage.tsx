@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import type { Organization, OrganizationMember } from '../../domain/entities/Organization';
 import type { Store } from '../../domain/entities/Store';
-import { organizationService, storeService } from '../../services';
+import type { ScenarioExecutionMetrics } from '../../application/services/ScenarioExecutionService';
+import { organizationService, scenarioExecutionService, storeService } from '../../services';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Layout } from '../components/Layout';
@@ -12,8 +13,15 @@ import { TextInput } from '../components/TextInput';
 import { Modal } from '../components/Modal';
 import { UserAvatar } from '../components/UserAvatar';
 import { SimpleBarChart } from '../components/SimpleBarChart';
-import { BarChartIcon, SparklesIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
+import {
+  BarChartIcon,
+  SparklesIcon,
+  StorefrontIcon,
+  TrophyIcon,
+  UsersGroupIcon,
+} from '../components/icons';
 import { isAutomatedScenario } from '../../shared/utils/automation';
+import { formatDurationFromMs } from '../../shared/utils/time';
 
 interface StoreForm {
   name: string;
@@ -59,6 +67,9 @@ export const AdminStoresPage = () => {
   const [isManagingMembers, setIsManagingMembers] = useState(false);
   const [storeAutomationCounts, setStoreAutomationCounts] = useState<Record<string, number>>({});
   const [isLoadingAutomationStats, setIsLoadingAutomationStats] = useState(false);
+  const [metrics, setMetrics] = useState<ScenarioExecutionMetrics | null>(null);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchOrganizations = async () => {
@@ -95,6 +106,8 @@ export const AdminStoresPage = () => {
     if (!selectedOrganizationId) {
       setStores([]);
       setStoreAutomationCounts({});
+      setMetrics(null);
+      setMetricsError(null);
       return;
     }
 
@@ -128,6 +141,40 @@ export const AdminStoresPage = () => {
   }, [selectedOrganization, setActiveOrganization]);
 
   useEffect(() => () => setActiveOrganization(null), [setActiveOrganization]);
+
+  useEffect(() => {
+    if (!selectedOrganizationId) {
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingMetrics(true);
+    setMetricsError(null);
+
+    const fetchMetrics = async () => {
+      try {
+        const data = await scenarioExecutionService.getOrganizationMetrics(selectedOrganizationId);
+        if (isMounted) {
+          setMetrics(data);
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setMetricsError('Não foi possível carregar as métricas de execução desta organização.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingMetrics(false);
+        }
+      }
+    };
+
+    void fetchMetrics();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedOrganizationId]);
 
   useEffect(() => {
     if (!selectedOrganizationId || stores.length === 0) {
@@ -454,6 +501,11 @@ export const AdminStoresPage = () => {
     }
   };
 
+  const qaRanking = metrics?.qaRanking ?? [];
+  const scenarioRanking = metrics?.scenarioRanking ?? [];
+  const fastestScenario = scenarioRanking[0] ?? null;
+  const hasExecutions = (metrics?.totalExecutions ?? 0) > 0;
+
   return (
     <Layout>
       <section className="page-container">
@@ -479,22 +531,176 @@ export const AdminStoresPage = () => {
                 Gerenciar organização
               </Button>
             )}
-            {selectedOrganizationId && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() =>
-                  navigate(`/admin/organization?organizationId=${selectedOrganizationId}`)
-                }
-              >
-                Ver métricas
-              </Button>
-            )}
             <Button type="button" onClick={openCreateModal} disabled={!selectedOrganizationId}>
               Nova loja
             </Button>
           </div>
         </div>
+
+        {selectedOrganizationId && (
+          <section className="organization-metrics">
+            <div className="organization-metrics__header">
+              <div>
+                <p className="organization-metrics__kicker">Performance desta organização</p>
+                <h2 className="organization-metrics__title">Ranking elegante de QAs</h2>
+                <p className="organization-metrics__subtitle">
+                  Acompanhe os tempos médios e melhores execuções registrados pelos times de QA.
+                </p>
+              </div>
+              <div className="organization-metrics__meta">
+                <span className="metrics-chip">
+                  {isLoadingMetrics
+                    ? 'Carregando...'
+                    : `${metrics?.totalExecutions ?? 0} execução${
+                        (metrics?.totalExecutions ?? 0) === 1 ? '' : 'es'
+                      }`}
+                </span>
+                {fastestScenario && (
+                  <span className="metrics-chip metrics-chip--muted">
+                    Cenário destaque: {fastestScenario.scenarioTitle}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {metricsError && (
+              <p className="form-message form-message--error" style={{ marginBottom: '1rem' }}>
+                {metricsError}
+              </p>
+            )}
+
+            {isLoadingMetrics ? (
+              <p className="section-subtitle">Coletando métricas e rankings...</p>
+            ) : !metrics || !hasExecutions ? (
+              <p className="organization-metrics__empty">
+                Registre execuções dos cenários para desbloquear o ranking de QAs e cenários.
+              </p>
+            ) : (
+              <>
+                <div className="qa-podium card">
+                  <div className="qa-podium__header">
+                    <div>
+                      <p className="qa-podium__kicker">Top 3 QAs</p>
+                      <h3>Quem está no pódio?</h3>
+                    </div>
+                    <TrophyIcon className="qa-podium__icon" />
+                  </div>
+                  <div className="qa-podium__grid">
+                    {[
+                      { label: '2º lugar', index: 1, modifier: 'second' as const },
+                      { label: '1º lugar', index: 0, modifier: 'first' as const },
+                      { label: '3º lugar', index: 2, modifier: 'third' as const },
+                    ].map((slot) => {
+                      const entry = qaRanking[slot.index];
+                      return (
+                        <div
+                          key={slot.label}
+                          className={`qa-podium__item qa-podium__item--${slot.modifier}`}
+                        >
+                          <span className="qa-podium__label">{slot.label}</span>
+                          {entry ? (
+                            <>
+                              <strong className="qa-podium__name">{entry.qaName}</strong>
+                              <span className="qa-podium__time">
+                                Média {formatDurationFromMs(entry.averageMs)}
+                              </span>
+                              <span className="qa-podium__time qa-podium__time--muted">
+                                Melhor {formatDurationFromMs(entry.bestMs)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="qa-podium__placeholder">Aguardando execuções</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="metrics-card-grid">
+                  <div className="metrics-card card">
+                    <div className="metrics-card__header">
+                      <h3>Ranking completo de QAs</h3>
+                      <span>Tempo médio, melhor tempo e volume de execuções</span>
+                    </div>
+                    <div className="metrics-table-wrapper">
+                      <table className="metrics-table">
+                        <thead>
+                          <tr>
+                            <th>Posição</th>
+                            <th>QA</th>
+                            <th>Média</th>
+                            <th>Melhor tempo</th>
+                            <th>Execuções</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {qaRanking.map((entry, index) => (
+                            <tr key={`${entry.qaId ?? entry.qaName}-${index}`}>
+                              <td>{index + 1}</td>
+                              <td>{entry.qaName}</td>
+                              <td>{formatDurationFromMs(entry.averageMs)}</td>
+                              <td>{formatDurationFromMs(entry.bestMs)}</td>
+                              <td>{entry.executions}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="metrics-card card">
+                    <div className="metrics-card__header">
+                      <h3>Cenários mais rápidos</h3>
+                      <span>Identifique oportunidades de aceleração</span>
+                    </div>
+
+                    {fastestScenario && (
+                      <div className="scenario-highlight">
+                        <SparklesIcon className="scenario-highlight__icon" />
+                        <div>
+                          <p className="scenario-highlight__label">Cenário destaque</p>
+                          <strong className="scenario-highlight__title">
+                            {fastestScenario.scenarioTitle}
+                          </strong>
+                          <p className="scenario-highlight__meta">
+                            Média {formatDurationFromMs(fastestScenario.averageMs)} • Melhor tempo{' '}
+                            {formatDurationFromMs(fastestScenario.bestMs)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="metrics-table-wrapper">
+                      <table className="metrics-table">
+                        <thead>
+                          <tr>
+                            <th>Posição</th>
+                            <th>Cenário</th>
+                            <th>Média</th>
+                            <th>Melhor tempo</th>
+                            <th>Execuções</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {scenarioRanking.map((entry, index) => (
+                            <tr key={`${entry.scenarioId}-${index}`}>
+                              <td>{index + 1}</td>
+                              <td>{entry.scenarioTitle}</td>
+                              <td>{formatDurationFromMs(entry.averageMs)}</td>
+                              <td>{formatDurationFromMs(entry.bestMs)}</td>
+                              <td>{entry.executions}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+        )}
 
         {isLoadingStores ? (
           <p className="section-subtitle">Carregando lojas vinculadas...</p>
