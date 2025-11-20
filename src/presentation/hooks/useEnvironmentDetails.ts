@@ -1,7 +1,14 @@
 import { useMemo } from 'react';
 
-import type { Environment, EnvironmentScenarioPlatform, EnvironmentBug } from '../../lib/types';
-import { SCENARIO_COMPLETED_STATUSES, getScenarioPlatformStatuses } from '../../lib/environments';
+import type {
+  Environment,
+  EnvironmentScenarioPlatform,
+  EnvironmentBug,
+} from '../../domain/entities/types';
+import {
+  SCENARIO_COMPLETED_STATUSES,
+  getScenarioPlatformStatuses,
+} from '../../infrastructure/external/environments';
 
 interface ScenarioStats {
   total: number;

@@ -1,4 +1,4 @@
-import { ALLOWED_EMAIL_DOMAINS } from '../constants/auth';
+import { ALLOWED_EMAIL_DOMAINS } from '../config/auth';
 
 export const isAllowedEmailDomain = (email: string) => {
   const [, domain = ''] = email.split('@');

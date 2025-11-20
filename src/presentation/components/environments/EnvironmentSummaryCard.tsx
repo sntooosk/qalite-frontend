@@ -1,6 +1,6 @@
-import type { Environment } from '../../../lib/types';
-import type { UserSummary } from '../../../lib/types';
-import { ENVIRONMENT_STATUS_LABEL } from '../../../shared/constants/environmentLabels';
+import type { Environment } from '../../../domain/entities/types';
+import type { UserSummary } from '../../../domain/entities/types';
+import { ENVIRONMENT_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 import { getReadableUserName, getUserInitials } from '../../utils/userDisplay';
 
 const buildJiraLink = (value: string | null | undefined): string | null => {

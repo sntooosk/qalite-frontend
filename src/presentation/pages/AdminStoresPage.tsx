@@ -1,9 +1,9 @@
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import type { Organization, OrganizationMember } from '../../lib/types';
-import type { Store } from '../../lib/types';
-import { organizationService, storeService } from '../../services';
+import type { Organization, OrganizationMember } from '../../domain/entities/types';
+import type { Store } from '../../domain/entities/types';
+import { organizationService, storeService } from '../../application/use-cases';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Layout } from '../components/Layout';

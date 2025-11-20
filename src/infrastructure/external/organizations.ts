@@ -17,8 +17,8 @@ import {
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
-import type { Organization, OrganizationMember } from './types';
-import { firebaseFirestore, firebaseStorage } from './firebase';
+import type { Organization, OrganizationMember } from '../../domain/entities/types';
+import { firebaseFirestore, firebaseStorage } from '../database/firebase';
 import { logActivity } from './logs';
 
 const ORGANIZATIONS_COLLECTION = 'organizations';

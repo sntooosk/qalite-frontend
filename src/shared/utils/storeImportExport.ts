@@ -1,5 +1,8 @@
-import type { StoreScenario } from '../../lib/types';
-import type { StoreExportPayload, StoreSuiteExportPayload } from '../../lib/stores';
+import type { StoreScenario } from '../../domain/entities/types';
+import type {
+  StoreExportPayload,
+  StoreSuiteExportPayload,
+} from '../../infrastructure/external/stores';
 
 export const downloadJsonFile = (data: unknown, fileName: string) => {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });

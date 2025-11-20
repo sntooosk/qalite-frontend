@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import type { EnvironmentTimeTracking } from '../../lib/types';
+import type { EnvironmentTimeTracking } from '../../domain/entities/types';
 import { formatDurationFromMs } from '../../shared/utils/time';
 
 export const useTimeTracking = (

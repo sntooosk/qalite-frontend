@@ -1,8 +1,8 @@
 import type { DragEvent } from 'react';
 
-import type { Environment, UserSummary } from '../../../lib/types';
+import type { Environment, UserSummary } from '../../../domain/entities/types';
 import { getReadableUserName, getUserInitials } from '../../utils/userDisplay';
-import { ENVIRONMENT_STATUS_LABEL } from '../../../shared/constants/environmentLabels';
+import { ENVIRONMENT_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 
 interface EnvironmentCardProps {
   environment: Environment;

@@ -8,8 +8,8 @@ import {
   where,
 } from 'firebase/firestore';
 
-import type { CreateScenarioExecutionInput, ScenarioExecution } from './types';
-import { firebaseFirestore } from './firebase';
+import type { CreateScenarioExecutionInput, ScenarioExecution } from '../../domain/entities/types';
+import { firebaseFirestore } from '../database/firebase';
 
 const SCENARIO_EXECUTIONS_COLLECTION = 'scenarioExecutions';
 const scenarioExecutionsCollection = collection(firebaseFirestore, SCENARIO_EXECUTIONS_COLLECTION);

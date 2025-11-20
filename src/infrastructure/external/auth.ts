@@ -11,32 +11,18 @@ import {
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
-import type { AuthUser, Role } from './types';
-import { DEFAULT_ROLE } from './types';
-import { firebaseAuth, firebaseFirestore, firebaseStorage } from './firebase';
+import type {
+  AuthStateListener,
+  LoginPayload,
+  RegisterPayload,
+  UpdateProfilePayload,
+} from '../../application/dto/auth';
+import type { AuthUser, Role } from '../../domain/entities/types';
+import { DEFAULT_ROLE } from '../../domain/entities/types';
+import { firebaseAuth, firebaseFirestore, firebaseStorage } from '../database/firebase';
 
 const USERS_COLLECTION = 'users';
 const USER_AVATAR_FILE = 'avatar.jpg';
-
-export interface RegisterPayload {
-  email: string;
-  password: string;
-  displayName: string;
-  role?: Role;
-}
-
-export interface LoginPayload {
-  email: string;
-  password: string;
-}
-
-export type AuthStateListener = (user: AuthUser | null) => void;
-
-export interface UpdateProfilePayload {
-  firstName: string;
-  lastName: string;
-  photoFile?: File | null;
-}
 
 export const hasRequiredRole = (user: AuthUser | null, allowedRoles: Role[]): boolean =>
   Boolean(user && allowedRoles.includes(user.role));

@@ -16,6 +16,8 @@ import {
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import {
+  type ActivityLog,
+  type CreateEnvironmentBugInput,
   type CreateEnvironmentInput,
   type Environment,
   type EnvironmentBug,
@@ -28,12 +30,10 @@ import {
   type UpdateEnvironmentBugInput,
   type UpdateEnvironmentInput,
   type UserSummary,
-  type CreateEnvironmentBugInput,
-  type ActivityLog,
-} from './types';
-import { firebaseFirestore, firebaseStorage } from './firebase';
-import { EnvironmentStatusError } from './errors';
-import { BUG_STATUS_LABEL } from '../shared/constants/environmentLabels';
+} from '../../domain/entities/types';
+import { firebaseFirestore, firebaseStorage } from '../database/firebase';
+import { EnvironmentStatusError } from '../../shared/errors/firebaseErrors';
+import { BUG_STATUS_LABEL } from '../../shared/config/environmentLabels';
 import { logActivity } from './logs';
 
 export interface EnvironmentRealtimeFilters {
@@ -370,13 +370,22 @@ export const addEnvironmentUser = async (environmentId: string, userId: string):
     });
   });
 
-  const storeId = (environmentData?.storeId as string | undefined) ?? '';
+  const environmentDetails = environmentData as Record<string, unknown> | null;
+  const storeId =
+    environmentDetails && typeof environmentDetails.storeId === 'string'
+      ? (environmentDetails.storeId as string)
+      : '';
+  const environmentIdentifier =
+    environmentDetails && typeof environmentDetails.identificador === 'string'
+      ? (environmentDetails.identificador as string)
+      : environmentId;
+
   if (storeId) {
     await logEnvironmentActivity(
       storeId,
       environmentId,
       'participation',
-      `Participante adicionado ao ambiente (${environmentData?.identificador ?? environmentId})`,
+      `Participante adicionado ao ambiente (${environmentIdentifier})`,
       'environment_participant',
     );
   }
@@ -413,13 +422,22 @@ export const removeEnvironmentUser = async (
     });
   });
 
-  const storeId = (environmentData?.storeId as string | undefined) ?? '';
+  const environmentDetails = environmentData as Record<string, unknown> | null;
+  const storeId =
+    environmentDetails && typeof environmentDetails.storeId === 'string'
+      ? (environmentDetails.storeId as string)
+      : '';
+  const environmentIdentifier =
+    environmentDetails && typeof environmentDetails.identificador === 'string'
+      ? (environmentDetails.identificador as string)
+      : environmentId;
+
   if (storeId) {
     await logEnvironmentActivity(
       storeId,
       environmentId,
       'participation',
-      `Participante removido do ambiente (${environmentData?.identificador ?? environmentId})`,
+      `Participante removido do ambiente (${environmentIdentifier})`,
       'environment_participant',
     );
   }

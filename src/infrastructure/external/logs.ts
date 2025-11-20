@@ -10,9 +10,9 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 
-import type { ActivityLog, ActivityLogInput } from './types';
+import type { ActivityLog, ActivityLogInput } from '../../domain/entities/types';
 import { getCurrentUser } from './auth';
-import { firebaseFirestore } from './firebase';
+import { firebaseFirestore } from '../database/firebase';
 
 const LOGS_COLLECTION = 'logs';
 const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;

@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 
-import type { Role } from '../../lib/types';
+import type { Role } from '../../domain/entities/types';
 import { useAuth } from '../hooks/useAuth';
 import { PageLoader } from '../components/PageLoader';
 

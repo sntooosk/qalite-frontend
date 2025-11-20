@@ -114,6 +114,60 @@ export interface StoreCategoryInput {
   name: string;
 }
 
+export interface CreateStorePayload {
+  organizationId: string;
+  name: string;
+  site: string;
+  stage: string;
+}
+
+export interface UpdateStorePayload {
+  name: string;
+  site: string;
+  stage: string;
+}
+
+export interface ImportScenariosResult {
+  created: number;
+  skipped: number;
+  scenarios: StoreScenario[];
+}
+
+export interface ImportSuitesResult {
+  created: number;
+  skipped: number;
+  suites: StoreSuite[];
+}
+
+export interface StoreExportPayload {
+  store: {
+    id: string;
+    name: string;
+    site: string;
+    stage: string;
+    scenarioCount: number;
+  };
+  exportedAt: string;
+  scenarios: StoreScenario[];
+}
+
+export interface StoreSuiteExportPayload {
+  store: {
+    id: string;
+    name: string;
+    site: string;
+    stage: string;
+    scenarioCount: number;
+  };
+  exportedAt: string;
+  suites: Array<{
+    id: string;
+    name: string;
+    description: string;
+    scenarios: Array<{ id: string; title: string }>;
+  }>;
+}
+
 export type EnvironmentStatus = 'backlog' | 'in_progress' | 'done';
 
 export type EnvironmentScenarioStatus =
@@ -270,4 +324,75 @@ export interface ActivityLogInput {
   action: ActivityLog['action'];
   message: string;
   actor?: AuthUser | null;
+}
+
+export interface EnvironmentRealtimeFilters {
+  storeId?: string;
+}
+
+export interface TransitionEnvironmentStatusParams {
+  environment: Environment;
+  targetStatus: EnvironmentStatus;
+  currentUserId?: string | null;
+}
+
+export interface CreateOrganizationPayload {
+  name: string;
+  description: string;
+  logoFile?: File | null;
+}
+
+export interface UpdateOrganizationPayload {
+  name: string;
+  description: string;
+  logoFile?: File | null;
+}
+
+export interface AddUserToOrganizationPayload {
+  organizationId: string;
+  userEmail: string;
+}
+
+export interface RemoveUserFromOrganizationPayload {
+  organizationId: string;
+  userId: string;
+}
+
+export interface ScenarioAverageEntry {
+  scenarioId: string | null;
+  scenarioTitle: string;
+  executions: number;
+  averageMs: number;
+  bestMs: number;
+}
+
+export type ScenarioAverageMap = Record<string, ScenarioAverageEntry>;
+
+export interface EnvironmentSummaryAttendee {
+  name: string;
+  email: string;
+}
+
+export interface EnvironmentSummaryPayload {
+  identifier?: string;
+  totalTime?: string;
+  totalTimeMs?: number;
+  scenariosCount?: number;
+  executedScenariosCount?: number;
+  executedScenariosMessage?: string;
+  fix?: {
+    type?: 'bug' | 'storyfixes';
+    value?: number;
+  };
+  jira?: string;
+  suiteName?: string;
+  suiteDetails?: string;
+  participantsCount?: number;
+  monitoredUrls?: string[];
+  attendees?: Array<EnvironmentSummaryAttendee | string>;
+}
+
+export interface SlackTaskSummaryPayload {
+  environmentSummary: EnvironmentSummaryPayload;
+  message?: string;
 }
