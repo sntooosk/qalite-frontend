@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import type { Organization } from '../../lib/types';
-import type { Store } from '../../lib/types';
-import { organizationService, storeService } from '../../services';
+import type { Organization } from '../../domain/entities/types';
+import type { Store } from '../../domain/entities/types';
+import { organizationService, storeService } from '../../application/use-cases';
 import { useToast } from '../context/ToastContext';
 
 export type OrganizationStoresStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'error';

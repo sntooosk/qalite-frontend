@@ -23,8 +23,8 @@ import {
   type StoreScenarioInput,
   type StoreSuite,
   type StoreSuiteInput,
-} from './types';
-import { firebaseFirestore } from './firebase';
+} from '../../domain/entities/types';
+import { firebaseFirestore } from '../database/firebase';
 import { logActivity } from './logs';
 
 const STORES_COLLECTION = 'stores';
@@ -466,7 +466,7 @@ export const replaceScenarios = async (
 
   await batch.commit();
 
-  const context = await getStoreContext(storeId, storeSnapshot.data());
+  const context = await getStoreContext(storeId);
   if (context.organizationId) {
     await logActivity({
       organizationId: context.organizationId,
@@ -526,7 +526,7 @@ export const mergeScenarios = async (
 
   await batch.commit();
 
-  const context = await getStoreContext(storeId, storeSnapshot.data());
+  const context = await getStoreContext(storeId, storeSnapshot.data() ?? {});
   if (context.organizationId && scenariosToCreate.length > 0) {
     await logActivity({
       organizationId: context.organizationId,
@@ -609,7 +609,7 @@ export const updateSuite = async (
   const updatedSnapshot = await getDoc(suiteRef);
   const updatedSuite = mapSuite(storeId, updatedSnapshot.id, updatedSnapshot.data() ?? {});
 
-  const context = await getStoreContext(storeId, storeSnapshot.data());
+  const context = await getStoreContext(storeId, suiteSnapshot.data() ?? {});
   if (context.organizationId) {
     await logActivity({
       organizationId: context.organizationId,

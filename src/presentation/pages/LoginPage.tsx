@@ -6,7 +6,7 @@ import { AuthLayout } from '../components/AuthLayout';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
 import { PasswordInput } from '../components/PasswordInput';
-import { ALLOWED_EMAIL_DOMAINS_LABEL } from '../../shared/constants/auth';
+import { ALLOWED_EMAIL_DOMAINS_LABEL } from '../../shared/config/auth';
 import { isAllowedEmailDomain } from '../../shared/utils/email';
 
 export const LoginPage = () => {

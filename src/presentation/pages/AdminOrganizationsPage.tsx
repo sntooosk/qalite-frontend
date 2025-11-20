@@ -1,8 +1,8 @@
 import { FormEvent, KeyboardEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import type { Organization } from '../../lib/types';
-import { organizationService } from '../../services';
+import type { Organization } from '../../domain/entities/types';
+import { organizationService } from '../../application/use-cases';
 import { useToast } from '../context/ToastContext';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';

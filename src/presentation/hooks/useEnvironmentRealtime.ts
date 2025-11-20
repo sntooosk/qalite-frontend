@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
-import type { Environment } from '../../lib/types';
-import { environmentService } from '../../services';
+import type { Environment } from '../../domain/entities/types';
+import { environmentService } from '../../application/use-cases';
 import { useRealtimeResource } from './useRealtimeResource';
 
 export const useEnvironmentRealtime = (environmentId: string | null | undefined) => {

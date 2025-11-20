@@ -1,0 +1,14 @@
+import type { LogRepository } from '../../domain/repositories';
+import type { ActivityLog, ActivityLogInput } from '../../domain/entities/types';
+
+export class LogUseCases {
+  constructor(private readonly logRepository: LogRepository) {}
+
+  record(input: ActivityLogInput): Promise<void> {
+    return this.logRepository.record(input);
+  }
+
+  listByOrganization(organizationId: string): Promise<ActivityLog[]> {
+    return this.logRepository.listByOrganization(organizationId);
+  }
+}

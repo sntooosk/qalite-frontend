@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
-import { EnvironmentStatusError } from '../../lib/errors';
-import type { Environment, EnvironmentStatus, UserSummary } from '../../lib/types';
-import type { SlackTaskSummaryPayload } from '../../lib/slack';
-import { environmentService, slackService } from '../../services';
+import { EnvironmentStatusError } from '../../shared/errors/firebaseErrors';
+import type { Environment, EnvironmentStatus, UserSummary } from '../../domain/entities/types';
+import type { SlackTaskSummaryPayload } from '../../infrastructure/external/slack';
+import { environmentService, slackService } from '../../application/use-cases';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { useToast } from '../context/ToastContext';
@@ -22,7 +22,7 @@ import { PageLoader } from '../components/PageLoader';
 import { useUserProfiles } from '../hooks/useUserProfiles';
 import { useEnvironmentBugs } from '../hooks/useEnvironmentBugs';
 import { EnvironmentBugModal } from '../components/environments/EnvironmentBugModal';
-import type { EnvironmentBug } from '../../lib/types';
+import type { EnvironmentBug } from '../../domain/entities/types';
 import { useEnvironmentDetails } from '../hooks/useEnvironmentDetails';
 import { useEnvironmentEngagement } from '../hooks/useEnvironmentEngagement';
 import { EnvironmentSummaryCard } from '../components/environments/EnvironmentSummaryCard';
@@ -97,8 +97,9 @@ const buildSlackTaskSummaryPayload = (
   options: SlackSummaryBuilderOptions,
 ): SlackTaskSummaryPayload => {
   const attendees = buildAttendeesList(environment, options.participantProfiles);
+  const attendeeList = attendees ?? [];
   const uniqueParticipantsCount = new Set(environment.participants ?? []).size;
-  const participantsCount = uniqueParticipantsCount || attendees.length;
+  const participantsCount = uniqueParticipantsCount || attendeeList.length;
   const monitoredUrls = (options.urls ?? []).filter(
     (url) => typeof url === 'string' && url.trim().length > 0,
   );
@@ -124,7 +125,7 @@ const buildSlackTaskSummaryPayload = (
       suiteDetails: buildSuiteDetails(options.scenarioCount),
       participantsCount,
       monitoredUrls,
-      attendees,
+      attendees: attendeeList,
     },
   };
 };

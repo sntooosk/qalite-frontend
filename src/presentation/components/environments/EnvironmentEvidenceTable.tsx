@@ -5,18 +5,18 @@ import {
   EnvironmentScenario,
   EnvironmentScenarioPlatform,
   EnvironmentScenarioStatus,
-} from '../../../lib/types';
-import { getScenarioPlatformStatuses } from '../../../lib/environments';
+} from '../../../domain/entities/types';
+import { getScenarioPlatformStatuses } from '../../../infrastructure/external/environments';
 import { useScenarioEvidence } from '../../hooks/useScenarioEvidence';
 import {
   ScenarioColumnSortControl,
   createScenarioSortComparator,
   type ScenarioSortConfig,
 } from '../ScenarioColumnSortControl';
-import { ENVIRONMENT_PLATFORM_LABEL } from '../../../shared/constants/environmentLabels';
+import { ENVIRONMENT_PLATFORM_LABEL } from '../../../shared/config/environmentLabels';
 import { isAutomatedScenario } from '../../../shared/utils/automation';
 import { useToast } from '../../context/ToastContext';
-import { scenarioExecutionService } from '../../../services';
+import { scenarioExecutionService } from '../../../application/use-cases';
 import { useAuth } from '../../hooks/useAuth';
 
 interface EnvironmentEvidenceTableProps {

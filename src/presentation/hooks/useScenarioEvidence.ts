@@ -1,7 +1,10 @@
 import { useCallback, useState } from 'react';
 
-import type { EnvironmentScenarioPlatform, EnvironmentScenarioStatus } from '../../lib/types';
-import { environmentService } from '../../services';
+import type {
+  EnvironmentScenarioPlatform,
+  EnvironmentScenarioStatus,
+} from '../../domain/entities/types';
+import { environmentService } from '../../application/use-cases';
 
 export const useScenarioEvidence = (environmentId: string | null | undefined) => {
   const [isUpdating, setIsUpdating] = useState(false);

@@ -1,6 +1,6 @@
 import { ReactNode, createContext, useCallback, useContext, useMemo, useState } from 'react';
 
-import type { Organization } from '../../lib/types';
+import type { Organization } from '../../domain/entities/types';
 
 interface OrganizationBrandingContextValue {
   activeOrganization: Organization | null;

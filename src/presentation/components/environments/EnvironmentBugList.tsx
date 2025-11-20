@@ -1,8 +1,8 @@
-import type { Environment } from '../../../lib/types';
-import type { EnvironmentBug } from '../../../lib/types';
-import { environmentService } from '../../../services';
+import type { Environment } from '../../../domain/entities/types';
+import type { EnvironmentBug } from '../../../domain/entities/types';
+import { environmentService } from '../../../application/use-cases';
 import { useToast } from '../../context/ToastContext';
-import { BUG_STATUS_LABEL } from '../../../shared/constants/environmentLabels';
+import { BUG_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 
 interface EnvironmentBugListProps {
   environment: Environment;

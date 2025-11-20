@@ -1,4 +1,14 @@
 import {
+  type AuthRepository,
+  type EnvironmentRepository,
+  type LogRepository,
+  type OrganizationRepository,
+  type ScenarioExecutionRepository,
+  type SlackRepository,
+  type StoreRepository,
+  type UserRepository,
+} from '../../domain/repositories';
+import {
   addEnvironmentUser,
   copyEnvironmentAsMarkdown,
   createEnvironment,
@@ -15,7 +25,7 @@ import {
   updateScenarioStatus,
   uploadScenarioEvidence,
   exportEnvironmentAsPDF,
-} from '../lib/environments';
+} from '../external/environments';
 import {
   addUserToOrganization,
   createOrganization,
@@ -25,13 +35,13 @@ import {
   listOrganizations,
   removeUserFromOrganization,
   updateOrganization,
-} from '../lib/organizations';
+} from '../external/organizations';
 import {
   createScenarioExecution,
   getStoreScenarioAverages,
   listScenarioExecutionsByStore,
   logScenarioExecution,
-} from '../lib/scenarioExecutions';
+} from '../external/scenarioExecutions';
 import {
   createStore,
   createCategory,
@@ -58,7 +68,7 @@ import {
   updateScenario,
   updateStore,
   updateSuite,
-} from '../lib/stores';
+} from '../external/stores';
 import {
   getCurrentUser,
   hasRequiredRole,
@@ -68,12 +78,12 @@ import {
   registerUser,
   sendPasswordReset,
   updateUserProfile,
-} from '../lib/auth';
-import { getUserSummariesByIds } from '../lib/users';
-import { sendEnvironmentSummaryToSlack } from '../lib/slack';
-import { listOrganizationLogs, logActivity } from '../lib/logs';
+} from '../external/auth';
+import { getUserSummariesByIds } from '../external/users';
+import { sendEnvironmentSummaryToSlack } from '../external/slack';
+import { listOrganizationLogs, logActivity } from '../external/logs';
 
-export const authService = {
+export const firebaseAuthRepository: AuthRepository = {
   register: registerUser,
   login: loginUser,
   logout: logoutUser,
@@ -84,7 +94,7 @@ export const authService = {
   updateProfile: updateUserProfile,
 };
 
-export const environmentService = {
+export const firebaseEnvironmentRepository: EnvironmentRepository = {
   create: createEnvironment,
   update: updateEnvironment,
   delete: deleteEnvironment,
@@ -103,7 +113,7 @@ export const environmentService = {
   copyAsMarkdown: copyEnvironmentAsMarkdown,
 };
 
-export const organizationService = {
+export const firebaseOrganizationRepository: OrganizationRepository = {
   list: listOrganizations,
   getById: getOrganization,
   create: createOrganization,
@@ -114,7 +124,7 @@ export const organizationService = {
   getUserOrganizationByUserId: getUserOrganization,
 };
 
-export const storeService = {
+export const firebaseStoreRepository: StoreRepository = {
   listByOrganization: listStores,
   getById: getStore,
   create: createStore,
@@ -142,22 +152,22 @@ export const storeService = {
   mergeSuites,
 };
 
-export const userService = {
+export const firebaseUserRepository: UserRepository = {
   getSummariesByIds: getUserSummariesByIds,
 };
 
-export const scenarioExecutionService = {
+export const firebaseScenarioExecutionRepository: ScenarioExecutionRepository = {
   logExecution: logScenarioExecution,
   getStoreScenarioAverages,
   listByStore: listScenarioExecutionsByStore,
   create: createScenarioExecution,
 };
 
-export const slackService = {
+export const slackIntegrationRepository: SlackRepository = {
   sendTaskSummary: sendEnvironmentSummaryToSlack,
 };
 
-export const logService = {
+export const firebaseLogRepository: LogRepository = {
   record: logActivity,
   listByOrganization: listOrganizationLogs,
 };

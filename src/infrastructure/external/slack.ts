@@ -1,36 +1,15 @@
+import type {
+  EnvironmentSummaryAttendee,
+  EnvironmentSummaryPayload,
+  SlackTaskSummaryPayload,
+} from '../../domain/entities/types';
+
+export type { EnvironmentSummaryAttendee, EnvironmentSummaryPayload, SlackTaskSummaryPayload };
+
 const getServiceBaseUrl = (): string => {
   const envUrl = (import.meta.env.VITE_QALITE_SERVICE_URL as string | undefined)?.trim();
   return envUrl && envUrl.length > 0 ? envUrl.replace(/\/$/, '') : 'http://localhost:3000';
 };
-
-export interface EnvironmentSummaryAttendee {
-  name: string;
-  email: string;
-}
-
-export interface EnvironmentSummaryPayload {
-  identifier?: string;
-  totalTime?: string;
-  totalTimeMs?: number;
-  scenariosCount?: number;
-  executedScenariosCount?: number;
-  executedScenariosMessage?: string;
-  fix?: {
-    type?: 'bug' | 'storyfixes';
-    value?: number;
-  };
-  jira?: string;
-  suiteName?: string;
-  suiteDetails?: string;
-  participantsCount?: number;
-  monitoredUrls?: string[];
-  attendees?: Array<EnvironmentSummaryAttendee | string>;
-}
-
-export interface SlackTaskSummaryPayload {
-  environmentSummary: EnvironmentSummaryPayload;
-  message?: string;
-}
 
 export const sendEnvironmentSummaryToSlack = async (
   payload: SlackTaskSummaryPayload,
