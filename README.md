@@ -1,42 +1,38 @@
 # QaLite Auth Starter
 
-Base de autenticação escalável construída com **React + Vite** e **Firebase Authentication** seguindo princípios de clean architecture e SOLID. O código foi simplificado para evitar camadas desnecessárias e manter a estrutura enxuta e legível.
+Base de autenticação enxuta construída com **React + Vite** e **Firebase Authentication** seguindo princípios de clean architecture e SOLID. A estrutura em camadas foi mantida, mas o código foi reduzido para o essencial: login, cadastro, recuperação de senha e edição de perfil.
 
-## 🚀 Stack principal
+## 🚀 Stack
 
 - React 18 com Vite + TypeScript
 - Firebase Authentication e Firestore
 - React Router DOM para roteamento
-- ESLint + Prettier para qualidade de código
-- Husky + lint-staged + Commitlint para automação de commits
-- GitHub Actions para CI (build + lint)
+- ESLint + Prettier
 
-## 📁 Arquitetura em camadas
+## 📁 Arquitetura
 
 ```
 src/
- ├─ domain/            # Entidades e contratos de repositório (regra de negócio pura)
- ├─ application/       # Casos de uso que orquestram os repositórios
- ├─ infrastructure/    # Implementações concretas (Firebase, fetch etc.)
- ├─ presentation/      # Páginas, componentes, hooks, rotas e provedores React
- ├─ shared/            # Utilidades e configurações agnósticas de UI
+ ├─ domain/            # Entidades e contratos de repositório
+ ├─ application/       # Casos de uso (serviços) consumidos pela UI
+ ├─ infrastructure/    # Firebase e integrações concretas
+ ├─ presentation/      # Páginas, componentes, hooks e rotas React
+ ├─ shared/            # Configurações e utilidades agnósticas
  ├─ App.tsx            # Composição de rotas
  └─ main.tsx           # Bootstrap do React
 ```
 
-A camada de aplicação agora usa diretamente os tipos do `domain`, removendo o antigo nível de DTOs que apenas replicava interfaces. Os repositórios continuam definidos por contratos na camada de domínio e implementados no diretório `infrastructure`, preservando inversão de dependência.
+A camada de aplicação expõe apenas os casos de uso de autenticação, consumindo o contrato `AuthRepository` definido no domínio e implementado via Firebase na infraestrutura. A apresentação fica livre para evoluir sem dependências diretas do Firebase.
 
 ## 🔐 Funcionalidades
 
-- Cadastro, login, logout e redefinição de senha com Firebase.
-- Persistência de perfil (nome, avatar, role e organização) no Firestore.
-- Proteção de rotas por autenticação e por role (`admin` e `user`).
-- Dashboards, gerenciamento de organizações/lojas, ambientes e evidências.
-- Exportação de ambientes em PDF ou Markdown e integração opcional com Slack.
+- Cadastro, login, logout e redefinição de senha.
+- Edição de perfil (nome e avatar) sincronizada com Firebase.
+- Proteção de rotas autenticadas.
 
-## ⚙️ Configuração do Firebase
+## ⚙️ Configuração
 
-Crie um arquivo `.env` baseado em `.env.example` com suas credenciais:
+Crie um `.env` a partir de `.env.example` com suas credenciais Firebase:
 
 ```
 VITE_FIREBASE_API_KEY=your-firebase-api-key
@@ -48,16 +44,7 @@ VITE_FIREBASE_APP_ID=1:000000000000:web:abcdef123456
 VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXX
 ```
 
-As variáveis são lidas via `import.meta.env` e nenhuma chave fica hardcoded.
-
-## 🧠 Como evoluir sem poluir
-
-- Preferir funções puras e contratos em `domain` para novas regras de negócio.
-- Casos de uso em `application` devem depender apenas das interfaces de repositório.
-- Implementações concretas ou integrações externas residem em `infrastructure`.
-- Mantenha componentes e hooks coesos em `presentation`, reutilizando utilidades de `shared` quando possível.
-
-## 🧩 Scripts disponíveis
+## 🧩 Scripts
 
 ```
 npm run dev          # Ambiente de desenvolvimento
@@ -70,24 +57,12 @@ npm run format       # Prettier write
 npm run prepare      # Instala hooks do Husky
 ```
 
-## ✅ Qualidade e CI
-
-- `.eslintrc.cjs` configurado para React, Hooks e TypeScript.
-- `.prettierrc` garante estilo consistente.
-- `lint-staged` roda ESLint + Prettier nos arquivos alterados.
-- Hooks do Husky (`pre-commit` e `commit-msg`) aplicam lint e Conventional Commits.
-- GitHub Actions executa lint e build a cada push.
-
 ## ▶️ Uso rápido
 
-```bash
+```
 npm install
-npm run prepare # instala os hooks do Husky
+npm run prepare
 npm run dev
 ```
 
-Abra `http://localhost:5173` e navegue pelos fluxos de autenticação. Roles de exemplo: `admin` e `user`.
-
-## 📄 Licença
-
-Distribuído sob a licença MIT. Ajuste conforme necessário.
+Abra `http://localhost:5173` e navegue pelos fluxos de autenticação.

@@ -1,10 +1,9 @@
 import { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+
 import { useAuth } from '../hooks/useAuth';
-import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Button } from './Button';
 import { UserAvatar } from './UserAvatar';
-import { LogoutIcon, UserIcon } from './icons';
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,24 +11,16 @@ interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   const { user, logout } = useAuth();
-  const { activeOrganization } = useOrganizationBranding();
   const navigate = useNavigate();
-  const displayName = user?.displayName || user?.email || '';
-  const brandSource = activeOrganization;
-  const brandName = brandSource?.name || 'QaLite';
-  const brandLogo = brandSource?.logoUrl || null;
+  const displayName = user?.displayName || user?.email || 'Usuário';
 
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Link to="/" className="app-brand" aria-label={`Página inicial da ${brandName}`}>
-          {brandLogo ? (
-            <img src={brandLogo} alt={`Logo da ${brandName}`} className="app-brand-logo" />
-          ) : (
-            <span className="app-logo">{brandName}</span>
-          )}
-          {brandSource?.name && <span className="app-brand-name">{brandSource.name}</span>}
+        <Link to="/" className="app-brand" aria-label="Página inicial do QaLite">
+          <span className="app-logo">QaLite</span>
         </Link>
+
         <nav className="header-actions">
           {user ? (
             <div className="header-user">
@@ -49,11 +40,9 @@ export const Layout = ({ children }: LayoutProps) => {
                   className="header-profile"
                   onClick={() => navigate('/profile')}
                 >
-                  <UserIcon aria-hidden className="icon" />
-                  <span>Perfil</span>
+                  Perfil
                 </button>
                 <Button type="button" variant="ghost" onClick={() => void logout()}>
-                  <LogoutIcon aria-hidden className="icon" />
                   Sair
                 </Button>
               </div>

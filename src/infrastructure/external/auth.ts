@@ -46,7 +46,6 @@ export const registerUser = async ({ role, ...payload }: RegisterPayload): Promi
     firstName,
     lastName,
     photoURL: user.photoURL ?? null,
-    organizationId: null,
     isNew: true,
   });
 
@@ -123,7 +122,6 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
     firstName: trimmedFirstName,
     lastName: trimmedLastName,
     photoURL,
-    organizationId: currentProfile.organizationId ?? null,
     isNew: false,
   });
 
@@ -137,7 +135,6 @@ interface StoredProfile {
   firstName?: string | null;
   lastName?: string | null;
   photoURL?: string | null;
-  organizationId?: string | null;
 }
 
 const mapToAuthUser = (user: FirebaseUser, profile: StoredProfile): AuthUser => {
@@ -161,7 +158,6 @@ const mapToAuthUser = (user: FirebaseUser, profile: StoredProfile): AuthUser => 
     firstName: effectiveFirstName,
     lastName: effectiveLastName,
     role: profile.role,
-    organizationId: profile.organizationId ?? null,
     photoURL: profile.photoURL ?? user.photoURL ?? undefined,
     accessToken: user.refreshToken,
     isEmailVerified: user.emailVerified,
@@ -176,7 +172,6 @@ const persistUserProfile = async (
     firstName: string;
     lastName: string;
     photoURL?: string | null;
-    organizationId: string | null;
     isNew?: boolean;
   },
 ): Promise<void> => {
@@ -190,7 +185,6 @@ const persistUserProfile = async (
       lastName: profile.lastName,
       role: profile.role,
       photoURL: profile.photoURL ?? null,
-      organizationId: profile.organizationId,
       ...(profile.isNew ? { createdAt: serverTimestamp() } : {}),
       updatedAt: serverTimestamp(),
     },
@@ -210,7 +204,6 @@ const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
       firstName: (data.firstName as string) ?? '',
       lastName: (data.lastName as string) ?? '',
       photoURL: (data.photoURL as string | null) ?? null,
-      organizationId: (data.organizationId as string | null) ?? null,
     };
   }
 
@@ -220,7 +213,6 @@ const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
     firstName: '',
     lastName: '',
     photoURL: null,
-    organizationId: null,
   };
 };
 

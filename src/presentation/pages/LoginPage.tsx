@@ -33,19 +33,8 @@ export const LoginPage = () => {
     }
 
     try {
-      const authenticatedUser = await login(normalizedEmail, password);
-
-      if (authenticatedUser.role === 'admin') {
-        navigate('/admin', { replace: true });
-        return;
-      }
-
-      if (authenticatedUser.organizationId) {
-        navigate('/dashboard', { replace: true });
-        return;
-      }
-
-      navigate('/no-organization', { replace: true });
+      await login(normalizedEmail, password);
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       console.error(err);
       const message =

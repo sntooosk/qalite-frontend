@@ -2,13 +2,10 @@ import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 
 import { useAuth } from '../hooks/useAuth';
 import { Alert } from '../components/Alert';
-import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { TextInput } from '../components/TextInput';
-import { ThemeToggle } from '../components/ThemeToggle';
 import { UserAvatar } from '../components/UserAvatar';
-import { ThemeIcon } from '../components/icons';
 
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -96,15 +93,6 @@ export const ProfilePage = () => {
   return (
     <Layout>
       <section className="card profile-card">
-        <div className="profile-toolbar">
-          <BackButton label="Voltar" />
-          <div className="profile-theme">
-            <ThemeIcon aria-hidden className="icon" />
-            <span>Modo de exibição</span>
-            <ThemeToggle />
-          </div>
-        </div>
-
         <span className="badge">Seu perfil</span>
         <h1 className="section-title">Atualize suas informações pessoais</h1>
         <p className="section-subtitle">

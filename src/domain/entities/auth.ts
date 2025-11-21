@@ -10,7 +10,6 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   role: Role;
-  organizationId?: string | null;
   accessToken?: string;
   photoURL?: string;
   isEmailVerified: boolean;

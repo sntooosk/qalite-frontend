@@ -4,18 +4,14 @@ import { useAuth } from '../hooks/useAuth';
 import { PageLoader } from '../components/PageLoader';
 
 export const HomePage = () => {
-  const { user, hasRole, isInitializing } = useAuth();
+  const { user, isInitializing } = useAuth();
 
   if (isInitializing) {
-    return <PageLoader message="Carregando acesso..." />;
+    return <PageLoader message="Preparando sua sessão..." />;
   }
 
   if (!user) {
     return <Navigate to="/login" replace />;
-  }
-
-  if (hasRole(['admin'])) {
-    return <Navigate to="/admin" replace />;
   }
 
   return <Navigate to="/dashboard" replace />;
