@@ -1,10 +1,10 @@
 import type { UserRepository } from '../../domain/repositories/UserRepository';
-import type { UserSummary } from '../../domain/entities/user';
+import type { UserSummaryDTO } from '../dto/user';
 
 export class UserUseCases {
   constructor(private readonly userRepository: UserRepository) {}
 
-  getSummariesByIds(ids: string[]): Promise<UserSummary[]> {
+  getSummariesByIds(ids: string[]): Promise<UserSummaryDTO[]> {
     return this.userRepository.getSummariesByIds(ids);
   }
 }

@@ -1,14 +1,14 @@
 import type { LogRepository } from '../../domain/repositories/LogRepository';
-import type { ActivityLog, ActivityLogInput } from '../../domain/entities/activityLog';
+import type { ActivityLogDTO, ActivityLogInputDTO } from '../dto/activityLog';
 
 export class LogUseCases {
   constructor(private readonly logRepository: LogRepository) {}
 
-  record(input: ActivityLogInput): Promise<void> {
+  record(input: ActivityLogInputDTO): Promise<void> {
     return this.logRepository.record(input);
   }
 
-  listByOrganization(organizationId: string): Promise<ActivityLog[]> {
+  listByOrganization(organizationId: string): Promise<ActivityLogDTO[]> {
     return this.logRepository.listByOrganization(organizationId);
   }
 }

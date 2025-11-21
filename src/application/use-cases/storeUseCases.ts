@@ -1,36 +1,36 @@
 import type { StoreRepository } from '../../domain/repositories/StoreRepository';
 import type {
-  CreateStorePayload,
-  ImportScenariosResult,
-  ImportSuitesResult,
-  Store,
-  StoreCategory,
-  StoreCategoryInput,
-  StoreExportPayload,
-  StoreScenario,
-  StoreScenarioInput,
-  StoreSuite,
-  StoreSuiteExportPayload,
-  StoreSuiteInput,
-  UpdateStorePayload,
-} from '../../domain/entities/store';
+  CreateStoreDTO,
+  ImportStoreScenariosResultDTO,
+  ImportStoreSuitesResultDTO,
+  StoreCategoryDTO,
+  StoreCategoryInputDTO,
+  StoreDTO,
+  StoreExportDTO,
+  StoreScenarioDTO,
+  StoreScenarioInputDTO,
+  StoreSuiteDTO,
+  StoreSuiteExportDTO,
+  StoreSuiteInputDTO,
+  UpdateStoreDTO,
+} from '../dto/store';
 
 export class StoreUseCases {
   constructor(private readonly storeRepository: StoreRepository) {}
 
-  listByOrganization(organizationId: string): Promise<Store[]> {
+  listByOrganization(organizationId: string): Promise<StoreDTO[]> {
     return this.storeRepository.listByOrganization(organizationId);
   }
 
-  getById(id: string): Promise<Store | null> {
+  getById(id: string): Promise<StoreDTO | null> {
     return this.storeRepository.getById(id);
   }
 
-  create(store: CreateStorePayload): Promise<Store> {
+  create(store: CreateStoreDTO): Promise<StoreDTO> {
     return this.storeRepository.create(store);
   }
 
-  update(id: string, store: UpdateStorePayload): Promise<Store> {
+  update(id: string, store: UpdateStoreDTO): Promise<StoreDTO> {
     return this.storeRepository.update(id, store);
   }
 
@@ -38,19 +38,19 @@ export class StoreUseCases {
     return this.storeRepository.delete(id);
   }
 
-  listScenarios(storeId: string): Promise<StoreScenario[]> {
+  listScenarios(storeId: string): Promise<StoreScenarioDTO[]> {
     return this.storeRepository.listScenarios(storeId);
   }
 
-  createScenario(scenario: { storeId: string } & StoreScenarioInput): Promise<StoreScenario> {
+  createScenario(scenario: { storeId: string } & StoreScenarioInputDTO): Promise<StoreScenarioDTO> {
     return this.storeRepository.createScenario(scenario);
   }
 
   updateScenario(
     storeId: string,
     scenarioId: string,
-    scenario: StoreScenarioInput,
-  ): Promise<StoreScenario> {
+    scenario: StoreScenarioInputDTO,
+  ): Promise<StoreScenarioDTO> {
     return this.storeRepository.updateScenario(storeId, scenarioId, scenario);
   }
 
@@ -58,15 +58,15 @@ export class StoreUseCases {
     return this.storeRepository.deleteScenario(storeId, scenarioId);
   }
 
-  listSuites(storeId: string): Promise<StoreSuite[]> {
+  listSuites(storeId: string): Promise<StoreSuiteDTO[]> {
     return this.storeRepository.listSuites(storeId);
   }
 
-  createSuite(suite: { storeId: string } & StoreSuiteInput): Promise<StoreSuite> {
+  createSuite(suite: { storeId: string } & StoreSuiteInputDTO): Promise<StoreSuiteDTO> {
     return this.storeRepository.createSuite(suite);
   }
 
-  updateSuite(storeId: string, suiteId: string, suite: StoreSuiteInput): Promise<StoreSuite> {
+  updateSuite(storeId: string, suiteId: string, suite: StoreSuiteInputDTO): Promise<StoreSuiteDTO> {
     return this.storeRepository.updateSuite(storeId, suiteId, suite);
   }
 
@@ -74,19 +74,19 @@ export class StoreUseCases {
     return this.storeRepository.deleteSuite(storeId, suiteId);
   }
 
-  listCategories(storeId: string): Promise<StoreCategory[]> {
+  listCategories(storeId: string): Promise<StoreCategoryDTO[]> {
     return this.storeRepository.listCategories(storeId);
   }
 
-  createCategory(category: { storeId: string } & StoreCategoryInput): Promise<StoreCategory> {
+  createCategory(category: { storeId: string } & StoreCategoryInputDTO): Promise<StoreCategoryDTO> {
     return this.storeRepository.createCategory(category);
   }
 
   updateCategory(
     storeId: string,
     categoryId: string,
-    category: StoreCategoryInput,
-  ): Promise<StoreCategory> {
+    category: StoreCategoryInputDTO,
+  ): Promise<StoreCategoryDTO> {
     return this.storeRepository.updateCategory(storeId, categoryId, category);
   }
 
@@ -94,20 +94,20 @@ export class StoreUseCases {
     return this.storeRepository.deleteCategory(storeId, categoryId);
   }
 
-  exportStore(storeId: string): Promise<StoreExportPayload> {
+  exportStore(storeId: string): Promise<StoreExportDTO> {
     return this.storeRepository.exportStore(storeId);
   }
 
-  exportSuites(storeId: string): Promise<StoreSuiteExportPayload> {
+  exportSuites(storeId: string): Promise<StoreSuiteExportDTO> {
     return this.storeRepository.exportSuites(storeId);
   }
 
   importScenarios(
     storeId: string,
-    scenarios: StoreScenarioInput[],
+    scenarios: StoreScenarioInputDTO[],
     strategy: 'replace' | 'merge',
   ): Promise<{
-    scenarios: StoreScenario[];
+    scenarios: StoreScenarioDTO[];
     created: number;
     skipped: number;
     strategy: 'replace' | 'merge';
@@ -117,10 +117,10 @@ export class StoreUseCases {
 
   importSuites(
     storeId: string,
-    suites: StoreSuiteInput[],
+    suites: StoreSuiteInputDTO[],
     strategy: 'replace' | 'merge',
   ): Promise<{
-    suites: StoreSuite[];
+    suites: StoreSuiteDTO[];
     created: number;
     skipped: number;
     strategy: 'replace' | 'merge';
@@ -128,19 +128,25 @@ export class StoreUseCases {
     return this.storeRepository.importSuites(storeId, suites, strategy);
   }
 
-  replaceScenarios(storeId: string, scenarios: StoreScenarioInput[]): Promise<StoreScenario[]> {
+  replaceScenarios(
+    storeId: string,
+    scenarios: StoreScenarioInputDTO[],
+  ): Promise<StoreScenarioDTO[]> {
     return this.storeRepository.replaceScenarios(storeId, scenarios);
   }
 
-  replaceSuites(storeId: string, suites: StoreSuiteInput[]): Promise<StoreSuite[]> {
+  replaceSuites(storeId: string, suites: StoreSuiteInputDTO[]): Promise<StoreSuiteDTO[]> {
     return this.storeRepository.replaceSuites(storeId, suites);
   }
 
-  mergeScenarios(storeId: string, scenarios: StoreScenarioInput[]): Promise<ImportScenariosResult> {
+  mergeScenarios(
+    storeId: string,
+    scenarios: StoreScenarioInputDTO[],
+  ): Promise<ImportStoreScenariosResultDTO> {
     return this.storeRepository.mergeScenarios(storeId, scenarios);
   }
 
-  mergeSuites(storeId: string, suites: StoreSuiteInput[]): Promise<ImportSuitesResult> {
+  mergeSuites(storeId: string, suites: StoreSuiteInputDTO[]): Promise<ImportStoreSuitesResultDTO> {
     return this.storeRepository.mergeSuites(storeId, suites);
   }
 }
