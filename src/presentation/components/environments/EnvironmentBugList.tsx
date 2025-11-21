@@ -1,6 +1,6 @@
 import type { Environment } from '../../../domain/entities/environment';
 import type { EnvironmentBug } from '../../../domain/entities/environment';
-import { environmentService } from '../../../application/use-cases/environment';
+import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
 import { useToast } from '../../context/ToastContext';
 import { BUG_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 

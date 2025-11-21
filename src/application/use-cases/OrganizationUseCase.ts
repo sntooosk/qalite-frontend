@@ -7,6 +7,7 @@ import type {
   RemoveUserFromOrganizationDTO,
   UpdateOrganizationDTO,
 } from '../dto/organization';
+import { firebaseOrganizationRepository } from '../../infrastructure/repositories/firebaseOrganizationRepository';
 
 export class OrganizationUseCases {
   constructor(private readonly organizationRepository: OrganizationRepository) {}
@@ -43,3 +44,6 @@ export class OrganizationUseCases {
     return this.organizationRepository.getUserOrganizationByUserId(userId);
   }
 }
+
+export const organizationUseCases = new OrganizationUseCases(firebaseOrganizationRepository);
+export const organizationService = organizationUseCases;

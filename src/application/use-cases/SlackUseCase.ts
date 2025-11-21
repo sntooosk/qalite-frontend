@@ -1,5 +1,6 @@
 import type { SlackRepository } from '../../domain/repositories/SlackRepository';
 import type { SlackTaskSummaryDTO } from '../dto/slack';
+import { slackIntegrationRepository } from '../../infrastructure/repositories/firebaseSlackRepository';
 
 export class SlackUseCases {
   constructor(private readonly slackRepository: SlackRepository) {}
@@ -8,3 +9,6 @@ export class SlackUseCases {
     return this.slackRepository.sendTaskSummary(payload);
   }
 }
+
+export const slackUseCases = new SlackUseCases(slackIntegrationRepository);
+export const slackService = slackUseCases;

@@ -4,6 +4,7 @@ import type {
   ScenarioAverageMapDTO,
   ScenarioExecutionDTO,
 } from '../dto/scenarioExecution';
+import { firebaseScenarioExecutionRepository } from '../../infrastructure/repositories/firebaseScenarioExecutionRepository';
 
 export class ScenarioExecutionUseCases {
   constructor(private readonly scenarioExecutionRepository: ScenarioExecutionRepository) {}
@@ -24,3 +25,8 @@ export class ScenarioExecutionUseCases {
     return this.scenarioExecutionRepository.create(input);
   }
 }
+
+export const scenarioExecutionUseCases = new ScenarioExecutionUseCases(
+  firebaseScenarioExecutionRepository,
+);
+export const scenarioExecutionService = scenarioExecutionUseCases;

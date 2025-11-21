@@ -16,7 +16,7 @@ import {
 import { ENVIRONMENT_PLATFORM_LABEL } from '../../../shared/config/environmentLabels';
 import { isAutomatedScenario } from '../../../shared/utils/automation';
 import { useToast } from '../../context/ToastContext';
-import { scenarioExecutionService } from '../../../application/use-cases/scenarioExecution';
+import { scenarioExecutionService } from '../../../application/use-cases/ScenarioExecutionUseCase';
 import { useAuth } from '../../hooks/useAuth';
 
 interface EnvironmentEvidenceTableProps {

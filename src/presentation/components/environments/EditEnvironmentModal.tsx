@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 import type { Environment } from '../../../domain/entities/environment';
-import { environmentService } from '../../../application/use-cases/environment';
+import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
 import { Button } from '../Button';
 import { Modal } from '../Modal';
 import { SelectInput } from '../SelectInput';

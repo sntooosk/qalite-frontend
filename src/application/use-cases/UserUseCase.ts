@@ -1,5 +1,6 @@
 import type { UserRepository } from '../../domain/repositories/UserRepository';
 import type { UserSummaryDTO } from '../dto/user';
+import { firebaseUserRepository } from '../../infrastructure/repositories/firebaseUserRepository';
 
 export class UserUseCases {
   constructor(private readonly userRepository: UserRepository) {}
@@ -8,3 +9,6 @@ export class UserUseCases {
     return this.userRepository.getSummariesByIds(ids);
   }
 }
+
+export const userUseCases = new UserUseCases(firebaseUserRepository);
+export const userService = userUseCases;

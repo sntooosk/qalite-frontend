@@ -12,6 +12,7 @@ import type {
   UpdateEnvironmentBugDTO,
   UpdateEnvironmentDTO,
 } from '../dto/environment';
+import { firebaseEnvironmentRepository } from '../../infrastructure/repositories/firebaseEnvironmentRepository';
 
 export class EnvironmentUseCases {
   constructor(private readonly environmentRepository: EnvironmentRepository) {}
@@ -114,3 +115,6 @@ export class EnvironmentUseCases {
     return this.environmentRepository.copyAsMarkdown(environment, bugs, participantProfiles);
   }
 }
+
+export const environmentUseCases = new EnvironmentUseCases(firebaseEnvironmentRepository);
+export const environmentService = environmentUseCases;

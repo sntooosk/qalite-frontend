@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import type { Organization } from '../../domain/entities/organization';
-import { organizationService } from '../../application/use-cases/organization';
+import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../context/ToastContext';
 import { Layout } from '../components/Layout';

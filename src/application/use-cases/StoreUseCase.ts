@@ -14,6 +14,7 @@ import type {
   StoreSuiteInputDTO,
   UpdateStoreDTO,
 } from '../dto/store';
+import { firebaseStoreRepository } from '../../infrastructure/repositories/firebaseStoreRepository';
 
 export class StoreUseCases {
   constructor(private readonly storeRepository: StoreRepository) {}
@@ -150,3 +151,6 @@ export class StoreUseCases {
     return this.storeRepository.mergeSuites(storeId, suites);
   }
 }
+
+export const storeUseCases = new StoreUseCases(firebaseStoreRepository);
+export const storeService = storeUseCases;
