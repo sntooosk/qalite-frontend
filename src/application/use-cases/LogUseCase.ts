@@ -1,5 +1,6 @@
 import type { LogRepository } from '../../domain/repositories/LogRepository';
 import type { ActivityLogDTO, ActivityLogInputDTO } from '../dto/activityLog';
+import { firebaseLogRepository } from '../../infrastructure/repositories/firebaseLogRepository';
 
 export class LogUseCases {
   constructor(private readonly logRepository: LogRepository) {}
@@ -12,3 +13,6 @@ export class LogUseCases {
     return this.logRepository.listByOrganization(organizationId);
   }
 }
+
+export const logUseCases = new LogUseCases(firebaseLogRepository);
+export const logService = logUseCases;

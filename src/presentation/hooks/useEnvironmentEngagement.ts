@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Environment } from '../../domain/entities/environment';
-import { environmentService } from '../../application/use-cases/environment';
+import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
 import { useAuth } from './useAuth';
 
 interface UseEnvironmentEngagementResult {

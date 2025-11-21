@@ -7,7 +7,7 @@ import type {
   StoreScenarioInput,
 } from '../../domain/entities/store';
 import type { StoreExportPayload } from '../../infrastructure/external/stores';
-import { storeService } from '../../application/use-cases/store';
+import { storeService } from '../../application/use-cases/StoreUseCase';
 import { useToast } from '../context/ToastContext';
 import { Button } from './Button';
 import { TextInput } from './TextInput';

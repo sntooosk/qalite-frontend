@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { ActivityLog } from '../../domain/entities/activityLog';
-import { logService } from '../../application/use-cases/log';
+import { logService } from '../../application/use-cases/LogUseCase';
 import { useToast } from '../context/ToastContext';
 import { ActivityIcon, ChevronDownIcon, FilterIcon } from './icons';
 

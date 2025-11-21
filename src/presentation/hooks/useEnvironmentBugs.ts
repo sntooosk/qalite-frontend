@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
 import type { EnvironmentBug } from '../../domain/entities/environment';
-import { environmentService } from '../../application/use-cases/environment';
+import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
 import { useRealtimeResource } from './useRealtimeResource';
 
 export const useEnvironmentBugs = (environmentId: string | null | undefined) => {

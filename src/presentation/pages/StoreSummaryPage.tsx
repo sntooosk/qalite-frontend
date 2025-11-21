@@ -14,9 +14,9 @@ import type {
   StoreExportPayload,
   StoreSuiteExportPayload,
 } from '../../infrastructure/external/stores';
-import { organizationService } from '../../application/use-cases/organization';
-import { scenarioExecutionService } from '../../application/use-cases/scenarioExecution';
-import { storeService } from '../../application/use-cases/store';
+import { organizationService } from '../../application/use-cases/OrganizationUseCase';
+import { scenarioExecutionService } from '../../application/use-cases/ScenarioExecutionUseCase';
+import { storeService } from '../../application/use-cases/StoreUseCase';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
