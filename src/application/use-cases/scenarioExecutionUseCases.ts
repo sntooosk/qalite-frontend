@@ -1,26 +1,26 @@
 import type { ScenarioExecutionRepository } from '../../domain/repositories/ScenarioExecutionRepository';
 import type {
-  CreateScenarioExecutionInput,
-  ScenarioAverageMap,
-  ScenarioExecution,
-} from '../../domain/entities/scenarioExecution';
+  CreateScenarioExecutionDTO,
+  ScenarioAverageMapDTO,
+  ScenarioExecutionDTO,
+} from '../dto/scenarioExecution';
 
 export class ScenarioExecutionUseCases {
   constructor(private readonly scenarioExecutionRepository: ScenarioExecutionRepository) {}
 
-  logExecution(input: CreateScenarioExecutionInput): Promise<void> {
+  logExecution(input: CreateScenarioExecutionDTO): Promise<void> {
     return this.scenarioExecutionRepository.logExecution(input);
   }
 
-  getStoreScenarioAverages(storeId: string): Promise<ScenarioAverageMap> {
+  getStoreScenarioAverages(storeId: string): Promise<ScenarioAverageMapDTO> {
     return this.scenarioExecutionRepository.getStoreScenarioAverages(storeId);
   }
 
-  listByStore(storeId: string): Promise<ScenarioExecution[]> {
+  listByStore(storeId: string): Promise<ScenarioExecutionDTO[]> {
     return this.scenarioExecutionRepository.listByStore(storeId);
   }
 
-  create(input: CreateScenarioExecutionInput): Promise<void> {
+  create(input: CreateScenarioExecutionDTO): Promise<void> {
     return this.scenarioExecutionRepository.create(input);
   }
 }
