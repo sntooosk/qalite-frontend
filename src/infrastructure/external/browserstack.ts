@@ -12,10 +12,10 @@ export const listBrowserstackBuilds = async (
   credentials: BrowserstackCredentials,
 ): Promise<BrowserstackBuild[]> => {
   const username = credentials.username?.trim();
-  const password = credentials.password?.trim();
+  const accessKey = credentials.accessKey?.trim();
 
-  if (!username || !password) {
-    throw new Error('Informe usuário e senha do BrowserStack na organização para continuar.');
+  if (!username || !accessKey) {
+    throw new Error('Informe usuário e access key do BrowserStack na organização para continuar.');
   }
 
   const baseUrl = getServiceBaseUrl();
@@ -27,7 +27,7 @@ export const listBrowserstackBuilds = async (
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, accessKey }),
     });
   } catch (error) {
     const hint =
