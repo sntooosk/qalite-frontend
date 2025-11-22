@@ -14,7 +14,7 @@ interface OrganizationFormState {
   logoFile: File | null;
   slackWebhookUrl: string;
   browserstackUsername: string;
-  browserstackPassword: string;
+  browserstackAccessKey: string;
 }
 
 const initialOrganizationForm: OrganizationFormState = {
@@ -22,21 +22,21 @@ const initialOrganizationForm: OrganizationFormState = {
   logoFile: null,
   slackWebhookUrl: '',
   browserstackUsername: '',
-  browserstackPassword: '',
+  browserstackAccessKey: '',
 };
 
 const buildBrowserstackCredentialsPayload = ({
   browserstackUsername,
-  browserstackPassword,
+  browserstackAccessKey,
 }: OrganizationFormState) => {
   const username = browserstackUsername.trim();
-  const password = browserstackPassword.trim();
+  const accessKey = browserstackAccessKey.trim();
 
-  if (!username && !password) {
+  if (!username && !accessKey) {
     return null;
   }
 
-  return { username, password };
+  return { username, accessKey };
 };
 
 export const AdminOrganizationsPage = () => {
@@ -232,18 +232,18 @@ export const AdminOrganizationsPage = () => {
             dataTestId="organization-browserstack-username-input"
           />
           <TextInput
-            id="organization-browserstack-password"
-            label="Senha do BrowserStack"
+            id="organization-browserstack-access-key"
+            label="Access key do BrowserStack"
             type="password"
-            value={organizationForm.browserstackPassword}
+            value={organizationForm.browserstackAccessKey}
             onChange={(event) =>
               setOrganizationForm((previous) => ({
                 ...previous,
-                browserstackPassword: event.target.value,
+                browserstackAccessKey: event.target.value,
               }))
             }
-            placeholder="password"
-            dataTestId="organization-browserstack-password-input"
+            placeholder="access key"
+            dataTestId="organization-browserstack-access-key-input"
           />
           <label className="upload-label" htmlFor="organization-logo">
             <span>Logo da organização</span>

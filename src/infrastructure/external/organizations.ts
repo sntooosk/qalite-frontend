@@ -57,13 +57,13 @@ const normalizeBrowserstackCredentials = (
   credentials: BrowserstackCredentials | null | undefined,
 ): BrowserstackCredentials | null => {
   const username = credentials?.username?.trim() || '';
-  const password = credentials?.password?.trim() || '';
+  const accessKey = credentials?.accessKey?.trim() || '';
 
-  if (!username && !password) {
+  if (!username && !accessKey) {
     return null;
   }
 
-  return { username, password };
+  return { username, accessKey };
 };
 
 const parseBrowserstackCredentials = (value: unknown): BrowserstackCredentials | null => {
@@ -73,13 +73,13 @@ const parseBrowserstackCredentials = (value: unknown): BrowserstackCredentials |
 
   const credentials = value as BrowserstackCredentials;
   const username = typeof credentials.username === 'string' ? credentials.username.trim() : '';
-  const password = typeof credentials.password === 'string' ? credentials.password.trim() : '';
+  const accessKey = typeof credentials.accessKey === 'string' ? credentials.accessKey.trim() : '';
 
-  if (!username && !password) {
+  if (!username && !accessKey) {
     return null;
   }
 
-  return { username, password };
+  return { username, accessKey };
 };
 
 export const listOrganizations = async (): Promise<Organization[]> => {

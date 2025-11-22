@@ -1,10 +1,12 @@
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
 import type { Store } from '../../domain/entities/store';
+import type { BrowserstackBuild } from '../../domain/entities/browserstack';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
+import { browserstackService } from '../../application/use-cases/BrowserstackUseCase';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Layout } from '../components/Layout';
@@ -13,6 +15,7 @@ import { TextInput } from '../components/TextInput';
 import { Modal } from '../components/Modal';
 import { UserAvatar } from '../components/UserAvatar';
 import { SimpleBarChart } from '../components/SimpleBarChart';
+import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanban';
 import { BarChartIcon, SparklesIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
 import { OrganizationLogPanel } from '../components/OrganizationLogPanel';
 import { isAutomatedScenario } from '../../shared/utils/automation';
@@ -27,7 +30,7 @@ interface OrganizationFormState {
   logoFile: File | null;
   slackWebhookUrl: string;
   browserstackUsername: string;
-  browserstackPassword: string;
+  browserstackAccessKey: string;
 }
 
 const initialStoreForm: StoreForm = {
@@ -40,21 +43,21 @@ const initialOrganizationForm: OrganizationFormState = {
   logoFile: null,
   slackWebhookUrl: '',
   browserstackUsername: '',
-  browserstackPassword: '',
+  browserstackAccessKey: '',
 };
 
 const buildBrowserstackCredentialsPayload = ({
   browserstackUsername,
-  browserstackPassword,
+  browserstackAccessKey,
 }: OrganizationFormState) => {
   const username = browserstackUsername.trim();
-  const password = browserstackPassword.trim();
+  const accessKey = browserstackAccessKey.trim();
 
-  if (!username && !password) {
+  if (!username && !accessKey) {
     return null;
   }
 
-  return { username, password };
+  return { username, accessKey };
 };
 
 export const AdminStoresPage = () => {
@@ -81,6 +84,8 @@ export const AdminStoresPage = () => {
   const [isManagingMembers, setIsManagingMembers] = useState(false);
   const [storeAutomationCounts, setStoreAutomationCounts] = useState<Record<string, number>>({});
   const [isLoadingAutomationStats, setIsLoadingAutomationStats] = useState(false);
+  const [browserstackBuilds, setBrowserstackBuilds] = useState<BrowserstackBuild[]>([]);
+  const [isLoadingBrowserstack, setIsLoadingBrowserstack] = useState(false);
 
   useEffect(() => {
     const fetchOrganizations = async () => {
@@ -198,6 +203,45 @@ export const AdminStoresPage = () => {
     };
   }, [selectedOrganizationId, stores, showToast]);
 
+  const hasBrowserstackCredentials = useMemo(
+    () =>
+      Boolean(
+        selectedOrganization?.browserstackCredentials?.username &&
+          selectedOrganization?.browserstackCredentials?.accessKey,
+      ),
+    [selectedOrganization],
+  );
+
+  const loadBrowserstackBuilds = useCallback(async () => {
+    if (!selectedOrganization?.browserstackCredentials || !hasBrowserstackCredentials) {
+      setBrowserstackBuilds([]);
+      return;
+    }
+
+    try {
+      setIsLoadingBrowserstack(true);
+      const builds = await browserstackService.listBuilds(
+        selectedOrganization.browserstackCredentials,
+      );
+      setBrowserstackBuilds(builds);
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar as execuções do BrowserStack.';
+
+      setBrowserstackBuilds([]);
+      showToast({ type: 'error', message });
+    } finally {
+      setIsLoadingBrowserstack(false);
+    }
+  }, [hasBrowserstackCredentials, selectedOrganization, showToast]);
+
+  useEffect(() => {
+    void loadBrowserstackBuilds();
+  }, [loadBrowserstackBuilds]);
+
   const scenariosPerStoreData = useMemo(
     () =>
       stores.map((store) => ({
@@ -238,7 +282,7 @@ export const AdminStoresPage = () => {
       logoFile: null,
       slackWebhookUrl: selectedOrganization.slackWebhookUrl ?? '',
       browserstackUsername: selectedOrganization.browserstackCredentials?.username ?? '',
-      browserstackPassword: selectedOrganization.browserstackCredentials?.password ?? '',
+      browserstackAccessKey: selectedOrganization.browserstackCredentials?.accessKey ?? '',
     });
     setOrganizationError(null);
     setMemberEmail('');
@@ -641,6 +685,23 @@ export const AdminStoresPage = () => {
                   icon={<SparklesIcon aria-hidden className="icon icon--lg" />}
                 />
               </section>
+
+              {hasBrowserstackCredentials ? (
+                <BrowserstackKanban
+                  builds={browserstackBuilds}
+                  isLoading={isLoadingBrowserstack}
+                  onRefresh={loadBrowserstackBuilds}
+                />
+              ) : (
+                <div className="card">
+                  <span className="badge">BrowserStack</span>
+                  <h2 className="section-title">Conecte sua conta</h2>
+                  <p className="section-subtitle">
+                    Adicione usuário e access key do BrowserStack nas configurações da organização
+                    para acompanhar as execuções automatizadas.
+                  </p>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -750,18 +811,18 @@ export const AdminStoresPage = () => {
               dataTestId="organization-settings-browserstack-username"
             />
             <TextInput
-              id="organization-browserstack-password"
-              label="Senha do BrowserStack"
+              id="organization-browserstack-access-key"
+              label="Access key do BrowserStack"
               type="password"
-              value={organizationForm.browserstackPassword}
+              value={organizationForm.browserstackAccessKey}
               onChange={(event) =>
                 setOrganizationForm((previous) => ({
                   ...previous,
-                  browserstackPassword: event.target.value,
+                  browserstackAccessKey: event.target.value,
                 }))
               }
-              placeholder="password"
-              dataTestId="organization-settings-browserstack-password"
+              placeholder="access key"
+              dataTestId="organization-settings-browserstack-access-key"
             />
             <label className="upload-label" htmlFor="organization-update-logo">
               <span>Logo da organização</span>
