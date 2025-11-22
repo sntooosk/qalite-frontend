@@ -1,49 +1,10 @@
 import type { OrganizationRepository } from '../../domain/repositories/OrganizationRepository';
-import type {
-  AddUserToOrganizationPayload,
-  CreateOrganizationPayload,
-  Organization,
-  OrganizationMember,
-  RemoveUserFromOrganizationPayload,
-  UpdateOrganizationPayload,
-} from '../../domain/entities/organization';
 import { firebaseOrganizationRepository } from '../../infrastructure/repositories/firebaseOrganizationRepository';
 
-export class OrganizationUseCases {
-  constructor(private readonly organizationRepository: OrganizationRepository) {}
+export type OrganizationService = OrganizationRepository;
 
-  list(): Promise<Organization[]> {
-    return this.organizationRepository.list();
-  }
+export const createOrganizationService = (
+  repository: OrganizationRepository,
+): OrganizationService => repository;
 
-  getById(id: string): Promise<Organization | null> {
-    return this.organizationRepository.getById(id);
-  }
-
-  create(organization: CreateOrganizationPayload): Promise<Organization> {
-    return this.organizationRepository.create(organization);
-  }
-
-  update(id: string, organization: UpdateOrganizationPayload): Promise<Organization> {
-    return this.organizationRepository.update(id, organization);
-  }
-
-  delete(id: string): Promise<void> {
-    return this.organizationRepository.delete(id);
-  }
-
-  addUser(payload: AddUserToOrganizationPayload): Promise<OrganizationMember> {
-    return this.organizationRepository.addUser(payload);
-  }
-
-  removeUser(payload: RemoveUserFromOrganizationPayload): Promise<void> {
-    return this.organizationRepository.removeUser(payload);
-  }
-
-  getUserOrganizationByUserId(userId: string): Promise<Organization | null> {
-    return this.organizationRepository.getUserOrganizationByUserId(userId);
-  }
-}
-
-export const organizationUseCases = new OrganizationUseCases(firebaseOrganizationRepository);
-export const organizationService = organizationUseCases;
+export const organizationService = createOrganizationService(firebaseOrganizationRepository);

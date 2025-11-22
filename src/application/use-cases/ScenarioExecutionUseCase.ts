@@ -1,32 +1,12 @@
 import type { ScenarioExecutionRepository } from '../../domain/repositories/ScenarioExecutionRepository';
-import type {
-  CreateScenarioExecutionInput,
-  ScenarioAverageMap,
-  ScenarioExecution,
-} from '../../domain/entities/scenarioExecution';
 import { firebaseScenarioExecutionRepository } from '../../infrastructure/repositories/firebaseScenarioExecutionRepository';
 
-export class ScenarioExecutionUseCases {
-  constructor(private readonly scenarioExecutionRepository: ScenarioExecutionRepository) {}
+export type ScenarioExecutionService = ScenarioExecutionRepository;
 
-  logExecution(input: CreateScenarioExecutionInput): Promise<void> {
-    return this.scenarioExecutionRepository.logExecution(input);
-  }
+export const createScenarioExecutionService = (
+  repository: ScenarioExecutionRepository,
+): ScenarioExecutionService => repository;
 
-  getStoreScenarioAverages(storeId: string): Promise<ScenarioAverageMap> {
-    return this.scenarioExecutionRepository.getStoreScenarioAverages(storeId);
-  }
-
-  listByStore(storeId: string): Promise<ScenarioExecution[]> {
-    return this.scenarioExecutionRepository.listByStore(storeId);
-  }
-
-  create(input: CreateScenarioExecutionInput): Promise<void> {
-    return this.scenarioExecutionRepository.create(input);
-  }
-}
-
-export const scenarioExecutionUseCases = new ScenarioExecutionUseCases(
+export const scenarioExecutionService = createScenarioExecutionService(
   firebaseScenarioExecutionRepository,
 );
-export const scenarioExecutionService = scenarioExecutionUseCases;

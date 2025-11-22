@@ -1,8 +1,5 @@
 import type { StoreScenario } from '../../domain/entities/store';
-import type {
-  StoreExportPayload,
-  StoreSuiteExportPayload,
-} from '../../infrastructure/external/stores';
+import type { StoreExportPayload, StoreSuiteExportPayload } from '../../domain/entities/store';
 
 export const downloadJsonFile = (data: unknown, fileName: string) => {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -48,7 +45,7 @@ export const validateScenarioImportPayload = (payload: StoreExportPayload) => {
     throw new Error('Estrutura de cenários inválida.');
   }
 
-  payload.scenarios.forEach((scenario) => {
+  payload.scenarios.forEach((scenario: StoreScenario) => {
     const requiredScenarioFields: (keyof StoreScenario)[] = [
       'title',
       'category',
@@ -80,7 +77,7 @@ export const validateSuiteImportPayload = (payload: StoreSuiteExportPayload) => 
     throw new Error('Estrutura de suítes inválida.');
   }
 
-  payload.suites.forEach((suite) => {
+  payload.suites.forEach((suite: StoreSuiteExportPayload['suites'][number]) => {
     if (typeof suite.name !== 'string' || !suite.name.trim()) {
       throw new Error('O nome da suíte é obrigatório.');
     }

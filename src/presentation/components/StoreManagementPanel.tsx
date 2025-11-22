@@ -5,8 +5,8 @@ import type {
   StoreCategory,
   StoreScenario,
   StoreScenarioInput,
+  StoreExportPayload,
 } from '../../domain/entities/store';
-import type { StoreExportPayload } from '../../infrastructure/external/stores';
 import { storeService } from '../../application/use-cases/StoreUseCase';
 import { useToast } from '../context/ToastContext';
 import { Button } from './Button';
@@ -771,14 +771,16 @@ export const StoreManagementPanel = ({
       );
 
       const strategy = shouldReplace ? 'replace' : 'merge';
-      const scenariosPayload = parsed.scenarios.map((scenario) => ({
-        title: scenario.title,
-        category: scenario.category,
-        automation: scenario.automation,
-        criticality: scenario.criticality,
-        observation: scenario.observation,
-        bdd: scenario.bdd,
-      }));
+      const scenariosPayload = parsed.scenarios.map<StoreScenarioInput>(
+        ({ title, category, automation, criticality, observation, bdd }) => ({
+          title,
+          category,
+          automation,
+          criticality,
+          observation,
+          bdd,
+        }),
+      );
 
       const result = await storeService.importScenarios(
         selectedStore.id,

@@ -1,18 +1,8 @@
 import type { LogRepository } from '../../domain/repositories/LogRepository';
-import type { ActivityLog, ActivityLogInput } from '../../domain/entities/activityLog';
 import { firebaseLogRepository } from '../../infrastructure/repositories/firebaseLogRepository';
 
-export class LogUseCases {
-  constructor(private readonly logRepository: LogRepository) {}
+export type LogService = LogRepository;
 
-  record(input: ActivityLogInput): Promise<void> {
-    return this.logRepository.record(input);
-  }
+export const createLogService = (repository: LogRepository): LogService => repository;
 
-  listByOrganization(organizationId: string): Promise<ActivityLog[]> {
-    return this.logRepository.listByOrganization(organizationId);
-  }
-}
-
-export const logUseCases = new LogUseCases(firebaseLogRepository);
-export const logService = logUseCases;
+export const logService = createLogService(firebaseLogRepository);

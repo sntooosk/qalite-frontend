@@ -9,11 +9,9 @@ import type {
   StoreScenarioInput,
   StoreSuite,
   StoreSuiteInput,
-} from '../../domain/entities/store';
-import type {
   StoreExportPayload,
   StoreSuiteExportPayload,
-} from '../../infrastructure/external/stores';
+} from '../../domain/entities/store';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { scenarioExecutionService } from '../../application/use-cases/ScenarioExecutionUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
@@ -47,7 +45,7 @@ import {
 } from '../../shared/utils/storeImportExport';
 import { isAutomatedScenario } from '../../shared/utils/automation';
 import { formatDurationFromMs } from '../../shared/utils/time';
-import type { ScenarioAverageMap } from '../../infrastructure/external/scenarioExecutions';
+import type { ScenarioAverageMap } from '../../domain/entities/scenarioExecution';
 
 const emptyScenarioForm: StoreScenarioInput = {
   title: '',
@@ -1125,14 +1123,16 @@ export const StoreSummaryPage = () => {
         'Deseja sobrescrever os cenários atuais? Clique em Cancelar para mesclar com os existentes.',
       );
       const strategy = shouldReplace ? 'replace' : 'merge';
-      const scenariosPayload = parsed.scenarios.map((scenario) => ({
-        title: scenario.title,
-        category: scenario.category,
-        automation: scenario.automation,
-        criticality: scenario.criticality,
-        observation: scenario.observation,
-        bdd: scenario.bdd,
-      }));
+      const scenariosPayload = parsed.scenarios.map<StoreScenarioInput>(
+        ({ title, category, automation, criticality, observation, bdd }) => ({
+          title,
+          category,
+          automation,
+          criticality,
+          observation,
+          bdd,
+        }),
+      );
 
       const result = await storeService.importScenarios(store.id, scenariosPayload, strategy);
       setScenarios(result.scenarios);
@@ -1400,28 +1400,30 @@ export const StoreSummaryPage = () => {
       );
       let missingReferences = 0;
 
-      const suitesPayload: StoreSuiteInput[] = parsed.suites.map((suite) => {
-        const mappedScenarioIds: string[] = [];
+      const suitesPayload: StoreSuiteInput[] = parsed.suites.map(
+        ({ name, description, scenarios }) => {
+          const mappedScenarioIds: string[] = [];
 
-        suite.scenarios.forEach((scenarioRef) => {
-          const normalizedTitle = scenarioRef.title.trim().toLowerCase();
-          const matchedId =
-            (scenarioRef.id ? scenarioById.get(scenarioRef.id) : undefined) ||
-            (normalizedTitle ? scenarioByTitle.get(normalizedTitle) : undefined);
+          scenarios.forEach(({ id: scenarioId, title }) => {
+            const normalizedTitle = title.trim().toLowerCase();
+            const matchedId =
+              (scenarioId ? scenarioById.get(scenarioId) : undefined) ||
+              (normalizedTitle ? scenarioByTitle.get(normalizedTitle) : undefined);
 
-          if (matchedId && !mappedScenarioIds.includes(matchedId)) {
-            mappedScenarioIds.push(matchedId);
-          } else if (scenarioRef.id || normalizedTitle) {
-            missingReferences += 1;
-          }
-        });
+            if (matchedId && !mappedScenarioIds.includes(matchedId)) {
+              mappedScenarioIds.push(matchedId);
+            } else if (scenarioId || normalizedTitle) {
+              missingReferences += 1;
+            }
+          });
 
-        return {
-          name: suite.name,
-          description: suite.description,
-          scenarioIds: mappedScenarioIds,
-        };
-      });
+          return {
+            name,
+            description,
+            scenarioIds: mappedScenarioIds,
+          };
+        },
+      );
 
       const result = await storeService.importSuites(store.id, suitesPayload, strategy);
       setSuites(result.suites);
