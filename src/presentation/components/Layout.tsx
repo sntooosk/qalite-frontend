@@ -18,17 +18,23 @@ export const Layout = ({ children }: LayoutProps) => {
   const brandSource = activeOrganization;
   const brandName = brandSource?.name || 'QaLite';
   const brandLogo = brandSource?.logoUrl || null;
+  const brandInitial = brandName.charAt(0).toUpperCase();
 
   return (
     <div className="app-shell">
       <header className="app-header">
         <Link to="/" className="app-brand" aria-label={`Página inicial da ${brandName}`}>
-          {brandLogo ? (
-            <img src={brandLogo} alt={`Logo da ${brandName}`} className="app-brand-logo" />
-          ) : (
+          <span className="app-brand-badge">
+            {brandLogo ? (
+              <img src={brandLogo} alt={`Logo da ${brandName}`} className="app-brand-logo" />
+            ) : (
+              <span className="app-brand-fallback">{brandInitial}</span>
+            )}
+          </span>
+          <div className="app-brand-text">
             <span className="app-logo">{brandName}</span>
-          )}
-          {brandSource?.name && <span className="app-brand-name">{brandSource.name}</span>}
+            <span className="app-brand-tagline">Experiências de QA com brilho</span>
+          </div>
         </Link>
         <nav className="header-actions">
           {user ? (
