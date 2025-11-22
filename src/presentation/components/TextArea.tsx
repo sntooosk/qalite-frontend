@@ -9,6 +9,7 @@ interface TextAreaProps {
   required?: boolean;
   rows?: number;
   disabled?: boolean;
+  dataTestId?: string;
 }
 
 export const TextArea = ({
@@ -20,6 +21,7 @@ export const TextArea = ({
   required = false,
   rows = 4,
   disabled = false,
+  dataTestId,
 }: TextAreaProps) => (
   <label htmlFor={id} className="field">
     <span className="field-label">{label}</span>
@@ -33,6 +35,7 @@ export const TextArea = ({
       rows={rows}
       disabled={disabled}
       className="field-input field-textarea"
+      data-testid={dataTestId}
     />
   </label>
 );

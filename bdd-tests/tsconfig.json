@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "types": ["cypress", "@badeball/cypress-cucumber-preprocessor"],
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strict": true
+  },
+  "include": ["cypress/**/*.ts", "cypress/**/*.js"],
+  "exclude": ["node_modules"]
+}

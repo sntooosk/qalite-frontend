@@ -1565,12 +1565,18 @@ export const StoreSummaryPage = () => {
                 </div>
 
                 {store && canManageScenarios && viewMode === 'scenarios' && (
-                  <form className="scenario-form" onSubmit={handleScenarioSubmit}>
+                  <form
+                    className="scenario-form"
+                    onSubmit={handleScenarioSubmit}
+                    data-testid="scenario-form"
+                  >
                     <h3 className="form-title">
                       {editingScenarioId ? 'Editar cenário' : 'Novo cenário'}
                     </h3>
                     {scenarioFormError && (
-                      <p className="form-message form-message--error">{scenarioFormError}</p>
+                      <p className="form-message form-message--error" data-testid="scenario-error">
+                        {scenarioFormError}
+                      </p>
                     )}
                     <TextInput
                       id="scenario-title"
@@ -1578,6 +1584,7 @@ export const StoreSummaryPage = () => {
                       value={scenarioForm.title}
                       onChange={handleScenarioFormChange('title')}
                       required
+                      dataTestId="scenario-title"
                     />
                     <div className="scenario-form-grid">
                       <SelectInput
@@ -1587,6 +1594,7 @@ export const StoreSummaryPage = () => {
                         onChange={handleScenarioFormChange('category')}
                         options={categorySelectOptions}
                         required
+                        dataTestId="scenario-category"
                       />
                       <SelectInput
                         id="scenario-automation"
@@ -1595,6 +1603,7 @@ export const StoreSummaryPage = () => {
                         onChange={handleScenarioFormChange('automation')}
                         options={automationSelectOptions}
                         required
+                        dataTestId="scenario-automation"
                       />
                       <SelectInput
                         id="scenario-criticality"
@@ -1603,6 +1612,7 @@ export const StoreSummaryPage = () => {
                         onChange={handleScenarioFormChange('criticality')}
                         options={criticalitySelectOptions}
                         required
+                        dataTestId="scenario-criticality"
                       />
                     </div>
                     <div className="category-manager">
@@ -1639,6 +1649,7 @@ export const StoreSummaryPage = () => {
                             setCategoryError(null);
                           }}
                           disabled={!store}
+                          data-testid="category-name"
                         />
                         <Button
                           type="button"
@@ -1647,6 +1658,7 @@ export const StoreSummaryPage = () => {
                           isLoading={isCreatingCategory}
                           loadingText="Salvando..."
                           disabled={!store || isLoadingCategories || isSyncingLegacyCategories}
+                          data-testid="category-submit"
                         >
                           Adicionar categoria
                         </Button>
@@ -1746,15 +1758,22 @@ export const StoreSummaryPage = () => {
                       label="Observação"
                       value={scenarioForm.observation}
                       onChange={handleScenarioFormChange('observation')}
+                      dataTestId="scenario-observation"
                     />
                     <TextArea
                       id="scenario-bdd"
                       label="BDD"
                       value={scenarioForm.bdd}
                       onChange={handleScenarioFormChange('bdd')}
+                      dataTestId="scenario-bdd"
                     />
                     <div className="scenario-form-actions">
-                      <Button type="submit" isLoading={isSavingScenario} loadingText="Salvando...">
+                      <Button
+                        type="submit"
+                        isLoading={isSavingScenario}
+                        loadingText="Salvando..."
+                        data-testid="scenario-submit"
+                      >
                         {editingScenarioId ? 'Atualizar cenário' : 'Adicionar cenário'}
                       </Button>
                       {editingScenarioId && (
@@ -2181,6 +2200,7 @@ export const StoreSummaryPage = () => {
                             <form
                               className="suite-card suite-editor-card"
                               onSubmit={handleSuiteSubmit}
+                              data-testid="suite-form"
                             >
                               <div className="suite-form-header-actions suite-editor-actions">
                                 <Button
@@ -2211,7 +2231,12 @@ export const StoreSummaryPage = () => {
                                 </div>
                               </div>
                               {suiteFormError && (
-                                <p className="form-message form-message--error">{suiteFormError}</p>
+                                <p
+                                  className="form-message form-message--error"
+                                  data-testid="suite-error"
+                                >
+                                  {suiteFormError}
+                                </p>
                               )}
                               <div className="suite-basic-info">
                                 <TextInput
@@ -2220,6 +2245,7 @@ export const StoreSummaryPage = () => {
                                   value={suiteForm.name}
                                   onChange={handleSuiteFormChange('name')}
                                   required
+                                  dataTestId="suite-name"
                                 />
                                 <TextArea
                                   id="suite-description"
@@ -2227,6 +2253,7 @@ export const StoreSummaryPage = () => {
                                   value={suiteForm.description}
                                   onChange={handleSuiteFormChange('description')}
                                   required
+                                  dataTestId="suite-description"
                                 />
                               </div>
                               <div className="suite-scenario-selector">
@@ -2273,12 +2300,14 @@ export const StoreSummaryPage = () => {
                                         value={suiteScenarioFilters.search}
                                         onChange={handleSuiteScenarioFilterChange('search')}
                                         aria-label="Buscar cenários por título"
+                                        data-testid="suite-filter-search"
                                       />
                                       <select
                                         className="scenario-filter-input"
                                         value={suiteScenarioFilters.category}
                                         onChange={handleSuiteScenarioFilterChange('category')}
                                         aria-label="Filtrar por categoria"
+                                        data-testid="suite-filter-category"
                                       >
                                         {categoryFilterOptions.map((option) => (
                                           <option key={option.value} value={option.value}>
@@ -2291,6 +2320,7 @@ export const StoreSummaryPage = () => {
                                         value={suiteScenarioFilters.criticality}
                                         onChange={handleSuiteScenarioFilterChange('criticality')}
                                         aria-label="Filtrar por criticidade"
+                                        data-testid="suite-filter-criticality"
                                       >
                                         {criticalityFilterOptions.map((option) => (
                                           <option key={option.value} value={option.value}>
@@ -2419,6 +2449,7 @@ export const StoreSummaryPage = () => {
                                   type="submit"
                                   isLoading={isSavingSuite}
                                   loadingText="Salvando..."
+                                  data-testid="suite-submit"
                                 >
                                   {editingSuiteId ? 'Atualizar suíte' : 'Salvar suíte'}
                                 </Button>
@@ -2453,11 +2484,18 @@ export const StoreSummaryPage = () => {
         isOpen={isStoreSettingsOpen}
         onClose={closeStoreSettings}
         title="Configurações da loja"
+        data-testid="store-settings-modal"
       >
         {storeSettingsError && (
-          <p className="form-message form-message--error">{storeSettingsError}</p>
+          <p className="form-message form-message--error" data-testid="store-settings-error">
+            {storeSettingsError}
+          </p>
         )}
-        <form className="form-grid" onSubmit={handleStoreSettingsSubmit}>
+        <form
+          className="form-grid"
+          onSubmit={handleStoreSettingsSubmit}
+          data-testid="store-settings-form"
+        >
           <TextInput
             id="store-settings-name"
             label="Nome da loja"
@@ -2466,6 +2504,7 @@ export const StoreSummaryPage = () => {
               setStoreSettings((previous) => ({ ...previous, name: event.target.value }))
             }
             required
+            dataTestId="store-settings-name"
           />
           <TextInput
             id="store-settings-site"
@@ -2475,6 +2514,7 @@ export const StoreSummaryPage = () => {
               setStoreSettings((previous) => ({ ...previous, site: event.target.value }))
             }
             required
+            dataTestId="store-settings-site"
           />
           <div className="form-actions">
             <Button type="submit" isLoading={isUpdatingStore} loadingText="Salvando...">

@@ -102,7 +102,7 @@ export const AdminOrganizationsPage = () => {
 
   return (
     <Layout>
-      <section className="page-container">
+      <section className="page-container" data-testid="organizations-page">
         <div className="page-header">
           <div>
             <h1 className="section-title">Organizações cadastradas</h1>
@@ -111,7 +111,7 @@ export const AdminOrganizationsPage = () => {
             </p>
           </div>
           <div className="page-actions">
-            <Button type="button" onClick={openCreateModal}>
+            <Button type="button" onClick={openCreateModal} data-testid="open-organization-modal">
               Nova organização
             </Button>
           </div>
@@ -131,13 +131,14 @@ export const AdminOrganizationsPage = () => {
           </div>
         ) : (
           <>
-            <div className="dashboard-grid">
+            <div className="dashboard-grid" data-testid="organization-grid">
               {organizations.map((organization) => (
                 <div
                   key={organization.id}
                   className="card card-clickable"
                   role="button"
                   tabIndex={0}
+                  data-testid="organization-card"
                   onClick={() => navigate(`/admin/organizations?organizationId=${organization.id}`)}
                   onKeyDown={(event) =>
                     handleCardKeyDown(event, () =>
@@ -167,9 +168,18 @@ export const AdminOrganizationsPage = () => {
         )}
       </section>
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title="Nova organização">
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title="Nova organização"
+        data-testid="organization-modal"
+      >
         {formError && <p className="form-message form-message--error">{formError}</p>}
-        <form className="form-grid" onSubmit={handleOrganizationSubmit}>
+        <form
+          className="form-grid"
+          onSubmit={handleOrganizationSubmit}
+          data-testid="organization-form"
+        >
           <TextInput
             id="organization-name"
             label="Nome da organização"
@@ -179,6 +189,7 @@ export const AdminOrganizationsPage = () => {
             }
             placeholder="Ex.: Squad de Onboarding"
             required
+            dataTestId="organization-name"
           />
           <TextInput
             id="organization-slack-webhook"
@@ -191,8 +202,13 @@ export const AdminOrganizationsPage = () => {
               }))
             }
             placeholder="https://hooks.slack.com/services/..."
+            dataTestId="organization-slack"
           />
-          <label className="upload-label" htmlFor="organization-logo">
+          <label
+            className="upload-label"
+            htmlFor="organization-logo"
+            data-testid="organization-logo-upload"
+          >
             <span>Logo da organização</span>
             <span className="upload-trigger">Selecionar arquivo</span>
             <input
@@ -210,7 +226,12 @@ export const AdminOrganizationsPage = () => {
             <span className="upload-hint">Formatos sugeridos: PNG, JPG ou SVG até 5MB.</span>
           </label>
           <div className="form-actions">
-            <Button type="submit" isLoading={isSavingOrganization} loadingText="Salvando...">
+            <Button
+              type="submit"
+              isLoading={isSavingOrganization}
+              loadingText="Salvando..."
+              data-testid="organization-submit"
+            >
               Criar organização
             </Button>
             <Button

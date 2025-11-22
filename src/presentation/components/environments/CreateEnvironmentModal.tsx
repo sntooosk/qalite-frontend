@@ -175,15 +175,25 @@ export const CreateEnvironmentModal = ({
       onClose={onClose}
       title="Criar ambiente"
       description="Preencha os campos para iniciar um novo ambiente de teste."
+      data-testid="create-environment-modal"
     >
-      <form className="environment-form" onSubmit={handleSubmit}>
-        {formError && <p className="form-message form-message--error">{formError}</p>}
+      <form
+        className="environment-form"
+        onSubmit={handleSubmit}
+        data-testid="create-environment-form"
+      >
+        {formError && (
+          <p className="form-message form-message--error" data-testid="create-environment-error">
+            {formError}
+          </p>
+        )}
         <TextInput
           id="identificador"
           label="Identificador"
           value={identificador}
           onChange={(event) => setIdentificador(event.target.value)}
           required
+          dataTestId="environment-identifier"
         />
         <TextArea
           id="urls"
@@ -191,12 +201,14 @@ export const CreateEnvironmentModal = ({
           value={urls}
           onChange={(event) => setUrls(event.target.value)}
           placeholder="https://exemplo.com"
+          dataTestId="environment-urls"
         />
         <TextInput
           id="jiraTask"
           label="Jira Task"
           value={jiraTask}
           onChange={(event) => setJiraTask(event.target.value)}
+          dataTestId="environment-jira"
         />
         <SelectInput
           id="tipoAmbiente"
@@ -208,6 +220,7 @@ export const CreateEnvironmentModal = ({
             { value: 'TM', label: 'TM' },
             { value: 'PROD', label: 'PROD' },
           ]}
+          dataTestId="environment-type"
         />
         <SelectInput
           id="tipoTeste"
@@ -215,6 +228,7 @@ export const CreateEnvironmentModal = ({
           value={tipoTeste}
           onChange={(event) => setTipoTeste(event.target.value)}
           options={tipoTesteOptions.map((option) => ({ value: option, label: option }))}
+          dataTestId="environment-test-type"
         />
         <SelectInput
           id="suiteId"
@@ -225,6 +239,7 @@ export const CreateEnvironmentModal = ({
             { value: '', label: 'Nenhuma' },
             ...suites.map((suite) => ({ value: suite.id, label: suite.name })),
           ]}
+          dataTestId="environment-suite"
         />
         {momentoOptions.length > 0 && (
           <SelectInput
@@ -233,6 +248,7 @@ export const CreateEnvironmentModal = ({
             value={momento}
             onChange={(event) => setMomento(event.target.value)}
             options={momentoOptions.map((option) => ({ value: option, label: option }))}
+            dataTestId="environment-moment"
           />
         )}
         {shouldDisplayReleaseField && (
@@ -241,6 +257,7 @@ export const CreateEnvironmentModal = ({
             label="Release"
             value={release}
             onChange={(event) => setRelease(event.target.value)}
+            dataTestId="environment-release"
           />
         )}
         {selectedSuite && (
@@ -251,7 +268,12 @@ export const CreateEnvironmentModal = ({
           </div>
         )}
 
-        <Button type="submit" isLoading={isSubmitting} loadingText="Salvando...">
+        <Button
+          type="submit"
+          isLoading={isSubmitting}
+          loadingText="Salvando..."
+          data-testid="create-environment-submit"
+        >
           Criar ambiente
         </Button>
       </form>

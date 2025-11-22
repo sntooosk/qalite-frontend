@@ -132,9 +132,18 @@ export const EditEnvironmentModal = ({
       onClose={onClose}
       title="Editar ambiente"
       description="Atualize as informações necessárias."
+      data-testid="edit-environment-modal"
     >
-      <form className="environment-form" onSubmit={handleSubmit}>
-        {formError && <p className="form-message form-message--error">{formError}</p>}
+      <form
+        className="environment-form"
+        onSubmit={handleSubmit}
+        data-testid="edit-environment-form"
+      >
+        {formError && (
+          <p className="form-message form-message--error" data-testid="edit-environment-error">
+            {formError}
+          </p>
+        )}
         <TextInput
           id="identificadorEditar"
           label="Identificador"
@@ -142,6 +151,7 @@ export const EditEnvironmentModal = ({
           onChange={(event) => setIdentificador(event.target.value)}
           required
           disabled={isLocked}
+          dataTestId="edit-environment-identifier"
         />
         <TextArea
           id="urlsEditar"
@@ -149,6 +159,7 @@ export const EditEnvironmentModal = ({
           value={urls}
           onChange={(event) => setUrls(event.target.value)}
           disabled={isLocked}
+          dataTestId="edit-environment-urls"
         />
         <TextInput
           id="jiraEditar"
@@ -156,6 +167,7 @@ export const EditEnvironmentModal = ({
           value={jiraTask}
           onChange={(event) => setJiraTask(event.target.value)}
           disabled={isLocked}
+          dataTestId="edit-environment-jira"
         />
         <SelectInput
           id="tipoAmbienteEditar"
@@ -168,6 +180,7 @@ export const EditEnvironmentModal = ({
             { value: 'TM', label: 'TM' },
             { value: 'PROD', label: 'PROD' },
           ]}
+          dataTestId="edit-environment-type"
         />
         <SelectInput
           id="tipoTesteEditar"
@@ -176,6 +189,7 @@ export const EditEnvironmentModal = ({
           onChange={(event) => setTipoTeste(event.target.value)}
           disabled={isLocked}
           options={tipoTesteOptions.map((option) => ({ value: option, label: option }))}
+          dataTestId="edit-environment-test-type"
         />
         {momentoOptions.length > 0 && (
           <SelectInput
@@ -185,6 +199,7 @@ export const EditEnvironmentModal = ({
             onChange={(event) => setMomento(event.target.value)}
             disabled={isLocked}
             options={momentoOptions.map((option) => ({ value: option, label: option }))}
+            dataTestId="edit-environment-moment"
           />
         )}
         {shouldDisplayReleaseField && (
@@ -194,6 +209,7 @@ export const EditEnvironmentModal = ({
             value={release}
             onChange={(event) => setRelease(event.target.value)}
             disabled={isLocked}
+            dataTestId="edit-environment-release"
           />
         )}
         <p className="environment-suite-preview">Cenários associados: {suiteSummary}</p>
@@ -202,6 +218,7 @@ export const EditEnvironmentModal = ({
           disabled={isLocked}
           isLoading={isSubmitting}
           loadingText="Salvando..."
+          data-testid="edit-environment-submit"
         >
           Salvar alterações
         </Button>

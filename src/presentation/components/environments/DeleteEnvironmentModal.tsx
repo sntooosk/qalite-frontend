@@ -41,14 +41,29 @@ export const DeleteEnvironmentModal = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Excluir ambiente">
-      {error && <p className="form-message form-message--error">{error}</p>}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Excluir ambiente"
+      data-testid="delete-environment-modal"
+    >
+      {error && (
+        <p className="form-message form-message--error" data-testid="delete-environment-error">
+          {error}
+        </p>
+      )}
       <p>
         Esta ação é permanente. Deseja excluir o ambiente{' '}
         <strong>{environment?.identificador ?? 'sem identificador'}</strong>?
       </p>
       <div className="modal-actions">
-        <Button type="button" variant="ghost" onClick={onClose} disabled={isDeleting}>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onClose}
+          disabled={isDeleting}
+          data-testid="delete-environment-cancel"
+        >
           Cancelar
         </Button>
         <Button
@@ -56,6 +71,7 @@ export const DeleteEnvironmentModal = ({
           onClick={handleDelete}
           isLoading={isDeleting}
           loadingText="Excluindo..."
+          data-testid="delete-environment-confirm"
         >
           Confirmar exclusão
         </Button>
