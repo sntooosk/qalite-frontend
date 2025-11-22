@@ -462,7 +462,7 @@ export const AdminStoresPage = () => {
 
   return (
     <Layout>
-      <section className="page-container">
+      <section className="page-container" data-testid="stores-page">
         <div className="page-header">
           <div>
             <button type="button" className="link-button" onClick={() => navigate('/admin')}>
@@ -481,11 +481,21 @@ export const AdminStoresPage = () => {
           </div>
           <div className="page-actions">
             {selectedOrganization && (
-              <Button type="button" variant="secondary" onClick={openOrganizationModal}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={openOrganizationModal}
+                data-testid="open-organization-management"
+              >
                 Gerenciar organização
               </Button>
             )}
-            <Button type="button" onClick={openCreateModal} disabled={!selectedOrganizationId}>
+            <Button
+              type="button"
+              onClick={openCreateModal}
+              disabled={!selectedOrganizationId}
+              data-testid="open-store-modal"
+            >
               Nova loja
             </Button>
           </div>
@@ -494,7 +504,7 @@ export const AdminStoresPage = () => {
         {isLoadingStores ? (
           <p className="section-subtitle">Carregando lojas vinculadas...</p>
         ) : stores.length === 0 ? (
-          <div className="dashboard-empty">
+          <div className="dashboard-empty" data-testid="stores-empty-state">
             <h2 className="text-xl font-semibold text-primary">Nenhuma loja cadastrada</h2>
             <p className="section-subtitle">
               Utilize o botão acima para cadastrar a primeira loja desta organização.
@@ -511,13 +521,14 @@ export const AdminStoresPage = () => {
               </div>
             )}
 
-            <div className="dashboard-grid">
+            <div className="dashboard-grid" data-testid="store-grid">
               {stores.map((store) => (
                 <div
                   key={store.id}
                   className="card card-clickable"
                   role="button"
                   tabIndex={0}
+                  data-testid="store-card"
                   onClick={() => navigate(`/stores/${store.id}`)}
                   onKeyDown={(event) =>
                     handleCardKeyDown(event, () => navigate(`/stores/${store.id}`))
@@ -614,9 +625,10 @@ export const AdminStoresPage = () => {
         onClose={closeStoreModal}
         title="Nova loja"
         description="Informe os dados básicos da loja para disponibilizar os cenários."
+        data-testid="store-modal"
       >
         {storeError && <p className="form-message form-message--error">{storeError}</p>}
-        <form className="form-grid" onSubmit={handleStoreSubmit}>
+        <form className="form-grid" onSubmit={handleStoreSubmit} data-testid="store-form">
           <TextInput
             id="store-name"
             label="Nome da loja"
@@ -626,6 +638,7 @@ export const AdminStoresPage = () => {
             }
             placeholder="Ex.: Loja QA"
             required
+            dataTestId="store-name"
           />
           <TextInput
             id="store-site"
@@ -635,9 +648,15 @@ export const AdminStoresPage = () => {
               setStoreForm((previous) => ({ ...previous, site: event.target.value }))
             }
             placeholder="https://minhaloja.com"
+            dataTestId="store-site"
           />
           <div className="form-actions">
-            <Button type="submit" isLoading={isSavingStore} loadingText="Salvando...">
+            <Button
+              type="submit"
+              isLoading={isSavingStore}
+              loadingText="Salvando..."
+              data-testid="store-submit"
+            >
               Criar loja
             </Button>
             <Button
@@ -657,12 +676,17 @@ export const AdminStoresPage = () => {
           isOpen={isOrganizationModalOpen}
           onClose={closeOrganizationModal}
           title={`Gerenciar ${selectedOrganization.name}`}
+          data-testid="manage-organization-modal"
         >
           {organizationError && (
             <p className="form-message form-message--error">{organizationError}</p>
           )}
 
-          <form className="form-grid" onSubmit={handleOrganizationSubmit}>
+          <form
+            className="form-grid"
+            onSubmit={handleOrganizationSubmit}
+            data-testid="manage-organization-form"
+          >
             <TextInput
               id="organization-name"
               label="Nome da organização"
@@ -672,6 +696,7 @@ export const AdminStoresPage = () => {
               }
               placeholder="Ex.: Squad de Onboarding"
               required
+              dataTestId="manage-organization-name"
             />
             <TextInput
               id="organization-slack-webhook"
@@ -684,8 +709,13 @@ export const AdminStoresPage = () => {
                 }))
               }
               placeholder="https://hooks.slack.com/services/..."
+              dataTestId="manage-organization-slack"
             />
-            <label className="upload-label" htmlFor="organization-update-logo">
+            <label
+              className="upload-label"
+              htmlFor="organization-update-logo"
+              data-testid="manage-organization-logo"
+            >
               <span>Logo da organização</span>
               <span className="upload-trigger">Atualizar logo</span>
               <input
@@ -703,7 +733,12 @@ export const AdminStoresPage = () => {
               <span className="upload-hint">Envie um arquivo PNG, JPG ou SVG até 5MB.</span>
             </label>
             <div className="form-actions">
-              <Button type="submit" isLoading={isSavingOrganization} loadingText="Salvando...">
+              <Button
+                type="submit"
+                isLoading={isSavingOrganization}
+                loadingText="Salvando..."
+                data-testid="manage-organization-submit"
+              >
                 Salvar alterações
               </Button>
               <Button
@@ -746,6 +781,7 @@ export const AdminStoresPage = () => {
                 onChange={(event) => setMemberEmail(event.target.value)}
                 placeholder="usuario@empresa.com"
                 required
+                dataTestId="organization-member-email"
               />
               <Button type="submit" isLoading={isManagingMembers} loadingText="Adicionando...">
                 Adicionar usuário

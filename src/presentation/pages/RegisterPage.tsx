@@ -78,14 +78,19 @@ export const RegisterPage = () => {
         </div>
       }
     >
-      {formError && <p className="form-message form-message--error">{formError}</p>}
-      <form className="form-grid" onSubmit={handleSubmit}>
+      {formError && (
+        <p className="form-message form-message--error" data-testid="register-error">
+          {formError}
+        </p>
+      )}
+      <form className="form-grid" onSubmit={handleSubmit} data-testid="register-form">
         <TextInput
           id="displayName"
           label="Nome completo"
           value={displayName}
           onChange={(event) => setDisplayName(event.target.value)}
           required
+          dataTestId="register-name"
         />
         <TextInput
           id="email"
@@ -94,6 +99,7 @@ export const RegisterPage = () => {
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           required
+          dataTestId="register-email"
         />
         <p className="form-hint">Use um e-mail corporativo ({ALLOWED_EMAIL_DOMAINS_LABEL}).</p>
         <PasswordInput
@@ -103,6 +109,7 @@ export const RegisterPage = () => {
           onChange={(event) => setPassword(event.target.value)}
           required
           autoComplete="new-password"
+          dataTestId="register-password"
         />
         <PasswordInput
           id="confirmPassword"
@@ -111,11 +118,17 @@ export const RegisterPage = () => {
           onChange={(event) => setConfirmPassword(event.target.value)}
           required
           autoComplete="new-password"
+          dataTestId="register-password-confirm"
         />
         <p className={`form-hint ${isPasswordStrong ? 'form-hint--success' : 'form-hint--danger'}`}>
           Senha com no mínimo {MIN_PASSWORD_LENGTH} caracteres.
         </p>
-        <Button type="submit" isLoading={isLoading} loadingText="Criando conta...">
+        <Button
+          type="submit"
+          isLoading={isLoading}
+          loadingText="Criando conta..."
+          data-testid="register-submit"
+        >
           Cadastrar
         </Button>
       </form>
