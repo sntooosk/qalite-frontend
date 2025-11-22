@@ -338,6 +338,8 @@ export const StoreSummaryPage = () => {
     [selectedSuitePreviewId, suites],
   );
 
+  const suitePreviewDescription = selectedSuitePreview?.description.trim();
+
   const selectedSuitePreviewEntries = useMemo(() => {
     if (!selectedSuitePreview) {
       return [];
@@ -2085,11 +2087,11 @@ export const StoreSummaryPage = () => {
                             </p>
                           ) : (
                             <div className="suite-preview suite-preview--cards">
-                              <div className="suite-preview-description">
-                                <p className="suite-description">
-                                  {selectedSuitePreview?.description || 'Suíte não tem descrição.'}
-                                </p>
-                              </div>
+                              {suitePreviewDescription && (
+                                <div className="suite-preview-description">
+                                  <p className="suite-description">{suitePreviewDescription}</p>
+                                </div>
+                              )}
                               <div className="table-scroll-area">
                                 <table className="suite-preview-table data-table">
                                   <thead>

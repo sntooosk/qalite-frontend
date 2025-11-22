@@ -9,6 +9,7 @@ import { environmentService } from '../../application/use-cases/EnvironmentUseCa
 import { slackService } from '../../application/use-cases/SlackUseCase';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
+import { SlackIcon } from '../components/icons';
 import { useToast } from '../context/ToastContext';
 import { useEnvironmentRealtime } from '../hooks/useEnvironmentRealtime';
 import { useTimeTracking } from '../hooks/useTimeTracking';
@@ -536,6 +537,7 @@ export const EnvironmentPage = () => {
                   isLoading={isSendingSlackSummary}
                   loadingText="Enviando..."
                 >
+                  <SlackIcon className="icon" />
                   Enviar resumo para o Slack
                 </Button>
               )}

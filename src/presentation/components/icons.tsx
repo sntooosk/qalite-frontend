@@ -127,3 +127,16 @@ export const ChevronDownIcon = (props: SVGProps<SVGSVGElement>) => (
     <path d="m6 9 6 6 6-6" />
   </svg>
 );
+
+export const SlackIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" {...props}>
+    <rect width="4.4" height="9.4" x="9.2" y="1.5" rx="2.2" fill="#36c5f0" />
+    <rect width="9.4" height="4.4" x="9.2" y="6.5" rx="2.2" fill="#36c5f0" />
+    <rect width="4.4" height="9.4" x="1.5" y="9.2" rx="2.2" fill="#2eb67d" />
+    <rect width="9.4" height="4.4" x="3.6" y="9.2" rx="2.2" fill="#2eb67d" />
+    <rect width="4.4" height="9.4" x="9.2" y="13.1" rx="2.2" fill="#ecb22e" />
+    <rect width="9.4" height="4.4" x="6.5" y="14.1" rx="2.2" fill="#ecb22e" />
+    <rect width="9.4" height="4.4" x="14.1" y="9.2" rx="2.2" fill="#e01e5a" />
+    <rect width="4.4" height="9.4" x="14.1" y="6.5" rx="2.2" fill="#e01e5a" />
+  </svg>
+);
