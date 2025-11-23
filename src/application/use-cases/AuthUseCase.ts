@@ -44,5 +44,4 @@ export class AuthUseCases {
   }
 }
 
-export const authUseCases = new AuthUseCases(firebaseAuthRepository);
-export const authService = authUseCases;
+export const authService = new AuthUseCases(firebaseAuthRepository);

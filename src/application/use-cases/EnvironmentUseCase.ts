@@ -113,5 +113,4 @@ export class EnvironmentUseCases {
   }
 }
 
-export const environmentUseCases = new EnvironmentUseCases(firebaseEnvironmentRepository);
-export const environmentService = environmentUseCases;
+export const environmentService = new EnvironmentUseCases(firebaseEnvironmentRepository);

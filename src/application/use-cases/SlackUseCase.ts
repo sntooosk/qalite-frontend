@@ -10,5 +10,4 @@ export class SlackUseCases {
   }
 }
 
-export const slackUseCases = new SlackUseCases(slackIntegrationRepository);
-export const slackService = slackUseCases;
+export const slackService = new SlackUseCases(slackIntegrationRepository);

@@ -10,5 +10,4 @@ export class UserUseCases {
   }
 }
 
-export const userUseCases = new UserUseCases(firebaseUserRepository);
-export const userService = userUseCases;
+export const userService = new UserUseCases(firebaseUserRepository);
