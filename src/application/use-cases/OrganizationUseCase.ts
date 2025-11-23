@@ -45,5 +45,4 @@ export class OrganizationUseCases {
   }
 }
 
-export const organizationUseCases = new OrganizationUseCases(firebaseOrganizationRepository);
-export const organizationService = organizationUseCases;
+export const organizationService = new OrganizationUseCases(firebaseOrganizationRepository);

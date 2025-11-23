@@ -13,5 +13,4 @@ export class BrowserstackUseCases {
   }
 }
 
-export const browserstackUseCases = new BrowserstackUseCases(browserstackIntegrationRepository);
-export const browserstackService = browserstackUseCases;
+export const browserstackService = new BrowserstackUseCases(browserstackIntegrationRepository);

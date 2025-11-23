@@ -26,7 +26,6 @@ export class ScenarioExecutionUseCases {
   }
 }
 
-export const scenarioExecutionUseCases = new ScenarioExecutionUseCases(
+export const scenarioExecutionService = new ScenarioExecutionUseCases(
   firebaseScenarioExecutionRepository,
 );
-export const scenarioExecutionService = scenarioExecutionUseCases;

@@ -14,5 +14,4 @@ export class LogUseCases {
   }
 }
 
-export const logUseCases = new LogUseCases(firebaseLogRepository);
-export const logService = logUseCases;
+export const logService = new LogUseCases(firebaseLogRepository);

@@ -146,5 +146,4 @@ export class StoreUseCases {
   }
 }
 
-export const storeUseCases = new StoreUseCases(firebaseStoreRepository);
-export const storeService = storeUseCases;
+export const storeService = new StoreUseCases(firebaseStoreRepository);
