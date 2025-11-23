@@ -25,6 +25,9 @@ import {
 } from './ScenarioColumnSortControl';
 import {
   downloadJsonFile,
+  downloadMarkdownFile,
+  openPdfFromMarkdown,
+  buildScenarioMarkdown,
   validateScenarioImportPayload,
 } from '../../shared/utils/storeImportExport';
 
@@ -713,7 +716,7 @@ export const StoreManagementPanel = ({
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = async (format: 'json' | 'markdown' | 'pdf') => {
     if (!selectedStore) {
       return;
     }
@@ -721,7 +724,22 @@ export const StoreManagementPanel = ({
     try {
       setIsExporting(true);
       const data = await storeService.exportStore(selectedStore.id);
-      downloadJsonFile(data, `${selectedStore.name.replace(/\s+/g, '_')}_cenarios.json`);
+      const baseFileName = `${selectedStore.name.replace(/\s+/g, '_')}_cenarios`;
+
+      if (format === 'json') {
+        downloadJsonFile(data, `${baseFileName}.json`);
+      }
+
+      if (format === 'markdown') {
+        const markdown = buildScenarioMarkdown(data);
+        downloadMarkdownFile(markdown, `${baseFileName}.md`);
+      }
+
+      if (format === 'pdf') {
+        const markdown = buildScenarioMarkdown(data);
+        openPdfFromMarkdown(markdown, `${selectedStore.name} - Cenários`);
+      }
+
       showToast({ type: 'success', message: 'Exportação concluída com sucesso.' });
     } catch (error) {
       console.error(error);
@@ -942,25 +960,47 @@ export const StoreManagementPanel = ({
                 <p className="section-subtitle">{selectedStore.site}</p>
               </div>
               <div className="store-details-actions">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleExport}
-                  isLoading={isExporting}
-                  loadingText="Exportando..."
-                >
-                  Exportar JSON
-                </Button>
-                {canManageScenarios && (
+                <div className="store-action-group">
                   <Button
                     type="button"
-                    variant="secondary"
-                    onClick={handleImportClick}
-                    isLoading={isImporting}
-                    loadingText="Importando..."
+                    variant="ghost"
+                    onClick={() => void handleExport('json')}
+                    isLoading={isExporting}
+                    loadingText="Exportando..."
                   >
-                    Importar JSON
+                    Exportar JSON
                   </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => void handleExport('markdown')}
+                    isLoading={isExporting}
+                    loadingText="Exportando..."
+                  >
+                    Exportar Markdown
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => void handleExport('pdf')}
+                    isLoading={isExporting}
+                    loadingText="Exportando..."
+                  >
+                    Exportar PDF
+                  </Button>
+                </div>
+                {canManageScenarios && (
+                  <div className="store-action-group">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleImportClick}
+                      isLoading={isImporting}
+                      loadingText="Importando..."
+                    >
+                      Importar JSON
+                    </Button>
+                  </div>
                 )}
                 <input
                   ref={fileInputRef}

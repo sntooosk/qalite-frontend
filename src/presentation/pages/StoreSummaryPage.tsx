@@ -42,6 +42,10 @@ import {
 import { useStoreEnvironments } from '../hooks/useStoreEnvironments';
 import {
   downloadJsonFile,
+  downloadMarkdownFile,
+  openPdfFromMarkdown,
+  buildScenarioMarkdown,
+  buildSuiteMarkdown,
   validateScenarioImportPayload,
   validateSuiteImportPayload,
 } from '../../shared/utils/storeImportExport';
@@ -1068,7 +1072,7 @@ export const StoreSummaryPage = () => {
     }
   };
 
-  const handleScenarioExport = async () => {
+  const handleScenarioExport = async (format: 'json' | 'markdown' | 'pdf') => {
     if (!store) {
       return;
     }
@@ -1076,7 +1080,22 @@ export const StoreSummaryPage = () => {
     try {
       setIsExportingScenarios(true);
       const data = await storeService.exportStore(store.id);
-      downloadJsonFile(data, `${store.name.replace(/\s+/g, '_')}_cenarios.json`);
+      const baseFileName = `${store.name.replace(/\s+/g, '_')}_cenarios`;
+
+      if (format === 'json') {
+        downloadJsonFile(data, `${baseFileName}.json`);
+      }
+
+      if (format === 'markdown') {
+        const markdown = buildScenarioMarkdown(data);
+        downloadMarkdownFile(markdown, `${baseFileName}.md`);
+      }
+
+      if (format === 'pdf') {
+        const markdown = buildScenarioMarkdown(data);
+        openPdfFromMarkdown(markdown, `${store.name} - Cenários`);
+      }
+
       showToast({ type: 'success', message: 'Exportação de cenários concluída.' });
     } catch (error) {
       console.error(error);
@@ -1333,7 +1352,7 @@ export const StoreSummaryPage = () => {
     }
   };
 
-  const handleSuiteExport = async () => {
+  const handleSuiteExport = async (format: 'json' | 'markdown' | 'pdf') => {
     if (!store) {
       return;
     }
@@ -1341,7 +1360,22 @@ export const StoreSummaryPage = () => {
     try {
       setIsExportingSuites(true);
       const data = await storeService.exportSuites(store.id);
-      downloadJsonFile(data, `${store.name.replace(/\s+/g, '_')}_suites.json`);
+      const baseFileName = `${store.name.replace(/\s+/g, '_')}_suites`;
+
+      if (format === 'json') {
+        downloadJsonFile(data, `${baseFileName}.json`);
+      }
+
+      if (format === 'markdown') {
+        const markdown = buildSuiteMarkdown(data);
+        downloadMarkdownFile(markdown, `${baseFileName}.md`);
+      }
+
+      if (format === 'pdf') {
+        const markdown = buildSuiteMarkdown(data);
+        openPdfFromMarkdown(markdown, `${store.name} - Suítes`);
+      }
+
       showToast({ type: 'success', message: 'Exportação de suítes concluída.' });
     } catch (error) {
       console.error(error);
@@ -1800,25 +1834,47 @@ export const StoreSummaryPage = () => {
                   <div className="scenario-table-actions">
                     {viewMode === 'scenarios' ? (
                       <>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={handleScenarioExport}
-                          isLoading={isExportingScenarios}
-                          loadingText="Exportando..."
-                        >
-                          Exportar JSON
-                        </Button>
-                        {canManageScenarios && (
+                        <div className="scenario-action-group">
                           <Button
                             type="button"
-                            variant="secondary"
-                            onClick={handleScenarioImportClick}
-                            isLoading={isImportingScenarios}
-                            loadingText="Importando..."
+                            variant="ghost"
+                            onClick={() => void handleScenarioExport('json')}
+                            isLoading={isExportingScenarios}
+                            loadingText="Exportando..."
                           >
-                            Importar JSON
+                            Exportar JSON
                           </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => void handleScenarioExport('markdown')}
+                            isLoading={isExportingScenarios}
+                            loadingText="Exportando..."
+                          >
+                            Exportar Markdown
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => void handleScenarioExport('pdf')}
+                            isLoading={isExportingScenarios}
+                            loadingText="Exportando..."
+                          >
+                            Exportar PDF
+                          </Button>
+                        </div>
+                        {canManageScenarios && (
+                          <div className="scenario-action-group">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={handleScenarioImportClick}
+                              isLoading={isImportingScenarios}
+                              loadingText="Importando..."
+                            >
+                              Importar JSON
+                            </Button>
+                          </div>
                         )}
                         {scenarios.length > 0 && (
                           <button
@@ -1832,25 +1888,47 @@ export const StoreSummaryPage = () => {
                       </>
                     ) : (
                       <>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={handleSuiteExport}
-                          isLoading={isExportingSuites}
-                          loadingText="Exportando..."
-                        >
-                          Exportar suítes
-                        </Button>
-                        {canManageScenarios && (
+                        <div className="scenario-action-group">
                           <Button
                             type="button"
-                            variant="secondary"
-                            onClick={handleSuiteImportClick}
-                            isLoading={isImportingSuites}
-                            loadingText="Importando..."
+                            variant="ghost"
+                            onClick={() => void handleSuiteExport('json')}
+                            isLoading={isExportingSuites}
+                            loadingText="Exportando..."
                           >
-                            Importar suítes
+                            Exportar JSON
                           </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => void handleSuiteExport('markdown')}
+                            isLoading={isExportingSuites}
+                            loadingText="Exportando..."
+                          >
+                            Exportar Markdown
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => void handleSuiteExport('pdf')}
+                            isLoading={isExportingSuites}
+                            loadingText="Exportando..."
+                          >
+                            Exportar PDF
+                          </Button>
+                        </div>
+                        {canManageScenarios && (
+                          <div className="scenario-action-group">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={handleSuiteImportClick}
+                              isLoading={isImportingSuites}
+                              loadingText="Importando..."
+                            >
+                              Importar suítes
+                            </Button>
+                          </div>
                         )}
                       </>
                     )}

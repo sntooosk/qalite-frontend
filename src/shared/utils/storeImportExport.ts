@@ -4,6 +4,18 @@ import type {
   StoreSuiteExportPayload,
 } from '../../infrastructure/external/stores';
 
+const downloadTextFile = (content: string, fileName: string, mimeType: string) => {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
 export const downloadJsonFile = (data: unknown, fileName: string) => {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -15,6 +27,106 @@ export const downloadJsonFile = (data: unknown, fileName: string) => {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
+
+export const downloadMarkdownFile = (content: string, fileName: string) => {
+  downloadTextFile(content, fileName, 'text/markdown');
+};
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+export const openPdfFromMarkdown = (content: string, title: string) => {
+  const printableWindow = window.open('', '_blank');
+
+  if (!printableWindow) {
+    throw new Error('Não foi possível abrir a visualização para exportar em PDF.');
+  }
+
+  const escapedContent = escapeHtml(content);
+  printableWindow.document.write(`
+    <!doctype html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8" />
+        <title>${escapeHtml(title)}</title>
+        <style>
+          body { font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 24px; }
+          pre { white-space: pre-wrap; word-break: break-word; font-size: 14px; line-height: 1.5; }
+          h1 { margin-bottom: 12px; }
+        </style>
+      </head>
+      <body>
+        <pre>${escapedContent}</pre>
+      </body>
+    </html>
+  `);
+
+  printableWindow.document.close();
+  printableWindow.focus();
+  printableWindow.print();
+};
+
+const buildScenarioSummary = (payload: StoreExportPayload) => {
+  const scenarioLines = payload.scenarios.map((scenario, index) =>
+    [
+      `### ${index + 1}. ${scenario.title}`,
+      `- Categoria: ${scenario.category}`,
+      `- Automação: ${scenario.automation}`,
+      `- Criticidade: ${scenario.criticality}`,
+      scenario.observation ? `- Observação: ${scenario.observation}` : '- Observação: —',
+      scenario.bdd ? `- BDD:\n\n${scenario.bdd}` : '- BDD: —',
+    ].join('\n'),
+  );
+
+  return [
+    `# Massa de cenários - ${payload.store.name}`,
+    `- Loja: ${payload.store.name}`,
+    `- Site: ${payload.store.site}`,
+    `- Ambiente: ${payload.store.stage || 'Não informado'}`,
+    `- Quantidade de cenários: ${payload.scenarios.length}`,
+    `- Exportado em: ${new Date(payload.exportedAt).toLocaleString('pt-BR')}`,
+    '',
+    '## Cenários',
+    ...scenarioLines,
+  ].join('\n\n');
+};
+
+const buildSuiteSummary = (payload: StoreSuiteExportPayload) => {
+  const suiteLines = payload.suites.map((suite, index) => {
+    const scenarioList = suite.scenarios
+      .map((scenario, scenarioIndex) => `  ${scenarioIndex + 1}. ${scenario.title || '—'}`)
+      .join('\n');
+
+    return [
+      `### ${index + 1}. ${suite.name}`,
+      suite.description ? `- Descrição: ${suite.description}` : '- Descrição: —',
+      '- Cenários:',
+      scenarioList || '  —',
+    ].join('\n');
+  });
+
+  return [
+    `# Suítes de testes - ${payload.store.name}`,
+    `- Loja: ${payload.store.name}`,
+    `- Site: ${payload.store.site}`,
+    `- Ambiente: ${payload.store.stage || 'Não informado'}`,
+    `- Quantidade de suítes: ${payload.suites.length}`,
+    `- Quantidade de cenários: ${payload.store.scenarioCount}`,
+    `- Exportado em: ${new Date(payload.exportedAt).toLocaleString('pt-BR')}`,
+    '',
+    '## Suítes',
+    ...suiteLines,
+  ].join('\n\n');
+};
+
+export const buildScenarioMarkdown = (payload: StoreExportPayload) => buildScenarioSummary(payload);
+
+export const buildSuiteMarkdown = (payload: StoreSuiteExportPayload) => buildSuiteSummary(payload);
 
 export const validateScenarioImportPayload = (payload: StoreExportPayload) => {
   if (!payload || typeof payload !== 'object') {
