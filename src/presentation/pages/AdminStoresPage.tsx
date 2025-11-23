@@ -53,6 +53,7 @@ export const AdminStoresPage = () => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
   const [stores, setStores] = useState<Store[]>([]);
+  const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(true);
   const [isLoadingStores, setIsLoadingStores] = useState(false);
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
   const [isOrganizationLocked, setIsOrganizationLocked] = useState(false);
@@ -82,6 +83,7 @@ export const AdminStoresPage = () => {
   useEffect(() => {
     const fetchOrganizations = async () => {
       try {
+        setIsLoadingOrganizations(true);
         const data = await organizationService.list();
         setOrganizations(data);
         const organizationFromParam = searchParams.get('organizationId');
@@ -104,6 +106,8 @@ export const AdminStoresPage = () => {
       } catch (error) {
         console.error(error);
         showToast({ type: 'error', message: 'Não foi possível carregar as organizações.' });
+      } finally {
+        setIsLoadingOrganizations(false);
       }
     };
 
@@ -556,6 +560,10 @@ export const AdminStoresPage = () => {
   return (
     <Layout>
       <section className="page-container" data-testid="stores-page">
+        {isLoadingOrganizations && (
+          <p className="section-subtitle">Carregando organizações vinculadas...</p>
+        )}
+
         <div className="page-header">
           <div>
             <button
@@ -599,7 +607,7 @@ export const AdminStoresPage = () => {
           </div>
         </div>
 
-        {isLoadingStores ? (
+        {isLoadingOrganizations || isLoadingStores ? (
           <p className="section-subtitle">Carregando lojas vinculadas...</p>
         ) : stores.length === 0 ? (
           <div className="dashboard-empty">
