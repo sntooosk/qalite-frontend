@@ -136,25 +136,19 @@ export const UserDashboardPage = () => {
 
   const hasBrowserstackCredentials = useMemo(
     () =>
-      Boolean(
-        organization?.browserstackCredentials?.username &&
-          organization?.browserstackCredentials?.accessKey,
-      ),
-    [
-      organization?.browserstackCredentials?.accessKey,
-      organization?.browserstackCredentials?.username,
-    ],
+      Boolean(user?.browserstackCredentials?.username && user?.browserstackCredentials?.accessKey),
+    [user?.browserstackCredentials?.accessKey, user?.browserstackCredentials?.username],
   );
 
   const loadBrowserstackBuilds = useCallback(async () => {
-    if (!hasBrowserstackCredentials || !organization?.browserstackCredentials) {
+    if (!hasBrowserstackCredentials || !user?.browserstackCredentials) {
       setBrowserstackBuilds([]);
       return;
     }
 
     try {
       setIsLoadingBrowserstack(true);
-      const builds = await browserstackService.listBuilds(organization.browserstackCredentials);
+      const builds = await browserstackService.listBuilds(user.browserstackCredentials);
       setBrowserstackBuilds(builds);
     } catch (error) {
       console.error(error);
@@ -166,7 +160,7 @@ export const UserDashboardPage = () => {
     } finally {
       setIsLoadingBrowserstack(false);
     }
-  }, [hasBrowserstackCredentials, organization?.browserstackCredentials, showToast]);
+  }, [hasBrowserstackCredentials, showToast, user?.browserstackCredentials]);
 
   useEffect(() => {
     void loadBrowserstackBuilds();
@@ -303,8 +297,8 @@ export const UserDashboardPage = () => {
               <span className="badge">BrowserStack</span>
               <h2 className="section-title">Acompanhe execuções automatizadas</h2>
               <p className="section-subtitle">
-                Solicite a um administrador que conecte o BrowserStack nas configurações da
-                organização para visualizar o quadro Kanban de execuções.
+                Adicione suas credenciais do BrowserStack no perfil para visualizar o quadro Kanban
+                de execuções.
               </p>
             </div>
           )}

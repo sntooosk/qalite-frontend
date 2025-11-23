@@ -9,6 +9,7 @@ import { storeService } from '../../application/use-cases/StoreUseCase';
 import { browserstackService } from '../../application/use-cases/BrowserstackUseCase';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
+import { useAuth } from '../hooks/useAuth';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
@@ -29,8 +30,6 @@ interface OrganizationFormState {
   name: string;
   logoFile: File | null;
   slackWebhookUrl: string;
-  browserstackUsername: string;
-  browserstackAccessKey: string;
 }
 
 const initialStoreForm: StoreForm = {
@@ -42,27 +41,12 @@ const initialOrganizationForm: OrganizationFormState = {
   name: '',
   logoFile: null,
   slackWebhookUrl: '',
-  browserstackUsername: '',
-  browserstackAccessKey: '',
-};
-
-const buildBrowserstackCredentialsPayload = ({
-  browserstackUsername,
-  browserstackAccessKey,
-}: OrganizationFormState) => {
-  const username = browserstackUsername.trim();
-  const accessKey = browserstackAccessKey.trim();
-
-  if (!username && !accessKey) {
-    return null;
-  }
-
-  return { username, accessKey };
 };
 
 export const AdminStoresPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { user } = useAuth();
   const { setActiveOrganization } = useOrganizationBranding();
   const [searchParams, setSearchParams] = useSearchParams();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -78,8 +62,6 @@ export const AdminStoresPage = () => {
   const [organizationForm, setOrganizationForm] =
     useState<OrganizationFormState>(initialOrganizationForm);
   const [isOrganizationSlackSectionOpen, setIsOrganizationSlackSectionOpen] = useState(false);
-  const [isOrganizationBrowserstackSectionOpen, setIsOrganizationBrowserstackSectionOpen] =
-    useState(false);
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [memberEmail, setMemberEmail] = useState('');
   const [memberError, setMemberError] = useState<string | null>(null);
@@ -208,24 +190,19 @@ export const AdminStoresPage = () => {
 
   const hasBrowserstackCredentials = useMemo(
     () =>
-      Boolean(
-        selectedOrganization?.browserstackCredentials?.username &&
-          selectedOrganization?.browserstackCredentials?.accessKey,
-      ),
-    [selectedOrganization],
+      Boolean(user?.browserstackCredentials?.username && user?.browserstackCredentials?.accessKey),
+    [user?.browserstackCredentials?.accessKey, user?.browserstackCredentials?.username],
   );
 
   const loadBrowserstackBuilds = useCallback(async () => {
-    if (!selectedOrganization?.browserstackCredentials || !hasBrowserstackCredentials) {
+    if (!user?.browserstackCredentials || !hasBrowserstackCredentials) {
       setBrowserstackBuilds([]);
       return;
     }
 
     try {
       setIsLoadingBrowserstack(true);
-      const builds = await browserstackService.listBuilds(
-        selectedOrganization.browserstackCredentials,
-      );
+      const builds = await browserstackService.listBuilds(user.browserstackCredentials);
       setBrowserstackBuilds(builds);
     } catch (error) {
       console.error(error);
@@ -239,7 +216,7 @@ export const AdminStoresPage = () => {
     } finally {
       setIsLoadingBrowserstack(false);
     }
-  }, [hasBrowserstackCredentials, selectedOrganization, showToast]);
+  }, [hasBrowserstackCredentials, showToast, user?.browserstackCredentials]);
 
   useEffect(() => {
     void loadBrowserstackBuilds();
@@ -281,20 +258,13 @@ export const AdminStoresPage = () => {
     }
 
     const slackWebhookUrl = selectedOrganization.slackWebhookUrl ?? '';
-    const browserstackUsername = selectedOrganization.browserstackCredentials?.username ?? '';
-    const browserstackAccessKey = selectedOrganization.browserstackCredentials?.accessKey ?? '';
 
     setOrganizationForm({
       name: selectedOrganization.name,
       logoFile: null,
       slackWebhookUrl,
-      browserstackUsername,
-      browserstackAccessKey,
     });
     setIsOrganizationSlackSectionOpen(Boolean(slackWebhookUrl.trim()));
-    setIsOrganizationBrowserstackSectionOpen(
-      Boolean(browserstackUsername.trim() || browserstackAccessKey.trim()),
-    );
     setOrganizationError(null);
     setMemberEmail('');
     setMemberError(null);
@@ -307,7 +277,6 @@ export const AdminStoresPage = () => {
     setMemberEmail('');
     setMemberError(null);
     setIsOrganizationSlackSectionOpen(false);
-    setIsOrganizationBrowserstackSectionOpen(false);
     setOrganizationForm(initialOrganizationForm);
   };
 
@@ -317,22 +286,6 @@ export const AdminStoresPage = () => {
 
       if (!nextValue) {
         setOrganizationForm((form) => ({ ...form, slackWebhookUrl: '' }));
-      }
-
-      return nextValue;
-    });
-  };
-
-  const toggleOrganizationBrowserstackSection = () => {
-    setIsOrganizationBrowserstackSectionOpen((previous) => {
-      const nextValue = !previous;
-
-      if (!nextValue) {
-        setOrganizationForm((form) => ({
-          ...form,
-          browserstackUsername: '',
-          browserstackAccessKey: '',
-        }));
       }
 
       return nextValue;
@@ -404,16 +357,11 @@ export const AdminStoresPage = () => {
         ? organizationForm.slackWebhookUrl.trim()
         : '';
 
-      const browserstackCredentials = isOrganizationBrowserstackSectionOpen
-        ? buildBrowserstackCredentialsPayload(organizationForm)
-        : null;
-
       const updated = await organizationService.update(selectedOrganization.id, {
         name: trimmedName,
         description: (selectedOrganization.description ?? '').trim(),
         logoFile: organizationForm.logoFile,
         slackWebhookUrl,
-        browserstackCredentials,
       });
 
       setOrganizations((previous) =>
@@ -746,8 +694,8 @@ export const AdminStoresPage = () => {
                   <span className="badge">BrowserStack</span>
                   <h2 className="section-title">Conecte sua conta</h2>
                   <p className="section-subtitle">
-                    Adicione usuário e access key do BrowserStack nas configurações da organização
-                    para acompanhar as execuções automatizadas.
+                    Adicione usuário e access key do BrowserStack no seu perfil para acompanhar as
+                    execuções automatizadas.
                   </p>
                 </div>
               )}
@@ -879,67 +827,6 @@ export const AdminStoresPage = () => {
                   <p className="form-hint">
                     Cole a URL gerada pelo aplicativo de Incoming Webhooks.
                   </p>
-                </div>
-              )}
-            </div>
-            <div className="collapsible-section">
-              <div className="collapsible-section__header">
-                <div className="collapsible-section__titles">
-                  <img
-                    className="collapsible-section__icon"
-                    src="https://img.icons8.com/color/48/browser-stack.png"
-                    alt="BrowserStack"
-                  />
-                  <p className="collapsible-section__title">Credenciais do BrowserStack</p>
-                  <p className="collapsible-section__description">
-                    Habilite para adicionar as credenciais usadas nas integrações com o
-                    BrowserStack.
-                  </p>
-                </div>
-                <label className="collapsible-section__toggle">
-                  <input
-                    type="checkbox"
-                    checked={isOrganizationBrowserstackSectionOpen}
-                    onChange={toggleOrganizationBrowserstackSection}
-                    aria-expanded={isOrganizationBrowserstackSectionOpen}
-                    aria-controls="organization-settings-browserstack-section"
-                  />
-                  <span>{isOrganizationBrowserstackSectionOpen ? 'Ativado' : 'Desativado'}</span>
-                </label>
-              </div>
-              {isOrganizationBrowserstackSectionOpen && (
-                <div
-                  className="collapsible-section__body"
-                  id="organization-settings-browserstack-section"
-                  data-testid="organization-settings-browserstack-section"
-                >
-                  <TextInput
-                    id="organization-browserstack-username"
-                    label="Usuário do BrowserStack"
-                    value={organizationForm.browserstackUsername}
-                    onChange={(event) =>
-                      setOrganizationForm((previous) => ({
-                        ...previous,
-                        browserstackUsername: event.target.value,
-                      }))
-                    }
-                    placeholder="username"
-                    dataTestId="organization-settings-browserstack-username"
-                  />
-                  <TextInput
-                    id="organization-browserstack-access-key"
-                    label="Access key do BrowserStack"
-                    type="password"
-                    value={organizationForm.browserstackAccessKey}
-                    onChange={(event) =>
-                      setOrganizationForm((previous) => ({
-                        ...previous,
-                        browserstackAccessKey: event.target.value,
-                      }))
-                    }
-                    placeholder="access key"
-                    dataTestId="organization-settings-browserstack-access-key"
-                  />
                 </div>
               )}
             </div>

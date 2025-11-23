@@ -17,5 +17,6 @@ export interface AuthRepository {
     firstName: string;
     lastName: string;
     photoFile?: File | null;
+    browserstackCredentials?: AuthUser['browserstackCredentials'];
   }) => Promise<AuthUser>;
 }

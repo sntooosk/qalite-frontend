@@ -48,9 +48,17 @@ export const BrowserstackKanban = ({ builds, isLoading, onRefresh }: Browserstac
       <header className="browserstack-kanban__header">
         <div>
           <span className="badge">Execuções</span>
-          <h3 className="section-title">BrowserStack</h3>
+          <div className="browserstack-kanban__title-row">
+            <img
+              className="browserstack-kanban__brand"
+              src="https://img.icons8.com/color/48/browser-stack.png"
+              alt="BrowserStack"
+            />
+            <h3 className="section-title">BrowserStack</h3>
+          </div>
           <p className="browserstack-kanban__description">
-            Visualize as execuções agrupadas por status e acesse o relatório público de cada build.
+            Visualize as execuções agrupadas por status e acesse o relatório público de cada build
+            usando suas credenciais pessoais configuradas no perfil.
           </p>
         </div>
 
@@ -85,7 +93,7 @@ export const BrowserstackKanban = ({ builds, isLoading, onRefresh }: Browserstac
         <div className="browserstack-kanban__empty">
           <h4 className="section-title">Nenhuma execução encontrada</h4>
           <p className="section-subtitle">
-            Verifique as credenciais do BrowserStack na organização ou utilize o botão de atualizar.
+            Verifique suas credenciais do BrowserStack no perfil ou utilize o botão de atualizar.
           </p>
         </div>
       ) : (

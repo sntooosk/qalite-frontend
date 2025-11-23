@@ -13,30 +13,12 @@ interface OrganizationFormState {
   name: string;
   logoFile: File | null;
   slackWebhookUrl: string;
-  browserstackUsername: string;
-  browserstackAccessKey: string;
 }
 
 const initialOrganizationForm: OrganizationFormState = {
   name: '',
   logoFile: null,
   slackWebhookUrl: '',
-  browserstackUsername: '',
-  browserstackAccessKey: '',
-};
-
-const buildBrowserstackCredentialsPayload = ({
-  browserstackUsername,
-  browserstackAccessKey,
-}: OrganizationFormState) => {
-  const username = browserstackUsername.trim();
-  const accessKey = browserstackAccessKey.trim();
-
-  if (!username && !accessKey) {
-    return null;
-  }
-
-  return { username, accessKey };
 };
 
 export const AdminOrganizationsPage = () => {
@@ -48,7 +30,6 @@ export const AdminOrganizationsPage = () => {
   const [organizationForm, setOrganizationForm] =
     useState<OrganizationFormState>(initialOrganizationForm);
   const [isSlackSectionOpen, setIsSlackSectionOpen] = useState(false);
-  const [isBrowserstackSectionOpen, setIsBrowserstackSectionOpen] = useState(false);
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>, callback: () => void) => {
@@ -79,7 +60,6 @@ export const AdminOrganizationsPage = () => {
     setOrganizationForm(initialOrganizationForm);
     setFormError(null);
     setIsSlackSectionOpen(false);
-    setIsBrowserstackSectionOpen(false);
     setIsModalOpen(true);
   };
 
@@ -87,7 +67,6 @@ export const AdminOrganizationsPage = () => {
     setIsModalOpen(false);
     setFormError(null);
     setIsSlackSectionOpen(false);
-    setIsBrowserstackSectionOpen(false);
     setOrganizationForm(initialOrganizationForm);
   };
 
@@ -97,22 +76,6 @@ export const AdminOrganizationsPage = () => {
 
       if (!nextValue) {
         setOrganizationForm((form) => ({ ...form, slackWebhookUrl: '' }));
-      }
-
-      return nextValue;
-    });
-  };
-
-  const toggleBrowserstackSection = () => {
-    setIsBrowserstackSectionOpen((previous) => {
-      const nextValue = !previous;
-
-      if (!nextValue) {
-        setOrganizationForm((form) => ({
-          ...form,
-          browserstackUsername: '',
-          browserstackAccessKey: '',
-        }));
       }
 
       return nextValue;
@@ -133,16 +96,12 @@ export const AdminOrganizationsPage = () => {
       setIsSavingOrganization(true);
 
       const slackWebhookUrl = isSlackSectionOpen ? organizationForm.slackWebhookUrl.trim() : '';
-      const browserstackCredentials = isBrowserstackSectionOpen
-        ? buildBrowserstackCredentialsPayload(organizationForm)
-        : null;
 
       const created = await organizationService.create({
         name: trimmedName,
         description: '',
         logoFile: organizationForm.logoFile,
         slackWebhookUrl,
-        browserstackCredentials,
       });
       setOrganizations((previous) => [...previous, created]);
       showToast({ type: 'success', message: 'Nova organização criada.' });
@@ -288,67 +247,6 @@ export const AdminOrganizationsPage = () => {
                   dataTestId="organization-slack-webhook-input"
                 />
                 <p className="form-hint">Cole a URL gerada pelo aplicativo de Incoming Webhooks.</p>
-              </div>
-            )}
-          </div>
-
-          <div className="collapsible-section">
-            <div className="collapsible-section__header">
-              <div className="collapsible-section__titles">
-                <img
-                  className="collapsible-section__icon"
-                  src="https://img.icons8.com/color/48/browser-stack.png"
-                  alt="BrowserStack"
-                />
-                <p className="collapsible-section__title">Credenciais do BrowserStack</p>
-                <p className="collapsible-section__description">
-                  Habilite para adicionar as credenciais usadas nas integrações com o BrowserStack.
-                </p>
-              </div>
-              <label className="collapsible-section__toggle">
-                <input
-                  type="checkbox"
-                  checked={isBrowserstackSectionOpen}
-                  onChange={toggleBrowserstackSection}
-                  aria-expanded={isBrowserstackSectionOpen}
-                  aria-controls="organization-browserstack-section"
-                />
-                <span>{isBrowserstackSectionOpen ? 'Ativado' : 'Desativado'}</span>
-              </label>
-            </div>
-            {isBrowserstackSectionOpen && (
-              <div
-                className="collapsible-section__body"
-                id="organization-browserstack-section"
-                data-testid="browserstack-credentials-section"
-              >
-                <TextInput
-                  id="organization-browserstack-username"
-                  label="Usuário do BrowserStack"
-                  value={organizationForm.browserstackUsername}
-                  onChange={(event) =>
-                    setOrganizationForm((previous) => ({
-                      ...previous,
-                      browserstackUsername: event.target.value,
-                    }))
-                  }
-                  placeholder="username"
-                  dataTestId="organization-browserstack-username-input"
-                />
-                <TextInput
-                  id="organization-browserstack-access-key"
-                  label="Access key do BrowserStack"
-                  type="password"
-                  value={organizationForm.browserstackAccessKey}
-                  onChange={(event) =>
-                    setOrganizationForm((previous) => ({
-                      ...previous,
-                      browserstackAccessKey: event.target.value,
-                    }))
-                  }
-                  placeholder="access key"
-                  dataTestId="organization-browserstack-access-key-input"
-                />
               </div>
             )}
           </div>
