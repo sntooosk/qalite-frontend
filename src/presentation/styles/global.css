@@ -2364,6 +2364,12 @@ button.store-summary-highlight:focus-visible {
   gap: 0.75rem;
 }
 
+.store-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .scenario-form {
   display: grid;
   gap: 1rem;
@@ -2583,6 +2589,13 @@ button.store-summary-highlight:focus-visible {
   gap: 0.5rem;
 }
 
+.scenario-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
 .scenario-table-header .scenario-table-description {
   margin: 0.4rem 0 0;
   font-size: 0.85rem;
@@ -2596,6 +2609,18 @@ button.store-summary-highlight:focus-visible {
   font-weight: 600;
   cursor: pointer;
   transition: opacity var(--transition-base);
+}
+
+@media (max-width: 720px) {
+  .scenario-table-actions {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .scenario-action-group {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
 .scenario-table-toggle:hover {
