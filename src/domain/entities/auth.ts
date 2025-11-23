@@ -1,3 +1,5 @@
+import type { BrowserstackCredentials } from './browserstack';
+
 export type Role = 'admin' | 'user';
 
 export const DEFAULT_ROLE: Role = 'user';
@@ -13,6 +15,7 @@ export interface AuthUser {
   organizationId?: string | null;
   accessToken?: string;
   photoURL?: string;
+  browserstackCredentials?: BrowserstackCredentials | null;
   isEmailVerified: boolean;
 }
 
@@ -34,4 +37,5 @@ export interface UpdateProfilePayload {
   firstName: string;
   lastName: string;
   photoFile?: File | null;
+  browserstackCredentials?: BrowserstackCredentials | null;
 }

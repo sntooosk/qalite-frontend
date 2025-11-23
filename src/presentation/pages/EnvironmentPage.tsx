@@ -578,6 +578,12 @@ export const EnvironmentPage = () => {
                   loadingText="Enviando..."
                   data-testid="send-slack-summary"
                 >
+                  <img
+                    className="button__icon"
+                    src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/48/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
+                    alt=""
+                    aria-hidden
+                  />
                   Enviar resumo para o Slack
                 </Button>
               )}

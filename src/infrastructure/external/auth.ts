@@ -19,6 +19,7 @@ import type {
   Role,
   UpdateProfilePayload,
 } from '../../domain/entities/auth';
+import type { BrowserstackCredentials } from '../../domain/entities/browserstack';
 import { DEFAULT_ROLE } from '../../domain/entities/auth';
 import { firebaseAuth, firebaseFirestore, firebaseStorage } from '../database/firebase';
 
@@ -40,15 +41,20 @@ export const registerUser = async ({ role, ...payload }: RegisterPayload): Promi
 
   const resolvedRole = role ?? DEFAULT_ROLE;
   const { firstName, lastName } = extractNameParts(normalizedDisplayName);
-  await persistUserProfile(user, {
-    role: resolvedRole,
-    displayName: normalizedDisplayName,
-    firstName,
-    lastName,
-    photoURL: user.photoURL ?? null,
-    organizationId: null,
-    isNew: true,
-  });
+  await persistUserProfile(
+    user,
+    {
+      role: resolvedRole,
+      displayName: normalizedDisplayName,
+      firstName,
+      lastName,
+      photoURL: user.photoURL ?? null,
+      organizationId: null,
+      browserstackCredentials: null,
+      isNew: true,
+    },
+    null,
+  );
 
   if (!user.emailVerified) {
     await sendEmailVerification(user);
@@ -95,6 +101,35 @@ export const onAuthStateChanged = (listener: AuthStateListener): (() => void) =>
     listener(mapToAuthUser(user, profile));
   });
 
+const normalizeBrowserstackCredentials = (
+  credentials: BrowserstackCredentials | null | undefined,
+): BrowserstackCredentials | null => {
+  const username = credentials?.username?.trim() || '';
+  const accessKey = credentials?.accessKey?.trim() || '';
+
+  if (!username && !accessKey) {
+    return null;
+  }
+
+  return { username, accessKey };
+};
+
+const parseBrowserstackCredentials = (value: unknown): BrowserstackCredentials | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const credentials = value as BrowserstackCredentials;
+  const username = typeof credentials.username === 'string' ? credentials.username.trim() : '';
+  const accessKey = typeof credentials.accessKey === 'string' ? credentials.accessKey.trim() : '';
+
+  if (!username && !accessKey) {
+    return null;
+  }
+
+  return { username, accessKey };
+};
+
 export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<AuthUser> => {
   const user = firebaseAuth.currentUser;
   if (!user) {
@@ -111,21 +146,27 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
   const trimmedFirstName = payload.firstName.trim();
   const trimmedLastName = payload.lastName.trim();
   const displayName = `${trimmedFirstName} ${trimmedLastName}`.trim();
+  const browserstackCredentials = normalizeBrowserstackCredentials(payload.browserstackCredentials);
 
   await firebaseUpdateProfile(user, {
     displayName: displayName || undefined,
     photoURL: photoURL ?? undefined,
   });
 
-  await persistUserProfile(user, {
-    role: currentProfile.role,
-    displayName,
-    firstName: trimmedFirstName,
-    lastName: trimmedLastName,
-    photoURL,
-    organizationId: currentProfile.organizationId ?? null,
-    isNew: false,
-  });
+  await persistUserProfile(
+    user,
+    {
+      role: currentProfile.role,
+      displayName,
+      firstName: trimmedFirstName,
+      lastName: trimmedLastName,
+      photoURL,
+      organizationId: currentProfile.organizationId ?? null,
+      browserstackCredentials,
+      isNew: false,
+    },
+    browserstackCredentials,
+  );
 
   const refreshedProfile = await fetchUserProfile(user.uid);
   return mapToAuthUser(firebaseAuth.currentUser ?? user, refreshedProfile);
@@ -138,6 +179,7 @@ interface StoredProfile {
   lastName?: string | null;
   photoURL?: string | null;
   organizationId?: string | null;
+  browserstackCredentials?: BrowserstackCredentials | null;
 }
 
 const mapToAuthUser = (user: FirebaseUser, profile: StoredProfile): AuthUser => {
@@ -162,6 +204,7 @@ const mapToAuthUser = (user: FirebaseUser, profile: StoredProfile): AuthUser => 
     lastName: effectiveLastName,
     role: profile.role,
     organizationId: profile.organizationId ?? null,
+    browserstackCredentials: profile.browserstackCredentials ?? null,
     photoURL: profile.photoURL ?? user.photoURL ?? undefined,
     accessToken: user.refreshToken,
     isEmailVerified: user.emailVerified,
@@ -177,8 +220,10 @@ const persistUserProfile = async (
     lastName: string;
     photoURL?: string | null;
     organizationId: string | null;
+    browserstackCredentials: BrowserstackCredentials | null;
     isNew?: boolean;
   },
+  browserstackCredentials: BrowserstackCredentials | null,
 ): Promise<void> => {
   const userDoc = doc(firebaseFirestore, USERS_COLLECTION, user.uid);
   await setDoc(
@@ -191,6 +236,7 @@ const persistUserProfile = async (
       role: profile.role,
       photoURL: profile.photoURL ?? null,
       organizationId: profile.organizationId,
+      browserstackCredentials,
       ...(profile.isNew ? { createdAt: serverTimestamp() } : {}),
       updatedAt: serverTimestamp(),
     },
@@ -211,6 +257,7 @@ const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
       lastName: (data.lastName as string) ?? '',
       photoURL: (data.photoURL as string | null) ?? null,
       organizationId: (data.organizationId as string | null) ?? null,
+      browserstackCredentials: parseBrowserstackCredentials(data?.browserstackCredentials),
     };
   }
 
@@ -221,6 +268,7 @@ const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
     lastName: '',
     photoURL: null,
     organizationId: null,
+    browserstackCredentials: null,
   };
 };
 
