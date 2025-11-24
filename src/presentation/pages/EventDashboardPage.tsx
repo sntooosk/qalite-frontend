@@ -195,6 +195,19 @@ export const EventDashboardPage = () => {
     [organizationEnvironments, event],
   );
 
+  const participantSet = useMemo(() => {
+    const participants = new Set<string>();
+
+    linkedEnvironments.forEach((environment) => {
+      environment.participants.forEach((participant) => participants.add(participant));
+    });
+
+    return participants;
+  }, [linkedEnvironments]);
+
+  const participantIds = useMemo(() => Array.from(participantSet), [participantSet]);
+  const participantProfiles = useUserProfiles(participantIds);
+
   const environmentParticipantsMap = useMemo(
     () =>
       linkedEnvironments.reduce(
@@ -227,19 +240,6 @@ export const EventDashboardPage = () => {
 
     return counts;
   }, [linkedEnvironments]);
-
-  const participantSet = useMemo(() => {
-    const participants = new Set<string>();
-
-    linkedEnvironments.forEach((environment) => {
-      environment.participants.forEach((participant) => participants.add(participant));
-    });
-
-    return participants;
-  }, [linkedEnvironments]);
-
-  const participantIds = useMemo(() => Array.from(participantSet), [participantSet]);
-  const participantProfiles = useUserProfiles(participantIds);
 
   const environmentStatusCounts = useMemo(() => {
     if (linkedEnvironments.length === 0) {
