@@ -7,8 +7,6 @@ import { UserAvatar } from './UserAvatar';
 import { LogoutIcon, UserIcon } from './icons';
 import qliteLogo from '../assets/logo.png';
 
-const DEFAULT_LOGO_PATH = qliteLogo;
-
 interface LayoutProps {
   children: ReactNode;
 }
@@ -20,7 +18,7 @@ export const Layout = ({ children }: LayoutProps) => {
   const displayName = user?.displayName || user?.email || '';
   const brandSource = activeOrganization;
   const brandName = brandSource?.name || 'QaLite';
-  const brandLogo = brandSource?.logoUrl || (brandName === 'QaLite' ? DEFAULT_LOGO_PATH : null);
+  const brandLogo = brandSource?.logoUrl || (brandName === 'QaLite' ? qliteLogo : null);
 
   return (
     <div className="app-shell">
