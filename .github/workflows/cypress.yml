@@ -13,4 +13,4 @@ jobs:
         with:
           token: ${{ secrets.GH_PAT }}
           repository: sntooosk/QaLite-cypress-automation
-          event-type: run-cypress-tests
+          event-type: qalite-cypress-trigger
