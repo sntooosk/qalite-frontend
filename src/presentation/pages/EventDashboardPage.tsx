@@ -345,7 +345,11 @@ export const EventDashboardPage = () => {
     try {
       await eventService.delete(event.id);
       showToast({ type: 'success', message: 'Evento excluído com sucesso.' });
-      navigate(`/organizations/events?organizationId=${organizationId ?? ''}`);
+      navigate(
+        organizationId
+          ? `/admin/organizations?organizationId=${organizationId}`
+          : '/admin/organizations',
+      );
     } catch (error) {
       console.error(error);
       const message = error instanceof Error ? error.message : 'Não foi possível excluir o evento.';
@@ -385,9 +389,6 @@ export const EventDashboardPage = () => {
             <p className="section-subtitle">
               Informe uma organização e evento válidos para acessar o dashboard.
             </p>
-            <Button type="button" onClick={() => navigate('/organizations/events')}>
-              Voltar para eventos
-            </Button>
           </div>
         </section>
       </Layout>
@@ -408,13 +409,6 @@ export const EventDashboardPage = () => {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => navigate(`/organizations/events?organizationId=${organizationId}`)}
-            >
-              Voltar para eventos
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
               onClick={handleOpenEditModal}
               disabled={!event}
             >
@@ -432,12 +426,6 @@ export const EventDashboardPage = () => {
           <div className="dashboard-empty">
             <h2 className="text-xl font-semibold text-primary">Evento não encontrado</h2>
             <p className="section-subtitle">Selecione outro evento na lista da organização.</p>
-            <Button
-              type="button"
-              onClick={() => navigate(`/organizations/events?organizationId=${organizationId}`)}
-            >
-              Voltar para eventos
-            </Button>
           </div>
         ) : (
           <>

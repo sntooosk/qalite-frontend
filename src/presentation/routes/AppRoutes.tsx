@@ -60,11 +60,6 @@ const AdminOrganizationsPage = lazy(() =>
 const AdminStoresPage = lazy(() =>
   import('../pages/AdminStoresPage').then(({ AdminStoresPage }) => ({ default: AdminStoresPage })),
 );
-const OrganizationEventsPage = lazy(() =>
-  import('../pages/OrganizationEventsPage').then(({ OrganizationEventsPage }) => ({
-    default: OrganizationEventsPage,
-  })),
-);
 const EventDashboardPage = lazy(() =>
   import('../pages/EventDashboardPage').then(({ EventDashboardPage }) => ({
     default: EventDashboardPage,
@@ -95,7 +90,6 @@ export const AppRoutes = () => (
           <Route element={<RoleProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin" element={<AdminOrganizationsPage />} />
             <Route path="/admin/organizations" element={<AdminStoresPage />} />
-            <Route path="/organizations/events" element={<OrganizationEventsPage />} />
             <Route path="/event" element={<EventDashboardPage />} />
           </Route>
 
