@@ -21,6 +21,7 @@ import type {
 } from '../../domain/entities/auth';
 import type { BrowserstackCredentials } from '../../domain/entities/browserstack';
 import { DEFAULT_ROLE } from '../../domain/entities/auth';
+import { addUserToOrganizationByEmailDomain } from './organizations';
 import { firebaseAuth, firebaseFirestore, firebaseStorage } from '../database/firebase';
 
 const USERS_COLLECTION = 'users';
@@ -83,7 +84,17 @@ export const registerUser = async ({ role, ...payload }: RegisterPayload): Promi
   persistFirebaseAuthCookie(user);
 
   const profile = await fetchUserProfile(user.uid);
-  return mapToAuthUser(user, profile);
+  const organizationId = await addUserToOrganizationByEmailDomain({
+    uid: user.uid,
+    email: user.email ?? '',
+    displayName: normalizedDisplayName || payload.email,
+    photoURL: user.photoURL ?? null,
+  });
+
+  return mapToAuthUser(user, {
+    ...profile,
+    organizationId: organizationId ?? profile.organizationId ?? null,
+  });
 };
 
 export const loginUser = async ({ email, password }: LoginPayload): Promise<AuthUser> => {
@@ -96,7 +107,17 @@ export const loginUser = async ({ email, password }: LoginPayload): Promise<Auth
   persistFirebaseAuthCookie(credential.user);
 
   const profile = await fetchUserProfile(credential.user.uid);
-  return mapToAuthUser(credential.user, profile);
+  const organizationId = await addUserToOrganizationByEmailDomain({
+    uid: credential.user.uid,
+    email: credential.user.email ?? email,
+    displayName: credential.user.displayName ?? email,
+    photoURL: credential.user.photoURL ?? null,
+  });
+
+  return mapToAuthUser(credential.user, {
+    ...profile,
+    organizationId: organizationId ?? profile.organizationId ?? null,
+  });
 };
 
 export const logoutUser = (): Promise<void> => signOut(firebaseAuth);
@@ -125,7 +146,19 @@ export const onAuthStateChanged = (listener: AuthStateListener): (() => void) =>
     persistFirebaseAuthCookie(user);
 
     const profile = await fetchUserProfile(user.uid);
-    listener(mapToAuthUser(user, profile));
+    const organizationId = await addUserToOrganizationByEmailDomain({
+      uid: user.uid,
+      email: user.email ?? '',
+      displayName: user.displayName ?? user.email ?? '',
+      photoURL: user.photoURL ?? null,
+    });
+
+    listener(
+      mapToAuthUser(user, {
+        ...profile,
+        organizationId: organizationId ?? profile.organizationId ?? null,
+      }),
+    );
   });
 
 const normalizeBrowserstackCredentials = (

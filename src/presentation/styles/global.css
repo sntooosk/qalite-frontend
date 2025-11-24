@@ -2238,6 +2238,10 @@ button.store-summary-highlight:focus-visible {
   gap: 1rem;
 }
 
+.member-list.member-list--compact {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
 .member-list-item {
   display: flex;
   align-items: center;
@@ -2247,6 +2251,12 @@ button.store-summary-highlight:focus-visible {
   padding: 0.75rem 1rem;
   background: var(--color-surface-alt);
   box-shadow: var(--shadow-sm);
+}
+
+.member-list--compact .member-list-item {
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
 }
 
 .member-list-details {
@@ -2262,10 +2272,18 @@ button.store-summary-highlight:focus-visible {
   color: var(--color-text-primary);
 }
 
+.member-list--compact .member-list-name {
+  font-size: 0.95rem;
+}
+
 .member-list-email {
   font-size: 0.9rem;
   color: var(--color-text-muted);
   word-break: break-word;
+}
+
+.member-list--compact .member-list-email {
+  font-size: 0.85rem;
 }
 
 .member-list-remove {

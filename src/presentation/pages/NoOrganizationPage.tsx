@@ -7,8 +7,8 @@ export const NoOrganizationPage = () => (
         <span className="badge">Configuração pendente</span>
         <h1 className="section-title">Você ainda não está vinculado a uma organização</h1>
         <p className="section-subtitle">
-          Entre em contato com um administrador para ser adicionado a uma equipe e liberar os
-          recursos do QaLite.
+          Entre em contato com um administrador para configurar o domínio do seu e-mail ou associar
+          sua conta a uma equipe e liberar os recursos do QaLite.
         </p>
       </div>
       <div className="card">

@@ -11,6 +11,7 @@ export interface Organization {
   description: string;
   logoUrl: string | null;
   slackWebhookUrl: string | null;
+  emailDomain: string | null;
   members: OrganizationMember[];
   memberIds: string[];
   createdAt: Date | null;
@@ -22,6 +23,7 @@ export interface CreateOrganizationPayload {
   description: string;
   logoFile?: File | null;
   slackWebhookUrl?: string | null;
+  emailDomain?: string | null;
 }
 
 export interface UpdateOrganizationPayload {
@@ -29,6 +31,7 @@ export interface UpdateOrganizationPayload {
   description: string;
   logoFile?: File | null;
   slackWebhookUrl?: string | null;
+  emailDomain?: string | null;
 }
 
 export interface AddUserToOrganizationPayload {

@@ -1,12 +1,12 @@
-import { ALLOWED_EMAIL_DOMAINS } from '../config/auth';
-
-export const isAllowedEmailDomain = (email: string) => {
-  const [, domain = ''] = email.split('@');
-  const normalizedDomain = domain.trim().toLowerCase();
-
-  if (!normalizedDomain) {
-    return false;
-  }
-
-  return ALLOWED_EMAIL_DOMAINS.some((allowedDomain) => allowedDomain === normalizedDomain);
+export const normalizeEmailDomain = (domain: string | null | undefined): string | null => {
+  const normalized = (domain ?? '').replace(/^@+/, '').trim().toLowerCase();
+  return normalized || null;
 };
+
+export const getEmailDomain = (email: string): string | null => {
+  const [, domain = ''] = email.split('@');
+  return domain ? domain.trim() : null;
+};
+
+export const getNormalizedEmailDomain = (email: string): string | null =>
+  normalizeEmailDomain(getEmailDomain(email));
