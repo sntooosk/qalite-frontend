@@ -19,7 +19,6 @@ import { SelectInput } from '../components/SelectInput';
 import { SimpleBarChart } from '../components/SimpleBarChart';
 import { ActivityIcon, BarChartIcon, SparklesIcon, UsersGroupIcon } from '../components/icons';
 import { useUserProfiles } from '../hooks/useUserProfiles';
-import type { UserSummary } from '../../domain/entities/user';
 import { ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
 import { getReadableUserName, getUserInitials } from '../utils/userDisplay';
 
@@ -208,20 +207,6 @@ export const EventDashboardPage = () => {
   const participantIds = useMemo(() => Array.from(participantSet), [participantSet]);
   const participantProfiles = useUserProfiles(participantIds);
 
-  const environmentParticipantsMap = useMemo(
-    () =>
-      linkedEnvironments.reduce(
-        (acc, environment) => {
-          acc[environment.id] = participantProfiles.filter((profile) =>
-            environment.participants.includes(profile.id),
-          );
-          return acc;
-        },
-        {} as Record<string, UserSummary[]>,
-      ),
-    [linkedEnvironments, participantProfiles],
-  );
-
   const scenarioStatusCounts = useMemo(() => {
     const counts: Record<EnvironmentScenarioStatus, number> = {
       pendente: 0,
@@ -388,7 +373,9 @@ export const EventDashboardPage = () => {
   };
 
   const renderEnvironmentParticipants = (environment: Environment) => {
-    const participants = environmentParticipantsMap[environment.id] ?? [];
+    const participants = participantProfiles.filter((profile) =>
+      environment.participants.includes(profile.id),
+    );
     const visibleParticipants = participants.slice(0, 4);
     const hiddenParticipantsCount = Math.max(participants.length - visibleParticipants.length, 0);
 
