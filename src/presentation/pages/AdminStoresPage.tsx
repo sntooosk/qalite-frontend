@@ -4,8 +4,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
 import type { Store } from '../../domain/entities/store';
 import type { BrowserstackBuild } from '../../domain/entities/browserstack';
+import type { OrganizationEvent } from '../../domain/entities/event';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
+import { eventService } from '../../application/use-cases/EventUseCase';
 import { browserstackService } from '../../application/use-cases/BrowserstackUseCase';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
@@ -15,6 +17,7 @@ import { Button } from '../components/Button';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { TextInput } from '../components/TextInput';
 import { Modal } from '../components/Modal';
+import { TextArea } from '../components/TextArea';
 import { UserAvatar } from '../components/UserAvatar';
 import { SimpleBarChart } from '../components/SimpleBarChart';
 import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanban';
@@ -33,6 +36,13 @@ interface OrganizationFormState {
   slackWebhookUrl: string;
 }
 
+interface EventFormState {
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+}
+
 const initialStoreForm: StoreForm = {
   name: '',
   site: '',
@@ -42,6 +52,13 @@ const initialOrganizationForm: OrganizationFormState = {
   name: '',
   logoFile: null,
   slackWebhookUrl: '',
+};
+
+const initialEventForm: EventFormState = {
+  name: '',
+  description: '',
+  startDate: '',
+  endDate: '',
 };
 
 export const AdminStoresPage = () => {
@@ -78,6 +95,12 @@ export const AdminStoresPage = () => {
   const [isLoadingAutomationStats, setIsLoadingAutomationStats] = useState(false);
   const [browserstackBuilds, setBrowserstackBuilds] = useState<BrowserstackBuild[]>([]);
   const [isLoadingBrowserstack, setIsLoadingBrowserstack] = useState(false);
+  const [events, setEvents] = useState<OrganizationEvent[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [eventForm, setEventForm] = useState<EventFormState>(initialEventForm);
+  const [isSavingEvent, setIsSavingEvent] = useState(false);
+  const [eventError, setEventError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchOrganizations = async () => {
@@ -147,6 +170,31 @@ export const AdminStoresPage = () => {
   }, [selectedOrganization, setActiveOrganization]);
 
   useEffect(() => () => setActiveOrganization(null), [setActiveOrganization]);
+
+  useEffect(() => {
+    if (!selectedOrganizationId) {
+      setEvents([]);
+      return;
+    }
+
+    const fetchEvents = async () => {
+      try {
+        setIsLoadingEvents(true);
+        const list = await eventService.listByOrganization(selectedOrganizationId);
+        setEvents(list);
+      } catch (error) {
+        console.error(error);
+        showToast({
+          type: 'error',
+          message: 'Não foi possível carregar os eventos da organização.',
+        });
+      } finally {
+        setIsLoadingEvents(false);
+      }
+    };
+
+    void fetchEvents();
+  }, [selectedOrganizationId, showToast]);
 
   useEffect(() => {
     if (!selectedOrganizationId || stores.length === 0) {
@@ -547,6 +595,54 @@ export const AdminStoresPage = () => {
     }
   };
 
+  const openEventModal = () => {
+    setIsEventModalOpen(true);
+    setEventError(null);
+  };
+
+  const closeEventModal = () => {
+    if (isSavingEvent) {
+      return;
+    }
+
+    setIsEventModalOpen(false);
+    setEventError(null);
+    setEventForm(initialEventForm);
+  };
+
+  const handleCreateEvent = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedOrganizationId) {
+      showToast({ type: 'error', message: 'Selecione uma organização para criar o evento.' });
+      return;
+    }
+
+    if (!eventForm.name.trim()) {
+      setEventError('Informe um nome para o evento.');
+      return;
+    }
+
+    try {
+      setIsSavingEvent(true);
+      const created = await eventService.create({
+        organizationId: selectedOrganizationId,
+        name: eventForm.name.trim(),
+        description: eventForm.description.trim() || undefined,
+        startDate: eventForm.startDate || null,
+        endDate: eventForm.endDate || null,
+      });
+
+      setEvents((previous) => [...previous, created]);
+      closeEventModal();
+      showToast({ type: 'success', message: 'Evento criado com sucesso.' });
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: 'Não foi possível criar o evento.' });
+    } finally {
+      setIsSavingEvent(false);
+    }
+  };
+
   return (
     <Layout>
       <section className="page-container" data-testid="stores-page">
@@ -584,20 +680,6 @@ export const AdminStoresPage = () => {
             )}
             <Button
               type="button"
-              variant="secondary"
-              onClick={() =>
-                navigate(
-                  `/organizations/events${
-                    selectedOrganizationId ? `?organizationId=${selectedOrganizationId}` : ''
-                  }`,
-                )
-              }
-              disabled={!selectedOrganizationId}
-            >
-              Eventos da organização
-            </Button>
-            <Button
-              type="button"
               onClick={openCreateModal}
               disabled={!selectedOrganizationId}
               data-testid="new-store-button"
@@ -624,6 +706,91 @@ export const AdminStoresPage = () => {
             {selectedOrganization && (
               <div className="page-section">
                 <OrganizationLogPanel organizationId={selectedOrganization.id} />
+              </div>
+            )}
+
+            {selectedOrganization && (
+              <div className="page-section">
+                <div className="card organization-log-panel organization-log-panel--collapsed">
+                  <div className="organization-log-panel__header">
+                    <div className="organization-log-panel__heading">
+                      <span className="icon-pill" aria-hidden>
+                        <SparklesIcon className="icon" />
+                      </span>
+                      <div>
+                        <div className="organization-log-panel__title-row">
+                          <span className="badge">Eventos</span>
+                          <span className="badge badge--muted">
+                            {events.length} registro{events.length === 1 ? '' : 's'}
+                          </span>
+                        </div>
+                        <h2 className="text-xl font-semibold text-primary">
+                          Eventos da organização
+                        </h2>
+                        <p className="section-subtitle">
+                          Liste e acesse rapidamente os eventos desta organização.
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button type="button" variant="secondary" onClick={openEventModal}>
+                      Criar novo evento
+                    </Button>
+                  </div>
+
+                  <div className="organization-log-panel__content">
+                    {isLoadingEvents ? (
+                      <p className="section-subtitle">Carregando eventos...</p>
+                    ) : events.length === 0 ? (
+                      <p className="section-subtitle">
+                        Nenhum evento cadastrado para esta organização.
+                      </p>
+                    ) : (
+                      <ul className="activity-log-list">
+                        {events.map((event) => (
+                          <li
+                            key={event.id}
+                            className="activity-log-item card-clickable"
+                            role="button"
+                            tabIndex={0}
+                            onClick={() =>
+                              navigate(
+                                `/event?organizationId=${event.organizationId}&eventId=${event.id}`,
+                              )
+                            }
+                            onKeyDown={(keyboardEvent) =>
+                              handleCardKeyDown(keyboardEvent, () =>
+                                navigate(
+                                  `/event?organizationId=${event.organizationId}&eventId=${event.id}`,
+                                ),
+                              )
+                            }
+                          >
+                            <div className="activity-log-item__timeline" aria-hidden>
+                              <span className="activity-log-dot activity-log-dot--create" />
+                              <span className="activity-log-line" />
+                            </div>
+
+                            <div className="activity-log-item__content">
+                              <div className="activity-log-tags">
+                                <span className="chip chip--create">Evento</span>
+                                {event.startDate && (
+                                  <span className="chip chip--entity">
+                                    Início: {event.startDate}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="activity-log-message">{event.name}</p>
+                              {event.description && (
+                                <p className="activity-log-meta">{event.description}</p>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -742,6 +909,67 @@ export const AdminStoresPage = () => {
           </>
         )}
       </section>
+
+      <Modal
+        isOpen={isEventModalOpen}
+        onClose={closeEventModal}
+        title="Novo evento"
+        description="Cadastre um evento da organização e acesse o dashboard dedicado."
+      >
+        {eventError && <p className="form-message form-message--error">{eventError}</p>}
+        <form className="form-grid" onSubmit={handleCreateEvent}>
+          <TextInput
+            id="event-name"
+            label="Nome do evento"
+            value={eventForm.name}
+            onChange={(event) =>
+              setEventForm((previous) => ({ ...previous, name: event.target.value }))
+            }
+            placeholder="Ex.: Semana de Testes"
+            required
+          />
+          <TextArea
+            id="event-description"
+            label="Descrição"
+            value={eventForm.description}
+            onChange={(event) =>
+              setEventForm((previous) => ({ ...previous, description: event.target.value }))
+            }
+            placeholder="Contexto e objetivo do evento"
+          />
+          <TextInput
+            id="event-start"
+            label="Data de início"
+            type="date"
+            value={eventForm.startDate}
+            onChange={(event) =>
+              setEventForm((previous) => ({ ...previous, startDate: event.target.value }))
+            }
+          />
+          <TextInput
+            id="event-end"
+            label="Data de término"
+            type="date"
+            value={eventForm.endDate}
+            onChange={(event) =>
+              setEventForm((previous) => ({ ...previous, endDate: event.target.value }))
+            }
+          />
+          <div className="form-actions">
+            <Button type="submit" isLoading={isSavingEvent} loadingText="Salvando...">
+              Criar evento
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={closeEventModal}
+              disabled={isSavingEvent}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       <Modal
         isOpen={isStoreModalOpen}
