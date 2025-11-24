@@ -25,6 +25,26 @@ import { firebaseAuth, firebaseFirestore, firebaseStorage } from '../database/fi
 
 const USERS_COLLECTION = 'users';
 const USER_AVATAR_FILE = 'avatar.jpg';
+const AUTH_COOKIE_NAME = 'firebase:authUser';
+
+const persistFirebaseAuthCookie = (firebaseUser: FirebaseUser | null): void => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  if (!firebaseUser) {
+    document.cookie = `${AUTH_COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+    return;
+  }
+
+  const firebaseCookie = JSON.stringify({
+    uid: firebaseUser.uid,
+    email: firebaseUser.email,
+    stsTokenManager: firebaseUser.stsTokenManager,
+  });
+
+  document.cookie = `${AUTH_COOKIE_NAME}=${encodeURIComponent(firebaseCookie)}; path=/;`;
+};
 
 export const hasRequiredRole = (user: AuthUser | null, allowedRoles: Role[]): boolean =>
   Boolean(user && allowedRoles.includes(user.role));
@@ -60,6 +80,8 @@ export const registerUser = async ({ role, ...payload }: RegisterPayload): Promi
     await sendEmailVerification(user);
   }
 
+  persistFirebaseAuthCookie(user);
+
   const profile = await fetchUserProfile(user.uid);
   return mapToAuthUser(user, profile);
 };
@@ -70,6 +92,8 @@ export const loginUser = async ({ email, password }: LoginPayload): Promise<Auth
   if (!credential.user.emailVerified) {
     await sendEmailVerification(credential.user);
   }
+
+  persistFirebaseAuthCookie(credential.user);
 
   const profile = await fetchUserProfile(credential.user.uid);
   return mapToAuthUser(credential.user, profile);
@@ -93,9 +117,12 @@ export const getCurrentUser = async (): Promise<AuthUser | null> => {
 export const onAuthStateChanged = (listener: AuthStateListener): (() => void) =>
   firebaseOnAuthStateChanged(firebaseAuth, async (user) => {
     if (!user) {
+      persistFirebaseAuthCookie(null);
       listener(null);
       return;
     }
+
+    persistFirebaseAuthCookie(user);
 
     const profile = await fetchUserProfile(user.uid);
     listener(mapToAuthUser(user, profile));
