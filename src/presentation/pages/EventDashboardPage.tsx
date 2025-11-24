@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import type { Environment } from '../../domain/entities/environment';
+import type { EnvironmentBug } from '../../domain/entities/environment';
 import type { OrganizationEvent } from '../../domain/entities/event';
 import type { Store } from '../../domain/entities/store';
 import { eventService } from '../../application/use-cases/EventUseCase';
@@ -20,6 +21,8 @@ import { SparklesIcon } from '../components/icons';
 import { useUserProfiles } from '../hooks/useUserProfiles';
 import { ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
 import { getReadableUserName, getUserInitials } from '../utils/userDisplay';
+import { formatDateTime } from '../../shared/utils/time';
+import { SCENARIO_COMPLETED_STATUSES } from '../../infrastructure/external/environments';
 
 interface EventFormState {
   name: string;
@@ -50,6 +53,7 @@ export const EventDashboardPage = () => {
   const [isLoadingEnvironments, setIsLoadingEnvironments] = useState(false);
   const [isLinkingEnvironment, setIsLinkingEnvironment] = useState(false);
   const [environmentToLink, setEnvironmentToLink] = useState('');
+  const [bugsByEnvironment, setBugsByEnvironment] = useState<Record<string, EnvironmentBug[]>>({});
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [eventForm, setEventForm] = useState<EventFormState>(initialEventForm);
   const [isSavingEvent, setIsSavingEvent] = useState(false);
@@ -188,6 +192,21 @@ export const EventDashboardPage = () => {
   const participantIds = useMemo(() => Array.from(participantSet), [participantSet]);
   const participantProfiles = useUserProfiles(participantIds);
 
+  const scenarioIndex = useMemo(() => {
+    const registry: Record<
+      string,
+      { scenario: Environment['scenarios'][string]; environmentId: string }
+    > = {};
+
+    linkedEnvironments.forEach((environment) => {
+      Object.entries(environment.scenarios).forEach(([scenarioId, scenario]) => {
+        registry[scenarioId] = { scenario, environmentId: environment.id };
+      });
+    });
+
+    return registry;
+  }, [linkedEnvironments]);
+
   const totalScenarios = useMemo(
     () => linkedEnvironments.reduce((total, environment) => total + environment.totalCenarios, 0),
     [linkedEnvironments],
@@ -206,6 +225,177 @@ export const EventDashboardPage = () => {
   );
 
   const openScenarios = Math.max(totalScenarios - completedScenarios, 0);
+
+  useEffect(() => {
+    if (linkedEnvironments.length === 0) {
+      setBugsByEnvironment({});
+      return undefined;
+    }
+
+    const unsubscribers = linkedEnvironments.map((environment) =>
+      environmentService.observeBugs(environment.id, (bugs) => {
+        setBugsByEnvironment((previous) => ({ ...previous, [environment.id]: bugs }));
+      }),
+    );
+
+    return () => {
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
+    };
+  }, [linkedEnvironments]);
+
+  const allBugs = useMemo(() => Object.values(bugsByEnvironment).flat(), [bugsByEnvironment]);
+
+  const testsByCategory = useMemo(() => {
+    const categoryCounts = linkedEnvironments.reduce<Record<string, number>>((acc, environment) => {
+      Object.values(environment.scenarios).forEach((scenario) => {
+        const category = scenario.categoria?.trim() || 'Sem categoria';
+        acc[category] = (acc[category] ?? 0) + 1;
+      });
+      return acc;
+    }, {});
+
+    const total = Object.values(categoryCounts).reduce((sum, count) => sum + count, 0);
+
+    return Object.entries(categoryCounts)
+      .map(([category, count]) => ({
+        category,
+        count,
+        percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [linkedEnvironments]);
+
+  const environmentProgress = useMemo(
+    () =>
+      linkedEnvironments.map((environment) => {
+        const scenarios = Object.values(environment.scenarios);
+        const total = scenarios.length;
+        const concluded = scenarios.filter((scenario) =>
+          SCENARIO_COMPLETED_STATUSES.includes(scenario.status),
+        ).length;
+        const running = scenarios.filter((scenario) => scenario.status === 'em_andamento').length;
+        const blocked = scenarios.filter((scenario) => scenario.status === 'bloqueado').length;
+        const pending = Math.max(total - concluded - running - blocked, 0);
+        const progress = total > 0 ? Math.round((concluded / total) * 1000) / 10 : 0;
+
+        return { environment, total, concluded, running, blocked, pending, progress };
+      }),
+    [linkedEnvironments],
+  );
+
+  const timeInsights = useMemo(() => {
+    const environmentsWithTime = linkedEnvironments.filter(
+      (environment) => environment.timeTracking.totalMs > 0 || environment.timeTracking.start,
+    );
+
+    const concludedTimes = environmentsWithTime.filter(
+      (environment) => environment.status === 'done',
+    );
+
+    const durations = concludedTimes.map((environment) => environment.timeTracking.totalMs);
+    const totalDurationMs = durations.reduce((sum, value) => sum + value, 0);
+    const averageDurationMs = durations.length > 0 ? totalDurationMs / durations.length : 0;
+
+    const earliestStart = environmentsWithTime.reduce<{
+      timestamp: string;
+      environmentId: string;
+    } | null>((earliest, environment) => {
+      if (!environment.timeTracking.start) return earliest;
+      if (!earliest)
+        return { timestamp: environment.timeTracking.start, environmentId: environment.id };
+      return new Date(environment.timeTracking.start) < new Date(earliest.timestamp)
+        ? { timestamp: environment.timeTracking.start, environmentId: environment.id }
+        : earliest;
+    }, null);
+
+    const latestEnd = environmentsWithTime.reduce<{
+      timestamp: string;
+      environmentId: string;
+    } | null>((latest, environment) => {
+      if (!environment.timeTracking.end) return latest;
+      if (!latest)
+        return { timestamp: environment.timeTracking.end, environmentId: environment.id };
+      return new Date(environment.timeTracking.end) > new Date(latest.timestamp)
+        ? { timestamp: environment.timeTracking.end, environmentId: environment.id }
+        : latest;
+    }, null);
+
+    const longestDuration = concludedTimes.reduce<{
+      duration: number;
+      environmentId: string;
+    } | null>((longest, environment) => {
+      const duration = environment.timeTracking.totalMs;
+      if (!longest) return { duration, environmentId: environment.id };
+      return duration > longest.duration ? { duration, environmentId: environment.id } : longest;
+    }, null);
+
+    return {
+      environmentsWithTimeCount: environmentsWithTime.length,
+      totalEnvironments: linkedEnvironments.length,
+      averageDurationMs,
+      totalDurationMs,
+      earliestStart,
+      latestEnd,
+      longestDuration,
+    };
+  }, [linkedEnvironments]);
+
+  const executionMetrics = useMemo(() => {
+    const scenarios = linkedEnvironments.flatMap((environment) =>
+      Object.values(environment.scenarios),
+    );
+    const total = scenarios.length;
+    const concluded = scenarios.filter((scenario) =>
+      SCENARIO_COMPLETED_STATUSES.includes(scenario.status),
+    ).length;
+    const blocked = scenarios.filter((scenario) => scenario.status === 'bloqueado').length;
+    const pending = scenarios.filter((scenario) => scenario.status === 'pendente').length;
+    const successRate = total > 0 ? Math.round((concluded / total) * 1000) / 10 : 0;
+    const failureRate = total > 0 ? Math.round((blocked / total) * 1000) / 10 : 0;
+
+    return { total, concluded, blocked, pending, successRate, failureRate };
+  }, [linkedEnvironments]);
+
+  const bugInsights = useMemo(() => {
+    const severityCounts = allBugs.reduce<Record<string, number>>((acc, bug) => {
+      const severity = bug.scenarioId ? scenarioIndex[bug.scenarioId]?.scenario.criticidade : null;
+      const key = severity?.trim() || 'Não informado';
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    const reopened = 0;
+
+    const impactedModules = allBugs.reduce<Set<string>>((modules, bug) => {
+      const category = bug.scenarioId ? scenarioIndex[bug.scenarioId]?.scenario.categoria : null;
+      if (category) modules.add(category);
+      return modules;
+    }, new Set<string>());
+
+    return {
+      total: allBugs.length,
+      severityCounts,
+      reopened,
+      impactedModulesCount: impactedModules.size,
+      impactedModulesBreakdown: impactedModules,
+    };
+  }, [allBugs, scenarioIndex]);
+
+  const formatDurationLabel = (milliseconds: number) => {
+    if (milliseconds <= 0) return 'Não registrado';
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const parts = [
+      hours > 0 ? `${hours}h` : null,
+      minutes > 0 ? `${minutes}min` : null,
+      `${seconds}s`,
+    ].filter(Boolean);
+
+    return parts.join(' ');
+  };
 
   const handleLinkEnvironment = async () => {
     if (!event || !environmentToLink) {
@@ -322,6 +512,11 @@ export const EventDashboardPage = () => {
   const renderEnvironmentLabel = (environment: Environment) => {
     const storeName = storeNameMap[environment.storeId] ?? 'Loja não encontrada';
     return `${environment.identificador} (${storeName})`;
+  };
+
+  const resolveEnvironmentLabel = (environmentId: string | undefined) => {
+    const environment = linkedEnvironments.find((item) => item.id === environmentId);
+    return environment ? renderEnvironmentLabel(environment) : 'Ambiente não encontrado';
   };
 
   const renderEnvironmentParticipants = (environment: Environment) => {
@@ -500,6 +695,7 @@ export const EventDashboardPage = () => {
                             <span className="environment-card-type">
                               {renderEnvironmentLabel(environment)}
                             </span>
+                            <span className="environment-card-badge">Evento</span>
                           </div>
                           <span
                             className={`environment-card-status-dot environment-card-status-dot--${environment.status}`}
@@ -589,6 +785,239 @@ export const EventDashboardPage = () => {
                   <span className="badge">Participantes</span>
                   <h4 className="card-title">{participantSet.size}</h4>
                   <p className="section-subtitle">Pessoas envolvidas nos testes</p>
+                </div>
+              </div>
+            </section>
+
+            <section className="card">
+              <div className="section-heading">
+                <span className="section-heading__icon" aria-hidden>
+                  <SparklesIcon className="icon icon--lg" />
+                </span>
+                <div>
+                  <h3>Insights do evento</h3>
+                  <p className="section-subtitle">
+                    Dados reais a partir dos ambientes vinculados, cenários e bugs registrados.
+                  </p>
+                </div>
+              </div>
+
+              <div className="insights-grid">
+                <div className="insight-panel">
+                  <header className="insight-panel__header">
+                    <div>
+                      <p className="insight-panel__eyebrow">Testes por categoria</p>
+                      <h4 className="insight-panel__title">
+                        O cálculo considera os ambientes vinculados a este evento.
+                      </h4>
+                    </div>
+                    <div className="insight-panel__total">
+                      <strong className="insight-panel__total-value">{totalScenarios}</strong>
+                      <span className="insight-panel__total-label">Testes</span>
+                    </div>
+                  </header>
+                  {testsByCategory.length === 0 ? (
+                    <p className="section-subtitle">
+                      Nenhum teste categorizado nos ambientes vinculados.
+                    </p>
+                  ) : (
+                    <ul className="insight-list">
+                      {testsByCategory.map((entry) => (
+                        <li key={entry.category} className="insight-list__item">
+                          <div>
+                            <p className="insight-list__title">{entry.category}</p>
+                            <p className="insight-list__subtitle">
+                              {entry.count} teste{entry.count !== 1 ? 's' : ''} · {entry.percentage}
+                              %
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="insight-panel">
+                  <p className="insight-panel__eyebrow">Análise por ambiente</p>
+                  <h4 className="insight-panel__title">
+                    Veja o andamento dos testes em cada ambiente participante do evento.
+                  </h4>
+                  {environmentProgress.length === 0 ? (
+                    <p className="section-subtitle">
+                      Nenhum ambiente participante para exibir progresso.
+                    </p>
+                  ) : (
+                    <ul className="insight-list">
+                      {environmentProgress.map((entry) => (
+                        <li key={entry.environment.id} className="insight-list__item">
+                          <div>
+                            <p className="insight-list__title">{entry.environment.identificador}</p>
+                            <p className="insight-list__subtitle">
+                              {renderEnvironmentLabel(entry.environment)}
+                            </p>
+                            <p className="insight-list__meta">
+                              {ENVIRONMENT_STATUS_LABEL[entry.environment.status]} •{' '}
+                              {entry.environment.tipoTeste}
+                            </p>
+                            <p className="insight-list__subtitle insight-list__subtitle--strong">
+                              {entry.concluded} de {entry.total} testes concluídos ({entry.progress}
+                              %).
+                            </p>
+                            <p className="insight-list__meta">
+                              {entry.running} em andamento · {entry.blocked} bloqueados ·{' '}
+                              {entry.pending} pendentes
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="insight-panel">
+                  <p className="insight-panel__eyebrow">Tempo de testes</p>
+                  <h4 className="insight-panel__title">
+                    Aproveite os registros de início, fim e duração para entender o ritmo de
+                    execução dos ambientes.
+                  </h4>
+                  <div className="insight-stats-grid">
+                    <div>
+                      <p className="insight-stat__label">Ambientes com tempo registrado</p>
+                      <p className="insight-stat__value">
+                        {timeInsights.environmentsWithTimeCount} de {timeInsights.totalEnvironments}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="insight-stat__label">Duração média concluída</p>
+                      <p className="insight-stat__value">
+                        {formatDurationLabel(timeInsights.averageDurationMs)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="insight-stat__label">Tempo total consolidado</p>
+                      <p className="insight-stat__value">
+                        {formatDurationLabel(timeInsights.totalDurationMs)}
+                      </p>
+                      <p className="insight-stat__helper">Soma das durações concluídas</p>
+                    </div>
+                    <div>
+                      <p className="insight-stat__label">Início mais cedo</p>
+                      <p className="insight-stat__value">
+                        {timeInsights.earliestStart
+                          ? formatDateTime(timeInsights.earliestStart.timestamp)
+                          : 'Não registrado'}
+                      </p>
+                      {timeInsights.earliestStart && (
+                        <p className="insight-stat__helper">
+                          {resolveEnvironmentLabel(timeInsights.earliestStart.environmentId)}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="insight-stat__label">Conclusão mais recente</p>
+                      <p className="insight-stat__value">
+                        {timeInsights.latestEnd
+                          ? formatDateTime(timeInsights.latestEnd.timestamp)
+                          : 'Não registrado'}
+                      </p>
+                      {timeInsights.latestEnd && (
+                        <p className="insight-stat__helper">
+                          {resolveEnvironmentLabel(timeInsights.latestEnd.environmentId)}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="insight-stat__label">Maior duração registrada</p>
+                      <p className="insight-stat__value">
+                        {timeInsights.longestDuration
+                          ? formatDurationLabel(timeInsights.longestDuration.duration)
+                          : 'Não registrado'}
+                      </p>
+                      {timeInsights.longestDuration && (
+                        <p className="insight-stat__helper">
+                          {resolveEnvironmentLabel(timeInsights.longestDuration.environmentId)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="insight-panel">
+                  <p className="insight-panel__eyebrow">Métricas de execução</p>
+                  <h4 className="insight-panel__title">
+                    Acompanhe pendências, bloqueios e outras métricas de execução considerando todos
+                    os ambientes do evento.
+                  </h4>
+                  <div className="insight-stats-grid">
+                    <div>
+                      <p className="insight-stat__label">Cenários pendentes</p>
+                      <p className="insight-stat__value">{executionMetrics.pending}</p>
+                    </div>
+                    <div>
+                      <p className="insight-stat__label">Taxa de sucesso</p>
+                      <p className="insight-stat__value">{executionMetrics.successRate}%</p>
+                      <p className="insight-stat__helper">
+                        {executionMetrics.concluded} execuções aprovadas
+                      </p>
+                    </div>
+                    <div>
+                      <p className="insight-stat__label">Taxa de falha</p>
+                      <p className="insight-stat__value">{executionMetrics.failureRate}%</p>
+                      <p className="insight-stat__helper">
+                        {executionMetrics.blocked} execuções bloqueadas
+                      </p>
+                    </div>
+                    <div>
+                      <p className="insight-stat__label">Execuções bloqueadas</p>
+                      <p className="insight-stat__value">{executionMetrics.blocked}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="insight-panel">
+                  <p className="insight-panel__eyebrow">Análise de bugs</p>
+                  <h4 className="insight-panel__title">
+                    Verifique severidade, reaberturas e módulos afetados pelos bugs encontrados
+                    durante o evento.
+                  </h4>
+                  <div className="insight-stats-grid">
+                    <div>
+                      <p className="insight-stat__label">Bugs por severidade</p>
+                      <p className="insight-stat__value">{bugInsights.total}</p>
+                      <ul className="insight-list insight-list--compact">
+                        {Object.entries(bugInsights.severityCounts).map(([severity, count]) => (
+                          <li key={severity} className="insight-list__item">
+                            <p className="insight-list__title">{severity}</p>
+                            <p className="insight-list__subtitle">
+                              {count} ·{' '}
+                              {bugInsights.total > 0
+                                ? Math.round((count / bugInsights.total) * 1000) / 10
+                                : 0}
+                              %
+                            </p>
+                          </li>
+                        ))}
+                        {bugInsights.total === 0 && (
+                          <li className="insight-list__item">
+                            <p className="insight-list__subtitle">Nenhum bug registrado.</p>
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="insight-stat__label">Bugs reabertos</p>
+                      <p className="insight-stat__value">{bugInsights.reopened}</p>
+                    </div>
+                    <div>
+                      <p className="insight-stat__label">Módulos impactados</p>
+                      <p className="insight-stat__value">{bugInsights.impactedModulesCount}</p>
+                      {bugInsights.impactedModulesBreakdown.size > 0 && (
+                        <p className="insight-stat__helper">
+                          {Array.from(bugInsights.impactedModulesBreakdown).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
