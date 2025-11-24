@@ -803,138 +803,231 @@ export const EventDashboardPage = () => {
               </div>
 
               <div className="insights-grid">
-                <div className="insight-panel">
-                  <header className="insight-panel__header">
+                <div className="insight-card">
+                  <div className="insight-card__header">
                     <div>
-                      <p className="insight-panel__eyebrow">Testes por categoria</p>
-                      <h4 className="insight-panel__title">
+                      <p className="insight-card__eyebrow">Testes por categoria</p>
+                      <h4 className="insight-card__title">
                         O cálculo considera os ambientes vinculados a este evento.
                       </h4>
                     </div>
-                    <div className="insight-panel__total">
-                      <strong className="insight-panel__total-value">{totalScenarios}</strong>
-                      <span className="insight-panel__total-label">Testes</span>
+                    <div className="insight-card__total">
+                      <strong>{totalScenarios}</strong>
+                      <span>Testes</span>
                     </div>
-                  </header>
+                  </div>
                   {testsByCategory.length === 0 ? (
                     <p className="section-subtitle">
                       Nenhum teste categorizado nos ambientes vinculados.
                     </p>
                   ) : (
-                    <ul className="insight-list">
+                    <div className="bar-chart" role="list">
                       {testsByCategory.map((entry) => (
-                        <li key={entry.category} className="insight-list__item">
+                        <div key={entry.category} className="bar-chart__row" role="listitem">
                           <div>
-                            <p className="insight-list__title">{entry.category}</p>
-                            <p className="insight-list__subtitle">
-                              {entry.count} teste{entry.count !== 1 ? 's' : ''} · {entry.percentage}
-                              %
+                            <p className="bar-chart__label">{entry.category}</p>
+                            <p className="bar-chart__helper">
+                              {entry.count} testes · {entry.percentage}%
                             </p>
                           </div>
-                        </li>
+                          <div className="bar-chart__track" aria-hidden>
+                            <span
+                              className="bar-chart__fill"
+                              style={{ width: `${Math.max(entry.percentage, 4)}%` }}
+                            />
+                          </div>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   )}
                 </div>
 
-                <div className="insight-panel">
-                  <p className="insight-panel__eyebrow">Análise por ambiente</p>
-                  <h4 className="insight-panel__title">
-                    Veja o andamento dos testes em cada ambiente participante do evento.
-                  </h4>
-                  {environmentProgress.length === 0 ? (
-                    <p className="section-subtitle">
-                      Nenhum ambiente participante para exibir progresso.
-                    </p>
-                  ) : (
-                    <ul className="insight-list">
-                      {environmentProgress.map((entry) => (
-                        <li key={entry.environment.id} className="insight-list__item">
-                          <div>
-                            <p className="insight-list__title">{entry.environment.identificador}</p>
-                            <p className="insight-list__subtitle">
-                              {renderEnvironmentLabel(entry.environment)}
-                            </p>
-                            <p className="insight-list__meta">
-                              {ENVIRONMENT_STATUS_LABEL[entry.environment.status]} •{' '}
-                              {entry.environment.tipoTeste}
-                            </p>
-                            <p className="insight-list__subtitle insight-list__subtitle--strong">
-                              {entry.concluded} de {entry.total} testes concluídos ({entry.progress}
-                              %).
-                            </p>
-                            <p className="insight-list__meta">
-                              {entry.running} em andamento · {entry.blocked} bloqueados ·{' '}
-                              {entry.pending} pendentes
-                            </p>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                <div className="insight-panel">
-                  <p className="insight-panel__eyebrow">Tempo de testes</p>
-                  <h4 className="insight-panel__title">
-                    Aproveite os registros de início, fim e duração para entender o ritmo de
-                    execução dos ambientes.
-                  </h4>
-                  <div className="insight-stats-grid">
+                <div className="insight-card">
+                  <div className="insight-card__header">
                     <div>
-                      <p className="insight-stat__label">Ambientes com tempo registrado</p>
-                      <p className="insight-stat__value">
+                      <p className="insight-card__eyebrow">Métricas de execução</p>
+                      <h4 className="insight-card__title">
+                        Acompanhe pendências, bloqueios e progresso consolidado do evento.
+                      </h4>
+                    </div>
+                    <div className="donut-chart" aria-hidden>
+                      <span
+                        className="donut-chart__visual"
+                        style={{
+                          backgroundImage:
+                            executionMetrics.total > 0
+                              ? `conic-gradient(var(--color-success) 0deg ${((executionMetrics.concluded / executionMetrics.total) * 360).toFixed(1)}deg, var(--color-alert) ${((executionMetrics.concluded / executionMetrics.total) * 360).toFixed(1)}deg ${(((executionMetrics.concluded + executionMetrics.pending) / executionMetrics.total) * 360).toFixed(1)}deg, var(--color-danger) ${(((executionMetrics.concluded + executionMetrics.pending) / executionMetrics.total) * 360).toFixed(1)}deg 360deg)`
+                              : 'radial-gradient(circle at center, var(--color-surface-alt) 0%, var(--color-surface) 60%)',
+                        }}
+                      />
+                      <div className="donut-chart__center">
+                        <strong>{executionMetrics.successRate}%</strong>
+                        <span>Sucesso</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="donut-chart__legend">
+                    <div className="legend-item">
+                      <span className="legend-swatch legend-swatch--success" />
+                      <div>
+                        <p className="legend-title">Execuções concluídas</p>
+                        <p className="legend-helper">{executionMetrics.concluded}</p>
+                      </div>
+                    </div>
+                    <div className="legend-item">
+                      <span className="legend-swatch legend-swatch--warning" />
+                      <div>
+                        <p className="legend-title">Pendentes</p>
+                        <p className="legend-helper">{executionMetrics.pending}</p>
+                      </div>
+                    </div>
+                    <div className="legend-item">
+                      <span className="legend-swatch legend-swatch--danger" />
+                      <div>
+                        <p className="legend-title">Bloqueados</p>
+                        <p className="legend-helper">{executionMetrics.blocked}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="insight-card">
+                  <div className="insight-card__header">
+                    <div>
+                      <p className="insight-card__eyebrow">Análise por ambiente</p>
+                      <h4 className="insight-card__title">
+                        Veja o andamento dos testes em cada ambiente participante do evento.
+                      </h4>
+                    </div>
+                  </div>
+                  {environmentProgress.length === 0 ? (
+                    <p className="section-subtitle">Nenhum ambiente vinculado ao evento.</p>
+                  ) : (
+                    <div className="bar-chart" role="list">
+                      {environmentProgress.map((entry) => {
+                        const concludedWidth =
+                          entry.total > 0 ? (entry.concluded / entry.total) * 100 : 0;
+                        const runningWidth =
+                          entry.total > 0 ? (entry.running / entry.total) * 100 : 0;
+                        const blockedWidth =
+                          entry.total > 0 ? (entry.blocked / entry.total) * 100 : 0;
+                        const pendingWidth = Math.max(
+                          0,
+                          100 - concludedWidth - runningWidth - blockedWidth,
+                        );
+
+                        return (
+                          <div
+                            key={entry.environment.id}
+                            className="bar-chart__row"
+                            role="listitem"
+                          >
+                            <div>
+                              <p className="bar-chart__label">{entry.environment.identificador}</p>
+                              <p className="bar-chart__helper">
+                                {renderEnvironmentLabel(entry.environment)}
+                              </p>
+                            </div>
+                            <div
+                              className="bar-chart__track bar-chart__track--segments"
+                              aria-hidden
+                            >
+                              <span
+                                className="bar-chart__segment bar-chart__segment--success"
+                                style={{ width: `${concludedWidth}%` }}
+                              />
+                              <span
+                                className="bar-chart__segment bar-chart__segment--info"
+                                style={{ width: `${runningWidth}%` }}
+                              />
+                              <span
+                                className="bar-chart__segment bar-chart__segment--danger"
+                                style={{ width: `${blockedWidth}%` }}
+                              />
+                              <span
+                                className="bar-chart__segment bar-chart__segment--muted"
+                                style={{ width: `${pendingWidth}%` }}
+                              />
+                            </div>
+                            <div className="bar-chart__meta">
+                              <span className="pill pill--success">
+                                {entry.concluded} concluídos
+                              </span>
+                              <span className="pill pill--info">{entry.running} em andamento</span>
+                              <span className="pill pill--danger">{entry.blocked} bloqueados</span>
+                              <span className="pill pill--muted">{entry.pending} pendentes</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="insight-card">
+                  <div className="insight-card__header">
+                    <div>
+                      <p className="insight-card__eyebrow">Tempo de testes</p>
+                      <h4 className="insight-card__title">
+                        Registros de início, fim e duração para entender o ritmo dos ambientes.
+                      </h4>
+                    </div>
+                  </div>
+                  <div className="stat-grid">
+                    <div className="stat-grid__item">
+                      <p className="stat-grid__label">Ambientes com tempo registrado</p>
+                      <p className="stat-grid__value">
                         {timeInsights.environmentsWithTimeCount} de {timeInsights.totalEnvironments}
                       </p>
                     </div>
-                    <div>
-                      <p className="insight-stat__label">Duração média concluída</p>
-                      <p className="insight-stat__value">
+                    <div className="stat-grid__item">
+                      <p className="stat-grid__label">Duração média concluída</p>
+                      <p className="stat-grid__value">
                         {formatDurationLabel(timeInsights.averageDurationMs)}
                       </p>
                     </div>
-                    <div>
-                      <p className="insight-stat__label">Tempo total consolidado</p>
-                      <p className="insight-stat__value">
+                    <div className="stat-grid__item">
+                      <p className="stat-grid__label">Tempo total consolidado</p>
+                      <p className="stat-grid__value">
                         {formatDurationLabel(timeInsights.totalDurationMs)}
                       </p>
-                      <p className="insight-stat__helper">Soma das durações concluídas</p>
+                      <p className="stat-grid__helper">Soma das durações concluídas</p>
                     </div>
-                    <div>
-                      <p className="insight-stat__label">Início mais cedo</p>
-                      <p className="insight-stat__value">
+                    <div className="stat-grid__item">
+                      <p className="stat-grid__label">Início mais cedo</p>
+                      <p className="stat-grid__value">
                         {timeInsights.earliestStart
                           ? formatDateTime(timeInsights.earliestStart.timestamp)
                           : 'Não registrado'}
                       </p>
                       {timeInsights.earliestStart && (
-                        <p className="insight-stat__helper">
+                        <p className="stat-grid__helper">
                           {resolveEnvironmentLabel(timeInsights.earliestStart.environmentId)}
                         </p>
                       )}
                     </div>
-                    <div>
-                      <p className="insight-stat__label">Conclusão mais recente</p>
-                      <p className="insight-stat__value">
+                    <div className="stat-grid__item">
+                      <p className="stat-grid__label">Conclusão mais recente</p>
+                      <p className="stat-grid__value">
                         {timeInsights.latestEnd
                           ? formatDateTime(timeInsights.latestEnd.timestamp)
                           : 'Não registrado'}
                       </p>
                       {timeInsights.latestEnd && (
-                        <p className="insight-stat__helper">
+                        <p className="stat-grid__helper">
                           {resolveEnvironmentLabel(timeInsights.latestEnd.environmentId)}
                         </p>
                       )}
                     </div>
-                    <div>
-                      <p className="insight-stat__label">Maior duração registrada</p>
-                      <p className="insight-stat__value">
+                    <div className="stat-grid__item">
+                      <p className="stat-grid__label">Maior duração registrada</p>
+                      <p className="stat-grid__value">
                         {timeInsights.longestDuration
                           ? formatDurationLabel(timeInsights.longestDuration.duration)
                           : 'Não registrado'}
                       </p>
                       {timeInsights.longestDuration && (
-                        <p className="insight-stat__helper">
+                        <p className="stat-grid__helper">
                           {resolveEnvironmentLabel(timeInsights.longestDuration.environmentId)}
                         </p>
                       )}
@@ -942,82 +1035,58 @@ export const EventDashboardPage = () => {
                   </div>
                 </div>
 
-                <div className="insight-panel">
-                  <p className="insight-panel__eyebrow">Métricas de execução</p>
-                  <h4 className="insight-panel__title">
-                    Acompanhe pendências, bloqueios e outras métricas de execução considerando todos
-                    os ambientes do evento.
-                  </h4>
-                  <div className="insight-stats-grid">
+                <div className="insight-card">
+                  <div className="insight-card__header">
                     <div>
-                      <p className="insight-stat__label">Cenários pendentes</p>
-                      <p className="insight-stat__value">{executionMetrics.pending}</p>
-                    </div>
-                    <div>
-                      <p className="insight-stat__label">Taxa de sucesso</p>
-                      <p className="insight-stat__value">{executionMetrics.successRate}%</p>
-                      <p className="insight-stat__helper">
-                        {executionMetrics.concluded} execuções aprovadas
-                      </p>
-                    </div>
-                    <div>
-                      <p className="insight-stat__label">Taxa de falha</p>
-                      <p className="insight-stat__value">{executionMetrics.failureRate}%</p>
-                      <p className="insight-stat__helper">
-                        {executionMetrics.blocked} execuções bloqueadas
-                      </p>
-                    </div>
-                    <div>
-                      <p className="insight-stat__label">Execuções bloqueadas</p>
-                      <p className="insight-stat__value">{executionMetrics.blocked}</p>
+                      <p className="insight-card__eyebrow">Análise de bugs</p>
+                      <h4 className="insight-card__title">
+                        Severidade, reaberturas e módulos afetados pelos bugs encontrados durante o
+                        evento.
+                      </h4>
                     </div>
                   </div>
-                </div>
+                  <div className="bar-chart" role="list">
+                    {Object.entries(bugInsights.severityCounts).map(([severity, count]) => (
+                      <div key={severity} className="bar-chart__row" role="listitem">
+                        <div>
+                          <p className="bar-chart__label">{severity}</p>
+                          <p className="bar-chart__helper">
+                            {count} ·
+                            {bugInsights.total > 0
+                              ? ` ${Math.round((count / bugInsights.total) * 1000) / 10}%`
+                              : ' 0%'}
+                          </p>
+                        </div>
+                        <div className="bar-chart__track bar-chart__track--severity" aria-hidden>
+                          <span
+                            className="bar-chart__fill bar-chart__fill--danger"
+                            style={{
+                              width: `${bugInsights.total > 0 ? Math.max((count / bugInsights.total) * 100, 6) : 0}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    {bugInsights.total === 0 && (
+                      <p className="section-subtitle">Nenhum bug registrado.</p>
+                    )}
+                  </div>
 
-                <div className="insight-panel">
-                  <p className="insight-panel__eyebrow">Análise de bugs</p>
-                  <h4 className="insight-panel__title">
-                    Verifique severidade, reaberturas e módulos afetados pelos bugs encontrados
-                    durante o evento.
-                  </h4>
-                  <div className="insight-stats-grid">
-                    <div>
-                      <p className="insight-stat__label">Bugs por severidade</p>
-                      <p className="insight-stat__value">{bugInsights.total}</p>
-                      <ul className="insight-list insight-list--compact">
-                        {Object.entries(bugInsights.severityCounts).map(([severity, count]) => (
-                          <li key={severity} className="insight-list__item">
-                            <p className="insight-list__title">{severity}</p>
-                            <p className="insight-list__subtitle">
-                              {count} ·{' '}
-                              {bugInsights.total > 0
-                                ? Math.round((count / bugInsights.total) * 1000) / 10
-                                : 0}
-                              %
-                            </p>
-                          </li>
-                        ))}
-                        {bugInsights.total === 0 && (
-                          <li className="insight-list__item">
-                            <p className="insight-list__subtitle">Nenhum bug registrado.</p>
-                          </li>
-                        )}
-                      </ul>
+                  <div className="pill-row">
+                    <div className="pill pill--muted">
+                      <span className="pill__label">Bugs reabertos</span>
+                      <strong>{bugInsights.reopened}</strong>
                     </div>
-                    <div>
-                      <p className="insight-stat__label">Bugs reabertos</p>
-                      <p className="insight-stat__value">{bugInsights.reopened}</p>
-                    </div>
-                    <div>
-                      <p className="insight-stat__label">Módulos impactados</p>
-                      <p className="insight-stat__value">{bugInsights.impactedModulesCount}</p>
-                      {bugInsights.impactedModulesBreakdown.size > 0 && (
-                        <p className="insight-stat__helper">
-                          {Array.from(bugInsights.impactedModulesBreakdown).join(', ')}
-                        </p>
-                      )}
+                    <div className="pill pill--info">
+                      <span className="pill__label">Módulos impactados</span>
+                      <strong>{bugInsights.impactedModulesCount}</strong>
                     </div>
                   </div>
+                  {bugInsights.impactedModulesBreakdown.size > 0 && (
+                    <p className="stat-grid__helper">
+                      {Array.from(bugInsights.impactedModulesBreakdown).join(', ')}
+                    </p>
+                  )}
                 </div>
               </div>
             </section>
