@@ -28,7 +28,7 @@ export const Layout = ({ children }: LayoutProps) => {
           ) : (
             <span className="app-logo">{brandName}</span>
           )}
-          {brandSource?.name && <span className="app-brand-name">{brandSource.name}</span>}
+          <span className="app-brand-name">{brandSource?.name || brandName}</span>
         </Link>
         <nav className="header-actions">
           {user ? (
