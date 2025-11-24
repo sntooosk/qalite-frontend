@@ -465,9 +465,14 @@ export const EventDashboardPage = () => {
             </p>
           </div>
           <div className="page-actions">
-            <Button type="button" variant="primary" onClick={handleGoBackToOrganization}>
-              Voltar para organização
-            </Button>
+            <button
+              type="button"
+              className="link-button"
+              data-testid="stores-back-button"
+              onClick={handleGoBackToOrganization}
+            >
+              ← Voltar
+            </button>
             <Button
               type="button"
               variant="secondary"
@@ -786,9 +791,22 @@ export const EventDashboardPage = () => {
           <Button type="button" variant="ghost" onClick={handleCloseManageModal}>
             Cancelar
           </Button>
-          <Button type="button" onClick={handleDeleteEvent} disabled={!event}>
+        </div>
+
+        <div className="modal-danger-zone">
+          <div>
+            <h4>Zona sensível</h4>
+            <p>Remova o evento e desvincule todos os ambientes e participantes.</p>
+          </div>
+          <button
+            type="button"
+            className="link-danger"
+            data-testid="delete-event-button"
+            onClick={handleDeleteEvent}
+            disabled={!event}
+          >
             Excluir evento
-          </Button>
+          </button>
         </div>
       </Modal>
     </Layout>
