@@ -196,7 +196,7 @@ export const UserDashboardPage = () => {
             }
           />
         ) : (
-          <div className="dashboard-grid">
+          <div className="content-grid">
             {stores.map((store) => (
               <button
                 key={store.id}

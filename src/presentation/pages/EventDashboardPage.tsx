@@ -313,6 +313,10 @@ export const EventDashboardPage = () => {
     setIsManageModalOpen(false);
   };
 
+  const handleOpenEnvironment = (environmentId: string) => {
+    navigate(`/environments/${environmentId}`);
+  };
+
   const handleGoBackToOrganization = () => {
     navigate(
       organizationId
@@ -461,9 +465,9 @@ export const EventDashboardPage = () => {
             </p>
           </div>
           <div className="page-actions">
-            <button type="button" className="link-danger" onClick={handleGoBackToOrganization}>
+            <Button type="button" variant="primary" onClick={handleGoBackToOrganization}>
               Voltar para organização
-            </button>
+            </Button>
             <Button
               type="button"
               variant="secondary"
@@ -514,6 +518,7 @@ export const EventDashboardPage = () => {
                           environment.status === 'done' ? 'is-locked' : ''
                         }`}
                         aria-label={`Ambiente ${environment.identificador}`}
+                        onClick={() => handleOpenEnvironment(environment.id)}
                       >
                         <div className="environment-card-header">
                           <div className="environment-card-title">
@@ -559,6 +564,19 @@ export const EventDashboardPage = () => {
                         >
                           {renderEnvironmentParticipants(environment)}
                         </div>
+
+                        <div className="environment-card-actions">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={(buttonEvent) => {
+                              buttonEvent.stopPropagation();
+                              void handleUnlinkEnvironment(environment.id);
+                            }}
+                          >
+                            Desvincular
+                          </Button>
+                        </div>
                       </article>
                     );
                   })}
@@ -566,7 +584,7 @@ export const EventDashboardPage = () => {
               )}
             </section>
 
-            <section className="dashboard-grid">
+            <section className="content-grid">
               <div className="card card-highlight">
                 <div className="section-heading">
                   <span className="section-heading__icon" aria-hidden>
@@ -641,7 +659,7 @@ export const EventDashboardPage = () => {
                 </div>
               </div>
 
-              <div className="dashboard-grid">
+              <div className="content-grid">
                 <div className="card card-highlight">
                   <span className="badge">Cenários</span>
                   <h4 className="card-title">{totalScenarios}</h4>
@@ -759,35 +777,16 @@ export const EventDashboardPage = () => {
             Nenhum ambiente vinculado ao evento. Selecione um para começar a acompanhar.
           </p>
         ) : (
-          <ul className="list list--grid">
-            {linkedEnvironments.map((environment) => (
-              <li key={environment.id} className="card card-highlight">
-                <div className="card-header">
-                  <div>
-                    <p className="badge badge--muted">{renderEnvironmentLabel(environment)}</p>
-                    <h3 className="card-title">Status: {environment.status}</h3>
-                  </div>
-                  <button
-                    type="button"
-                    className="button button-secondary button-ghost"
-                    onClick={() => handleUnlinkEnvironment(environment.id)}
-                  >
-                    Desvincular
-                  </button>
-                </div>
-                <p className="section-subtitle">
-                  {Object.keys(environment.scenarios).length} cenário(s) cadastrados
-                </p>
-                <p className="section-subtitle">
-                  {environment.participants.length} participante(s) neste ambiente
-                </p>
-              </li>
-            ))}
-          </ul>
+          <p className="section-subtitle">
+            Utilize os cards de ambiente no dashboard para desvincular ou abrir detalhes.
+          </p>
         )}
 
-        <div className="form-actions">
-          <Button type="button" variant="danger" onClick={handleDeleteEvent} disabled={!event}>
+        <div className="modal-actions">
+          <Button type="button" variant="ghost" onClick={handleCloseManageModal}>
+            Cancelar
+          </Button>
+          <Button type="button" onClick={handleDeleteEvent} disabled={!event}>
             Excluir evento
           </Button>
         </div>

@@ -794,7 +794,7 @@ export const AdminStoresPage = () => {
               </div>
             )}
 
-            <div className="dashboard-grid">
+            <div className="content-grid">
               {stores.map((store) => (
                 <div
                   key={store.id}

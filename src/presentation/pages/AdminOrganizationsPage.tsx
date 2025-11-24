@@ -148,7 +148,7 @@ export const AdminOrganizationsPage = () => {
           </div>
         ) : (
           <>
-            <div className="dashboard-grid">
+            <div className="content-grid">
               {organizations.map((organization) => (
                 <div
                   key={organization.id}
