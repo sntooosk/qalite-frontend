@@ -66,7 +66,7 @@ export const EventDashboardPage = () => {
   const [isLoadingEnvironments, setIsLoadingEnvironments] = useState(false);
   const [isLinkingEnvironment, setIsLinkingEnvironment] = useState(false);
   const [environmentToLink, setEnvironmentToLink] = useState('');
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [eventForm, setEventForm] = useState<EventFormState>(initialEventForm);
   const [isSavingEvent, setIsSavingEvent] = useState(false);
 
@@ -292,7 +292,7 @@ export const EventDashboardPage = () => {
     }
   };
 
-  const handleOpenEditModal = () => {
+  const handleOpenManageModal = () => {
     if (!event) return;
     setEventForm({
       name: event.name,
@@ -300,11 +300,11 @@ export const EventDashboardPage = () => {
       startDate: event.startDate ?? '',
       endDate: event.endDate ?? '',
     });
-    setIsEditModalOpen(true);
+    setIsManageModalOpen(true);
   };
 
-  const handleCloseEditModal = () => {
-    setIsEditModalOpen(false);
+  const handleCloseManageModal = () => {
+    setIsManageModalOpen(false);
   };
 
   const handleUpdateEvent = async (formEvent: FormEvent<HTMLFormElement>) => {
@@ -323,7 +323,7 @@ export const EventDashboardPage = () => {
       });
       setEvent(updated);
       showToast({ type: 'success', message: 'Evento atualizado com sucesso.' });
-      setIsEditModalOpen(false);
+      setIsManageModalOpen(false);
     } catch (error) {
       console.error(error);
       const message =
@@ -409,13 +409,10 @@ export const EventDashboardPage = () => {
             <Button
               type="button"
               variant="secondary"
-              onClick={handleOpenEditModal}
+              onClick={handleOpenManageModal}
               disabled={!event}
             >
-              Editar evento
-            </Button>
-            <Button type="button" variant="danger" onClick={handleDeleteEvent} disabled={!event}>
-              Excluir evento
+              Gerenciar evento
             </Button>
           </div>
         </div>
@@ -437,50 +434,14 @@ export const EventDashboardPage = () => {
                 <div>
                   <h2>Ambientes do evento</h2>
                   <p className="section-subtitle">
-                    Vincule ou remova ambientes para gerar relatórios precisos do evento.
+                    Consulte os ambientes vinculados e use Gerenciar evento para alterar vínculos.
                   </p>
                 </div>
               </div>
 
-              <div className="form-grid">
-                <SelectInput
-                  id="environment-selector"
-                  label="Adicionar ambiente"
-                  value={environmentToLink}
-                  options={
-                    availableEnvironments.length > 0
-                      ? [
-                          { value: '', label: 'Selecione um ambiente para vincular' },
-                          ...availableEnvironments.map((environment) => ({
-                            value: environment.id,
-                            label: renderEnvironmentLabel(environment),
-                          })),
-                        ]
-                      : [
-                          {
-                            value: '',
-                            label: isLoadingEnvironments
-                              ? 'Carregando ambientes...'
-                              : 'Nenhum ambiente disponível',
-                          },
-                        ]
-                  }
-                  onChange={(eventChange) => setEnvironmentToLink(eventChange.target.value)}
-                  disabled={availableEnvironments.length === 0 || isLoadingEnvironments}
-                />
-
-                <Button
-                  type="button"
-                  onClick={handleLinkEnvironment}
-                  disabled={isLinkingEnvironment}
-                >
-                  {isLinkingEnvironment ? 'Vinculando...' : 'Vincular ambiente'}
-                </Button>
-              </div>
-
               {linkedEnvironments.length === 0 ? (
                 <p className="section-subtitle">
-                  Nenhum ambiente vinculado ao evento. Adicione um para acompanhar as métricas.
+                  Nenhum ambiente vinculado ao evento. Abra Gerenciar evento para adicionar.
                 </p>
               ) : (
                 <ul className="list list--grid">
@@ -493,13 +454,6 @@ export const EventDashboardPage = () => {
                           </p>
                           <h3 className="card-title">Status: {environment.status}</h3>
                         </div>
-                        <button
-                          type="button"
-                          className="button button-secondary button-ghost"
-                          onClick={() => handleUnlinkEnvironment(environment.id)}
-                        >
-                          Desvincular
-                        </button>
                       </div>
                       <p className="section-subtitle">
                         {Object.keys(environment.scenarios).length} cenário(s) cadastrados
@@ -615,7 +569,7 @@ export const EventDashboardPage = () => {
         )}
       </section>
 
-      <Modal isOpen={isEditModalOpen} onClose={handleCloseEditModal} title="Editar evento">
+      <Modal isOpen={isManageModalOpen} onClose={handleCloseManageModal} title="Gerenciar evento">
         <form className="form-grid" onSubmit={handleUpdateEvent}>
           <TextInput
             id="event-name"
@@ -658,14 +612,86 @@ export const EventDashboardPage = () => {
           />
 
           <div className="form-actions">
-            <Button type="button" variant="secondary" onClick={handleCloseEditModal}>
-              Cancelar
+            <Button type="button" variant="secondary" onClick={handleCloseManageModal}>
+              Fechar
             </Button>
             <Button type="submit" disabled={isSavingEvent}>
               {isSavingEvent ? 'Salvando...' : 'Salvar alterações'}
             </Button>
           </div>
         </form>
+
+        <div className="divider" />
+
+        <div className="form-grid">
+          <SelectInput
+            id="environment-selector"
+            label="Adicionar ambiente"
+            value={environmentToLink}
+            options={
+              availableEnvironments.length > 0
+                ? [
+                    { value: '', label: 'Selecione um ambiente para vincular' },
+                    ...availableEnvironments.map((environment) => ({
+                      value: environment.id,
+                      label: renderEnvironmentLabel(environment),
+                    })),
+                  ]
+                : [
+                    {
+                      value: '',
+                      label: isLoadingEnvironments
+                        ? 'Carregando ambientes...'
+                        : 'Nenhum ambiente disponível',
+                    },
+                  ]
+            }
+            onChange={(eventChange) => setEnvironmentToLink(eventChange.target.value)}
+            disabled={availableEnvironments.length === 0 || isLoadingEnvironments}
+          />
+
+          <Button type="button" onClick={handleLinkEnvironment} disabled={isLinkingEnvironment}>
+            {isLinkingEnvironment ? 'Vinculando...' : 'Vincular ambiente'}
+          </Button>
+        </div>
+
+        {linkedEnvironments.length === 0 ? (
+          <p className="section-subtitle">
+            Nenhum ambiente vinculado ao evento. Selecione um para começar a acompanhar.
+          </p>
+        ) : (
+          <ul className="list list--grid">
+            {linkedEnvironments.map((environment) => (
+              <li key={environment.id} className="card card-highlight">
+                <div className="card-header">
+                  <div>
+                    <p className="badge badge--muted">{renderEnvironmentLabel(environment)}</p>
+                    <h3 className="card-title">Status: {environment.status}</h3>
+                  </div>
+                  <button
+                    type="button"
+                    className="button button-secondary button-ghost"
+                    onClick={() => handleUnlinkEnvironment(environment.id)}
+                  >
+                    Desvincular
+                  </button>
+                </div>
+                <p className="section-subtitle">
+                  {Object.keys(environment.scenarios).length} cenário(s) cadastrados
+                </p>
+                <p className="section-subtitle">
+                  {environment.participants.length} participante(s) neste ambiente
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="form-actions">
+          <Button type="button" variant="danger" onClick={handleDeleteEvent} disabled={!event}>
+            Excluir evento
+          </Button>
+        </div>
       </Modal>
     </Layout>
   );
