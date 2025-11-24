@@ -6,6 +6,8 @@ import { Button } from './Button';
 import { UserAvatar } from './UserAvatar';
 import { LogoutIcon, UserIcon } from './icons';
 
+const DEFAULT_LOGO_PATH = '/logo.png';
+
 interface LayoutProps {
   children: ReactNode;
 }
@@ -17,7 +19,7 @@ export const Layout = ({ children }: LayoutProps) => {
   const displayName = user?.displayName || user?.email || '';
   const brandSource = activeOrganization;
   const brandName = brandSource?.name || 'QaLite';
-  const brandLogo = brandSource?.logoUrl || null;
+  const brandLogo = brandSource?.logoUrl || (brandName === 'QaLite' ? DEFAULT_LOGO_PATH : null);
 
   return (
     <div className="app-shell">
@@ -28,7 +30,7 @@ export const Layout = ({ children }: LayoutProps) => {
           ) : (
             <span className="app-logo">{brandName}</span>
           )}
-          {brandSource?.name && <span className="app-brand-name">{brandSource.name}</span>}
+          <span className="app-brand-name">{brandSource?.name || brandName}</span>
         </Link>
         <nav className="header-actions">
           {user ? (
