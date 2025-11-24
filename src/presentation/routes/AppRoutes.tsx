@@ -65,6 +65,11 @@ const OrganizationEventsPage = lazy(() =>
     default: OrganizationEventsPage,
   })),
 );
+const EventDashboardPage = lazy(() =>
+  import('../pages/EventDashboardPage').then(({ EventDashboardPage }) => ({
+    default: EventDashboardPage,
+  })),
+);
 
 export const AppRoutes = () => (
   <AppProviders>
@@ -91,6 +96,7 @@ export const AppRoutes = () => (
             <Route path="/admin" element={<AdminOrganizationsPage />} />
             <Route path="/admin/organizations" element={<AdminStoresPage />} />
             <Route path="/organizations/events" element={<OrganizationEventsPage />} />
+            <Route path="/event" element={<EventDashboardPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
