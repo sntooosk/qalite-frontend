@@ -7,7 +7,8 @@ export type ActivityEntityType =
   | 'suite'
   | 'environment'
   | 'environment_bug'
-  | 'environment_participant';
+  | 'environment_participant'
+  | 'event';
 
 export interface ActivityLog {
   id: string;

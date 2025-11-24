@@ -584,6 +584,20 @@ export const AdminStoresPage = () => {
             )}
             <Button
               type="button"
+              variant="secondary"
+              onClick={() =>
+                navigate(
+                  `/organizations/events${
+                    selectedOrganizationId ? `?organizationId=${selectedOrganizationId}` : ''
+                  }`,
+                )
+              }
+              disabled={!selectedOrganizationId}
+            >
+              Eventos da organização
+            </Button>
+            <Button
+              type="button"
               onClick={openCreateModal}
               disabled={!selectedOrganizationId}
               data-testid="new-store-button"

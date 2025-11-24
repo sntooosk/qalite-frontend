@@ -18,6 +18,7 @@ const ENTITY_FILTERS = [
   { value: 'environment', label: 'Ambiente' },
   { value: 'environment_bug', label: 'Bug de ambiente' },
   { value: 'environment_participant', label: 'Participante' },
+  { value: 'event', label: 'Evento' },
 ];
 
 const ACTION_FILTERS: { value: ActivityLog['action'] | 'all'; label: string }[] = [
@@ -144,7 +145,7 @@ export const OrganizationLogPanel = ({ organizationId }: OrganizationLogPanelPro
             </div>
             <h2 className="text-xl font-semibold text-primary">Logs da organização</h2>
             <p className="section-subtitle">
-              Registro das ações realizadas em ambientes, lojas, cenários e suítes.
+              Registro das ações realizadas em ambientes, eventos, lojas, cenários e suítes.
             </p>
           </div>
         </div>
