@@ -12,5 +12,5 @@ jobs:
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.GH_PAT }}
-          repository: sntooosk/QaLite-cypress-automation
+          repository: sntooosk/qalite-cypress-e2e-automation
           event-type: qalite-cypress-trigger
