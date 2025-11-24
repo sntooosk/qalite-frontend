@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import type { Environment, EnvironmentScenarioStatus } from '../../domain/entities/environment';
+import type { Environment } from '../../domain/entities/environment';
 import type { OrganizationEvent } from '../../domain/entities/event';
 import type { Store } from '../../domain/entities/store';
 import { eventService } from '../../application/use-cases/EventUseCase';
@@ -16,8 +16,7 @@ import { Modal } from '../components/Modal';
 import { TextInput } from '../components/TextInput';
 import { TextArea } from '../components/TextArea';
 import { SelectInput } from '../components/SelectInput';
-import { SimpleBarChart } from '../components/SimpleBarChart';
-import { ActivityIcon, BarChartIcon, SparklesIcon, UsersGroupIcon } from '../components/icons';
+import { SparklesIcon } from '../components/icons';
 import { useUserProfiles } from '../hooks/useUserProfiles';
 import { ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
 import { getReadableUserName, getUserInitials } from '../utils/userDisplay';
@@ -34,24 +33,6 @@ const initialEventForm: EventFormState = {
   description: '',
   startDate: '',
   endDate: '',
-};
-
-const scenarioStatusOrder: EnvironmentScenarioStatus[] = [
-  'pendente',
-  'em_andamento',
-  'bloqueado',
-  'concluido',
-  'concluido_automatizado',
-  'nao_se_aplica',
-];
-
-const scenarioStatusLabel: Record<EnvironmentScenarioStatus, string> = {
-  pendente: 'Pendente',
-  em_andamento: 'Em andamento',
-  bloqueado: 'Bloqueado',
-  concluido: 'Concluído',
-  concluido_automatizado: 'Automatizado',
-  nao_se_aplica: 'N/A',
 };
 
 export const EventDashboardPage = () => {
@@ -206,39 +187,6 @@ export const EventDashboardPage = () => {
 
   const participantIds = useMemo(() => Array.from(participantSet), [participantSet]);
   const participantProfiles = useUserProfiles(participantIds);
-
-  const scenarioStatusCounts = useMemo(() => {
-    const counts: Record<EnvironmentScenarioStatus, number> = {
-      pendente: 0,
-      em_andamento: 0,
-      bloqueado: 0,
-      concluido: 0,
-      concluido_automatizado: 0,
-      nao_se_aplica: 0,
-    };
-
-    linkedEnvironments.forEach((environment) => {
-      Object.values(environment.scenarios).forEach((scenario) => {
-        counts[scenario.status] += 1;
-      });
-    });
-
-    return counts;
-  }, [linkedEnvironments]);
-
-  const environmentStatusCounts = useMemo(() => {
-    if (linkedEnvironments.length === 0) {
-      return { backlog: 0, in_progress: 0, done: 0 } as const;
-    }
-
-    return linkedEnvironments.reduce(
-      (acc, environment) => ({
-        ...acc,
-        [environment.status]: acc[environment.status] + 1,
-      }),
-      { backlog: 0, in_progress: 0, done: 0 } as const,
-    );
-  }, [linkedEnvironments]);
 
   const totalScenarios = useMemo(
     () => linkedEnvironments.reduce((total, environment) => total + environment.totalCenarios, 0),
@@ -421,24 +369,6 @@ export const EventDashboardPage = () => {
     );
   };
 
-  const scenarioChartData = scenarioStatusOrder.map((status) => ({
-    label: scenarioStatusLabel[status],
-    value: scenarioStatusCounts[status],
-  }));
-
-  const participantsChartData = linkedEnvironments.map((environment) => ({
-    label: renderEnvironmentLabel(environment),
-    value: environment.participants.length,
-  }));
-
-  const environmentChartData = (
-    [
-      { label: 'Backlog', value: environmentStatusCounts.backlog },
-      { label: 'Em andamento', value: environmentStatusCounts.in_progress },
-      { label: 'Concluído', value: environmentStatusCounts.done },
-    ] as const
-  ).filter((entry) => entry.value > 0);
-
   if (!organizationId || !eventId) {
     return (
       <Layout>
@@ -501,14 +431,51 @@ export const EventDashboardPage = () => {
                 <div>
                   <h2>Ambientes do evento</h2>
                   <p className="section-subtitle">
-                    Consulte os ambientes vinculados e use Gerenciar evento para alterar vínculos.
+                    Consulte os ambientes vinculados, vincule novos e desvincule diretamente pelos
+                    cards.
                   </p>
                 </div>
               </div>
 
+              <div className="form-grid environment-linker">
+                <SelectInput
+                  id="environment-selector"
+                  label="Adicionar ambiente"
+                  value={environmentToLink}
+                  options={
+                    availableEnvironments.length > 0
+                      ? [
+                          { value: '', label: 'Selecione um ambiente para vincular' },
+                          ...availableEnvironments.map((environment) => ({
+                            value: environment.id,
+                            label: renderEnvironmentLabel(environment),
+                          })),
+                        ]
+                      : [
+                          {
+                            value: '',
+                            label: isLoadingEnvironments
+                              ? 'Carregando ambientes...'
+                              : 'Nenhum ambiente disponível',
+                          },
+                        ]
+                  }
+                  onChange={(eventChange) => setEnvironmentToLink(eventChange.target.value)}
+                  disabled={availableEnvironments.length === 0 || isLoadingEnvironments}
+                />
+
+                <Button
+                  type="button"
+                  onClick={handleLinkEnvironment}
+                  disabled={isLinkingEnvironment}
+                >
+                  {isLinkingEnvironment ? 'Vinculando...' : 'Vincular ambiente'}
+                </Button>
+              </div>
+
               {linkedEnvironments.length === 0 ? (
                 <p className="section-subtitle">
-                  Nenhum ambiente vinculado ao evento. Abra Gerenciar evento para adicionar.
+                  Nenhum ambiente vinculado ao evento. Selecione um para começar a acompanhar.
                 </p>
               ) : (
                 <div className="environment-kanban-columns">
@@ -587,68 +554,6 @@ export const EventDashboardPage = () => {
                   })}
                 </div>
               )}
-            </section>
-
-            <section className="content-grid">
-              <div className="card card-highlight">
-                <div className="section-heading">
-                  <span className="section-heading__icon" aria-hidden>
-                    <BarChartIcon className="icon" />
-                  </span>
-                  <div>
-                    <h3>Distribuição de cenários</h3>
-                    <p className="section-subtitle">Situação dos cenários vinculados ao evento.</p>
-                  </div>
-                </div>
-
-                {totalScenarios === 0 ? (
-                  <p className="section-subtitle">
-                    Nenhum cenário vinculado aos ambientes do evento.
-                  </p>
-                ) : (
-                  <SimpleBarChart data={scenarioChartData} />
-                )}
-              </div>
-
-              <div className="card card-highlight">
-                <div className="section-heading">
-                  <span className="section-heading__icon" aria-hidden>
-                    <UsersGroupIcon className="icon" />
-                  </span>
-                  <div>
-                    <h3>Participantes por ambiente</h3>
-                    <p className="section-subtitle">
-                      Ambientes com maior engajamento de testadores.
-                    </p>
-                  </div>
-                </div>
-
-                {participantsChartData.length === 0 ? (
-                  <p className="section-subtitle">
-                    Ainda não há participantes nos ambientes vinculados a este evento.
-                  </p>
-                ) : (
-                  <SimpleBarChart data={participantsChartData} />
-                )}
-              </div>
-
-              <div className="card card-highlight">
-                <div className="section-heading">
-                  <span className="section-heading__icon" aria-hidden>
-                    <ActivityIcon className="icon" />
-                  </span>
-                  <div>
-                    <h3>Status dos ambientes</h3>
-                    <p className="section-subtitle">Visão geral do andamento das execuções.</p>
-                  </div>
-                </div>
-
-                {environmentChartData.length === 0 ? (
-                  <p className="section-subtitle">Nenhum ambiente vinculado ao evento.</p>
-                ) : (
-                  <SimpleBarChart data={environmentChartData} />
-                )}
-              </div>
             </section>
 
             <section className="card">
@@ -734,8 +639,8 @@ export const EventDashboardPage = () => {
           />
 
           <div className="form-actions">
-            <Button type="button" variant="secondary" onClick={handleCloseManageModal}>
-              Fechar
+            <Button type="button" variant="ghost" onClick={handleCloseManageModal}>
+              Cancelar
             </Button>
             <Button type="submit" disabled={isSavingEvent}>
               {isSavingEvent ? 'Salvando...' : 'Salvar alterações'}
@@ -745,52 +650,8 @@ export const EventDashboardPage = () => {
 
         <div className="divider" />
 
-        <div className="form-grid">
-          <SelectInput
-            id="environment-selector"
-            label="Adicionar ambiente"
-            value={environmentToLink}
-            options={
-              availableEnvironments.length > 0
-                ? [
-                    { value: '', label: 'Selecione um ambiente para vincular' },
-                    ...availableEnvironments.map((environment) => ({
-                      value: environment.id,
-                      label: renderEnvironmentLabel(environment),
-                    })),
-                  ]
-                : [
-                    {
-                      value: '',
-                      label: isLoadingEnvironments
-                        ? 'Carregando ambientes...'
-                        : 'Nenhum ambiente disponível',
-                    },
-                  ]
-            }
-            onChange={(eventChange) => setEnvironmentToLink(eventChange.target.value)}
-            disabled={availableEnvironments.length === 0 || isLoadingEnvironments}
-          />
-
-          <Button type="button" onClick={handleLinkEnvironment} disabled={isLinkingEnvironment}>
-            {isLinkingEnvironment ? 'Vinculando...' : 'Vincular ambiente'}
-          </Button>
-        </div>
-
-        {linkedEnvironments.length === 0 ? (
-          <p className="section-subtitle">
-            Nenhum ambiente vinculado ao evento. Selecione um para começar a acompanhar.
-          </p>
-        ) : (
-          <p className="section-subtitle">
-            Utilize os cards de ambiente no dashboard para desvincular ou abrir detalhes.
-          </p>
-        )}
-
-        <div className="modal-actions">
-          <Button type="button" variant="ghost" onClick={handleCloseManageModal}>
-            Cancelar
-          </Button>
+        <div className="section-subtitle">
+          Utilize os cards de ambiente no dashboard para vincular e desvincular ambientes.
         </div>
 
         <div className="modal-danger-zone">
