@@ -504,7 +504,9 @@ export const EventDashboardPage = () => {
               ) : (
                 <div className="environment-kanban-columns">
                   {linkedEnvironments.map((environment) => {
-                    const participants = environmentParticipantsMap[environment.id] ?? [];
+                    const participants = participantProfiles.filter((profile) =>
+                      environment.participants.includes(profile.id),
+                    );
                     return (
                       <article
                         key={environment.id}
