@@ -18,6 +18,10 @@ import { TextArea } from '../components/TextArea';
 import { SelectInput } from '../components/SelectInput';
 import { SimpleBarChart } from '../components/SimpleBarChart';
 import { ActivityIcon, BarChartIcon, SparklesIcon, UsersGroupIcon } from '../components/icons';
+import { useUserProfiles } from '../hooks/useUserProfiles';
+import type { UserSummary } from '../../domain/entities/user';
+import { ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
+import { getReadableUserName, getUserInitials } from '../utils/userDisplay';
 
 interface EventFormState {
   name: string;
@@ -191,6 +195,20 @@ export const EventDashboardPage = () => {
     [organizationEnvironments, event],
   );
 
+  const environmentParticipantsMap = useMemo(
+    () =>
+      linkedEnvironments.reduce(
+        (acc, environment) => {
+          acc[environment.id] = participantProfiles.filter((profile) =>
+            environment.participants.includes(profile.id),
+          );
+          return acc;
+        },
+        {} as Record<string, UserSummary[]>,
+      ),
+    [linkedEnvironments, participantProfiles],
+  );
+
   const scenarioStatusCounts = useMemo(() => {
     const counts: Record<EnvironmentScenarioStatus, number> = {
       pendente: 0,
@@ -219,6 +237,9 @@ export const EventDashboardPage = () => {
 
     return participants;
   }, [linkedEnvironments]);
+
+  const participantIds = useMemo(() => Array.from(participantSet), [participantSet]);
+  const participantProfiles = useUserProfiles(participantIds);
 
   const environmentStatusCounts = useMemo(() => {
     if (linkedEnvironments.length === 0) {
@@ -307,6 +328,14 @@ export const EventDashboardPage = () => {
     setIsManageModalOpen(false);
   };
 
+  const handleGoBackToOrganization = () => {
+    navigate(
+      organizationId
+        ? `/admin/organizations?organizationId=${organizationId}`
+        : '/admin/organizations',
+    );
+  };
+
   const handleUpdateEvent = async (formEvent: FormEvent<HTMLFormElement>) => {
     formEvent.preventDefault();
     if (!event) {
@@ -345,11 +374,7 @@ export const EventDashboardPage = () => {
     try {
       await eventService.delete(event.id);
       showToast({ type: 'success', message: 'Evento excluído com sucesso.' });
-      navigate(
-        organizationId
-          ? `/admin/organizations?organizationId=${organizationId}`
-          : '/admin/organizations',
-      );
+      handleGoBackToOrganization();
     } catch (error) {
       console.error(error);
       const message = error instanceof Error ? error.message : 'Não foi possível excluir o evento.';
@@ -360,6 +385,49 @@ export const EventDashboardPage = () => {
   const renderEnvironmentLabel = (environment: Environment) => {
     const storeName = storeNameMap[environment.storeId] ?? 'Loja não encontrada';
     return `${environment.identificador} (${storeName})`;
+  };
+
+  const renderEnvironmentParticipants = (environment: Environment) => {
+    const participants = environmentParticipantsMap[environment.id] ?? [];
+    const visibleParticipants = participants.slice(0, 4);
+    const hiddenParticipantsCount = Math.max(participants.length - visibleParticipants.length, 0);
+
+    if (participants.length === 0) {
+      return <span className="environment-card-avatars__placeholder">Sem participantes</span>;
+    }
+
+    return (
+      <>
+        <ul className="environment-card-participant-list" aria-label="Participantes do ambiente">
+          {visibleParticipants.map((user) => {
+            const readableName = getReadableUserName(user);
+            const initials = getUserInitials(readableName);
+            return (
+              <li key={user.id} className="environment-card-participant" title={readableName}>
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt={readableName} className="environment-card-avatar" />
+                ) : (
+                  <span
+                    className="environment-card-avatar environment-card-avatar--initials"
+                    aria-label={readableName}
+                  >
+                    {initials}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+          {hiddenParticipantsCount > 0 && (
+            <li className="environment-card-participant environment-card-participant--more">
+              +{hiddenParticipantsCount}
+            </li>
+          )}
+        </ul>
+        <span className="environment-card-participants-label">
+          {participants.length} participante{participants.length > 1 ? 's' : ''}
+        </span>
+      </>
+    );
   };
 
   const scenarioChartData = scenarioStatusOrder.map((status) => ({
@@ -406,6 +474,9 @@ export const EventDashboardPage = () => {
             </p>
           </div>
           <div className="page-actions">
+            <button type="button" className="link-danger" onClick={handleGoBackToOrganization}>
+              Voltar para organização
+            </button>
             <Button
               type="button"
               variant="secondary"
@@ -444,26 +515,65 @@ export const EventDashboardPage = () => {
                   Nenhum ambiente vinculado ao evento. Abra Gerenciar evento para adicionar.
                 </p>
               ) : (
-                <ul className="list list--grid">
-                  {linkedEnvironments.map((environment) => (
-                    <li key={environment.id} className="card card-highlight">
-                      <div className="card-header">
-                        <div>
-                          <p className="badge badge--muted">
-                            {renderEnvironmentLabel(environment)}
-                          </p>
-                          <h3 className="card-title">Status: {environment.status}</h3>
+                <div className="environment-kanban-columns">
+                  {linkedEnvironments.map((environment) => {
+                    const participants = environmentParticipantsMap[environment.id] ?? [];
+                    return (
+                      <article
+                        key={environment.id}
+                        className={`environment-card ${
+                          environment.status === 'done' ? 'is-locked' : ''
+                        }`}
+                        aria-label={`Ambiente ${environment.identificador}`}
+                      >
+                        <div className="environment-card-header">
+                          <div className="environment-card-title">
+                            <span className="environment-card-identifier">
+                              {environment.identificador}
+                            </span>
+                            <span className="environment-card-type">
+                              {renderEnvironmentLabel(environment)}
+                            </span>
+                          </div>
+                          <span
+                            className={`environment-card-status-dot environment-card-status-dot--${environment.status}`}
+                          >
+                            {ENVIRONMENT_STATUS_LABEL[environment.status]}
+                          </span>
                         </div>
-                      </div>
-                      <p className="section-subtitle">
-                        {Object.keys(environment.scenarios).length} cenário(s) cadastrados
-                      </p>
-                      <p className="section-subtitle">
-                        {environment.participants.length} participante(s) neste ambiente
-                      </p>
-                    </li>
-                  ))}
-                </ul>
+
+                        <div className="environment-card-suite-row">
+                          <span className="environment-card-suite-label">Tipo de teste</span>
+                          <span className="environment-card-suite-name">
+                            {environment.tipoTeste}
+                          </span>
+                        </div>
+
+                        <div className="environment-card-stats">
+                          <div className="environment-card-stat">
+                            <span className="environment-card-stat-label">Cenários</span>
+                            <strong className="environment-card-stat-value">
+                              {Object.keys(environment.scenarios).length}
+                            </strong>
+                          </div>
+                          <div className="environment-card-stat">
+                            <span className="environment-card-stat-label">Participantes</span>
+                            <strong className="environment-card-stat-value">
+                              {participants.length}
+                            </strong>
+                          </div>
+                        </div>
+
+                        <div
+                          className="environment-card-participants"
+                          aria-label="Participantes do ambiente"
+                        >
+                          {renderEnvironmentParticipants(environment)}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
               )}
             </section>
 
