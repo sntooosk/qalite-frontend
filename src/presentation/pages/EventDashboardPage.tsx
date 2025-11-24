@@ -57,6 +57,8 @@ export const EventDashboardPage = () => {
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
   const [eventForm, setEventForm] = useState<EventFormState>(initialEventForm);
   const [isSavingEvent, setIsSavingEvent] = useState(false);
+  const pieChartRadius = 78;
+  const pieChartCircumference = 2 * Math.PI * pieChartRadius;
 
   const storeNameMap = useMemo(
     () => Object.fromEntries(stores.map((store) => [store.id, store.name])),
@@ -356,6 +358,35 @@ export const EventDashboardPage = () => {
     return { total, concluded, blocked, pending, successRate, failureRate };
   }, [linkedEnvironments]);
 
+  const executionPieSegments = useMemo(() => {
+    const baseSegments = [
+      { label: 'Concluídos', value: executionMetrics.concluded, color: 'var(--color-success)' },
+      { label: 'Pendentes', value: executionMetrics.pending, color: 'var(--color-alert)' },
+      { label: 'Bloqueados', value: executionMetrics.blocked, color: 'var(--color-danger)' },
+    ];
+
+    const validSegments = baseSegments.filter((segment) => segment.value > 0);
+    const segments =
+      validSegments.length > 0
+        ? validSegments
+        : [{ label: 'Sem dados', value: 1, color: 'var(--color-border-strong)' }];
+
+    const totalValue = segments.reduce((sum, segment) => sum + segment.value, 0);
+    let offset = 0;
+
+    return segments.map((segment) => {
+      const dash = totalValue > 0 ? (segment.value / totalValue) * pieChartCircumference : 0;
+      const currentSegment = { ...segment, dash, offset };
+      offset -= dash;
+      return currentSegment;
+    });
+  }, [
+    executionMetrics.blocked,
+    executionMetrics.concluded,
+    executionMetrics.pending,
+    pieChartCircumference,
+  ]);
+
   const bugInsights = useMemo(() => {
     const severityCounts = allBugs.reduce<Record<string, number>>((acc, bug) => {
       const severity = bug.scenarioId ? scenarioIndex[bug.scenarioId]?.scenario.criticidade : null;
@@ -519,6 +550,10 @@ export const EventDashboardPage = () => {
     return environment ? renderEnvironmentLabel(environment) : 'Ambiente não encontrado';
   };
 
+  const handleExportPdf = () => {
+    window.print();
+  };
+
   const renderEnvironmentParticipants = (environment: Environment) => {
     const participants = participantProfiles.filter((profile) =>
       environment.participants.includes(profile.id),
@@ -598,6 +633,9 @@ export const EventDashboardPage = () => {
             >
               ← Voltar
             </button>
+            <Button type="button" variant="secondary" onClick={handleExportPdf}>
+              Exportar PDF
+            </Button>
             <Button
               type="button"
               variant="secondary"
@@ -850,23 +888,41 @@ export const EventDashboardPage = () => {
                         Acompanhe pendências, bloqueios e progresso consolidado do evento.
                       </h4>
                     </div>
-                    <div className="donut-chart" aria-hidden>
-                      <span
-                        className="donut-chart__visual"
-                        style={{
-                          backgroundImage:
-                            executionMetrics.total > 0
-                              ? `conic-gradient(var(--color-success) 0deg ${((executionMetrics.concluded / executionMetrics.total) * 360).toFixed(1)}deg, var(--color-alert) ${((executionMetrics.concluded / executionMetrics.total) * 360).toFixed(1)}deg ${(((executionMetrics.concluded + executionMetrics.pending) / executionMetrics.total) * 360).toFixed(1)}deg, var(--color-danger) ${(((executionMetrics.concluded + executionMetrics.pending) / executionMetrics.total) * 360).toFixed(1)}deg 360deg)`
-                              : 'radial-gradient(circle at center, var(--color-surface-alt) 0%, var(--color-surface) 60%)',
-                        }}
-                      />
-                      <div className="donut-chart__center">
+                    <div
+                      className="pie-chart"
+                      role="img"
+                      aria-label="Distribuição de execução do evento"
+                    >
+                      <svg viewBox="0 0 200 200" className="pie-chart__svg" aria-hidden>
+                        <circle
+                          className="pie-chart__track"
+                          cx="100"
+                          cy="100"
+                          r={pieChartRadius}
+                          strokeWidth="22"
+                        />
+                        {executionPieSegments.map((segment) => (
+                          <circle
+                            key={segment.label}
+                            className="pie-chart__segment"
+                            cx="100"
+                            cy="100"
+                            r={pieChartRadius}
+                            strokeWidth="22"
+                            stroke={segment.color}
+                            strokeDasharray={`${segment.dash} ${pieChartCircumference - segment.dash}`}
+                            strokeDashoffset={segment.offset}
+                            transform="rotate(-90 100 100)"
+                          />
+                        ))}
+                      </svg>
+                      <div className="pie-chart__center">
                         <strong>{executionMetrics.successRate}%</strong>
                         <span>Sucesso</span>
                       </div>
                     </div>
                   </div>
-                  <div className="donut-chart__legend">
+                  <div className="pie-chart__legend">
                     <div className="legend-item">
                       <span className="legend-swatch legend-swatch--success" />
                       <div>
