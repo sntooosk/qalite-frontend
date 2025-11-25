@@ -217,11 +217,12 @@ export const AdminOrganizationsPage = () => {
                 emailDomain: event.target.value,
               }))
             }
-            placeholder="exemplo.com"
+            placeholder="@exemplo.com"
             dataTestId="organization-email-domain-input"
           />
           <p className="form-hint">
-            Use apenas o domínio (sem @). Usuários com esse e-mail serão vinculados automaticamente.
+            Informe o domínio (com ou sem @). Usuários com esse e-mail serão vinculados
+            automaticamente.
           </p>
           <div className="collapsible-section">
             <div className="collapsible-section__header">
