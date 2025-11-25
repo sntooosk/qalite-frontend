@@ -208,7 +208,7 @@ export const addUserToOrganization = async (
 
     const usersRef = collection(firebaseFirestore, USERS_COLLECTION);
     const userQuery = query(usersRef, where('email', '==', normalizedEmail), limit(1));
-    const userSnapshot = await getDocs(userQuery);
+    const userSnapshot = await transaction.get(userQuery);
 
     if (userSnapshot.empty) {
       throw new Error('Usuário não encontrado.');
