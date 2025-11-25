@@ -132,6 +132,19 @@ export const ProfilePage = () => {
           </div>
         </div>
 
+        <div className="card private-banner">
+          <div>
+            <span className="badge">Área privada</span>
+            <p className="section-subtitle">
+              Espaço pessoal para notas, checklists, massa de dados e arquivos visível apenas para
+              você.
+            </p>
+          </div>
+          <Button type="button" onClick={() => navigate('/profile/private-area')}>
+            Abrir meu espaço
+          </Button>
+        </div>
+
         <span className="badge">Seu perfil</span>
         <h1 className="section-title">Atualize suas informações pessoais</h1>
         <p className="section-subtitle">
