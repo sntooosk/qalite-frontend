@@ -31,6 +31,7 @@ interface OrganizationFormState {
   name: string;
   logoFile: File | null;
   slackWebhookUrl: string;
+  emailDomain: string;
 }
 
 const initialStoreForm: StoreForm = {
@@ -42,6 +43,7 @@ const initialOrganizationForm: OrganizationFormState = {
   name: '',
   logoFile: null,
   slackWebhookUrl: '',
+  emailDomain: '',
 };
 
 export const AdminStoresPage = () => {
@@ -265,11 +267,13 @@ export const AdminStoresPage = () => {
     }
 
     const slackWebhookUrl = selectedOrganization.slackWebhookUrl ?? '';
+    const emailDomain = selectedOrganization.emailDomain ?? '';
 
     setOrganizationForm({
       name: selectedOrganization.name,
       logoFile: null,
       slackWebhookUrl,
+      emailDomain,
     });
     setIsOrganizationSlackSectionOpen(Boolean(slackWebhookUrl.trim()));
     setOrganizationError(null);
@@ -363,12 +367,14 @@ export const AdminStoresPage = () => {
       const slackWebhookUrl = isOrganizationSlackSectionOpen
         ? organizationForm.slackWebhookUrl.trim()
         : '';
+      const emailDomain = organizationForm.emailDomain.trim();
 
       const updated = await organizationService.update(selectedOrganization.id, {
         name: trimmedName,
         description: (selectedOrganization.description ?? '').trim(),
         logoFile: organizationForm.logoFile,
         slackWebhookUrl,
+        emailDomain,
       });
 
       setOrganizations((previous) =>
@@ -806,6 +812,22 @@ export const AdminStoresPage = () => {
               required
               dataTestId="organization-settings-name"
             />
+            <TextInput
+              id="organization-email-domain"
+              label="Domínio de e-mail da organização"
+              value={organizationForm.emailDomain}
+              onChange={(event) =>
+                setOrganizationForm((previous) => ({
+                  ...previous,
+                  emailDomain: event.target.value,
+                }))
+              }
+              placeholder="@exemplo.com"
+              dataTestId="organization-settings-email-domain"
+            />
+            <p className="form-hint">
+              Informe o domínio (com ou sem @). Usuários com esse e-mail entram automaticamente.
+            </p>
             <div className="collapsible-section">
               <div className="collapsible-section__header">
                 <div className="collapsible-section__titles">

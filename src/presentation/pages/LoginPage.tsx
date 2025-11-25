@@ -6,8 +6,6 @@ import { AuthLayout } from '../components/AuthLayout';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
 import { PasswordInput } from '../components/PasswordInput';
-import { ALLOWED_EMAIL_DOMAINS_LABEL } from '../../shared/config/auth';
-import { isAllowedEmailDomain } from '../../shared/utils/email';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -24,11 +22,6 @@ export const LoginPage = () => {
 
     if (!normalizedEmail || !password) {
       setFormError('Informe e-mail e senha para continuar.');
-      return;
-    }
-
-    if (!isAllowedEmailDomain(normalizedEmail)) {
-      setFormError(`Utilize um e-mail corporativo (${ALLOWED_EMAIL_DOMAINS_LABEL}).`);
       return;
     }
 
@@ -78,7 +71,10 @@ export const LoginPage = () => {
           required
           dataTestId="login-email"
         />
-        <p className="form-hint">Use um e-mail corporativo ({ALLOWED_EMAIL_DOMAINS_LABEL}).</p>
+        <p className="form-hint">
+          Se o domínio do seu e-mail já estiver configurado, você será incluído automaticamente na
+          organização ao entrar.
+        </p>
         <PasswordInput
           id="password"
           label="Senha"

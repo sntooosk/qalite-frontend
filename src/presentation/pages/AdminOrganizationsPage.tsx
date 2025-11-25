@@ -13,12 +13,14 @@ interface OrganizationFormState {
   name: string;
   logoFile: File | null;
   slackWebhookUrl: string;
+  emailDomain: string;
 }
 
 const initialOrganizationForm: OrganizationFormState = {
   name: '',
   logoFile: null,
   slackWebhookUrl: '',
+  emailDomain: '',
 };
 
 export const AdminOrganizationsPage = () => {
@@ -96,12 +98,14 @@ export const AdminOrganizationsPage = () => {
       setIsSavingOrganization(true);
 
       const slackWebhookUrl = isSlackSectionOpen ? organizationForm.slackWebhookUrl.trim() : '';
+      const emailDomain = organizationForm.emailDomain.trim();
 
       const created = await organizationService.create({
         name: trimmedName,
         description: '',
         logoFile: organizationForm.logoFile,
         slackWebhookUrl,
+        emailDomain,
       });
       setOrganizations((previous) => [...previous, created]);
       showToast({ type: 'success', message: 'Nova organização criada.' });
@@ -203,6 +207,23 @@ export const AdminOrganizationsPage = () => {
             required
             dataTestId="organization-name-input"
           />
+          <TextInput
+            id="organization-email-domain"
+            label="Domínio de e-mail da organização"
+            value={organizationForm.emailDomain}
+            onChange={(event) =>
+              setOrganizationForm((previous) => ({
+                ...previous,
+                emailDomain: event.target.value,
+              }))
+            }
+            placeholder="@exemplo.com"
+            dataTestId="organization-email-domain-input"
+          />
+          <p className="form-hint">
+            Informe o domínio (com ou sem @). Usuários com esse e-mail serão vinculados
+            automaticamente.
+          </p>
           <div className="collapsible-section">
             <div className="collapsible-section__header">
               <div className="collapsible-section__titles">

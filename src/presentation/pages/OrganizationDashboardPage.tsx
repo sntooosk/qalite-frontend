@@ -88,13 +88,13 @@ export const OrganizationDashboardPage = () => {
 
           {!isLoading && (organization?.members.length ?? 0) === 0 && (
             <p className="section-subtitle">
-              Nenhum membro foi associado a esta organização ainda. Aguarde um administrador
-              adicionar seu time.
+              Nenhum membro foi associado a esta organização ainda. Assim que alguém fizer login com
+              um e-mail do domínio configurado, ele aparecerá automaticamente aqui.
             </p>
           )}
 
           {!isLoading && (organization?.members.length ?? 0) > 0 && (
-            <ul className="member-list">
+            <ul className="member-list member-list--compact">
               {organization?.members.map((member) => (
                 <li key={member.uid} className="member-list-item">
                   <UserAvatar

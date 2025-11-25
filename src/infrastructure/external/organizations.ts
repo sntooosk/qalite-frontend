@@ -18,6 +18,7 @@ import {
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
+import { getNormalizedEmailDomain, normalizeEmailDomain } from '../../shared/utils/email';
 import { firebaseFirestore, firebaseStorage } from '../database/firebase';
 import { logActivity } from './logs';
 
@@ -29,6 +30,7 @@ export interface CreateOrganizationPayload {
   description: string;
   logoFile?: File | null;
   slackWebhookUrl?: string | null;
+  emailDomain?: string | null;
 }
 
 export interface UpdateOrganizationPayload {
@@ -36,6 +38,7 @@ export interface UpdateOrganizationPayload {
   description: string;
   logoFile?: File | null;
   slackWebhookUrl?: string | null;
+  emailDomain?: string | null;
 }
 
 export interface AddUserToOrganizationPayload {
@@ -76,12 +79,14 @@ export const createOrganization = async (
   const trimmedName = payload.name.trim();
   const trimmedDescription = payload.description.trim();
   const slackWebhookUrl = payload.slackWebhookUrl?.trim() || null;
+  const emailDomain = normalizeEmailDomain(payload.emailDomain);
 
   const docRef = await addDoc(organizationsCollection, {
     name: trimmedName,
     description: trimmedDescription,
     logoUrl: null,
     slackWebhookUrl,
+    emailDomain,
     members: [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -117,6 +122,7 @@ export const updateOrganization = async (
     name: payload.name.trim(),
     description: payload.description.trim(),
     slackWebhookUrl: payload.slackWebhookUrl?.trim() || null,
+    emailDomain: normalizeEmailDomain(payload.emailDomain),
     updatedAt: serverTimestamp(),
   };
 
@@ -323,6 +329,101 @@ export const getUserOrganization = async (userId: string): Promise<Organization 
   return getOrganization(organizationId);
 };
 
+export const findOrganizationByEmailDomain = async (
+  email: string,
+): Promise<Organization | null> => {
+  const normalizedDomain = getNormalizedEmailDomain(email);
+
+  if (!normalizedDomain) {
+    return null;
+  }
+
+  const organizationQuery = query(
+    organizationsCollection,
+    where('emailDomain', '==', normalizedDomain),
+    limit(1),
+  );
+  const snapshot = await getDocs(organizationQuery);
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  const organizationDoc = snapshot.docs[0];
+  return mapOrganization(organizationDoc.id, organizationDoc.data());
+};
+
+export const addUserToOrganizationByEmailDomain = async (
+  user: Pick<OrganizationMember, 'uid' | 'email' | 'displayName' | 'photoURL'>,
+): Promise<string | null> => {
+  const organization = await findOrganizationByEmailDomain(user.email);
+
+  if (!organization) {
+    return null;
+  }
+
+  const organizationRef = doc(firebaseFirestore, ORGANIZATIONS_COLLECTION, organization.id);
+  const userRef = doc(firebaseFirestore, USERS_COLLECTION, user.uid);
+
+  let assignedOrganizationId: string | null = null;
+  let addedToOrganization = false;
+
+  await runTransaction(firebaseFirestore, async (transaction) => {
+    const organizationSnapshot = await transaction.get(organizationRef);
+
+    if (!organizationSnapshot.exists()) {
+      assignedOrganizationId = null;
+      return;
+    }
+
+    const currentMembers = (organizationSnapshot.data()?.members as string[] | undefined) ?? [];
+    const userSnapshot = await transaction.get(userRef);
+    const existingOrganizationId = (userSnapshot.data()?.organizationId as string | null) ?? null;
+
+    if (existingOrganizationId && existingOrganizationId !== organization.id) {
+      assignedOrganizationId = existingOrganizationId;
+      return;
+    }
+
+    const shouldAddMember = !currentMembers.includes(user.uid);
+    const resolvedOrganizationId = existingOrganizationId ?? organization.id;
+
+    if (shouldAddMember) {
+      transaction.update(organizationRef, {
+        members: arrayUnion(user.uid),
+        updatedAt: serverTimestamp(),
+      });
+      addedToOrganization = true;
+    }
+
+    transaction.set(
+      userRef,
+      {
+        organizationId: resolvedOrganizationId,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    assignedOrganizationId = resolvedOrganizationId;
+  });
+
+  if (addedToOrganization) {
+    await logActivity({
+      organizationId: organization.id,
+      entityId: organization.id,
+      entityType: 'organization',
+      action: 'participation',
+      message: `Membro adicionado automaticamente: ${user.displayName || user.email}`,
+    });
+  }
+
+  return assignedOrganizationId;
+};
+
 const mapOrganization = async (
   id: string,
   data: Record<string, unknown> | undefined,
@@ -336,6 +437,7 @@ const mapOrganization = async (
     description: ((data?.description as string) ?? '').trim(),
     logoUrl: ((data?.logoUrl as string) ?? '').trim() || null,
     slackWebhookUrl: ((data?.slackWebhookUrl as string) ?? '').trim() || null,
+    emailDomain: normalizeEmailDomain((data?.emailDomain as string | null | undefined) ?? null),
     members,
     memberIds,
     createdAt: timestampToDate(data?.createdAt),

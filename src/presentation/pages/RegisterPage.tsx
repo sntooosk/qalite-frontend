@@ -6,8 +6,6 @@ import { AuthLayout } from '../components/AuthLayout';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
 import { PasswordInput } from '../components/PasswordInput';
-import { ALLOWED_EMAIL_DOMAINS_LABEL } from '../../shared/config/auth';
-import { isAllowedEmailDomain } from '../../shared/utils/email';
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -37,11 +35,6 @@ export const RegisterPage = () => {
     const emailRegex = /[^@\s]+@[^@\s]+\.[^@\s]+/;
     if (!emailRegex.test(normalizedEmail)) {
       setFormError('Informe um e-mail válido.');
-      return;
-    }
-
-    if (!isAllowedEmailDomain(normalizedEmail)) {
-      setFormError(`Utilize um e-mail corporativo (${ALLOWED_EMAIL_DOMAINS_LABEL}).`);
       return;
     }
 
@@ -97,7 +90,9 @@ export const RegisterPage = () => {
           required
           dataTestId="register-email"
         />
-        <p className="form-hint">Use um e-mail corporativo ({ALLOWED_EMAIL_DOMAINS_LABEL}).</p>
+        <p className="form-hint">
+          Cadastre seu e-mail corporativo para ser vinculado automaticamente à organização correta.
+        </p>
         <PasswordInput
           id="password"
           label="Senha"
