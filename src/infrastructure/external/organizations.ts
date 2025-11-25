@@ -279,28 +279,31 @@ export const removeUserFromOrganization = async (
 
     organizationName = (organizationSnapshot.data()?.name as string | undefined) ?? '';
 
+    const userSnapshot = await transaction.get(userRef);
+
+    if (!userSnapshot.exists()) {
+      return;
+    }
+
+    const userData = userSnapshot.data();
+    const currentOrganizationId = (userData.organizationId as string | null) ?? null;
+
+    removedUserLabel = (userData.displayName as string | undefined) ?? userData.email;
+
     transaction.update(organizationRef, {
       members: arrayRemove(payload.userId),
       updatedAt: serverTimestamp(),
     });
 
-    const userSnapshot = await transaction.get(userRef);
-    if (userSnapshot.exists()) {
-      const userData = userSnapshot.data();
-      const currentOrganizationId = (userData.organizationId as string | null) ?? null;
-
-      removedUserLabel = (userData.displayName as string | undefined) ?? userData.email;
-
-      if (currentOrganizationId === payload.organizationId) {
-        transaction.set(
-          userRef,
-          {
-            organizationId: null,
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true },
-        );
-      }
+    if (currentOrganizationId === payload.organizationId) {
+      transaction.set(
+        userRef,
+        {
+          organizationId: null,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
     }
   });
 
