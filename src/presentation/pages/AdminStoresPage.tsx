@@ -85,7 +85,13 @@ export const AdminStoresPage = () => {
     const fetchOrganizations = async () => {
       try {
         const data = await organizationService.list();
-        setOrganizations(data);
+        const normalized = data.map((organization) => ({
+          ...organization,
+          members: organization.members ?? [],
+          memberIds: organization.memberIds ?? [],
+        }));
+
+        setOrganizations(normalized);
         const organizationFromParam = searchParams.get('organizationId');
         const hasValidOrganizationParam = Boolean(
           organizationFromParam && data.some((item) => item.id === organizationFromParam),
@@ -443,11 +449,14 @@ export const AdminStoresPage = () => {
             return organization;
           }
 
-          const hasMember = organization.memberIds.includes(member.uid);
+          const members = organization.members ?? [];
+          const memberIds = organization.memberIds ?? [];
+          const hasMember = memberIds.includes(member.uid);
+
           return {
             ...organization,
-            members: hasMember ? organization.members : [...organization.members, member],
-            memberIds: hasMember ? organization.memberIds : [...organization.memberIds, member.uid],
+            members: hasMember ? members : [...members, member],
+            memberIds: hasMember ? memberIds : [...memberIds, member.uid],
           };
         }),
       );
