@@ -241,12 +241,6 @@ export const AdminStoresPage = () => {
     void loadBrowserstackBuilds();
   }, [loadBrowserstackBuilds]);
 
-  useEffect(() => {
-    if (isOrganizationModalOpen && allUsers.length === 0 && !isLoadingUsers) {
-      void loadAllUsers();
-    }
-  }, [allUsers.length, isLoadingUsers, isOrganizationModalOpen, loadAllUsers]);
-
   const loadAllUsers = useCallback(async () => {
     try {
       setIsLoadingUsers(true);
@@ -259,6 +253,12 @@ export const AdminStoresPage = () => {
       setIsLoadingUsers(false);
     }
   }, [showToast]);
+
+  useEffect(() => {
+    if (isOrganizationModalOpen && allUsers.length === 0 && !isLoadingUsers) {
+      void loadAllUsers();
+    }
+  }, [allUsers.length, isLoadingUsers, isOrganizationModalOpen, loadAllUsers]);
 
   const scenariosPerStoreData = useMemo(
     () =>
