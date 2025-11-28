@@ -616,6 +616,9 @@ export const AdminStoresPage = () => {
     }
   };
 
+  const selectedOrganizationMembers = selectedOrganization?.members ?? [];
+  const selectedOrganizationName = selectedOrganization?.name ?? 'Organização';
+
   return (
     <Layout>
       <section className="page-container" data-testid="stores-page">
@@ -631,7 +634,7 @@ export const AdminStoresPage = () => {
             </button>
             <h1 className="section-title">
               {selectedOrganization
-                ? `Lojas da organização ${selectedOrganization.name}`
+                ? `Lojas da organização ${selectedOrganizationName}`
                 : 'Lojas da organização'}
             </h1>
             <p className="section-subtitle">
@@ -988,8 +991,8 @@ export const AdminStoresPage = () => {
                 </p>
               </div>
               <span className="badge">
-                {selectedOrganization.members.length} membro
-                {selectedOrganization.members.length === 1 ? '' : 's'}
+                {selectedOrganizationMembers.length} membro
+                {selectedOrganizationMembers.length === 1 ? '' : 's'}
               </span>
             </div>
 
@@ -1064,14 +1067,14 @@ export const AdminStoresPage = () => {
               )}
             </div>
 
-            {selectedOrganization.members.length === 0 ? (
+            {selectedOrganizationMembers.length === 0 ? (
               <p className="section-subtitle">
                 Nenhum usuário vinculado ainda. Adicione membros utilizando o e-mail cadastrado no
                 QaLite.
               </p>
             ) : (
               <ul className="member-list">
-                {selectedOrganization.members.map((member) => (
+                {selectedOrganizationMembers.map((member) => (
                   <li key={member.uid} className="member-list-item">
                     <UserAvatar
                       name={member.displayName || member.email}
