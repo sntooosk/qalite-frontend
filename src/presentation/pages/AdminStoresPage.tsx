@@ -2,11 +2,13 @@ import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useState } f
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
+import type { UserSummary } from '../../domain/entities/user';
 import type { Store } from '../../domain/entities/store';
 import type { BrowserstackBuild } from '../../domain/entities/browserstack';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
 import { browserstackService } from '../../application/use-cases/BrowserstackUseCase';
+import { userService } from '../../application/use-cases/UserUseCase';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { useAuth } from '../hooks/useAuth';
@@ -68,6 +70,8 @@ export const AdminStoresPage = () => {
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [memberEmail, setMemberEmail] = useState('');
   const [memberError, setMemberError] = useState<string | null>(null);
+  const [allUsers, setAllUsers] = useState<UserSummary[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
   const [isManagingMembers, setIsManagingMembers] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
@@ -237,6 +241,25 @@ export const AdminStoresPage = () => {
     void loadBrowserstackBuilds();
   }, [loadBrowserstackBuilds]);
 
+  useEffect(() => {
+    if (isOrganizationModalOpen && allUsers.length === 0 && !isLoadingUsers) {
+      void loadAllUsers();
+    }
+  }, [allUsers.length, isLoadingUsers, isOrganizationModalOpen, loadAllUsers]);
+
+  const loadAllUsers = useCallback(async () => {
+    try {
+      setIsLoadingUsers(true);
+      const users = await userService.listAllSummaries();
+      setAllUsers(users);
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: 'Não foi possível carregar os usuários.' });
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  }, [showToast]);
+
   const scenariosPerStoreData = useMemo(
     () =>
       stores.map((store) => ({
@@ -254,6 +277,28 @@ export const AdminStoresPage = () => {
       })),
     [stores, storeAutomationCounts],
   );
+
+  const memberSuggestions = useMemo(() => {
+    const memberIds = new Set(selectedOrganization?.memberIds ?? []);
+    const query = memberEmail.trim().toLowerCase();
+
+    return allUsers
+      .filter((user) => {
+        if (memberIds.has(user.id)) {
+          return false;
+        }
+
+        if (!query) {
+          return true;
+        }
+
+        const normalizedEmail = user.email.toLowerCase();
+        const normalizedName = user.displayName.toLowerCase();
+
+        return normalizedEmail.includes(query) || normalizedName.includes(query);
+      })
+      .sort((first, second) => first.displayName.localeCompare(second.displayName));
+  }, [allUsers, memberEmail, selectedOrganization?.memberIds]);
 
   const openCreateModal = () => {
     setStoreForm(initialStoreForm);
@@ -422,56 +467,65 @@ export const AdminStoresPage = () => {
     }
   };
 
+  const addMemberByEmail = useCallback(
+    async (email: string) => {
+      if (!selectedOrganization) {
+        return;
+      }
+
+      setMemberError(null);
+
+      const trimmedEmail = email.trim();
+      if (!trimmedEmail) {
+        setMemberError('Informe o e-mail do usuário.');
+        return;
+      }
+
+      try {
+        setIsManagingMembers(true);
+        const member = await organizationService.addUser({
+          organizationId: selectedOrganization.id,
+          userEmail: trimmedEmail,
+        });
+
+        setOrganizations((previous) =>
+          previous.map((organization) => {
+            if (organization.id !== selectedOrganization.id) {
+              return organization;
+            }
+
+            const members = organization.members ?? [];
+            const memberIds = organization.memberIds ?? [];
+            const hasMember = memberIds.includes(member.uid);
+
+            return {
+              ...organization,
+              members: hasMember ? members : [...members, member],
+              memberIds: hasMember ? memberIds : [...memberIds, member.uid],
+            };
+          }),
+        );
+
+        setMemberEmail('');
+        showToast({ type: 'success', message: 'Usuário adicionado à organização.' });
+      } catch (error) {
+        console.error(error);
+        const message =
+          error instanceof Error ? error.message : 'Não foi possível adicionar o usuário.';
+        setMemberError(message);
+        showToast({ type: 'error', message });
+      } finally {
+        setIsManagingMembers(false);
+      }
+    },
+    [selectedOrganization, setOrganizations, showToast],
+  );
+
   const handleAddMember = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMemberError(null);
 
-    if (!selectedOrganization) {
-      return;
-    }
-
-    const trimmedEmail = memberEmail.trim();
-    if (!trimmedEmail) {
-      setMemberError('Informe o e-mail do usuário.');
-      return;
-    }
-
-    try {
-      setIsManagingMembers(true);
-      const member = await organizationService.addUser({
-        organizationId: selectedOrganization.id,
-        userEmail: trimmedEmail,
-      });
-
-      setOrganizations((previous) =>
-        previous.map((organization) => {
-          if (organization.id !== selectedOrganization.id) {
-            return organization;
-          }
-
-          const members = organization.members ?? [];
-          const memberIds = organization.memberIds ?? [];
-          const hasMember = memberIds.includes(member.uid);
-
-          return {
-            ...organization,
-            members: hasMember ? members : [...members, member],
-            memberIds: hasMember ? memberIds : [...memberIds, member.uid],
-          };
-        }),
-      );
-
-      setMemberEmail('');
-      showToast({ type: 'success', message: 'Usuário adicionado à organização.' });
-    } catch (error) {
-      console.error(error);
-      const message =
-        error instanceof Error ? error.message : 'Não foi possível adicionar o usuário.';
-      setMemberError(message);
-      showToast({ type: 'error', message });
-    } finally {
-      setIsManagingMembers(false);
-    }
+    await addMemberByEmail(memberEmail);
   };
 
   const handleRemoveMember = async (member: OrganizationMember) => {
@@ -969,6 +1023,46 @@ export const AdminStoresPage = () => {
                 Adicionar usuário
               </Button>
             </form>
+
+            <div className="card" style={{ marginTop: '1rem', padding: '1rem' }}>
+              <div
+                className="flex items-center justify-between flex-wrap gap-2"
+                style={{ marginBottom: '0.5rem' }}
+              >
+                <p className="section-subtitle" style={{ margin: 0 }}>
+                  Sugestões de usuários cadastrados no QaLite
+                </p>
+                {isLoadingUsers && <span className="badge">Carregando...</span>}
+              </div>
+              {memberSuggestions.length === 0 && !isLoadingUsers ? (
+                <p className="section-subtitle" style={{ margin: 0 }}>
+                  Nenhum usuário encontrado. Tente buscar pelo nome ou e-mail.
+                </p>
+              ) : (
+                <ul className="member-list" style={{ gap: '0.75rem' }}>
+                  {memberSuggestions.map((user) => (
+                    <li key={user.id} className="member-list-item" style={{ alignItems: 'center' }}>
+                      <UserAvatar
+                        name={user.displayName || user.email}
+                        photoURL={user.photoURL ?? undefined}
+                      />
+                      <div className="member-list-details">
+                        <span className="member-list-name">{user.displayName || user.email}</span>
+                        <span className="member-list-email">{user.email}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="member-list-remove"
+                        onClick={() => void addMemberByEmail(user.email)}
+                        disabled={isManagingMembers}
+                      >
+                        Adicionar
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
 
             {selectedOrganization.members.length === 0 ? (
               <p className="section-subtitle">

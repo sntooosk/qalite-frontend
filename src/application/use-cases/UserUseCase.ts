@@ -8,6 +8,10 @@ export class UserUseCases {
   getSummariesByIds(ids: string[]): Promise<UserSummary[]> {
     return this.userRepository.getSummariesByIds(ids);
   }
+
+  listAllSummaries(): Promise<UserSummary[]> {
+    return this.userRepository.listAllSummaries();
+  }
 }
 
 export const userService = new UserUseCases(firebaseUserRepository);
