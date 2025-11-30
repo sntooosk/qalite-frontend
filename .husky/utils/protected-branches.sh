@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-
-# Allow semantic-release in GitHub Actions
-if [ "$GITHUB_ACTIONS" = "true" ] && [ "$SEMANTIC_RELEASE" = "true" ]; then
-  exit 0
-fi
-
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 PROTECTED_BRANCHES="^(main|master|develop)$"
 
