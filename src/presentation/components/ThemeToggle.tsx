@@ -10,6 +10,7 @@ export const ThemeToggle = () => {
       onClick={toggleTheme}
       aria-label="Alternar tema"
       aria-pressed={theme === 'dark'}
+      data-theme-state={theme}
     >
       <span className="theme-toggle__icon" aria-hidden>
         {theme === 'light' ? '🌞' : '🌙'}
