@@ -4,9 +4,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
 import type { Store } from '../../domain/entities/store';
 import type { BrowserstackBuild } from '../../domain/entities/browserstack';
+import type { UserSummary } from '../../domain/entities/user';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
 import { browserstackService } from '../../application/use-cases/BrowserstackUseCase';
+import { userService } from '../../application/use-cases/UserUseCase';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { useAuth } from '../hooks/useAuth';
@@ -68,6 +70,9 @@ export const AdminStoresPage = () => {
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
   const [isManagingMembers, setIsManagingMembers] = useState(false);
+  const [userDirectory, setUserDirectory] = useState<UserSummary[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [memberSearch, setMemberSearch] = useState('');
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     message: string;
     description?: string;
@@ -195,11 +200,54 @@ export const AdminStoresPage = () => {
     };
   }, [selectedOrganizationId, stores, showToast]);
 
+  useEffect(() => {
+    if (!isOrganizationModalOpen || userDirectory.length > 0) {
+      return;
+    }
+
+    const fetchUsers = async () => {
+      try {
+        setIsLoadingUsers(true);
+        const users = await userService.listAll();
+        setUserDirectory(users);
+      } catch (error) {
+        console.error(error);
+        showToast({
+          type: 'error',
+          message: 'Não foi possível carregar os usuários para sugestão.',
+        });
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    };
+
+    void fetchUsers();
+  }, [isOrganizationModalOpen, showToast, userDirectory.length]);
+
   const hasBrowserstackCredentials = useMemo(
     () =>
       Boolean(user?.browserstackCredentials?.username && user?.browserstackCredentials?.accessKey),
     [user?.browserstackCredentials?.accessKey, user?.browserstackCredentials?.username],
   );
+
+  const memberSuggestions = useMemo(() => {
+    const query = memberSearch.trim().toLowerCase();
+
+    if (!query) {
+      return [];
+    }
+
+    const existingMemberIds = new Set(selectedOrganization?.memberIds ?? []);
+
+    return userDirectory
+      .filter((user) => !existingMemberIds.has(user.id))
+      .filter(
+        (user) =>
+          user.displayName.toLowerCase().includes(query) ||
+          user.email.toLowerCase().includes(query),
+      )
+      .slice(0, 5);
+  }, [memberSearch, selectedOrganization?.memberIds, userDirectory]);
 
   const loadBrowserstackBuilds = useCallback(async () => {
     if (!user?.browserstackCredentials || !hasBrowserstackCredentials) {
@@ -408,6 +456,60 @@ export const AdminStoresPage = () => {
     } finally {
       setIsSavingOrganization(false);
     }
+  };
+
+  const handleAddMember = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setOrganizationError(null);
+
+    if (!selectedOrganization) {
+      return;
+    }
+
+    const trimmedEmail = memberSearch.trim().toLowerCase();
+
+    if (!trimmedEmail) {
+      setOrganizationError('Informe um e-mail para adicionar o usuário.');
+      return;
+    }
+
+    try {
+      setIsManagingMembers(true);
+      const newMember = await organizationService.addUser({
+        organizationId: selectedOrganization.id,
+        userEmail: trimmedEmail,
+      });
+
+      setOrganizations((previous) =>
+        previous.map((organization) =>
+          organization.id === selectedOrganization.id
+            ? organization.memberIds.includes(newMember.uid)
+              ? organization
+              : {
+                  ...organization,
+                  members: [...organization.members, newMember].sort((a, b) =>
+                    (a.displayName || a.email).localeCompare(b.displayName || b.email),
+                  ),
+                  memberIds: [...organization.memberIds, newMember.uid],
+                }
+            : organization,
+        ),
+      );
+
+      showToast({ type: 'success', message: 'Usuário adicionado à organização.' });
+      setMemberSearch('');
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error ? error.message : 'Não foi possível adicionar o usuário.';
+      showToast({ type: 'error', message });
+    } finally {
+      setIsManagingMembers(false);
+    }
+  };
+
+  const handleSuggestionSelect = (user: UserSummary) => {
+    setMemberSearch(user.email);
   };
 
   const handleRemoveMember = async (member: OrganizationMember) => {
@@ -872,6 +974,47 @@ export const AdminStoresPage = () => {
                 {selectedOrganization.members.length === 1 ? '' : 's'}
               </span>
             </div>
+
+            <form className="organization-members-form" onSubmit={handleAddMember}>
+              <TextInput
+                id="organization-member-email"
+                label="Adicionar membro por e-mail"
+                value={memberSearch}
+                onChange={(event) => setMemberSearch(event.target.value)}
+                placeholder="usuario@exemplo.com"
+                dataTestId="organization-member-email"
+              />
+              <Button
+                type="submit"
+                isLoading={isManagingMembers}
+                loadingText="Adicionando..."
+                disabled={isManagingMembers}
+                data-testid="add-organization-member"
+              >
+                Adicionar membro
+              </Button>
+              {isLoadingUsers && (
+                <p className="form-hint organization-members-form__hint">Carregando sugestões...</p>
+              )}
+              {!isLoadingUsers && memberSuggestions.length > 0 && (
+                <ul className="member-suggestions" role="listbox">
+                  {memberSuggestions.map((suggestion) => (
+                    <li key={suggestion.id} className="member-suggestions__item">
+                      <button
+                        type="button"
+                        className="member-suggestions__button"
+                        onClick={() => handleSuggestionSelect(suggestion)}
+                      >
+                        <span className="member-suggestions__primary">
+                          {suggestion.displayName || suggestion.email}
+                        </span>
+                        <span className="member-suggestions__secondary">{suggestion.email}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </form>
 
             {selectedOrganization.members.length === 0 ? (
               <p className="section-subtitle">Nenhum usuário vinculado ainda.</p>
