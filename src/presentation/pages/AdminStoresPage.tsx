@@ -241,11 +241,12 @@ export const AdminStoresPage = () => {
 
     return userDirectory
       .filter((user) => !existingMemberIds.has(user.id))
-      .filter(
-        (user) =>
-          user.displayName.toLowerCase().includes(query) ||
-          user.email.toLowerCase().includes(query),
-      )
+      .filter((user) => {
+        const displayName = user.displayName?.toLowerCase() ?? '';
+        const email = user.email?.toLowerCase() ?? '';
+
+        return displayName.includes(query) || email.includes(query);
+      })
       .slice(0, 5);
   }, [memberSearch, selectedOrganization?.memberIds, userDirectory]);
 
@@ -600,6 +601,8 @@ export const AdminStoresPage = () => {
     }
   };
 
+  const selectedMembers = selectedOrganization?.members ?? [];
+
   return (
     <Layout>
       <section className="page-container" data-testid="stores-page">
@@ -718,14 +721,14 @@ export const AdminStoresPage = () => {
                       {selectedOrganization.members.length === 1 ? 'or' : 'ores'}
                     </span>
                   </div>
-                  {selectedOrganization.members.length === 0 ? (
+                  {selectedMembers.length === 0 ? (
                     <p className="section-subtitle">
                       Nenhum colaborador vinculado. Utilize o botão “Gerenciar organização” para
                       convidar novos membros.
                     </p>
                   ) : (
                     <ul className="collaborator-list">
-                      {selectedOrganization.members.map((member) => (
+                      {selectedMembers.map((member) => (
                         <li key={member.uid} className="collaborator-card">
                           <UserAvatar
                             name={member.displayName || member.email}
@@ -970,8 +973,8 @@ export const AdminStoresPage = () => {
                 <p className="section-subtitle">Visualize e gerencie os usuários da organização.</p>
               </div>
               <span className="badge">
-                {selectedOrganization.members.length} membro
-                {selectedOrganization.members.length === 1 ? '' : 's'}
+                {selectedMembers.length} membro
+                {selectedMembers.length === 1 ? '' : 's'}
               </span>
             </div>
 
@@ -1016,11 +1019,11 @@ export const AdminStoresPage = () => {
               )}
             </form>
 
-            {selectedOrganization.members.length === 0 ? (
+            {selectedMembers.length === 0 ? (
               <p className="section-subtitle">Nenhum usuário vinculado ainda.</p>
             ) : (
               <ul className="member-list">
-                {selectedOrganization.members.map((member) => (
+                {selectedMembers.map((member) => (
                   <li key={member.uid} className="member-list-item">
                     <UserAvatar
                       name={member.displayName || member.email}
