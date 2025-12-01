@@ -4,9 +4,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
 import type { Store } from '../../domain/entities/store';
 import type { BrowserstackBuild } from '../../domain/entities/browserstack';
+import type { UserSummary } from '../../domain/entities/user';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
 import { browserstackService } from '../../application/use-cases/BrowserstackUseCase';
+import { userService } from '../../application/use-cases/UserUseCase';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { useAuth } from '../hooks/useAuth';
@@ -66,6 +68,9 @@ export const AdminStoresPage = () => {
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
   const [isManagingMembers, setIsManagingMembers] = useState(false);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [userSuggestions, setUserSuggestions] = useState<UserSummary[]>([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     message: string;
     description?: string;
@@ -193,6 +198,40 @@ export const AdminStoresPage = () => {
     };
   }, [selectedOrganizationId, stores, showToast]);
 
+  useEffect(() => {
+    const searchTerm = newMemberEmail.trim();
+
+    if (!searchTerm) {
+      setUserSuggestions([]);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const fetchSuggestions = async () => {
+        try {
+          setIsSearchingUsers(true);
+          const results = await userService.searchByTerm(searchTerm);
+          const filteredResults = selectedOrganization
+            ? results.filter((user) => !selectedOrganization.memberIds.includes(user.id))
+            : results;
+
+          setUserSuggestions(filteredResults);
+        } catch (error) {
+          console.error(error);
+          setUserSuggestions([]);
+        } finally {
+          setIsSearchingUsers(false);
+        }
+      };
+
+      void fetchSuggestions();
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [newMemberEmail, selectedOrganization]);
+
   const hasBrowserstackCredentials = useMemo(
     () =>
       Boolean(user?.browserstackCredentials?.username && user?.browserstackCredentials?.accessKey),
@@ -280,6 +319,8 @@ export const AdminStoresPage = () => {
     setOrganizationError(null);
     setIsOrganizationSlackSectionOpen(false);
     setOrganizationForm(initialOrganizationForm);
+    setNewMemberEmail('');
+    setUserSuggestions([]);
   };
 
   const toggleOrganizationSlackSection = () => {
@@ -403,6 +444,59 @@ export const AdminStoresPage = () => {
       showToast({ type: 'error', message });
     } finally {
       setIsSavingOrganization(false);
+    }
+  };
+
+  const handleAddMember = async () => {
+    if (!selectedOrganization) {
+      return;
+    }
+
+    const trimmedEmail = newMemberEmail.trim();
+    if (!trimmedEmail) {
+      setOrganizationError('Informe um e-mail para adicionar.');
+      return;
+    }
+
+    const normalizedEmail = trimmedEmail.toLowerCase();
+    if (
+      selectedOrganization.members.some((member) => member.email.toLowerCase() === normalizedEmail)
+    ) {
+      setOrganizationError('Usuário já está vinculado à organização.');
+      return;
+    }
+
+    try {
+      setIsManagingMembers(true);
+      const member = await organizationService.addUser({
+        organizationId: selectedOrganization.id,
+        userEmail: trimmedEmail,
+      });
+
+      setOrganizations((previous) =>
+        previous.map((organization) =>
+          organization.id === selectedOrganization.id
+            ? {
+                ...organization,
+                members: [...organization.members, member],
+                memberIds: [...organization.memberIds, member.uid],
+              }
+            : organization,
+        ),
+      );
+
+      setNewMemberEmail('');
+      setUserSuggestions([]);
+      setOrganizationError(null);
+      showToast({ type: 'success', message: 'Usuário adicionado à organização.' });
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error ? error.message : 'Não foi possível adicionar o usuário.';
+      setOrganizationError(message);
+      showToast({ type: 'error', message });
+    } finally {
+      setIsManagingMembers(false);
     }
   };
 
@@ -850,6 +944,59 @@ export const AdminStoresPage = () => {
                 {selectedOrganization.members.length === 1 ? '' : 's'}
               </span>
             </div>
+
+            <div className="member-invite-grid">
+              <TextInput
+                id="organization-add-member"
+                label="Adicionar membro por e-mail"
+                value={newMemberEmail}
+                onChange={(event) => setNewMemberEmail(event.target.value)}
+                placeholder="usuario@empresa.com"
+                autoComplete="email"
+                dataTestId="organization-add-member-input"
+              />
+              <Button
+                type="button"
+                onClick={handleAddMember}
+                isLoading={isManagingMembers}
+                loadingText="Adicionando..."
+                disabled={isSavingOrganization || isManagingMembers}
+                data-testid="organization-add-member-button"
+              >
+                Adicionar
+              </Button>
+            </div>
+            <p className="form-hint">
+              Convide qualquer usuário existente pelo e-mail, mesmo que não corresponda ao domínio
+              configurado.
+            </p>
+            {isSearchingUsers && <p className="form-hint">Buscando sugestões...</p>}
+            {!isSearchingUsers && userSuggestions.length > 0 && (
+              <ul className="suggestion-list" role="listbox" aria-label="Sugestões de usuários">
+                {userSuggestions.map((suggestion) => (
+                  <li key={suggestion.id}>
+                    <button
+                      type="button"
+                      className="suggestion-option"
+                      onClick={() => setNewMemberEmail(suggestion.email)}
+                    >
+                      <UserAvatar
+                        name={suggestion.displayName || suggestion.email}
+                        photoURL={suggestion.photoURL ?? undefined}
+                        size="sm"
+                      />
+                      <div className="suggestion-option__details">
+                        <span className="suggestion-option__name">
+                          {suggestion.displayName || suggestion.email}
+                        </span>
+                        <span className="suggestion-option__email">{suggestion.email}</span>
+                      </div>
+                      <span className="suggestion-option__hint">Usar e-mail</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {selectedOrganization.members.length === 0 ? (
               <p className="section-subtitle">Nenhum usuário vinculado ainda.</p>
