@@ -11,14 +11,12 @@ import { Modal } from '../components/Modal';
 
 interface OrganizationFormState {
   name: string;
-  logoFile: File | null;
   slackWebhookUrl: string;
   emailDomain: string;
 }
 
 const initialOrganizationForm: OrganizationFormState = {
   name: '',
-  logoFile: null,
   slackWebhookUrl: '',
   emailDomain: '',
 };
@@ -103,7 +101,6 @@ export const AdminOrganizationsPage = () => {
       const created = await organizationService.create({
         name: trimmedName,
         description: '',
-        logoFile: organizationForm.logoFile,
         slackWebhookUrl,
         emailDomain,
       });
@@ -271,25 +268,6 @@ export const AdminOrganizationsPage = () => {
               </div>
             )}
           </div>
-
-          <label className="upload-label" htmlFor="organization-logo">
-            <span>Logo da organização</span>
-            <span className="upload-trigger">Selecionar arquivo</span>
-            <input
-              id="organization-logo"
-              className="upload-input"
-              type="file"
-              accept="image/*"
-              data-testid="organization-logo-input"
-              onChange={(event) =>
-                setOrganizationForm((previous) => ({
-                  ...previous,
-                  logoFile: event.target.files?.[0] ?? null,
-                }))
-              }
-            />
-            <span className="upload-hint">Formatos sugeridos: PNG, JPG ou SVG até 5MB.</span>
-          </label>
           <div className="form-actions">
             <Button
               type="submit"

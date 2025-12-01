@@ -18,7 +18,7 @@ export const Layout = ({ children }: LayoutProps) => {
   const displayName = user?.displayName || user?.email || '';
   const brandSource = activeOrganization;
   const brandName = brandSource?.name || 'QaLite';
-  const brandLogo = brandSource?.logoUrl || (brandName === 'QaLite' ? qliteLogo : null);
+  const brandLogo = brandName === 'QaLite' ? qliteLogo : null;
 
   return (
     <div className="app-shell">

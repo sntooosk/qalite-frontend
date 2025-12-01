@@ -29,7 +29,6 @@ interface StoreForm {
 
 interface OrganizationFormState {
   name: string;
-  logoFile: File | null;
   slackWebhookUrl: string;
   emailDomain: string;
 }
@@ -41,7 +40,6 @@ const initialStoreForm: StoreForm = {
 
 const initialOrganizationForm: OrganizationFormState = {
   name: '',
-  logoFile: null,
   slackWebhookUrl: '',
   emailDomain: '',
 };
@@ -269,7 +267,6 @@ export const AdminStoresPage = () => {
 
     setOrganizationForm({
       name: selectedOrganization.name,
-      logoFile: null,
       slackWebhookUrl,
       emailDomain,
     });
@@ -366,7 +363,6 @@ export const AdminStoresPage = () => {
       const updated = await organizationService.update(selectedOrganization.id, {
         name: trimmedName,
         description: (selectedOrganization.description ?? '').trim(),
-        logoFile: organizationForm.logoFile,
         slackWebhookUrl,
         emailDomain,
       });
@@ -822,24 +818,6 @@ export const AdminStoresPage = () => {
                 </div>
               )}
             </div>
-            <label className="upload-label" htmlFor="organization-update-logo">
-              <span>Logo da organização</span>
-              <span className="upload-trigger">Atualizar logo</span>
-              <input
-                id="organization-update-logo"
-                className="upload-input"
-                type="file"
-                accept="image/*"
-                data-testid="organization-settings-logo"
-                onChange={(event) =>
-                  setOrganizationForm((previous) => ({
-                    ...previous,
-                    logoFile: event.target.files?.[0] ?? null,
-                  }))
-                }
-              />
-              <span className="upload-hint">Envie um arquivo PNG, JPG ou SVG até 5MB.</span>
-            </label>
             <div className="form-actions">
               <Button
                 type="submit"
