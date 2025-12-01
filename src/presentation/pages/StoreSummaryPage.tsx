@@ -40,6 +40,7 @@ import {
 } from '../components/ScenarioColumnSortControl';
 import { useStoreEnvironments } from '../hooks/useStoreEnvironments';
 import {
+  downloadJsonFile,
   downloadMarkdownFile,
   openPdfFromMarkdown,
   buildScenarioMarkdown,
@@ -81,7 +82,7 @@ interface StoreHighlight {
   onClick?: () => void;
 }
 
-type ExportFormat = 'markdown' | 'pdf';
+type ExportFormat = 'markdown' | 'pdf' | 'json';
 
 const emptyScenarioFilters: ScenarioFilters = {
   search: '',
@@ -1097,6 +1098,11 @@ export const StoreSummaryPage = () => {
         openPdfFromMarkdown(markdown, `${store.name} - Cenários`, pdfWindow);
       }
 
+      if (format === 'json') {
+        const jsonContent = JSON.stringify(data, null, 2);
+        downloadJsonFile(jsonContent, `${baseFileName}.json`);
+      }
+
       showToast({ type: 'success', message: 'Exportação de cenários concluída.' });
     } catch (error) {
       console.error(error);
@@ -1433,6 +1439,11 @@ export const StoreSummaryPage = () => {
       if (format === 'pdf') {
         const markdown = buildSuiteMarkdown(data);
         openPdfFromMarkdown(markdown, `${store.name} - Suítes`, pdfWindow);
+      }
+
+      if (format === 'json') {
+        const jsonContent = JSON.stringify(data, null, 2);
+        downloadJsonFile(jsonContent, `${baseFileName}.json`);
       }
 
       showToast({ type: 'success', message: 'Exportação de suítes concluída.' });
@@ -1880,6 +1891,15 @@ export const StoreSummaryPage = () => {
                           <Button
                             type="button"
                             variant="ghost"
+                            onClick={() => void handleScenarioExport('json')}
+                            isLoading={exportingScenarioFormat === 'json'}
+                            loadingText="Exportando..."
+                          >
+                            Exportar JSON
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
                             onClick={() => void handleScenarioExport('markdown')}
                             isLoading={exportingScenarioFormat === 'markdown'}
                             loadingText="Exportando..."
@@ -1924,6 +1944,15 @@ export const StoreSummaryPage = () => {
                             loadingText="Importando..."
                           >
                             Importar JSON
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => void handleSuiteExport('json')}
+                            isLoading={exportingSuiteFormat === 'json'}
+                            loadingText="Exportando..."
+                          >
+                            Exportar JSON
                           </Button>
                           <Button
                             type="button"
