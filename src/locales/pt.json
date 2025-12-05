@@ -312,6 +312,35 @@
       "leaveSuccess": "Você saiu do ambiente.",
       "leaveError": "Não foi possível sair do ambiente."
     },
+    "environmentSummary": {
+      "start": "Início do teste",
+      "end": "Término do teste",
+      "totalTime": "Tempo total",
+      "scenarios": "Cenários",
+      "noScenarios": "Nenhum cenário executado",
+      "oneScenario": "1 cenário executado",
+      "multipleScenarios": "{{count}} cenários executados",
+
+      "bugs": "Bugs registrados",
+      "storyfix": "Storyfix registrados",
+
+      "jira": "Jira",
+      "notInformed": "Não informado",
+
+      "moment": "Momento",
+      "release": "Release",
+
+      "participants": "Participantes",
+      "noParticipants": "Nenhum participante",
+      "oneParticipant": "1 participante ativo",
+      "multipleParticipants": "{{count}} participantes ativos",
+
+      "urls": "URLs monitoradas",
+      "noUrls": "Nenhuma URL adicionada.",
+
+      "whoIsParticipating": "Quem está participando"
+    },
+
     "summary": {
       "participants": "Participantes",
       "bugs": "Bugs",

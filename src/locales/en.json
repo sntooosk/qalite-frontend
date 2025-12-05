@@ -312,6 +312,34 @@
       "leaveSuccess": "You left the environment.",
       "leaveError": "Unable to leave the environment."
     },
+    "environmentSummary": {
+      "start": "Test start",
+      "end": "Test end",
+      "totalTime": "Total time",
+      "scenarios": "Scenarios",
+      "noScenarios": "No scenarios executed",
+      "oneScenario": "1 scenario executed",
+      "multipleScenarios": "{{count}} scenarios executed",
+
+      "bugs": "Registered bugs",
+      "storyfix": "Registered storyfixes",
+
+      "jira": "Jira",
+      "notInformed": "Not informed",
+
+      "moment": "Moment",
+      "release": "Release",
+
+      "participants": "Participants",
+      "noParticipants": "No participants",
+      "oneParticipant": "1 active participant",
+      "multipleParticipants": "{{count}} active participants",
+
+      "urls": "Monitored URLs",
+      "noUrls": "No URL added.",
+
+      "whoIsParticipating": "Who is participating"
+    },
     "summary": {
       "participants": "Participants",
       "bugs": "Bugs",
