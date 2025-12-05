@@ -341,6 +341,26 @@
       "whoIsParticipating": "Quem está participando"
     },
 
+    "environmentBugList": {
+      "bugRemovedSuccess": "Bug removido com sucesso.",
+      "bugRemovedError": "Não foi possível remover o bug.",
+      "notLinked": "Não vinculado",
+      "scenarioRemoved": "Cenário removido",
+      "bugRegistry": "Registro de bugs",
+      "loadingBugs": "Carregando bugs...",
+      "noBugs": "Nenhum bug registrado neste ambiente.",
+      "title": "Título",
+      "status": "Status",
+      "scenario": "Cenário",
+      "description": "Descrição",
+      "actions": "Ações",
+      "edit": "Editar",
+      "remove": "Remover",
+      "noDescription": "Sem descrição",
+      "confirmDeleteWithName": "Você deseja mesmo excluir o bug \"{{title}}\"?",
+      "confirmDelete": "Você deseja mesmo excluir?"
+    },
+
     "summary": {
       "participants": "Participantes",
       "bugs": "Bugs",
