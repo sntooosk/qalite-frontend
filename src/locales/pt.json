@@ -377,6 +377,15 @@
       "saving": "Salvando...",
       "saveChanges": "Salvar alterações"
     },
+    "deleteEnvironmentModal": {
+      "deleteEnvironment": "Excluir ambiente",
+      "deleteEnvironmentError": "Não foi possível excluir este ambiente.",
+      "deleteEnvironmentWarning": "Esta ação é permanente. Deseja excluir o ambiente",
+      "noIdentifier": "sem identificador",
+      "cancel": "Cancelar",
+      "deleting": "Excluindo...",
+      "confirmDelete": "Confirmar exclusão"
+    },
 
     "summary": {
       "participants": "Participantes",

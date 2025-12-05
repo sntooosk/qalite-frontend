@@ -377,6 +377,16 @@
       "saving": "Saving...",
       "saveChanges": "Save changes"
     },
+    "deleteEnvironmentModal": {
+      "deleteEnvironment": "Delete environment",
+      "deleteEnvironmentError": "Could not delete this environment.",
+      "deleteEnvironmentWarning": "This action is permanent. Do you want to delete the environment",
+      "noIdentifier": "no identifier",
+      "cancel": "Cancel",
+      "deleting": "Deleting...",
+      "confirmDelete": "Confirm deletion"
+    },
+
     "summary": {
       "participants": "Participants",
       "bugs": "Bugs",
