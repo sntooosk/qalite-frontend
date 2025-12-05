@@ -360,6 +360,23 @@
       "confirmDeleteWithName": "Você deseja mesmo excluir o bug \"{{title}}\"?",
       "confirmDelete": "Você deseja mesmo excluir?"
     },
+    "editEnvironmentModal": {
+      "editEnvironment": "Editar ambiente",
+      "updateInfo": "Atualize as informações necessárias.",
+      "selectMomentError": "Selecione o momento do ambiente.",
+      "missingReleaseError": "Informe a release para este ambiente.",
+      "updateEnvironmentError": "Não foi possível atualizar o ambiente.",
+      "identifier": "Identificador",
+      "urls": "URLs",
+      "jiraTask": "Jira Task",
+      "environmentType": "Tipo de ambiente",
+      "testType": "Tipo de teste",
+      "moment": "Momento/Quando",
+      "release": "Release",
+      "suiteSummary": "Cenários associados:",
+      "saving": "Salvando...",
+      "saveChanges": "Salvar alterações"
+    },
 
     "summary": {
       "participants": "Participantes",

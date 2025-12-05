@@ -360,6 +360,23 @@
       "confirmDeleteWithName": "Do you really want to delete the bug \"{{title}}\"?",
       "confirmDelete": "Do you really want to delete?"
     },
+    "editEnvironmentModal": {
+      "editEnvironment": "Edit environment",
+      "updateInfo": "Update the necessary information.",
+      "selectMomentError": "Select the environment moment.",
+      "missingReleaseError": "Provide the release for this environment.",
+      "updateEnvironmentError": "Could not update the environment.",
+      "identifier": "Identifier",
+      "urls": "URLs",
+      "jiraTask": "Jira Task",
+      "environmentType": "Environment type",
+      "testType": "Test type",
+      "moment": "Moment/When",
+      "release": "Release",
+      "suiteSummary": "Associated scenarios:",
+      "saving": "Saving...",
+      "saveChanges": "Save changes"
+    },
     "summary": {
       "participants": "Participants",
       "bugs": "Bugs",

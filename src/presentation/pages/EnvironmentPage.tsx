@@ -621,6 +621,8 @@ export const EnvironmentPage = () => {
           <div className="environment-evidence__header">
             <h3 className="section-title">{translation('environment.scenarios.title')}</h3>
           </div>
+
+          compónente EnvironmentEvidenceTable
           <EnvironmentEvidenceTable
             environment={environment}
             isLocked={Boolean(isScenarioLocked)}
@@ -630,6 +632,8 @@ export const EnvironmentPage = () => {
           />
         </div>
 
+
+        Componente EnvironmentBugList
         <EnvironmentBugList
           environment={environment}
           bugs={bugs}
@@ -639,11 +643,14 @@ export const EnvironmentPage = () => {
         />
       </section>
 
+      component EditEnvironmentModal
       <EditEnvironmentModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         environment={environment ?? null}
       />
+
+      component DeleteEnvironmentModal
       <DeleteEnvironmentModal
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
@@ -651,6 +658,7 @@ export const EnvironmentPage = () => {
         onDeleted={() => navigate(-1)}
       />
       {environment && (
+        
         <EnvironmentBugModal
           environment={environment}
           isOpen={isBugModalOpen}
