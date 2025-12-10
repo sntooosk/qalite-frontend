@@ -75,6 +75,32 @@
       "light": "Light",
       "dark": "Dark"
     },
+    "scenarioOptions": {
+      "notAutomated": "Not automated"
+    },
+    "environmentKanban": {
+    "progress": "In progress",
+    "done": "Completed",
+    "backlogError": "Environments cannot be moved back to the backlog.",
+    "statusUpdate": "Status updated successfully.",
+    "statusError": "There are pending or in-progress scenarios. Complete them before finishing.",
+    "updateError": "Unable to update the status.",
+    "environmentStatus": "Environment status",
+    "environments": "Environments",
+    "environment": "environment",
+    "description": "Track the validation flow and move environments through statuses.",
+    "create": "Create environment",
+    "archivedEnvironments": "archived",
+    "consulted": "can be viewed",
+    "below": "below the board.",
+    "loading": "Loading environments...",
+    "noEnvironment": "No environments.",
+    "archived": "Archived",
+    "max": "Maximize",
+    "min": "Minimize",
+    "maxEnvironment": "Click “Maximize” to view archived environments.",
+    "environmentCreated": "Environment successfully created."
+  },
     "loginPage": {
       "title": "Sign in to your account",
       "emailLabel": "Email",

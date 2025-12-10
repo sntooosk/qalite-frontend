@@ -1,6 +1,7 @@
 import type { DragEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 import { EnvironmentStatusError } from '../../../shared/errors/firebaseErrors';
 import type { Environment, EnvironmentStatus } from '../../../domain/entities/environment';
@@ -24,8 +25,8 @@ interface EnvironmentKanbanProps {
 
 const COLUMNS: { status: EnvironmentStatus; title: string }[] = [
   { status: 'backlog', title: 'Backlog' },
-  { status: 'in_progress', title: 'Em andamento' },
-  { status: 'done', title: 'Concluído' },
+  { status: 'in_progress', title: 'environmentKanban.progress' },
+  { status: 'done', title: 'environmentKanban.done' },
 ];
 
 export const EnvironmentKanban = ({
@@ -41,6 +42,7 @@ export const EnvironmentKanban = ({
   const [userProfilesMap, setUserProfilesMap] = useState<Record<string, UserSummary>>({});
   const [isArchiveMinimized, setIsArchiveMinimized] = useState(true);
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   useEffect(() => {
     let isMounted = true;
@@ -164,7 +166,7 @@ export const EnvironmentKanban = ({
     }
 
     if (status === 'backlog' && environment.status !== 'backlog') {
-      showToast({ type: 'info', message: 'Ambientes não podem retornar para o backlog.' });
+      showToast({ type: 'info', message: t('environmentKanban.done') });
       return;
     }
 
@@ -174,18 +176,18 @@ export const EnvironmentKanban = ({
         targetStatus: status,
         currentUserId: user?.uid ?? null,
       });
-      showToast({ type: 'success', message: 'Status atualizado com sucesso.' });
+      showToast({ type: 'success', message: t('environmentKanban.statusUpdate') });
     } catch (error) {
       if (error instanceof EnvironmentStatusError && error.code === 'PENDING_SCENARIOS') {
         showToast({
           type: 'error',
-          message: 'Existem cenários pendentes ou em andamento. Conclua-os antes de finalizar.',
+          message: t('environmentKanban.statusError'),
         });
         return;
       }
 
       console.error(error);
-      showToast({ type: 'error', message: 'Não foi possível atualizar o status.' });
+      showToast({ type: 'error', message: t('environmentKanban.updateError') });
     }
   };
 
@@ -202,28 +204,28 @@ export const EnvironmentKanban = ({
     <section className="environment-kanban">
       <header className="environment-kanban-header">
         <div>
-          <span className="badge">Status dos ambientes</span>
-          <h3 className="section-title">Ambientes</h3>
+          <span className="badge">{t('environmentKanban.environmentStatus')}</span>
+          <h3 className="section-title">{t('environmentKanban.environments')}</h3>
           <p className="environment-kanban-description">
-            Acompanhe o fluxo de validação e mova os ambientes por status.
+            {t('environmentKanban.description')}
           </p>
         </div>
         <Button type="button" onClick={() => setIsCreateOpen(true)}>
-          Criar ambiente
+          {t('environmentKanban.create')}
         </Button>
       </header>
 
       {hasArchivedEnvironments && (
         <p className="environment-kanban-archive-hint">
-          {archivedEnvironments.length} ambiente
-          {archivedEnvironments.length === 1 ? '' : 's'} arquivado
-          {archivedEnvironments.length === 1 ? '' : 's'} pode ser consultado
-          {archivedEnvironments.length === 1 ? '' : 's'} abaixo do quadro.
+          {archivedEnvironments.length} {t('environmentKanban.environment')}
+          {archivedEnvironments.length === 1 ? '' : 's'} {t('environmentKanban.archivedEnvironments')}
+          {archivedEnvironments.length === 1 ? '' : 's'} {t('environmentKanban.consulted')}
+          {archivedEnvironments.length === 1 ? '' : 's'} {t('environmentKanban.below')}
         </p>
       )}
 
       {isLoading ? (
-        <p className="section-subtitle">Carregando ambientes...</p>
+        <p className="section-subtitle">{t('environmentKanban.loading')}</p>
       ) : (
         <div className="environment-kanban-columns">
           {COLUMNS.map((column) => {
@@ -238,13 +240,13 @@ export const EnvironmentKanban = ({
                 onDrop={handleDrop(column.status)}
               >
                 <div className="environment-kanban-column-header">
-                  <h4>{column.title}</h4>
+                  <h4>{t(column.title)}</h4>
                   <span className="environment-kanban-column-count">
                     {environmentsToRender.length}
                   </span>
                 </div>
                 {environmentsToRender.length === 0 ? (
-                  <p className="section-subtitle">Sem ambientes.</p>
+                  <p className="section-subtitle">{t('environmentKanban.noEnvironment')}</p>
                 ) : (
                   environmentsToRender.map((environment) => (
                     <EnvironmentCard
@@ -277,7 +279,7 @@ export const EnvironmentKanban = ({
             >
               <div className="environment-kanban-column-header">
                 <div className="environment-kanban-column-title">
-                  <h4>Arquivado</h4>
+                  <h4>{t('environmentKanban.archived')}</h4>
                   <button
                     type="button"
                     className="environment-kanban-archive-toggle"
@@ -285,7 +287,7 @@ export const EnvironmentKanban = ({
                     aria-expanded={!isArchiveMinimized}
                     aria-controls="environment-kanban-archived-list"
                   >
-                    {isArchiveMinimized ? 'Maximizar' : 'Minimizar'}
+                    {isArchiveMinimized ? t('environmentKanban.max') : t('environmentKanban.min')}
                   </button>
                 </div>
                 <span className="environment-kanban-column-count">
@@ -295,7 +297,7 @@ export const EnvironmentKanban = ({
 
               {isArchiveMinimized ? (
                 <p className="environment-kanban-archive-placeholder">
-                  Clique em “Maximizar” para visualizar os ambientes arquivados.
+                  {t('environmentKanban.maxEnvironment')}
                 </p>
               ) : (
                 <div
@@ -328,7 +330,7 @@ export const EnvironmentKanban = ({
         storeId={storeId}
         suites={suites}
         scenarios={scenarios}
-        onCreated={() => showToast({ type: 'success', message: 'Ambiente criado com sucesso.' })}
+        onCreated={() => showToast({ type: 'success', message: t('environmentKanban.environmentCreated') })}
       />
     </section>
   );
