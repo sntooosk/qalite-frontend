@@ -71,6 +71,10 @@
       "badge": "Overview",
       "loading": "Loading data..."
     },
+    "themeToggle": {
+      "light": "Light",
+      "dark": "Dark"
+    },
     "loginPage": {
       "title": "Sign in to your account",
       "emailLabel": "Email",

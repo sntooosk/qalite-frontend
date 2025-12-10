@@ -71,6 +71,10 @@
       "badge": "Visão geral",
       "loading": "Carregando dados..."
     },
+    "themeToggle": {
+      "light": "Modo claro",
+      "dark": "Modo escuro"
+    },
     "loginPage": {
       "title": "Entre na sua conta",
       "emailLabel": "E-mail",
