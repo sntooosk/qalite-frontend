@@ -133,6 +133,7 @@
       "description": "Fill in the fields to start a new test environment.",
       "id": "Identifier",
       "urls": "URLs (one per line)",
+      "example": "https://example.com",
       "environmentType": "Environment type",
       "testType": "Test type",
       "suiteId": "Existing suite",

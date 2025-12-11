@@ -192,7 +192,7 @@ export const CreateEnvironmentModal = ({
           label={t('createEnvironment.urls')}
           value={urls}
           onChange={(event) => setUrls(event.target.value)}
-          placeholder="https://exemplo.com"
+          placeholder={t('createEnvironment.example')}
         />
         <TextInput
           id="jiraTask"

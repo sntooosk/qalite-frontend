@@ -133,6 +133,7 @@
       "description": "Preencha os campos para iniciar um novo ambiente de teste.",
       "id": "Identificador",
       "urls": "URLs (uma por linha)",
+      "example": "https://exemplo.com",
       "environmentType": "Tipo de ambiente",
       "testType":"Tipo de teste",
       "suiteId": "Suite existente",
