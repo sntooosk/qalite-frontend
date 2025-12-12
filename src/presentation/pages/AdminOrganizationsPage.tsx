@@ -8,28 +8,35 @@ import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
 import { Modal } from '../components/Modal';
+import { useTranslation } from 'react-i18next';
 
 interface OrganizationFormState {
   name: string;
   slackWebhookUrl: string;
   emailDomain: string;
+  browserstackUsername: string;
+  browserstackAccessKey: string;
 }
 
 const initialOrganizationForm: OrganizationFormState = {
   name: '',
   slackWebhookUrl: '',
   emailDomain: '',
+  browserstackUsername: '',
+  browserstackAccessKey: '',
 };
 
 export const AdminOrganizationsPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { t: translation } = useTranslation();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [organizationForm, setOrganizationForm] =
     useState<OrganizationFormState>(initialOrganizationForm);
   const [isSlackSectionOpen, setIsSlackSectionOpen] = useState(false);
+  const [isBrowserstackSectionOpen, setIsBrowserstackSectionOpen] = useState(false);
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>, callback: () => void) => {
@@ -47,19 +54,23 @@ export const AdminOrganizationsPage = () => {
         setOrganizations(data);
       } catch (error) {
         console.error(error);
-        showToast({ type: 'error', message: 'Não foi possível carregar as organizações.' });
+        showToast({
+          type: 'error',
+          message: translation('adminOrganizationsPage.errors.loadOrganizations'),
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     void fetchOrganizations();
-  }, [showToast]);
+  }, [showToast, translation]);
 
   const openCreateModal = () => {
     setOrganizationForm(initialOrganizationForm);
     setFormError(null);
     setIsSlackSectionOpen(false);
+    setIsBrowserstackSectionOpen(false);
     setIsModalOpen(true);
   };
 
@@ -67,6 +78,7 @@ export const AdminOrganizationsPage = () => {
     setIsModalOpen(false);
     setFormError(null);
     setIsSlackSectionOpen(false);
+    setIsBrowserstackSectionOpen(false);
     setOrganizationForm(initialOrganizationForm);
   };
 
@@ -82,13 +94,31 @@ export const AdminOrganizationsPage = () => {
     });
   };
 
+  const toggleBrowserstackSection = () => {
+    setIsBrowserstackSectionOpen((previous) => {
+      const nextValue = !previous;
+
+      if (!nextValue) {
+        setOrganizationForm((form) => ({
+          ...form,
+          browserstackUsername: '',
+          browserstackAccessKey: '',
+        }));
+      }
+
+      return nextValue;
+    });
+  };
+
   const handleOrganizationSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError(null);
 
     const trimmedName = organizationForm.name.trim();
+
     if (!trimmedName) {
-      setFormError('Informe um nome para a organização.');
+      const message = translation('adminOrganizationsPage.errors.nameRequired');
+      setFormError(message);
       return;
     }
 
@@ -97,20 +127,39 @@ export const AdminOrganizationsPage = () => {
 
       const slackWebhookUrl = isSlackSectionOpen ? organizationForm.slackWebhookUrl.trim() : '';
       const emailDomain = organizationForm.emailDomain.trim();
+      const browserstackUsername = isBrowserstackSectionOpen
+        ? organizationForm.browserstackUsername.trim()
+        : '';
+      const browserstackAccessKey = isBrowserstackSectionOpen
+        ? organizationForm.browserstackAccessKey.trim()
+        : '';
 
       const created = await organizationService.create({
         name: trimmedName,
         description: '',
         slackWebhookUrl,
         emailDomain,
+        browserstackCredentials:
+          browserstackUsername || browserstackAccessKey
+            ? {
+                username: browserstackUsername,
+                accessKey: browserstackAccessKey,
+              }
+            : null,
       });
       setOrganizations((previous) => [...previous, created]);
-      showToast({ type: 'success', message: 'Nova organização criada.' });
+      showToast({
+        type: 'success',
+        message: translation('adminOrganizationsPage.success.created'),
+      });
       closeModal();
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error ? error.message : 'Não foi possível salvar a organização.';
+        error instanceof Error
+          ? error.message
+          : translation('adminOrganizationsPage.errors.generic');
+
       setFormError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -123,71 +172,77 @@ export const AdminOrganizationsPage = () => {
       <section className="page-container" data-testid="organizations-page">
         <div className="page-header">
           <div>
-            <h1 className="section-title">Organizações cadastradas</h1>
-            <p className="section-subtitle">
-              Gerencie as organizações e mantenha os membros atualizados em um só lugar.
-            </p>
+            <h1 className="section-title">{translation('adminOrganizationsPage.title')}</h1>
+            <p className="section-subtitle">{translation('adminOrganizationsPage.subtitle')}</p>
           </div>
+
           <div className="page-actions">
             <Button type="button" onClick={openCreateModal} data-testid="new-organization-button">
-              Nova organização
+              {translation('adminOrganizationsPage.actions.newOrganization')}
             </Button>
           </div>
         </div>
 
         {isLoading ? (
-          <p className="section-subtitle">Carregando organizações do Firestore...</p>
+          <p className="section-subtitle">{translation('adminOrganizationsPage.loading')}</p>
         ) : organizations.length === 0 ? (
           <div className="dashboard-empty">
-            <h2 className="text-xl font-semibold text-primary">Nenhuma organização cadastrada</h2>
+            <h2 className="text-xl font-semibold text-primary">
+              {translation('adminOrganizationsPage.empty.title')}
+            </h2>
+
             <p className="section-subtitle">
-              Utilize o botão acima para cadastrar a primeira organização.
+              {translation('adminOrganizationsPage.empty.description')}
             </p>
+
             <Button type="button" onClick={openCreateModal}>
-              Nova organização
+              {translation('adminOrganizationsPage.actions.newOrganization')}
             </Button>
           </div>
         ) : (
-          <>
-            <div className="dashboard-grid">
-              {organizations.map((organization) => (
-                <div
-                  key={organization.id}
-                  className="card card-clickable"
-                  data-testid={`organization-card-${organization.id}`}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate(`/admin/organizations?organizationId=${organization.id}`)}
-                  onKeyDown={(event) =>
-                    handleCardKeyDown(event, () =>
-                      navigate(`/admin/organizations?organizationId=${organization.id}`),
-                    )
-                  }
-                >
-                  <div className="organization-card-header">
-                    <div>
-                      <h2 className="card-title">{organization.name}</h2>
-                    </div>
-                  </div>
-                  <div className="organization-card-footer">
-                    <span className="badge">
-                      {organization.members.length} membro
-                      {organization.members.length === 1 ? '' : 's'}
-                    </span>
-                    <div className="card-link-hint">
-                      <span>Ver lojas</span>
-                      <span aria-hidden>&rarr;</span>
-                    </div>
+          <div className="dashboard-grid">
+            {organizations.map((organization) => (
+              <div
+                key={organization.id}
+                className="card card-clickable"
+                data-testid={`organization-card-${organization.id}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/admin/organizations?organizationId=${organization.id}`)}
+                onKeyDown={(event) =>
+                  handleCardKeyDown(event, () =>
+                    navigate(`/admin/organizations?organizationId=${organization.id}`),
+                  )
+                }
+              >
+                <div className="organization-card-header">
+                  <h2 className="card-title">{organization.name}</h2>
+                </div>
+
+                <div className="organization-card-footer">
+                  <span className="badge">
+                    {organization.members.length}
+                    {organization.members.length === 1 ? '' : 's'}
+                  </span>
+
+                  <div className="card-link-hint">
+                    <span>{translation('adminOrganizationsPage.viewStores')}</span>
+                    <span aria-hidden>&rarr;</span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </>
+              </div>
+            ))}
+          </div>
         )}
       </section>
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title="Nova organização">
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title={translation('adminOrganizationsPage.modal.title')}
+      >
         {formError && <p className="form-message form-message--error">{formError}</p>}
+
         <form
           className="form-grid"
           onSubmit={handleOrganizationSubmit}
@@ -195,18 +250,16 @@ export const AdminOrganizationsPage = () => {
         >
           <TextInput
             id="organization-name"
-            label="Nome da organização"
+            label={translation('adminOrganizationsPage.form.name.label')}
             value={organizationForm.name}
-            onChange={(event) =>
-              setOrganizationForm((previous) => ({ ...previous, name: event.target.value }))
-            }
-            placeholder="Ex.: Squad de Onboarding"
+            onChange={(event) => setOrganizationForm((p) => ({ ...p, name: event.target.value }))}
+            placeholder={translation('adminOrganizationsPage.form.name.placeholder')}
             required
             dataTestId="organization-name-input"
           />
           <TextInput
             id="organization-email-domain"
-            label="Domínio de e-mail da organização"
+            label={translation('adminOrganizationsPage.form.emailDomain.label')}
             value={organizationForm.emailDomain}
             onChange={(event) =>
               setOrganizationForm((previous) => ({
@@ -214,26 +267,110 @@ export const AdminOrganizationsPage = () => {
                 emailDomain: event.target.value,
               }))
             }
-            placeholder="@exemplo.com"
+            placeholder={translation('adminOrganizationsPage.form.emailDomain.placeholder')}
             dataTestId="organization-email-domain-input"
           />
-          <p className="form-hint">
-            Informe o domínio (com ou sem @). Usuários com esse e-mail serão vinculados
-            automaticamente.
-          </p>
+
+          <p className="form-hint">{translation('adminOrganizationsPage.form.emailDomain.hint')}</p>
+
           <div className="collapsible-section">
             <div className="collapsible-section__header">
               <div className="collapsible-section__titles">
                 <img
                   className="collapsible-section__icon"
-                  src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/48/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
-                  alt="Slack"
+                  src="https://img.icons8.com/color/48/browser-stack.png"
+                  alt={translation('adminOrganizationsPage.form.browserstack.iconAlt')}
+                  width={48}
+                  height={48}
                 />
-                <p className="collapsible-section__title">Webhook do Slack</p>
+                <p className="collapsible-section__title">
+                  {translation('adminOrganizationsPage.form.browserstack.title')}
+                </p>
                 <p className="collapsible-section__description">
-                  Deseja cadastrar um webhook para enviar notificações automáticas no Slack?
+                  {translation('adminOrganizationsPage.form.browserstack.description')}
                 </p>
               </div>
+              <label className="collapsible-section__toggle">
+                <input
+                  type="checkbox"
+                  checked={isBrowserstackSectionOpen}
+                  onChange={toggleBrowserstackSection}
+                  aria-expanded={isBrowserstackSectionOpen}
+                  aria-controls="organization-browserstack-section"
+                />
+                <span>
+                  {isBrowserstackSectionOpen
+                    ? translation('adminOrganizationsPage.form.browserstack.enabled')
+                    : translation('adminOrganizationsPage.form.browserstack.disabled')}
+                </span>
+              </label>
+            </div>
+
+            {isBrowserstackSectionOpen && (
+              <div
+                className="collapsible-section__body"
+                id="organization-browserstack-section"
+                data-testid="browserstack-credentials-section"
+              >
+                <div className="form-grid">
+                  <TextInput
+                    id="organization-browserstack-username"
+                    label={translation('adminOrganizationsPage.form.browserstack.usernameLabel')}
+                    value={organizationForm.browserstackUsername}
+                    onChange={(event) =>
+                      setOrganizationForm((previous) => ({
+                        ...previous,
+                        browserstackUsername: event.target.value,
+                      }))
+                    }
+                    placeholder={translation(
+                      'adminOrganizationsPage.form.browserstack.usernamePlaceholder',
+                    )}
+                    dataTestId="organization-browserstack-username-input"
+                  />
+                  <TextInput
+                    id="organization-browserstack-access-key"
+                    label={translation('adminOrganizationsPage.form.browserstack.accessKeyLabel')}
+                    value={organizationForm.browserstackAccessKey}
+                    onChange={(event) =>
+                      setOrganizationForm((previous) => ({
+                        ...previous,
+                        browserstackAccessKey: event.target.value,
+                      }))
+                    }
+                    placeholder={translation(
+                      'adminOrganizationsPage.form.browserstack.accessKeyPlaceholder',
+                    )}
+                    type="password"
+                    dataTestId="organization-browserstack-access-key-input"
+                  />
+                </div>
+                <p className="form-hint">
+                  {translation('adminOrganizationsPage.form.browserstack.hint')}
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="collapsible-section">
+            <div className="collapsible-section__header">
+              <div className="collapsible-section__titles">
+                <img
+                  className="collapsible-section__icon"
+                  src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/24/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
+                  alt={translation('adminOrganizationsPage.form.slack.iconAlt')}
+                  width={24}
+                  height={24}
+                />
+
+                <p className="collapsible-section__title">
+                  {translation('adminOrganizationsPage.form.slack.title')}
+                </p>
+
+                <p className="collapsible-section__description">
+                  {translation('adminOrganizationsPage.form.slack.description')}
+                </p>
+              </div>
+
               <label className="collapsible-section__toggle">
                 <input
                   type="checkbox"
@@ -242,9 +379,14 @@ export const AdminOrganizationsPage = () => {
                   aria-expanded={isSlackSectionOpen}
                   aria-controls="organization-slack-section"
                 />
-                <span>{isSlackSectionOpen ? 'Ativado' : 'Desativado'}</span>
+                <span>
+                  {isSlackSectionOpen
+                    ? translation('adminOrganizationsPage.form.slack.enabled')
+                    : translation('adminOrganizationsPage.form.slack.disabled')}
+                </span>
               </label>
             </div>
+
             {isSlackSectionOpen && (
               <div
                 className="collapsible-section__body"
@@ -253,7 +395,7 @@ export const AdminOrganizationsPage = () => {
               >
                 <TextInput
                   id="organization-slack-webhook"
-                  label="Webhook do Slack"
+                  label={translation('adminOrganizationsPage.form.slack.webhookLabel')}
                   value={organizationForm.slackWebhookUrl}
                   onChange={(event) =>
                     setOrganizationForm((previous) => ({
@@ -261,21 +403,23 @@ export const AdminOrganizationsPage = () => {
                       slackWebhookUrl: event.target.value,
                     }))
                   }
-                  placeholder="https://hooks.slack.com/services/..."
+                  placeholder={translation('adminOrganizationsPage.form.slack.webhookPlaceholder')}
                   dataTestId="organization-slack-webhook-input"
                 />
-                <p className="form-hint">Cole a URL gerada pelo aplicativo de Incoming Webhooks.</p>
+
+                <p className="form-hint">{translation('adminOrganizationsPage.form.slack.hint')}</p>
               </div>
             )}
           </div>
+
           <div className="form-actions">
             <Button
               type="submit"
               isLoading={isSavingOrganization}
-              loadingText="Salvando..."
+              loadingText={translation('adminOrganizationsPage.actions.saving')}
               data-testid="save-organization-button"
             >
-              Criar organização
+              {translation('adminOrganizationsPage.actions.create')}
             </Button>
             <Button
               type="button"
@@ -284,7 +428,7 @@ export const AdminOrganizationsPage = () => {
               disabled={isSavingOrganization}
               data-testid="cancel-organization-button"
             >
-              Cancelar
+              {translation('adminOrganizationsPage.actions.cancel')}
             </Button>
           </div>
         </form>

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 
 import { Layout } from '../components/Layout';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
@@ -12,10 +12,12 @@ import { useStoreOrganizationBranding } from '../hooks/useStoreOrganizationBrand
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { useEnvironmentBugs } from '../hooks/useEnvironmentBugs';
 import { useEnvironmentDetails } from '../hooks/useEnvironmentDetails';
+import { useTranslation } from 'react-i18next';
 
 export const PublicEnvironmentPage = () => {
   const { environmentId } = useParams<{ environmentId: string }>();
   const { environment, isLoading } = useEnvironmentRealtime(environmentId);
+  const [searchParams] = useSearchParams();
   const participants = useUserProfiles(environment?.participants ?? []);
   const { organization: environmentOrganization } = useStoreOrganizationBranding(
     environment?.storeId ?? null,
@@ -29,6 +31,9 @@ export const PublicEnvironmentPage = () => {
   const { bugCountByScenario, progressPercentage, progressLabel, scenarioCount, headerMeta, urls } =
     useEnvironmentDetails(environment, bugs);
 
+  const { t, i18n } = useTranslation();
+  const shareLanguageParam = searchParams.get('lang');
+
   useEffect(() => {
     setActiveOrganization(environmentOrganization ?? null);
 
@@ -37,11 +42,18 @@ export const PublicEnvironmentPage = () => {
     };
   }, [environmentOrganization, setActiveOrganization]);
 
+  useEffect(() => {
+    const resolvedLanguage = shareLanguageParam ?? environment?.publicShareLanguage;
+    if (resolvedLanguage && i18n.language !== resolvedLanguage) {
+      void i18n.changeLanguage(resolvedLanguage);
+    }
+  }, [environment?.publicShareLanguage, i18n, shareLanguageParam]);
+
   if (isLoading) {
     return (
       <Layout>
         <section className="page-container">
-          <p className="section-subtitle">Carregando ambiente público...</p>
+          <p className="section-subtitle">{t('publicEnvironment.loading')}</p>
         </section>
       </Layout>
     );
@@ -51,8 +63,8 @@ export const PublicEnvironmentPage = () => {
     return (
       <Layout>
         <section className="page-container">
-          <h1 className="section-title">Ambiente não encontrado</h1>
-          <p className="section-subtitle">Verifique o link compartilhado e tente novamente.</p>
+          <h1 className="section-title">{t('publicEnvironment.notFound')}</h1>
+          <p className="section-subtitle">{t('publicEnvironment.tryAgain')}</p>
         </section>
       </Layout>
     );
@@ -87,9 +99,6 @@ export const PublicEnvironmentPage = () => {
         </div>
 
         <div className="environment-evidence">
-          <div className="environment-evidence__header">
-            <h3 className="section-title">Cenários e evidências</h3>
-          </div>
           <EnvironmentEvidenceTable
             environment={environment}
             isLocked
@@ -105,6 +114,7 @@ export const PublicEnvironmentPage = () => {
           isLoading={isLoadingBugs}
           onEdit={() => {}}
           showActions={false}
+          showHeader={false}
         />
       </section>
     </Layout>

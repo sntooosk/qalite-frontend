@@ -11,7 +11,6 @@ import { browserstackService } from '../../application/use-cases/BrowserstackUse
 import { userService } from '../../application/use-cases/UserUseCase';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
-import { useAuth } from '../hooks/useAuth';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
@@ -23,6 +22,7 @@ import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanba
 import { BarChartIcon, SparklesIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
 import { OrganizationLogPanel } from '../components/OrganizationLogPanel';
 import { isAutomatedScenario } from '../../shared/utils/automation';
+import { useTranslation } from 'react-i18next';
 
 interface StoreForm {
   name: string;
@@ -33,6 +33,8 @@ interface OrganizationFormState {
   name: string;
   slackWebhookUrl: string;
   emailDomain: string;
+  browserstackUsername: string;
+  browserstackAccessKey: string;
 }
 
 const initialStoreForm: StoreForm = {
@@ -44,12 +46,13 @@ const initialOrganizationForm: OrganizationFormState = {
   name: '',
   slackWebhookUrl: '',
   emailDomain: '',
+  browserstackUsername: '',
+  browserstackAccessKey: '',
 };
 
 export const AdminStoresPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { user } = useAuth();
   const { setActiveOrganization } = useOrganizationBranding();
   const [searchParams, setSearchParams] = useSearchParams();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -65,6 +68,8 @@ export const AdminStoresPage = () => {
   const [organizationForm, setOrganizationForm] =
     useState<OrganizationFormState>(initialOrganizationForm);
   const [isOrganizationSlackSectionOpen, setIsOrganizationSlackSectionOpen] = useState(false);
+  const [isOrganizationBrowserstackSectionOpen, setIsOrganizationBrowserstackSectionOpen] =
+    useState(false);
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
   const [isManagingMembers, setIsManagingMembers] = useState(false);
@@ -81,6 +86,7 @@ export const AdminStoresPage = () => {
   const [isLoadingAutomationStats, setIsLoadingAutomationStats] = useState(false);
   const [browserstackBuilds, setBrowserstackBuilds] = useState<BrowserstackBuild[]>([]);
   const [isLoadingBrowserstack, setIsLoadingBrowserstack] = useState(false);
+  const { t: translation } = useTranslation();
 
   useEffect(() => {
     const fetchOrganizations = async () => {
@@ -106,12 +112,12 @@ export const AdminStoresPage = () => {
         }
       } catch (error) {
         console.error(error);
-        showToast({ type: 'error', message: 'Não foi possível carregar as organizações.' });
+        showToast({ type: 'error', message: translation('AdminStoresPage.toast-error-load-orgs') });
       }
     };
 
     void fetchOrganizations();
-  }, [searchParams, showToast]);
+  }, [searchParams, showToast, translation]);
 
   useEffect(() => {
     if (!selectedOrganizationId) {
@@ -130,7 +136,7 @@ export const AdminStoresPage = () => {
         console.error(error);
         showToast({
           type: 'error',
-          message: 'Não foi possível carregar as lojas desta organização.',
+          message: translation('AdminStoresPage.toast-error-load-stores'),
         });
       } finally {
         setIsLoadingStores(false);
@@ -138,7 +144,7 @@ export const AdminStoresPage = () => {
     };
 
     void fetchStores();
-  }, [selectedOrganizationId, setSearchParams, showToast]);
+  }, [selectedOrganizationId, setSearchParams, showToast, translation]);
 
   const selectedOrganization = useMemo(
     () => organizations.find((organization) => organization.id === selectedOrganizationId) ?? null,
@@ -181,7 +187,7 @@ export const AdminStoresPage = () => {
         if (isMounted) {
           showToast({
             type: 'error',
-            message: 'Não foi possível carregar os cenários automatizados por loja.',
+            message: translation('AdminStoresPage.toast-error-load-automation-stats'),
           });
         }
       } finally {
@@ -196,7 +202,7 @@ export const AdminStoresPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [selectedOrganizationId, stores, showToast]);
+  }, [selectedOrganizationId, stores, showToast, translation]);
 
   useEffect(() => {
     const searchTerm = newMemberEmail.trim();
@@ -232,35 +238,38 @@ export const AdminStoresPage = () => {
     };
   }, [newMemberEmail, selectedOrganization]);
 
+  const selectedOrganizationCredentials = selectedOrganization?.browserstackCredentials ?? null;
   const hasBrowserstackCredentials = useMemo(
     () =>
-      Boolean(user?.browserstackCredentials?.username && user?.browserstackCredentials?.accessKey),
-    [user?.browserstackCredentials?.accessKey, user?.browserstackCredentials?.username],
+      Boolean(
+        selectedOrganizationCredentials?.username && selectedOrganizationCredentials?.accessKey,
+      ),
+    [selectedOrganizationCredentials?.accessKey, selectedOrganizationCredentials?.username],
   );
 
   const loadBrowserstackBuilds = useCallback(async () => {
-    if (!user?.browserstackCredentials || !hasBrowserstackCredentials) {
+    if (!selectedOrganizationCredentials || !hasBrowserstackCredentials) {
       setBrowserstackBuilds([]);
       return;
     }
 
     try {
       setIsLoadingBrowserstack(true);
-      const builds = await browserstackService.listBuilds(user.browserstackCredentials);
+      const builds = await browserstackService.listBuilds(selectedOrganizationCredentials);
       setBrowserstackBuilds(builds);
     } catch (error) {
       console.error(error);
       const message =
         error instanceof Error
           ? error.message
-          : 'Não foi possível carregar as execuções do BrowserStack.';
+          : translation('AdminStoresPage.toast-error-load-browserstack');
 
       setBrowserstackBuilds([]);
       showToast({ type: 'error', message });
     } finally {
       setIsLoadingBrowserstack(false);
     }
-  }, [hasBrowserstackCredentials, showToast, user?.browserstackCredentials]);
+  }, [hasBrowserstackCredentials, selectedOrganizationCredentials, showToast, translation]);
 
   useEffect(() => {
     void loadBrowserstackBuilds();
@@ -303,13 +312,20 @@ export const AdminStoresPage = () => {
 
     const slackWebhookUrl = selectedOrganization.slackWebhookUrl ?? '';
     const emailDomain = selectedOrganization.emailDomain ?? '';
+    const browserstackUsername = selectedOrganization.browserstackCredentials?.username ?? '';
+    const browserstackAccessKey = selectedOrganization.browserstackCredentials?.accessKey ?? '';
 
     setOrganizationForm({
       name: selectedOrganization.name,
       slackWebhookUrl,
       emailDomain,
+      browserstackUsername,
+      browserstackAccessKey,
     });
     setIsOrganizationSlackSectionOpen(Boolean(slackWebhookUrl.trim()));
+    setIsOrganizationBrowserstackSectionOpen(
+      Boolean(browserstackUsername.trim() || browserstackAccessKey.trim()),
+    );
     setOrganizationError(null);
     setIsOrganizationModalOpen(true);
   };
@@ -318,6 +334,7 @@ export const AdminStoresPage = () => {
     setIsOrganizationModalOpen(false);
     setOrganizationError(null);
     setIsOrganizationSlackSectionOpen(false);
+    setIsOrganizationBrowserstackSectionOpen(false);
     setOrganizationForm(initialOrganizationForm);
     setNewMemberEmail('');
     setUserSuggestions([]);
@@ -335,6 +352,22 @@ export const AdminStoresPage = () => {
     });
   };
 
+  const toggleOrganizationBrowserstackSection = () => {
+    setIsOrganizationBrowserstackSectionOpen((previous) => {
+      const nextValue = !previous;
+
+      if (!nextValue) {
+        setOrganizationForm((form) => ({
+          ...form,
+          browserstackUsername: '',
+          browserstackAccessKey: '',
+        }));
+      }
+
+      return nextValue;
+    });
+  };
+
   const handleStoreSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStoreError(null);
@@ -343,17 +376,17 @@ export const AdminStoresPage = () => {
     const trimmedSite = storeForm.site.trim();
 
     if (!selectedOrganizationId) {
-      setStoreError('Selecione uma organização antes de cadastrar a loja.');
+      setStoreError(translation('AdminStoresPage.form-error-no-org-selected'));
       return;
     }
 
     if (!trimmedName) {
-      setStoreError('Informe o nome da loja.');
+      setStoreError(translation('AdminStoresPage.form-error-no-store-name'));
       return;
     }
 
     if (!trimmedSite) {
-      setStoreError('Informe o site da loja.');
+      setStoreError(translation('AdminStoresPage.form-error-no-store-site'));
       return;
     }
 
@@ -368,11 +401,17 @@ export const AdminStoresPage = () => {
       });
 
       setStores((previous) => [...previous, created].sort((a, b) => a.name.localeCompare(b.name)));
-      showToast({ type: 'success', message: 'Nova loja cadastrada.' });
+      showToast({
+        type: 'success',
+        message: translation('AdminStoresPage.toast-success-store-created'),
+      });
       closeStoreModal();
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'Não foi possível salvar a loja.';
+      const message =
+        error instanceof Error
+          ? error.message
+          : translation('AdminStoresPage.toast-error-save-store');
       setStoreError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -390,7 +429,7 @@ export const AdminStoresPage = () => {
 
     const trimmedName = organizationForm.name.trim();
     if (!trimmedName) {
-      setOrganizationError('Informe um nome para a organização.');
+      setOrganizationError(translation('AdminStoresPage.form-error-no-org-name'));
       return;
     }
 
@@ -400,23 +439,41 @@ export const AdminStoresPage = () => {
         ? organizationForm.slackWebhookUrl.trim()
         : '';
       const emailDomain = organizationForm.emailDomain.trim();
+      const browserstackUsername = isOrganizationBrowserstackSectionOpen
+        ? organizationForm.browserstackUsername.trim()
+        : '';
+      const browserstackAccessKey = isOrganizationBrowserstackSectionOpen
+        ? organizationForm.browserstackAccessKey.trim()
+        : '';
 
       const updated = await organizationService.update(selectedOrganization.id, {
         name: trimmedName,
         description: (selectedOrganization.description ?? '').trim(),
         slackWebhookUrl,
         emailDomain,
+        browserstackCredentials:
+          browserstackUsername || browserstackAccessKey
+            ? {
+                username: browserstackUsername,
+                accessKey: browserstackAccessKey,
+              }
+            : null,
       });
 
       setOrganizations((previous) =>
         previous.map((organization) => (organization.id === updated.id ? updated : organization)),
       );
-      showToast({ type: 'success', message: 'Organização atualizada com sucesso.' });
+      showToast({
+        type: 'success',
+        message: translation('AdminStoresPage.toast-success-org-updated'),
+      });
       closeOrganizationModal();
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error ? error.message : 'Não foi possível salvar a organização.';
+        error instanceof Error
+          ? error.message
+          : translation('AdminStoresPage.toast-error-save-org');
       setOrganizationError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -432,7 +489,10 @@ export const AdminStoresPage = () => {
       setOrganizations(remainingOrganizations);
       setStores([]);
       closeOrganizationModal();
-      showToast({ type: 'success', message: 'Organização removida com sucesso.' });
+      showToast({
+        type: 'success',
+        message: translation('AdminStoresPage.toast-success-org-removed'),
+      });
 
       setSelectedOrganizationId('');
       setSearchParams({});
@@ -440,7 +500,9 @@ export const AdminStoresPage = () => {
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error ? error.message : 'Não foi possível remover a organização.';
+        error instanceof Error
+          ? error.message
+          : translation('AdminStoresPage.toast-error-remove-org');
       showToast({ type: 'error', message });
     } finally {
       setIsSavingOrganization(false);
@@ -449,23 +511,26 @@ export const AdminStoresPage = () => {
 
   const handleAddMember = async () => {
     if (!selectedOrganization) {
+      setOrganizationError(translation('AdminStoresPage.member-add-no-organization'));
       return;
     }
 
     const trimmedEmail = newMemberEmail.trim();
     if (!trimmedEmail) {
-      setOrganizationError('Informe um e-mail para adicionar.');
+      setOrganizationError(translation('AdminStoresPage.member-add-email-required'));
+
       return;
     }
 
     const normalizedEmail = trimmedEmail.toLowerCase();
+
     if (
       selectedOrganization.members.some((member) => member.email.toLowerCase() === normalizedEmail)
     ) {
-      setOrganizationError('Usuário já está vinculado à organização.');
+      setOrganizationError(translation('AdminStoresPage.member-add-already-linked'));
+
       return;
     }
-
     try {
       setIsManagingMembers(true);
       const member = await organizationService.addUser({
@@ -488,11 +553,16 @@ export const AdminStoresPage = () => {
       setNewMemberEmail('');
       setUserSuggestions([]);
       setOrganizationError(null);
-      showToast({ type: 'success', message: 'Usuário adicionado à organização.' });
+      showToast({
+        type: 'success',
+        message: translation('AdminStoresPage.toast-success-member-added'),
+      });
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error ? error.message : 'Não foi possível adicionar o usuário.';
+        error instanceof Error
+          ? error.message
+          : translation('AdminStoresPage.toast-error-add-member');
       setOrganizationError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -524,11 +594,16 @@ export const AdminStoresPage = () => {
         ),
       );
 
-      showToast({ type: 'success', message: 'Usuário removido da organização.' });
+      showToast({
+        type: 'success',
+        message: translation('AdminStoresPage.toast-success-member-removed'),
+      });
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error ? error.message : 'Não foi possível remover o usuário.';
+        error instanceof Error
+          ? error.message
+          : translation('AdminStoresPage.toast-error-remove-member');
       showToast({ type: 'error', message });
     } finally {
       setIsManagingMembers(false);
@@ -541,8 +616,10 @@ export const AdminStoresPage = () => {
     }
 
     setDeleteConfirmation({
-      message: `Você deseja mesmo excluir a organização "${selectedOrganization.name}"?`,
-      description: 'Os usuários serão desvinculados.',
+      message: translation('AdminStoresPage.confirm-delete-org-message', {
+        organizationName: selectedOrganization.name,
+      }),
+      description: translation('AdminStoresPage.confirm-delete-org-description'),
       onConfirm: () => handleDeleteOrganization(selectedOrganization),
     });
   };
@@ -553,8 +630,12 @@ export const AdminStoresPage = () => {
     }
 
     setDeleteConfirmation({
-      message: `Você deseja mesmo excluir ${member.displayName || member.email}?`,
-      description: `O usuário será removido da organização ${selectedOrganization.name}.`,
+      message: translation('AdminStoresPage.confirm-remove-member-message', {
+        memberName: member.displayName || member.email,
+      }),
+      description: translation('AdminStoresPage.confirm-remove-member-description', {
+        organizationName: selectedOrganization.name,
+      }),
       onConfirm: () => handleRemoveMember(member),
     });
   };
@@ -599,17 +680,19 @@ export const AdminStoresPage = () => {
               onClick={() => navigate('/admin')}
               data-testid="stores-back-button"
             >
-              &larr; Voltar
+              &larr; {translation('back')}
             </button>
             <h1 className="section-title">
               {selectedOrganization
-                ? `Lojas da organização ${selectedOrganization.name}`
-                : 'Lojas da organização'}
+                ? translation('AdminStoresPage.stores-title-org-selected', {
+                    organizationName: selectedOrganization.name,
+                  })
+                : translation('AdminStoresPage.stores-title-no-org-selected')}
             </h1>
             <p className="section-subtitle">
               {isOrganizationLocked
-                ? 'Para trocar a organização, utilize o botão Voltar e selecione outra opção.'
-                : 'Escolha uma organização para visualizar e administrar suas lojas.'}
+                ? translation('AdminStoresPage.stores-subtitle-locked')
+                : translation('AdminStoresPage.stores-subtitle-unlocked')}
             </p>
           </div>
           <div className="page-actions">
@@ -620,7 +703,7 @@ export const AdminStoresPage = () => {
                 onClick={openOrganizationModal}
                 data-testid="manage-organization-button"
               >
-                Gerenciar organização
+                {translation('AdminStoresPage.manage-organization-button')}
               </Button>
             )}
             <Button
@@ -629,21 +712,23 @@ export const AdminStoresPage = () => {
               disabled={!selectedOrganizationId}
               data-testid="new-store-button"
             >
-              Nova loja
+              {translation('AdminStoresPage.new-store-button')}
             </Button>
           </div>
         </div>
 
         {isLoadingStores ? (
-          <p className="section-subtitle">Carregando lojas vinculadas...</p>
+          <p className="section-subtitle">
+            {translation('AdminStoresPage.loading-stores-message')}
+          </p>
         ) : stores.length === 0 ? (
           <div className="dashboard-empty">
-            <h2 className="text-xl font-semibold text-primary">Nenhuma loja cadastrada</h2>
-            <p className="section-subtitle">
-              Utilize o botão acima para cadastrar a primeira loja desta organização.
-            </p>
+            <h2 className="text-xl font-semibold text-primary">
+              {translation('AdminStoresPage.no-stores-title')}
+            </h2>
+            <p className="section-subtitle">{translation('AdminStoresPage.no-stores-subtitle')}</p>
             <Button type="button" onClick={openCreateModal} disabled={!selectedOrganizationId}>
-              Nova loja
+              {translation('AdminStoresPage.new-store-button')}
             </Button>
           </div>
         ) : (
@@ -676,10 +761,14 @@ export const AdminStoresPage = () => {
                         <h2 className="card-title">{store.name}</h2>
                       </div>
                     </div>
-                    <span className="badge">{store.scenarioCount} cenários</span>
+                    <span className="badge">
+                      {translation('AdminStoresPage.store-card-scenarios-badge', {
+                        scenarioCount: store.scenarioCount,
+                      })}
+                    </span>
                   </div>
                   <div className="card-link-hint">
-                    <span>Abrir loja</span>
+                    <span>{translation('storesPage.openStore')}</span>
                     <span aria-hidden>&rarr;</span>
                   </div>
                 </div>
@@ -695,31 +784,29 @@ export const AdminStoresPage = () => {
                         <UsersGroupIcon className="icon icon--lg" />
                       </span>
                       <div>
-                        <h3>Colaboradores da organização</h3>
+                        <h3>{translation('AdminStoresPage.collaborators-card-title')}</h3>
                         <p className="section-subtitle">
-                          Visualize rapidamente quem tem acesso a esta organização.
+                          {translation('AdminStoresPage.collaborators-card-subtitle')}
                         </p>
                       </div>
                     </div>
                     <span className="badge">
-                      {selectedOrganization.members.length} colaborad
-                      {selectedOrganization.members.length === 1 ? 'or' : 'ores'}
+                      {selectedOrganization.members.length === 1
+                        ? translation('AdminStoresPage.collaborators-count-singular')
+                        : translation('AdminStoresPage.collaborators-count-plural', {
+                            count: selectedOrganization.members.length,
+                          })}
                     </span>
                   </div>
                   {selectedOrganization.members.length === 0 ? (
                     <p className="section-subtitle">
-                      Nenhum colaborador vinculado. Utilize o botão “Gerenciar organização” para
-                      convidar novos membros.
+                      {translation('AdminStoresPage.no-collaborators-message')}
                     </p>
                   ) : (
                     <ul className="collaborator-list">
                       {selectedOrganization.members.map((member) => (
                         <li key={member.uid} className="collaborator-card">
-                          <UserAvatar
-                            name={member.displayName || member.email}
-                            photoURL={member.photoURL ?? undefined}
-                            size="sm"
-                          />
+                          <UserAvatar name={member.displayName || member.email} size="sm" />
                           <div className="collaborator-card__details">
                             <strong>{member.displayName || member.email}</strong>
                           </div>
@@ -732,17 +819,21 @@ export const AdminStoresPage = () => {
 
               <section className="organization-charts-grid">
                 <SimpleBarChart
-                  title="Cenários por loja"
-                  description="Total de cenários cadastrados em cada loja desta organização."
+                  title={translation('AdminStoresPage.chart-scenarios-title')}
+                  description={translation('AdminStoresPage.scenarios-per-store-chart-description')}
                   data={scenariosPerStoreData}
-                  emptyMessage="Cadastre lojas e cenários para visualizar este gráfico."
+                  emptyMessage={translation(
+                    'AdminStoresPage.scenarios-per-store-chart-empty-message',
+                  )}
                   icon={<BarChartIcon aria-hidden className="icon icon--lg" />}
                 />
                 <SimpleBarChart
-                  title="Cenários automatizados"
-                  description="Comparativo de cenários marcados como automatizados por loja."
+                  title={translation('AdminStoresPage.chart-automated-title')}
+                  description={translation('AdminStoresPage.automated-scenarios-chart-description')}
                   data={automatedScenariosPerStoreData}
-                  emptyMessage="Ainda não identificamos cenários automatizados nas lojas desta organização."
+                  emptyMessage={translation(
+                    'AdminStoresPage.automated-scenarios-chart-empty-message',
+                  )}
                   isLoading={isLoadingAutomationStats}
                   variant="info"
                   icon={<SparklesIcon aria-hidden className="icon icon--lg" />}
@@ -757,11 +848,14 @@ export const AdminStoresPage = () => {
                 />
               ) : (
                 <div className="card">
-                  <span className="badge">BrowserStack</span>
-                  <h2 className="section-title">Conecte sua conta</h2>
+                  <span className="badge">
+                    {translation('AdminStoresPage.browserstack-card-badge')}
+                  </span>
+                  <h2 className="section-title">
+                    {translation('AdminStoresPage.browserstack-card-title')}
+                  </h2>
                   <p className="section-subtitle">
-                    Adicione usuário e access key do BrowserStack no seu perfil para acompanhar as
-                    execuções automatizadas.
+                    {translation('AdminStoresPage.browserstack-card-subtitle')}
                   </p>
                 </div>
               )}
@@ -773,40 +867,40 @@ export const AdminStoresPage = () => {
       <Modal
         isOpen={isStoreModalOpen}
         onClose={closeStoreModal}
-        title="Nova loja"
-        description="Informe os dados básicos da loja para disponibilizar os cenários."
+        title={translation('AdminStoresPage.store-name-label')}
+        description={translation('AdminStoresPage.modal-store-description')}
       >
         {storeError && <p className="form-message form-message--error">{storeError}</p>}
         <form className="form-grid" onSubmit={handleStoreSubmit} data-testid="store-form">
           <TextInput
             id="store-name"
-            label="Nome da loja"
+            label={translation('AdminStoresPage.store-name-label')}
             value={storeForm.name}
             onChange={(event) =>
               setStoreForm((previous) => ({ ...previous, name: event.target.value }))
             }
-            placeholder="Ex.: Loja QA"
+            placeholder={translation('AdminStoresPage.store-name-placeholder')}
             required
             dataTestId="store-name-input"
           />
           <TextInput
             id="store-site"
-            label="URL do site"
+            label={translation('AdminStoresPage.store-site-label')}
             value={storeForm.site}
             onChange={(event) =>
               setStoreForm((previous) => ({ ...previous, site: event.target.value }))
             }
-            placeholder="https://minhaloja.com"
+            placeholder={translation('AdminStoresPage.store-site-placeholder')}
             dataTestId="store-site-input"
           />
           <div className="form-actions">
             <Button
               type="submit"
               isLoading={isSavingStore}
-              loadingText="Salvando..."
+              loadingText={translation('AdminStoresPage.save-button-saving')}
               data-testid="save-store-button"
             >
-              Criar loja
+              {translation('AdminStoresPage.save-store-button')}
             </Button>
             <Button
               type="button"
@@ -815,7 +909,7 @@ export const AdminStoresPage = () => {
               disabled={isSavingStore}
               data-testid="cancel-store-button"
             >
-              Cancelar
+              {translation('AdminStoresPage.cancel-store-button')}
             </Button>
           </div>
         </form>
@@ -825,7 +919,9 @@ export const AdminStoresPage = () => {
         <Modal
           isOpen={isOrganizationModalOpen}
           onClose={closeOrganizationModal}
-          title={`Gerenciar ${selectedOrganization.name}`}
+          title={translation('AdminStoresPage.modal-org-title', {
+            organizationName: selectedOrganization.name,
+          })}
         >
           {organizationError && (
             <p className="form-message form-message--error">{organizationError}</p>
@@ -838,18 +934,18 @@ export const AdminStoresPage = () => {
           >
             <TextInput
               id="organization-name"
-              label="Nome da organização"
+              label={translation('AdminStoresPage.org-name-label')}
               value={organizationForm.name}
               onChange={(event) =>
                 setOrganizationForm((previous) => ({ ...previous, name: event.target.value }))
               }
-              placeholder="Ex.: Squad de Onboarding"
+              placeholder={translation('AdminStoresPage.org-name-placeholder')}
               required
               dataTestId="organization-settings-name"
             />
             <TextInput
               id="organization-email-domain"
-              label="Domínio de e-mail da organização"
+              label={translation('AdminStoresPage.org-email-domain-label')}
               value={organizationForm.emailDomain}
               onChange={(event) =>
                 setOrganizationForm((previous) => ({
@@ -857,23 +953,102 @@ export const AdminStoresPage = () => {
                   emailDomain: event.target.value,
                 }))
               }
-              placeholder="@exemplo.com"
+              placeholder={translation('AdminStoresPage.org-email-domain-placeholder')}
               dataTestId="organization-settings-email-domain"
             />
-            <p className="form-hint">
-              Informe o domínio (com ou sem @). Usuários com esse e-mail entram automaticamente.
-            </p>
+            <p className="form-hint">{translation('AdminStoresPage.org-email-domain-hint')}</p>
             <div className="collapsible-section">
               <div className="collapsible-section__header">
                 <div className="collapsible-section__titles">
                   <img
                     className="collapsible-section__icon"
-                    src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/48/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
-                    alt="Slack"
+                    src="https://img.icons8.com/color/48/browser-stack.png"
+                    alt={translation('AdminStoresPage.org-browserstack-icon-alt')}
+                    width={48}
+                    height={48}
                   />
-                  <p className="collapsible-section__title">Webhook do Slack</p>
+                  <p className="collapsible-section__title">
+                    {translation('AdminStoresPage.org-browserstack-section-title')}
+                  </p>
                   <p className="collapsible-section__description">
-                    Deseja cadastrar um webhook para enviar notificações automáticas no Slack?
+                    {translation('AdminStoresPage.org-browserstack-section-description')}
+                  </p>
+                </div>
+                <label className="collapsible-section__toggle">
+                  <input
+                    type="checkbox"
+                    checked={isOrganizationBrowserstackSectionOpen}
+                    onChange={toggleOrganizationBrowserstackSection}
+                    aria-expanded={isOrganizationBrowserstackSectionOpen}
+                    aria-controls="organization-settings-browserstack-section"
+                  />
+                  <span>
+                    {isOrganizationBrowserstackSectionOpen
+                      ? translation('AdminStoresPage.org-browserstack-toggle-on')
+                      : translation('AdminStoresPage.org-browserstack-toggle-off')}
+                  </span>
+                </label>
+              </div>
+              {isOrganizationBrowserstackSectionOpen && (
+                <div
+                  className="collapsible-section__body"
+                  id="organization-settings-browserstack-section"
+                  data-testid="organization-settings-browserstack-section"
+                >
+                  <div className="form-grid">
+                    <TextInput
+                      id="organization-browserstack-username"
+                      label={translation('AdminStoresPage.org-browserstack-username-label')}
+                      value={organizationForm.browserstackUsername}
+                      onChange={(event) =>
+                        setOrganizationForm((previous) => ({
+                          ...previous,
+                          browserstackUsername: event.target.value,
+                        }))
+                      }
+                      placeholder={translation(
+                        'AdminStoresPage.org-browserstack-username-placeholder',
+                      )}
+                      dataTestId="organization-settings-browserstack-username"
+                    />
+                    <TextInput
+                      id="organization-browserstack-access-key"
+                      label={translation('AdminStoresPage.org-browserstack-access-key-label')}
+                      value={organizationForm.browserstackAccessKey}
+                      onChange={(event) =>
+                        setOrganizationForm((previous) => ({
+                          ...previous,
+                          browserstackAccessKey: event.target.value,
+                        }))
+                      }
+                      placeholder={translation(
+                        'AdminStoresPage.org-browserstack-access-key-placeholder',
+                      )}
+                      type="password"
+                      dataTestId="organization-settings-browserstack-access-key"
+                    />
+                  </div>
+                  <p className="form-hint">
+                    {translation('AdminStoresPage.org-browserstack-hint')}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="collapsible-section">
+              <div className="collapsible-section__header">
+                <div className="collapsible-section__titles">
+                  <img
+                    className="collapsible-section__icon"
+                    src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/24/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
+                    alt={translation('AdminStoresPage.org-slack-icon-alt')}
+                    width={24}
+                    height={24}
+                  />
+                  <p className="collapsible-section__title">
+                    {translation('AdminStoresPage.org-slack-section-title')}
+                  </p>
+                  <p className="collapsible-section__description">
+                    {translation('AdminStoresPage.org-slack-section-description')}
                   </p>
                 </div>
                 <label className="collapsible-section__toggle">
@@ -884,7 +1059,11 @@ export const AdminStoresPage = () => {
                     aria-expanded={isOrganizationSlackSectionOpen}
                     aria-controls="organization-settings-slack-section"
                   />
-                  <span>{isOrganizationSlackSectionOpen ? 'Ativado' : 'Desativado'}</span>
+                  <span>
+                    {isOrganizationSlackSectionOpen
+                      ? translation('AdminStoresPage.org-slack-toggle-on')
+                      : translation('AdminStoresPage.org-slack-toggle-off')}
+                  </span>
                 </label>
               </div>
               {isOrganizationSlackSectionOpen && (
@@ -895,7 +1074,7 @@ export const AdminStoresPage = () => {
                 >
                   <TextInput
                     id="organization-slack-webhook"
-                    label="Webhook do Slack"
+                    label={translation('AdminStoresPage.org-slack-webhook-label')}
                     value={organizationForm.slackWebhookUrl}
                     onChange={(event) =>
                       setOrganizationForm((previous) => ({
@@ -903,11 +1082,11 @@ export const AdminStoresPage = () => {
                         slackWebhookUrl: event.target.value,
                       }))
                     }
-                    placeholder="https://hooks.slack.com/services/..."
+                    placeholder={translation('AdminStoresPage.org-slack-webhook-placeholder')}
                     dataTestId="organization-settings-slack-webhook"
                   />
                   <p className="form-hint">
-                    Cole a URL gerada pelo aplicativo de Incoming Webhooks.
+                    {translation('AdminStoresPage.org-slack-webhook-hint')}
                   </p>
                 </div>
               )}
@@ -916,10 +1095,10 @@ export const AdminStoresPage = () => {
               <Button
                 type="submit"
                 isLoading={isSavingOrganization}
-                loadingText="Salvando..."
+                loadingText={translation('saving')}
                 data-testid="save-organization-settings"
               >
-                Salvar alterações
+                {translation('saveChanges')}
               </Button>
               <Button
                 type="button"
@@ -928,7 +1107,7 @@ export const AdminStoresPage = () => {
                 disabled={isSavingOrganization}
                 data-testid="cancel-organization-settings"
               >
-                Cancelar
+                {translation('AdminStoresPage.cancel-store-button')}
               </Button>
             </div>
           </form>
@@ -936,22 +1115,27 @@ export const AdminStoresPage = () => {
           <div className="card bg-surface" style={{ padding: '1.5rem', marginTop: '1.5rem' }}>
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
-                <h3 className="text-lg font-semibold text-primary">Membros vinculados</h3>
-                <p className="section-subtitle">Visualize e gerencie os usuários da organização.</p>
+                <h3 className="text-lg font-semibold text-primary">
+                  {translation('AdminStoresPage.org-vinculed-members')}
+                </h3>
+                <p className="section-subtitle">
+                  {translation('AdminStoresPage.org-slack-added-user')}
+                </p>
               </div>
               <span className="badge">
-                {selectedOrganization.members.length} membro
-                {selectedOrganization.members.length === 1 ? '' : 's'}
+                {translation('AdminStoresPage.member-count', {
+                  count: selectedOrganization.members.length,
+                })}
               </span>
             </div>
 
             <div className="member-invite-grid">
               <TextInput
                 id="organization-add-member"
-                label="Adicionar membro por e-mail"
+                label={translation('AdminStoresPage.org-added-user-to-email')}
                 value={newMemberEmail}
                 onChange={(event) => setNewMemberEmail(event.target.value)}
-                placeholder="usuario@empresa.com"
+                placeholder={translation('AdminStoresPage.org-email-placeholder')}
                 autoComplete="email"
                 dataTestId="organization-add-member-input"
               />
@@ -959,20 +1143,22 @@ export const AdminStoresPage = () => {
                 type="button"
                 onClick={handleAddMember}
                 isLoading={isManagingMembers}
-                loadingText="Adicionando..."
-                disabled={isSavingOrganization || isManagingMembers}
-                data-testid="organization-add-member-button"
+                loadingText={translation('AdminStoresPage.org-button-addeding')}
+                data-testid="add-organization-member"
               >
-                Adicionar
+                {translation('AdminStoresPage.org-added-user')}
               </Button>
             </div>
-            <p className="form-hint">
-              Convide qualquer usuário existente pelo e-mail, mesmo que não corresponda ao domínio
-              configurado.
-            </p>
-            {isSearchingUsers && <p className="form-hint">Buscando sugestões...</p>}
+            <p className="form-hint">{translation('AdminStoresPage.member-add-hint')}</p>
+            {isSearchingUsers && (
+              <p className="form-hint">{translation('AdminStoresPage.user-search-loading')}</p>
+            )}
             {!isSearchingUsers && userSuggestions.length > 0 && (
-              <ul className="suggestion-list" role="listbox" aria-label="Sugestões de usuários">
+              <ul
+                className="suggestion-list"
+                role="listbox"
+                aria-label={translation('AdminStoresPage.user-search-suggestions')}
+              >
                 {userSuggestions.map((suggestion) => (
                   <li key={suggestion.id}>
                     <button
@@ -980,18 +1166,16 @@ export const AdminStoresPage = () => {
                       className="suggestion-option"
                       onClick={() => setNewMemberEmail(suggestion.email)}
                     >
-                      <UserAvatar
-                        name={suggestion.displayName || suggestion.email}
-                        photoURL={suggestion.photoURL ?? undefined}
-                        size="sm"
-                      />
+                      <UserAvatar name={suggestion.displayName || suggestion.email} size="sm" />
                       <div className="suggestion-option__details">
                         <span className="suggestion-option__name">
                           {suggestion.displayName || suggestion.email}
                         </span>
                         <span className="suggestion-option__email">{suggestion.email}</span>
                       </div>
-                      <span className="suggestion-option__hint">Usar e-mail</span>
+                      <span className="suggestion-option__hint">
+                        {translation('AdminStoresPage.user-search-email-hint')}
+                      </span>
                     </button>
                   </li>
                 ))}
@@ -999,15 +1183,14 @@ export const AdminStoresPage = () => {
             )}
 
             {selectedOrganization.members.length === 0 ? (
-              <p className="section-subtitle">Nenhum usuário vinculado ainda.</p>
+              <p className="section-subtitle">
+                {translation('AdminStoresPage.no-members-message')}
+              </p>
             ) : (
               <ul className="member-list">
                 {selectedOrganization.members.map((member) => (
                   <li key={member.uid} className="member-list-item">
-                    <UserAvatar
-                      name={member.displayName || member.email}
-                      photoURL={member.photoURL ?? undefined}
-                    />
+                    <UserAvatar name={member.displayName || member.email} />
                     <div className="member-list-details">
                       <span className="member-list-name">{member.displayName || member.email}</span>
                       <span className="member-list-email">{member.email}</span>
@@ -1018,7 +1201,7 @@ export const AdminStoresPage = () => {
                       onClick={() => openRemoveMemberModal(member)}
                       disabled={isManagingMembers}
                     >
-                      Remover
+                      {translation('AdminStoresPage.org-remove-user')}
                     </button>
                   </li>
                 ))}
@@ -1028,8 +1211,8 @@ export const AdminStoresPage = () => {
 
           <div className="modal-danger-zone">
             <div>
-              <h4>Zona sensível</h4>
-              <p>Remova a organização e desvincule todos os usuários.</p>
+              <h4>{translation('AdminStoresPage.org-danger-zone')}</h4>
+              <p>{translation('AdminStoresPage.org-remove-org-and-users')}</p>
             </div>
             <button
               type="button"
@@ -1038,7 +1221,7 @@ export const AdminStoresPage = () => {
               disabled={isSavingOrganization}
               data-testid="delete-organization-button"
             >
-              Excluir organização
+              {translation('AdminStoresPage.org-remove-organization')}
             </button>
           </div>
         </Modal>

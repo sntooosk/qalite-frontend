@@ -1,4 +1,5 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type {
   Store,
@@ -10,6 +11,7 @@ import { storeService } from '../../application/use-cases/StoreUseCase';
 import { useToast } from '../context/ToastContext';
 import { Button } from './Button';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { PaginationControls } from './PaginationControls';
 import { TextInput } from './TextInput';
 import { TextArea } from './TextArea';
 import { SelectInput } from './SelectInput';
@@ -23,12 +25,8 @@ import {
   sortScenarioList,
   type ScenarioSortConfig,
 } from './ScenarioColumnSortControl';
-import {
-  downloadMarkdownFile,
-  openPdfFromMarkdown,
-  buildScenarioMarkdown,
-  downloadScenarioWorkbook,
-} from '../../shared/utils/storeImportExport';
+import { downloadScenarioWorkbook, openScenarioPdf } from '../../shared/utils/storeImportExport';
+import { normalizeAutomationValue } from '../../shared/utils/automation';
 
 interface StoreManagementPanelProps {
   organizationId: string;
@@ -38,7 +36,7 @@ interface StoreManagementPanelProps {
   showScenarioForm?: boolean;
 }
 
-type ExportFormat = 'markdown' | 'pdf' | 'xlsx';
+type ExportFormat = 'pdf' | 'xlsx';
 
 const emptyScenarioForm: StoreScenarioInput = {
   title: '',
@@ -49,6 +47,8 @@ const emptyScenarioForm: StoreScenarioInput = {
   bdd: '',
 };
 
+const PAGE_SIZE = 20;
+
 export const StoreManagementPanel = ({
   organizationId,
   organizationName,
@@ -56,6 +56,7 @@ export const StoreManagementPanel = ({
   canManageScenarios,
   showScenarioForm = true,
 }: StoreManagementPanelProps) => {
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoadingStores, setIsLoadingStores] = useState(true);
@@ -91,6 +92,8 @@ export const StoreManagementPanel = ({
   const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
+  const scenarioFormRef = useRef<HTMLFormElement | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const canUseScenarioForm = canManageScenarios && showScenarioForm !== false;
   const canToggleCategoryList =
     !isLoadingCategories && !isSyncingLegacyCategories && categories.length > 0;
@@ -109,6 +112,13 @@ export const StoreManagementPanel = ({
     () => sortScenarioList(scenarios, scenarioSort),
     [scenarioSort, scenarios],
   );
+  const paginatedScenarios = useMemo(
+    () => displayedScenarios.slice(0, visibleCount),
+    [displayedScenarios, visibleCount],
+  );
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [scenarioSort, scenarios.length]);
 
   const persistedCategoryNames = useMemo(
     () =>
@@ -125,23 +135,23 @@ export const StoreManagementPanel = ({
 
   const categorySelectOptions = useMemo(() => {
     if (availableCategories.length === 0) {
-      return [{ value: '', label: 'Cadastre uma categoria para começar' }];
+      return [{ value: '', label: t('storeSummary.registerCategory') }];
     }
 
     return [
-      { value: '', label: 'Selecione uma categoria' },
+      { value: '', label: t('storeSummary.selectCategory') },
       ...availableCategories.map((category) => ({ value: category, label: category })),
     ];
-  }, [availableCategories]);
+  }, [availableCategories, t]);
 
   const automationSelectOptions = useMemo(
-    () => [{ value: '', label: 'Selecione o tipo de automação' }, ...AUTOMATION_OPTIONS],
-    [],
+    () => [{ value: '', label: t('storeSummary.selectAutomation') }, ...AUTOMATION_OPTIONS],
+    [t],
   );
 
   const criticalitySelectOptions = useMemo(
-    () => [{ value: '', label: 'Selecione a criticidade' }, ...CRITICALITY_OPTIONS],
-    [],
+    () => [{ value: '', label: t('storeSummary.selectCriticality') }, ...CRITICALITY_OPTIONS],
+    [t],
   );
 
   useEffect(() => {
@@ -160,7 +170,7 @@ export const StoreManagementPanel = ({
         console.error(error);
         showToast({
           type: 'error',
-          message: 'Não foi possível carregar as lojas desta organização.',
+          message: t('storeManagement.storeListLoadError'),
         });
       } finally {
         setIsLoadingStores(false);
@@ -168,7 +178,7 @@ export const StoreManagementPanel = ({
     };
 
     void fetchStores();
-  }, [organizationId, showToast]);
+  }, [organizationId, showToast, t]);
 
   const selectedStore = useMemo(
     () => stores.find((store) => store.id === selectedStoreId) ?? null,
@@ -190,7 +200,7 @@ export const StoreManagementPanel = ({
         console.error(error);
         showToast({
           type: 'error',
-          message: 'Não foi possível carregar a massa de cenários desta loja.',
+          message: t('storeManagement.scenarioListLoadError'),
         });
       } finally {
         setIsLoadingScenarios(false);
@@ -198,7 +208,7 @@ export const StoreManagementPanel = ({
     };
 
     void fetchScenarios();
-  }, [selectedStore, showToast]);
+  }, [selectedStore, showToast, t]);
 
   useEffect(() => {
     if (!selectedStore) {
@@ -218,7 +228,7 @@ export const StoreManagementPanel = ({
       } catch (error) {
         console.error(error);
         if (isMounted) {
-          showToast({ type: 'error', message: 'Não foi possível carregar as categorias.' });
+          showToast({ type: 'error', message: t('storeSummary.categoriesLoadError') });
         }
       } finally {
         if (isMounted) {
@@ -232,7 +242,7 @@ export const StoreManagementPanel = ({
     return () => {
       isMounted = false;
     };
-  }, [selectedStore, showToast]);
+  }, [selectedStore, showToast, t]);
 
   useEffect(() => {
     setIsCategoryListCollapsed(true);
@@ -356,12 +366,12 @@ export const StoreManagementPanel = ({
     const stageValue = storeFormMode === 'edit' && selectedStore ? selectedStore.stage : '';
 
     if (!trimmedName) {
-      setStoreFormError('Informe um nome para a loja.');
+      setStoreFormError(t('storeSummary.storeNameRequired'));
       return;
     }
 
     if (!trimmedSite) {
-      setStoreFormError('Informe o site da loja.');
+      setStoreFormError(t('storeSummary.storeSiteRequired'));
       return;
     }
 
@@ -380,7 +390,7 @@ export const StoreManagementPanel = ({
         );
         setSelectedStoreId(created.id);
         resetStoreForm();
-        showToast({ type: 'success', message: 'Loja criada com sucesso.' });
+        showToast({ type: 'success', message: t('storeManagement.storeCreateSuccess') });
         return;
       }
 
@@ -398,12 +408,12 @@ export const StoreManagementPanel = ({
             )
             .sort((a, b) => a.name.localeCompare(b.name)),
         );
-        showToast({ type: 'success', message: 'Loja atualizada com sucesso.' });
+        showToast({ type: 'success', message: t('storeSummary.storeUpdateSuccess') });
         resetStoreForm();
       }
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'Não foi possível salvar a loja.';
+      const message = error instanceof Error ? error.message : t('storeManagement.storeSaveError');
       setStoreFormError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -431,10 +441,10 @@ export const StoreManagementPanel = ({
         }
         return remaining;
       });
-      showToast({ type: 'success', message: 'Loja removida com sucesso.' });
+      showToast({ type: 'success', message: t('storeSummary.storeRemoveSuccess') });
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'Não foi possível remover a loja.';
+      const message = error instanceof Error ? error.message : t('storeSummary.storeRemoveError');
       showToast({ type: 'error', message });
     } finally {
       setIsSavingStore(false);
@@ -454,7 +464,7 @@ export const StoreManagementPanel = ({
 
     const trimmedCategory = newCategoryName.trim();
     if (!trimmedCategory) {
-      setCategoryError('Informe o nome da nova categoria.');
+      setCategoryError(t('storeSummary.newCategoryNameRequired'));
       return;
     }
 
@@ -470,11 +480,11 @@ export const StoreManagementPanel = ({
       setScenarioForm((previous) => ({ ...previous, category: trimmedCategory }));
       setNewCategoryName('');
       setCategoryError(null);
-      showToast({ type: 'success', message: 'Categoria criada com sucesso.' });
+      showToast({ type: 'success', message: t('storeSummary.categoryCreateSuccess') });
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error ? error.message : 'Não foi possível criar a categoria.';
+        error instanceof Error ? error.message : t('storeSummary.categoryCreateError');
       setCategoryError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -500,7 +510,7 @@ export const StoreManagementPanel = ({
 
     const trimmedName = editingCategoryName.trim();
     if (!trimmedName) {
-      setCategoryError('Informe o nome da categoria.');
+      setCategoryError(t('storeSummary.categoryNameRequired'));
       return;
     }
 
@@ -532,11 +542,11 @@ export const StoreManagementPanel = ({
       setEditingCategoryId(null);
       setEditingCategoryName('');
       setCategoryError(null);
-      showToast({ type: 'success', message: 'Categoria atualizada com sucesso.' });
+      showToast({ type: 'success', message: t('storeSummary.categoryUpdateSuccess') });
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error ? error.message : 'Não foi possível atualizar a categoria.';
+        error instanceof Error ? error.message : t('storeSummary.categoryUpdateError');
       setCategoryError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -556,13 +566,11 @@ export const StoreManagementPanel = ({
       if (scenarioForm.category === category.name) {
         setScenarioForm((previous) => ({ ...previous, category: '' }));
       }
-      showToast({ type: 'success', message: 'Categoria removida com sucesso.' });
+      showToast({ type: 'success', message: t('storeSummary.categoryRemoveSuccess') });
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível remover esta categoria. Verifique se ela está em uso.';
+        error instanceof Error ? error.message : t('storeSummary.categoryRemoveError');
       setCategoryError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -572,19 +580,20 @@ export const StoreManagementPanel = ({
 
   const handleCopyBdd = async (bdd: string) => {
     if (!bdd.trim()) {
-      showToast({ type: 'error', message: 'Não há conteúdo de BDD para copiar.' });
+      showToast({ type: 'error', message: t('storeSummary.bddEmpty') });
       return;
     }
 
     try {
       if (!navigator?.clipboard) {
-        throw new Error('Clipboard API indisponível.');
+        showToast({ type: 'error', message: t('storeSummary.bddClipboardUnavailable') });
+        return;
       }
       await navigator.clipboard.writeText(bdd);
-      showToast({ type: 'success', message: 'BDD copiado para a área de transferência.' });
+      showToast({ type: 'success', message: t('storeSummary.bddCopied') });
     } catch (error) {
       console.error(error);
-      showToast({ type: 'error', message: 'Não foi possível copiar o BDD automaticamente.' });
+      showToast({ type: 'error', message: t('storeSummary.bddCopyError') });
     }
   };
 
@@ -613,7 +622,7 @@ export const StoreManagementPanel = ({
     ];
     const hasEmptyField = requiredFields.some((value) => value === '');
     if (hasEmptyField) {
-      setScenarioFormError('Preencha todos os campos obrigatórios.');
+      setScenarioFormError(t('storeSummary.scenarioFieldsRequired'));
       return;
     }
 
@@ -628,7 +637,7 @@ export const StoreManagementPanel = ({
         setScenarios((previous) =>
           previous.map((scenario) => (scenario.id === updated.id ? updated : scenario)),
         );
-        showToast({ type: 'success', message: 'Cenário atualizado com sucesso.' });
+        showToast({ type: 'success', message: t('storeSummary.scenarioUpdateSuccess') });
       } else {
         const created = await storeService.createScenario({
           storeId: selectedStore.id,
@@ -642,14 +651,14 @@ export const StoreManagementPanel = ({
               : store,
           ),
         );
-        showToast({ type: 'success', message: 'Cenário adicionado com sucesso.' });
+        showToast({ type: 'success', message: t('storeSummary.scenarioCreateSuccess') });
       }
 
       setScenarioForm(emptyScenarioForm);
       setEditingScenarioId(null);
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message : 'Não foi possível salvar o cenário.';
+      const message = error instanceof Error ? error.message : t('storeSummary.scenarioSaveError');
       setScenarioFormError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -662,16 +671,22 @@ export const StoreManagementPanel = ({
       return;
     }
 
+    const normalizedAutomation = normalizeAutomationValue(scenario.automation);
+    const automationMatch = AUTOMATION_OPTIONS.find(
+      (option) => normalizeAutomationValue(option.value) === normalizedAutomation,
+    );
+
     setScenarioForm({
       title: scenario.title,
       category: scenario.category,
-      automation: scenario.automation,
+      automation: automationMatch?.value ?? scenario.automation,
       criticality: scenario.criticality,
       observation: scenario.observation ?? '',
       bdd: scenario.bdd ?? '',
     });
     setEditingScenarioId(scenario.id);
     setScenarioFormError(null);
+    scenarioFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleDeleteScenario = async (scenario: StoreScenario) => {
@@ -690,11 +705,11 @@ export const StoreManagementPanel = ({
             : store,
         ),
       );
-      showToast({ type: 'success', message: 'Cenário removido com sucesso.' });
+      showToast({ type: 'success', message: t('storeSummary.scenarioRemoveSuccess') });
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error ? error.message : 'Não foi possível remover o cenário.';
+        error instanceof Error ? error.message : t('storeSummary.scenarioRemoveError');
       showToast({ type: 'error', message });
     } finally {
       setIsSavingScenario(false);
@@ -703,8 +718,8 @@ export const StoreManagementPanel = ({
 
   const openDeleteStoreModal = (store: Store) => {
     setDeleteConfirmation({
-      message: `Você deseja mesmo excluir a loja "${store.name}"?`,
-      description: 'Todos os cenários vinculados serão excluídos.',
+      message: t('storeSummary.storeDeleteConfirm', { name: store.name }),
+      description: t('storeSummary.storeDeleteWarning'),
       onConfirm: () => handleDeleteStore(store),
     });
   };
@@ -715,8 +730,8 @@ export const StoreManagementPanel = ({
     }
 
     setDeleteConfirmation({
-      message: `Você deseja mesmo excluir a categoria "${category.name}"?`,
-      description: 'Essa ação não pode ser desfeita.',
+      message: t('storeSummary.categoryDeleteConfirm', { name: category.name }),
+      description: t('storeSummary.categoryDeleteWarning'),
       onConfirm: () => handleDeleteCategory(category),
     });
   };
@@ -727,7 +742,7 @@ export const StoreManagementPanel = ({
     }
 
     setDeleteConfirmation({
-      message: `Você deseja mesmo excluir o cenário "${scenario.title}"?`,
+      message: t('storeSummary.scenarioDeleteConfirm', { title: scenario.title }),
       onConfirm: () => handleDeleteScenario(scenario),
     });
   };
@@ -767,13 +782,13 @@ export const StoreManagementPanel = ({
       if (!pdfWindow) {
         showToast({
           type: 'error',
-          message: 'Não foi possível abrir a visualização para exportar em PDF.',
+          message: t('storeSummary.pdfOpenError'),
         });
         return;
       }
 
       pdfWindow.document.write(
-        "<p style='font-family: Inter, system-ui, -apple-system, sans-serif; padding: 24px;'>Gerando PDF...</p>",
+        `<p style='font-family: Inter, system-ui, -apple-system, sans-serif; padding: 24px;'>${t('storeSummary.pdfGenerating')}</p>`,
       );
       pdfWindow.document.close();
     }
@@ -781,27 +796,25 @@ export const StoreManagementPanel = ({
     try {
       setExportingFormat(format);
       const data = await storeService.exportStore(selectedStore.id);
-      const baseFileName = `${selectedStore.name.replace(/\s+/g, '_')}_cenarios`;
-
-      if (format === 'markdown') {
-        const markdown = buildScenarioMarkdown(data);
-        downloadMarkdownFile(markdown, `${baseFileName}.md`);
-      }
+      const baseFileName = `${selectedStore.name.replace(/\s+/g, '_')}_${t('storeManagement.exportFileSuffix')}`;
 
       if (format === 'xlsx') {
         downloadScenarioWorkbook(data, `${baseFileName}.xlsx`);
       }
 
       if (format === 'pdf') {
-        const markdown = buildScenarioMarkdown(data);
-        openPdfFromMarkdown(markdown, `${selectedStore.name} - Cenários`, pdfWindow);
+        openScenarioPdf(
+          data,
+          t('storeManagement.exportTitle', { name: selectedStore.name }),
+          pdfWindow,
+        );
       }
 
-      showToast({ type: 'success', message: 'Exportação concluída com sucesso.' });
+      showToast({ type: 'success', message: t('storeSummary.scenarioExportSuccess') });
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error ? error.message : 'Não foi possível exportar os cenários.';
+        error instanceof Error ? error.message : t('storeSummary.scenarioExportError');
       showToast({ type: 'error', message });
       pdfWindow?.close();
     } finally {
@@ -814,27 +827,30 @@ export const StoreManagementPanel = ({
       <div className="card store-management-sidebar">
         <div className="store-management-header">
           <div>
-            <h2 className="text-xl font-semibold text-primary">Lojas da organização</h2>
+            <h2 className="text-xl font-semibold text-primary">
+              {t('storeManagement.organizationStoresTitle')}
+            </h2>
             <p className="section-subtitle">
-              {organizationName} possui {stores.length} loja{stores.length === 1 ? '' : 's'}{' '}
-              cadastrada{stores.length === 1 ? '' : 's'}.
+              {t('storeManagement.organizationStoreCount', {
+                organizationName,
+                count: stores.length,
+              })}
             </p>
           </div>
           {canManageStores && (
             <Button type="button" variant="secondary" onClick={handleStartCreateStore}>
-              Nova loja
+              {t('storeManagement.newStore')}
             </Button>
           )}
         </div>
 
         {isLoadingStores ? (
-          <p className="section-subtitle">Carregando lojas cadastradas...</p>
+          <p className="section-subtitle">{t('storeManagement.loadingStores')}</p>
         ) : stores.length === 0 ? (
           <p className="section-subtitle">
-            Nenhuma loja foi cadastrada ainda.{' '}
             {canManageStores
-              ? 'Crie a primeira loja para começar.'
-              : 'Aguarde um administrador cadastrar uma loja.'}
+              ? t('storeManagement.emptyStoresManage')
+              : t('storeManagement.emptyStoresView')}
           </p>
         ) : (
           <ul className="store-list">
@@ -855,7 +871,7 @@ export const StoreManagementPanel = ({
                     </div>
                     <p>{store.site}</p>
                     <span className="store-list-count">
-                      {store.scenarioCount} cenário{store.scenarioCount === 1 ? '' : 's'}
+                      {t('storeManagement.scenarioCount', { count: store.scenarioCount })}
                     </span>
                   </button>
                   {canManageStores && (
@@ -865,7 +881,7 @@ export const StoreManagementPanel = ({
                         onClick={() => handleStartEditStore(store)}
                         disabled={isSavingStore}
                       >
-                        Editar
+                        {t('edit')}
                       </button>
                       <button
                         type="button"
@@ -873,7 +889,7 @@ export const StoreManagementPanel = ({
                         disabled={isSavingStore}
                         className="store-list-delete"
                       >
-                        Excluir
+                        {t('delete')}
                       </button>
                     </div>
                   )}
@@ -886,32 +902,36 @@ export const StoreManagementPanel = ({
         {canManageStores && storeFormMode !== 'hidden' && (
           <form className="form-grid" onSubmit={handleStoreFormSubmit}>
             <h3 className="form-title">
-              {storeFormMode === 'create' ? 'Cadastrar loja' : 'Editar loja'}
+              {storeFormMode === 'create'
+                ? t('storeManagement.storeFormTitleCreate')
+                : t('storeManagement.storeFormTitleEdit')}
             </h3>
             {storeFormError && <p className="form-message form-message--error">{storeFormError}</p>}
             <TextInput
               id="store-name"
-              label="Nome"
+              label={t('storeManagement.storeNameLabel')}
               value={storeForm.name}
               onChange={(event) =>
                 setStoreForm((previous) => ({ ...previous, name: event.target.value }))
               }
-              placeholder="Ex.: Loja Centro"
+              placeholder={t('storeManagement.storeNamePlaceholder')}
               required
             />
             <TextInput
               id="store-site"
-              label="Site"
+              label={t('storeManagement.storeSiteLabel')}
               value={storeForm.site}
               onChange={(event) =>
                 setStoreForm((previous) => ({ ...previous, site: event.target.value }))
               }
-              placeholder="Ex.: https://minhaloja.com"
+              placeholder={t('storeManagement.storeSitePlaceholder')}
               required
             />
             <div className="store-form-actions">
-              <Button type="submit" isLoading={isSavingStore} loadingText="Salvando...">
-                {storeFormMode === 'create' ? 'Salvar loja' : 'Atualizar loja'}
+              <Button type="submit" isLoading={isSavingStore} loadingText={t('saving')}>
+                {storeFormMode === 'create'
+                  ? t('storeManagement.storeSaveCreate')
+                  : t('storeManagement.storeSaveUpdate')}
               </Button>
               <Button
                 type="button"
@@ -919,7 +939,7 @@ export const StoreManagementPanel = ({
                 onClick={resetStoreForm}
                 disabled={isSavingStore}
               >
-                Cancelar
+                {t('cancel')}
               </Button>
             </div>
           </form>
@@ -939,45 +959,38 @@ export const StoreManagementPanel = ({
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => void handleExport('markdown')}
-                    isLoading={exportingFormat === 'markdown'}
-                    loadingText="Exportando..."
-                  >
-                    Exportar Markdown
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
                     onClick={() => void handleExport('xlsx')}
                     isLoading={exportingFormat === 'xlsx'}
-                    loadingText="Exportando..."
+                    loadingText={t('exporting')}
                   >
-                    Exportar Excel
+                    {t('storeManagement.exportExcel')}
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
                     onClick={() => void handleExport('pdf')}
                     isLoading={exportingFormat === 'pdf'}
-                    loadingText="Exportando..."
+                    loadingText={t('exporting')}
                   >
-                    Exportar PDF
+                    {t('storeSummary.exportPdf')}
                   </Button>
                 </div>
               </div>
             </div>
 
             {canUseScenarioForm && (
-              <form className="scenario-form" onSubmit={handleScenarioSubmit}>
+              <form ref={scenarioFormRef} className="scenario-form" onSubmit={handleScenarioSubmit}>
                 <h3 className="form-title">
-                  {editingScenarioId ? 'Editar cenário' : 'Novo cenário'}
+                  {editingScenarioId
+                    ? t('storeManagement.scenarioFormTitleEdit')
+                    : t('storeManagement.scenarioFormTitleCreate')}
                 </h3>
                 {scenarioFormError && (
                   <p className="form-message form-message--error">{scenarioFormError}</p>
                 )}
                 <TextInput
                   id="scenario-title"
-                  label="Título"
+                  label={t('storeSummary.title')}
                   value={scenarioForm.title}
                   onChange={handleScenarioFormChange('title')}
                   required
@@ -985,7 +998,7 @@ export const StoreManagementPanel = ({
                 <div className="scenario-form-grid">
                   <SelectInput
                     id="scenario-category"
-                    label="Categoria"
+                    label={t('storeSummary.category')}
                     value={scenarioForm.category}
                     onChange={handleScenarioFormChange('category')}
                     options={categorySelectOptions}
@@ -993,7 +1006,7 @@ export const StoreManagementPanel = ({
                   />
                   <SelectInput
                     id="scenario-automation"
-                    label="Automação"
+                    label={t('storeSummary.automation')}
                     value={scenarioForm.automation}
                     onChange={handleScenarioFormChange('automation')}
                     options={automationSelectOptions}
@@ -1001,7 +1014,7 @@ export const StoreManagementPanel = ({
                   />
                   <SelectInput
                     id="scenario-criticality"
-                    label="Criticidade"
+                    label={t('storeSummary.criticality')}
                     value={scenarioForm.criticality}
                     onChange={handleScenarioFormChange('criticality')}
                     options={criticalitySelectOptions}
@@ -1011,10 +1024,9 @@ export const StoreManagementPanel = ({
                 <div className="category-manager">
                   <div className="category-manager-header">
                     <div className="category-manager-header-text">
-                      <p className="field-label">Gerencie as categorias disponíveis</p>
+                      <p className="field-label">{t('storeManagement.categoryManagerTitle')}</p>
                       <p className="category-manager-description">
-                        Cadastre, edite ou remova categorias para manter a massa organizada. Só é
-                        possível remover categorias que não estejam associadas a cenários.
+                        {t('storeManagement.categoryManagerDescription')}
                       </p>
                     </div>
                     {canToggleCategoryList && (
@@ -1026,7 +1038,9 @@ export const StoreManagementPanel = ({
                         }
                         aria-expanded={!isCategoryListCollapsed}
                       >
-                        {isCategoryListCollapsed ? 'Maximizar lista' : 'Minimizar lista'}
+                        {isCategoryListCollapsed
+                          ? t('storeManagement.categoryListExpand')
+                          : t('storeManagement.categoryListCollapse')}
                       </button>
                     )}
                   </div>
@@ -1035,7 +1049,9 @@ export const StoreManagementPanel = ({
                       type="text"
                       className="field-input"
                       placeholder={
-                        selectedStore ? 'Informe uma nova categoria' : 'Selecione uma loja'
+                        selectedStore
+                          ? t('storeManagement.categoryPlaceholder')
+                          : t('storeManagement.categorySelectStorePlaceholder')
                       }
                       value={newCategoryName}
                       onChange={(event) => {
@@ -1049,20 +1065,22 @@ export const StoreManagementPanel = ({
                       variant="secondary"
                       onClick={handleCreateCategory}
                       isLoading={isCreatingCategory}
-                      loadingText="Salvando..."
+                      loadingText={t('saving')}
                       disabled={!selectedStore || isLoadingCategories || isSyncingLegacyCategories}
                     >
-                      Adicionar categoria
+                      {t('storeManagement.addCategory')}
                     </Button>
                   </div>
                   {categoryError && (
                     <p className="form-message form-message--error">{categoryError}</p>
                   )}
                   {isLoadingCategories || isSyncingLegacyCategories ? (
-                    <p className="category-manager-description">Carregando categorias...</p>
+                    <p className="category-manager-description">
+                      {t('storeManagement.loadingCategories')}
+                    </p>
                   ) : isCategoryListCollapsed && categories.length > 0 ? (
                     <p className="category-manager-description category-manager-collapsed-message">
-                      Lista minimizada. Utilize o botão acima para visualizar novamente.
+                      {t('storeManagement.categoryListCollapsed')}
                     </p>
                   ) : categories.length > 0 ? (
                     <ul className="category-manager-list">
@@ -1087,9 +1105,9 @@ export const StoreManagementPanel = ({
                                     type="button"
                                     onClick={handleUpdateCategory}
                                     isLoading={updatingCategoryId === category.id}
-                                    loadingText="Salvando..."
+                                    loadingText={t('saving')}
                                   >
-                                    Salvar
+                                    {t('storeManagement.saveCategory')}
                                   </Button>
                                   <Button
                                     type="button"
@@ -1097,7 +1115,7 @@ export const StoreManagementPanel = ({
                                     onClick={handleCancelEditCategory}
                                     disabled={updatingCategoryId === category.id}
                                   >
-                                    Cancelar
+                                    {t('cancel')}
                                   </Button>
                                 </div>
                               </>
@@ -1111,7 +1129,7 @@ export const StoreManagementPanel = ({
                                     onClick={() => handleStartEditCategory(category)}
                                     disabled={deletingCategoryId === category.id}
                                   >
-                                    Editar
+                                    {t('edit')}
                                   </Button>
                                   <Button
                                     type="button"
@@ -1119,14 +1137,14 @@ export const StoreManagementPanel = ({
                                     onClick={() => openDeleteCategoryModal(category)}
                                     disabled={deletingCategoryId === category.id || isCategoryUsed}
                                     isLoading={deletingCategoryId === category.id}
-                                    loadingText="Removendo..."
+                                    loadingText={t('deleteLoading')}
                                     title={
                                       isCategoryUsed
-                                        ? 'Remova ou atualize os cenários associados antes de excluir.'
+                                        ? t('storeManagement.categoryRemoveBlocked')
                                         : undefined
                                     }
                                   >
-                                    Remover
+                                    {t('delete')}
                                   </Button>
                                 </div>
                               </>
@@ -1136,24 +1154,26 @@ export const StoreManagementPanel = ({
                       })}
                     </ul>
                   ) : (
-                    <p className="category-manager-empty">Nenhuma categoria cadastrada ainda.</p>
+                    <p className="category-manager-empty">{t('storeManagement.emptyCategories')}</p>
                   )}
                 </div>
                 <TextArea
                   id="scenario-observation"
-                  label="Observação"
+                  label={t('storeSummary.observation')}
                   value={scenarioForm.observation}
                   onChange={handleScenarioFormChange('observation')}
                 />
                 <TextArea
                   id="scenario-bdd"
-                  label="BDD"
+                  label={t('storeSummary.bdd')}
                   value={scenarioForm.bdd}
                   onChange={handleScenarioFormChange('bdd')}
                 />
                 <div className="scenario-form-actions">
-                  <Button type="submit" isLoading={isSavingScenario} loadingText="Salvando...">
-                    {editingScenarioId ? 'Atualizar cenário' : 'Adicionar cenário'}
+                  <Button type="submit" isLoading={isSavingScenario} loadingText={t('saving')}>
+                    {editingScenarioId
+                      ? t('storeManagement.scenarioUpdateAction')
+                      : t('storeManagement.scenarioCreateAction')}
                   </Button>
                   {editingScenarioId && (
                     <Button
@@ -1165,7 +1185,7 @@ export const StoreManagementPanel = ({
                       }}
                       disabled={isSavingScenario}
                     >
-                      Cancelar edição
+                      {t('storeManagement.cancelScenarioEdit')}
                     </Button>
                   )}
                 </div>
@@ -1173,38 +1193,38 @@ export const StoreManagementPanel = ({
             )}
 
             <div className="scenario-table-header">
-              <h3 className="section-subtitle">Cenários cadastrados</h3>
+              <h3 className="section-subtitle">{t('storeManagement.scenarioTableTitle')}</h3>
               {scenarios.length > 0 && (
                 <button
                   type="button"
                   className="scenario-table-toggle"
                   onClick={() => setIsScenarioTableCollapsed((previous) => !previous)}
                 >
-                  {isScenarioTableCollapsed ? 'Maximizar tabela' : 'Minimizar tabela'}
+                  {isScenarioTableCollapsed
+                    ? t('storeManagement.scenarioTableExpand')
+                    : t('storeManagement.scenarioTableCollapse')}
                 </button>
               )}
             </div>
             <div className="scenario-table-wrapper">
               {isScenarioTableCollapsed ? (
-                <p className="section-subtitle">
-                  Tabela minimizada. Utilize o botão acima para visualizar os cenários novamente.
-                </p>
+                <p className="section-subtitle">{t('storeManagement.scenarioTableCollapsed')}</p>
               ) : isLoadingScenarios ? (
-                <p className="section-subtitle">Carregando cenários cadastrados...</p>
+                <p className="section-subtitle">{t('storeManagement.loadingScenarios')}</p>
               ) : scenarios.length === 0 ? (
                 <p className="section-subtitle">
                   {canUseScenarioForm
-                    ? 'Nenhum cenário cadastrado para esta loja ainda. Utilize o formulário acima para criar o primeiro.'
-                    : 'Nenhum cenário cadastrado para esta loja ainda. Solicite a um responsável a criação da massa de testes.'}
+                    ? t('storeManagement.emptyScenariosManage')
+                    : t('storeManagement.emptyScenariosView')}
                 </p>
               ) : (
                 <table className="scenario-table data-table">
                   <thead>
                     <tr>
-                      <th>Título</th>
+                      <th>{t('storeSummary.title')}</th>
                       <th>
                         <ScenarioColumnSortControl
-                          label="Categoria"
+                          label={t('storeSummary.category')}
                           field="category"
                           sort={scenarioSort}
                           onChange={setScenarioSort}
@@ -1212,7 +1232,7 @@ export const StoreManagementPanel = ({
                       </th>
                       <th>
                         <ScenarioColumnSortControl
-                          label="Automação"
+                          label={t('storeSummary.automation')}
                           field="automation"
                           sort={scenarioSort}
                           onChange={setScenarioSort}
@@ -1220,19 +1240,19 @@ export const StoreManagementPanel = ({
                       </th>
                       <th>
                         <ScenarioColumnSortControl
-                          label="Criticidade"
+                          label={t('storeSummary.criticality')}
                           field="criticality"
                           sort={scenarioSort}
                           onChange={setScenarioSort}
                         />
                       </th>
-                      <th>Observação</th>
-                      <th>BDD</th>
-                      {canUseScenarioForm && <th>Ações</th>}
+                      <th>{t('storeSummary.observation')}</th>
+                      <th>{t('storeSummary.bdd')}</th>
+                      {canUseScenarioForm && <th>{t('storeManagement.actions')}</th>}
                     </tr>
                   </thead>
                   <tbody>
-                    {displayedScenarios.map((scenario) => {
+                    {paginatedScenarios.map((scenario) => {
                       const hasBdd = Boolean(scenario.bdd?.trim());
 
                       return (
@@ -1248,7 +1268,7 @@ export const StoreManagementPanel = ({
                             </span>
                           </td>
                           <td className="scenario-observation">
-                            {scenario.observation?.trim() || '—'}
+                            {scenario.observation?.trim() || t('storeManagement.emptyValue')}
                           </td>
                           <td className="scenario-bdd">
                             {hasBdd ? (
@@ -1257,10 +1277,12 @@ export const StoreManagementPanel = ({
                                 className="scenario-copy-button"
                                 onClick={() => void handleCopyBdd(scenario.bdd)}
                               >
-                                Copiar BDD
+                                {t('storeSummary.copyBdd')}
                               </button>
                             ) : (
-                              <span className="scenario-bdd--empty">—</span>
+                              <span className="scenario-bdd--empty">
+                                {t('storeManagement.emptyValue')}
+                              </span>
                             )}
                           </td>
                           {canUseScenarioForm && (
@@ -1270,7 +1292,7 @@ export const StoreManagementPanel = ({
                                 onClick={() => handleEditScenario(scenario)}
                                 disabled={isSavingScenario}
                               >
-                                Editar
+                                {t('edit')}
                               </button>
                               <button
                                 type="button"
@@ -1278,7 +1300,7 @@ export const StoreManagementPanel = ({
                                 disabled={isSavingScenario}
                                 className="scenario-delete"
                               >
-                                Excluir
+                                {t('delete')}
                               </button>
                             </td>
                           )}
@@ -1289,16 +1311,29 @@ export const StoreManagementPanel = ({
                 </table>
               )}
             </div>
+            {!isScenarioTableCollapsed && scenarios.length > 0 && (
+              <PaginationControls
+                total={displayedScenarios.length}
+                visible={paginatedScenarios.length}
+                step={PAGE_SIZE}
+                onShowLess={() => setVisibleCount(PAGE_SIZE)}
+                onShowMore={() =>
+                  setVisibleCount((previous) =>
+                    Math.min(previous + PAGE_SIZE, displayedScenarios.length),
+                  )
+                }
+              />
+            )}
           </>
         ) : (
           <div className="store-empty">
             <h2 className="text-xl font-semibold text-primary">
-              Selecione uma loja para continuar
+              {t('storeManagement.selectStoreTitle')}
             </h2>
             <p className="section-subtitle">
               {canManageStores
-                ? 'Escolha uma loja na lista ao lado ou cadastre uma nova para gerenciar os cenários.'
-                : 'Solicite a um administrador o cadastro de lojas para visualizar os cenários disponíveis.'}
+                ? t('storeManagement.selectStoreManageDescription')
+                : t('storeManagement.selectStoreViewDescription')}
             </p>
           </div>
         )}

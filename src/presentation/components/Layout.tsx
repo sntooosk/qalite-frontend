@@ -6,6 +6,7 @@ import { Button } from './Button';
 import { UserAvatar } from './UserAvatar';
 import { LogoutIcon, UserIcon } from './icons';
 import qliteLogo from '../assets/logo.png';
+import { useTranslation } from 'react-i18next';
 
 interface LayoutProps {
   children: ReactNode;
@@ -17,26 +18,32 @@ export const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const displayName = user?.displayName || user?.email || '';
   const brandSource = activeOrganization;
-  const brandName = brandSource?.name || 'QaLite';
+  const { t } = useTranslation();
+  const brandName = brandSource?.name || t('app.brandName');
   const brandLogo = qliteLogo;
 
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Link to="/" className="app-brand" aria-label={`Página inicial da ${brandName}`}>
-          <img src={brandLogo} alt="Logo da QaLite" className="app-brand-logo" />
+        <Link to="/" className="app-brand" aria-label={t('layout.homeAriaLabel', { brandName })}>
+          <img
+            src={brandLogo}
+            alt={t('layout.brandLogoAlt', { brandName })}
+            className="app-brand-logo"
+          />
           <span className="app-brand-name">{brandSource?.name || brandName}</span>
         </Link>
         <nav className="header-actions">
           {user ? (
             <div className="header-user">
               <div className="header-user-info">
-                <UserAvatar name={displayName} photoURL={user.photoURL} size="sm" />
+                <UserAvatar name={displayName} size="sm" />
                 <div className="user-context">
-                  <span className="user-greeting">Olá,</span>
-                  <span className="user-name">{displayName}</span>
-                  <span className="user-role">
-                    {user.role === 'admin' ? 'Administrador' : 'Colaborador'}
+                  <span className="user-greeting">
+                    {t('greetingWithRole', {
+                      role: user.role === 'admin' ? t('roleAdmin') : t('roleUser'),
+                      name: displayName,
+                    })}
                   </span>
                 </div>
               </div>
@@ -47,21 +54,21 @@ export const Layout = ({ children }: LayoutProps) => {
                   onClick={() => navigate('/profile')}
                 >
                   <UserIcon aria-hidden className="icon" />
-                  <span>Perfil</span>
+                  <span>{t('profile')}</span>
                 </button>
                 <Button type="button" variant="ghost" onClick={() => void logout()}>
                   <LogoutIcon aria-hidden className="icon" />
-                  Sair
+                  {t('logout')}
                 </Button>
               </div>
             </div>
           ) : (
             <div className="header-auth">
               <Link to="/login" className="text-link">
-                Entrar
+                {t('login')}
               </Link>
               <Button type="button" onClick={() => navigate('/register')}>
-                Criar conta
+                {t('register')}
               </Button>
             </div>
           )}

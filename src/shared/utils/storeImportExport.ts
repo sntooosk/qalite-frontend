@@ -418,6 +418,104 @@ export const openPdfFromMarkdown = (
   printableWindow.print();
 };
 
+export const openScenarioPdf = (
+  payload: StoreExportPayload,
+  title: string,
+  targetWindow?: Window | null,
+) => {
+  const printableWindow = targetWindow ?? window.open('', '_blank');
+
+  if (!printableWindow) {
+    throw new Error('Não foi possível abrir a visualização para exportar em PDF.');
+  }
+
+  const scenarioRows = payload.scenarios
+    .map((scenario, index) => {
+      const observation = scenario.observation?.trim() || '—';
+      const bdd = scenario.bdd?.trim() || '—';
+
+      return `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(scenario.title || '—')}</td>
+          <td>${escapeHtml(scenario.category || '—')}</td>
+          <td>${escapeHtml(scenario.automation || '—')}</td>
+          <td>${escapeHtml(scenario.criticality || '—')}</td>
+          <td>${escapeHtml(observation)}</td>
+          <td>${escapeHtml(bdd)}</td>
+        </tr>
+      `;
+    })
+    .join('');
+
+  const content = `
+    <!doctype html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8" />
+        <title>${escapeHtml(title)}</title>
+        <style>
+          body { font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 24px; }
+          h1 { margin-bottom: 4px; }
+          .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0; padding: 12px; background: #f5f7fb; border: 1px solid #e5e7eb; border-radius: 12px; }
+          .summary-grid span { color: #6b7280; font-size: 12px; }
+          .summary-grid strong { display: block; margin-top: 4px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; vertical-align: top; }
+          th { background: #f9fafb; }
+        </style>
+      </head>
+      <body>
+        <h1>${escapeHtml(title)}</h1>
+        <div class="summary-grid">
+          <div>
+            <span>Loja</span>
+            <strong>${escapeHtml(payload.store.name)}</strong>
+          </div>
+          <div>
+            <span>Site</span>
+            <strong>${escapeHtml(payload.store.site || '—')}</strong>
+          </div>
+          <div>
+            <span>Ambiente</span>
+            <strong>${escapeHtml(payload.store.stage || 'Não informado')}</strong>
+          </div>
+          <div>
+            <span>Quantidade de cenários</span>
+            <strong>${payload.scenarios.length}</strong>
+          </div>
+          <div>
+            <span>Exportado em</span>
+            <strong>${escapeHtml(formatDateTime(payload.exportedAt))}</strong>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Título</th>
+              <th>Categoria</th>
+              <th>Automação</th>
+              <th>Criticidade</th>
+              <th>Observação</th>
+              <th>BDD</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${scenarioRows || `<tr><td colspan="7">Nenhum cenário cadastrado.</td></tr>`}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `;
+
+  printableWindow.document.open();
+  printableWindow.document.write(content);
+  printableWindow.document.close();
+  printableWindow.focus();
+  printableWindow.print();
+};
+
 const buildScenarioSummary = (payload: StoreExportPayload) => {
   const scenarioLines = payload.scenarios.map((scenario: StoreScenario, index: number) =>
     [

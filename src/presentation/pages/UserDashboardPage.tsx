@@ -16,6 +16,7 @@ import { storeService } from '../../application/use-cases/StoreUseCase';
 import { browserstackService } from '../../application/use-cases/BrowserstackUseCase';
 import type { BrowserstackBuild } from '../../domain/entities/browserstack';
 import { isAutomatedScenario } from '../../shared/utils/automation';
+import { useTranslation } from 'react-i18next';
 
 export const UserDashboardPage = () => {
   const navigate = useNavigate();
@@ -28,6 +29,8 @@ export const UserDashboardPage = () => {
   const [isLoadingAutomationStats, setIsLoadingAutomationStats] = useState(false);
   const [browserstackBuilds, setBrowserstackBuilds] = useState<BrowserstackBuild[]>([]);
   const [isLoadingBrowserstack, setIsLoadingBrowserstack] = useState(false);
+
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (isInitializing) {
@@ -108,23 +111,19 @@ export const UserDashboardPage = () => {
 
   const subtitle = useMemo(() => {
     if (organization?.name) {
-      return `Você está colaborando com ${organization.name}. Selecione uma loja para continuar.`;
+      return (t('userPage.organizationName', { org: organization.name }), t('selectStore'));
     }
 
     if (status === 'error') {
-      return 'Não conseguimos carregar as lojas. Tente novamente ou fale com o administrador.';
+      return t('userPage.loadingError');
     }
 
-    return 'Escolha uma das lojas disponíveis para revisar as suítes de cenários.';
-  }, [organization?.name, status]);
+    return t('userPage.chooseStore');
+  }, [organization?.name, status, t]);
 
   const isError = status === 'error';
-  const emptyStateTitle = isError
-    ? 'Não foi possível carregar as lojas'
-    : 'Nenhuma loja disponível ainda';
-  const emptyStateDescription = isError
-    ? 'Atualize a página ou tente novamente mais tarde. Se o problema persistir, contate o administrador.'
-    : 'Peça para um administrador adicionar lojas à sua organização ou volte mais tarde.';
+  const emptyStateTitle = isError ? t('userPage.loadingStores') : t('userPage.unavailableStores');
+  const emptyStateDescription = isError ? t('userPage.updatePage') : t('userPage.addStores');
 
   const scenariosPerStoreData = useMemo(
     () =>
@@ -144,33 +143,30 @@ export const UserDashboardPage = () => {
     [stores, storeAutomationCounts],
   );
 
+  const organizationCredentials = organization?.browserstackCredentials ?? null;
   const hasBrowserstackCredentials = useMemo(
-    () =>
-      Boolean(user?.browserstackCredentials?.username && user?.browserstackCredentials?.accessKey),
-    [user?.browserstackCredentials?.accessKey, user?.browserstackCredentials?.username],
+    () => Boolean(organizationCredentials?.username && organizationCredentials?.accessKey),
+    [organizationCredentials?.accessKey, organizationCredentials?.username],
   );
 
   const loadBrowserstackBuilds = useCallback(async () => {
-    if (!hasBrowserstackCredentials || !user?.browserstackCredentials) {
+    if (!hasBrowserstackCredentials || !organizationCredentials) {
       setBrowserstackBuilds([]);
       return;
     }
 
     try {
       setIsLoadingBrowserstack(true);
-      const builds = await browserstackService.listBuilds(user.browserstackCredentials);
+      const builds = await browserstackService.listBuilds(organizationCredentials);
       setBrowserstackBuilds(builds);
     } catch (error) {
       console.error(error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível carregar as execuções do BrowserStack.';
+      const message = error instanceof Error ? error.message : t('userPage.errorBrowserstack');
       showToast({ type: 'error', message });
     } finally {
       setIsLoadingBrowserstack(false);
     }
-  }, [hasBrowserstackCredentials, showToast, user?.browserstackCredentials]);
+  }, [hasBrowserstackCredentials, organizationCredentials, showToast, t]);
 
   useEffect(() => {
     void loadBrowserstackBuilds();
@@ -181,14 +177,14 @@ export const UserDashboardPage = () => {
       <section className="page-container">
         <div className="page-header">
           <div>
-            <span className="badge">Biblioteca de lojas</span>
-            <h1 className="section-title">Selecione uma loja para revisar seus cenários</h1>
+            <span className="badge">{t('userPage.badge')}</span>
+            <h1 className="section-title">{t('userPage.storeTitle')}</h1>
             <p className="section-subtitle">{subtitle}</p>
           </div>
         </div>
 
         {isLoading ? (
-          <p className="section-subtitle">Carregando lojas disponíveis...</p>
+          <p className="section-subtitle">{t('userPage.loadingTitle')}</p>
         ) : stores.length === 0 ? (
           <EmptyState
             title={emptyStateTitle}
@@ -196,11 +192,11 @@ export const UserDashboardPage = () => {
             action={
               isError ? (
                 <Button type="button" variant="secondary" onClick={() => window.location.reload()}>
-                  Tentar novamente
+                  {t('userPage.reload')}
                 </Button>
               ) : (
                 <Button type="button" variant="secondary" onClick={() => navigate('/profile')}>
-                  Revisar perfil
+                  {t('userPage.profile')}
                 </Button>
               )
             }
@@ -221,7 +217,9 @@ export const UserDashboardPage = () => {
                     </span>
                     <h2 className="card-title">{store.name}</h2>
                   </div>
-                  <span className="badge">{store.scenarioCount} cenários</span>
+                  <span className="badge">
+                    {t('storesPage.scenarios', { count: store.scenarioCount })}
+                  </span>
                 </div>
               </button>
             ))}
@@ -238,30 +236,24 @@ export const UserDashboardPage = () => {
                       <UsersGroupIcon className="icon icon--lg" />
                     </span>
                     <div>
-                      <h3>Colaboradores da organização</h3>
-                      <p className="section-subtitle">
-                        Visualize rapidamente quem tem acesso a esta organização.
-                      </p>
+                      <h3>{t('userPage.users')}</h3>
+                      <p className="section-subtitle">{t('userPage.userSubtitle')}</p>
                     </div>
                   </div>
                   <span className="badge">
-                    {organization.members.length} colaborad
-                    {organization.members.length === 1 ? 'or' : 'ores'}
+                    {organization.members.length} {t('userPage.usersCount')}
+                    {organization.members.length === 1
+                      ? t('userPage.oneUser')
+                      : t('userPage.moreUsers')}
                   </span>
                 </div>
                 {organization.members.length === 0 ? (
-                  <p className="section-subtitle">
-                    Nenhum colaborador vinculado. Aguarde um administrador convidar novos membros.
-                  </p>
+                  <p className="section-subtitle">{t('userPage.members')}</p>
                 ) : (
                   <ul className="collaborator-list">
                     {organization.members.map((member) => (
                       <li key={member.uid} className="collaborator-card">
-                        <UserAvatar
-                          name={member.displayName || member.email}
-                          photoURL={member.photoURL ?? undefined}
-                          size="sm"
-                        />
+                        <UserAvatar name={member.displayName || member.email} size="sm" />
                         <div className="collaborator-card__details">
                           <strong>{member.displayName || member.email}</strong>
                         </div>
@@ -274,17 +266,17 @@ export const UserDashboardPage = () => {
 
             <section className="organization-charts-grid">
               <SimpleBarChart
-                title="Cenários por loja"
-                description="Total de cenários cadastrados em cada loja desta organização."
+                title={t('userPage.storeScenarios')}
+                description={t('userPage.totalScenarios')}
                 data={scenariosPerStoreData}
-                emptyMessage="Cadastre lojas e cenários para visualizar este gráfico."
+                emptyMessage={t('userPage.emptyStores')}
                 icon={<BarChartIcon aria-hidden className="icon icon--lg" />}
               />
               <SimpleBarChart
-                title="Cenários automatizados"
-                description="Comparativo de cenários marcados como automatizados por loja."
+                title={t('userPage.automatedScenarios')}
+                description={t('userPage.scenariosDescription')}
                 data={automatedScenariosPerStoreData}
-                emptyMessage="Ainda não identificamos cenários automatizados nas lojas desta organização."
+                emptyMessage={t('userPage.emptyScenarios')}
                 isLoading={isLoadingAutomationStats}
                 variant="info"
                 icon={<SparklesIcon aria-hidden className="icon icon--lg" />}
@@ -304,12 +296,9 @@ export const UserDashboardPage = () => {
             />
           ) : (
             <div className="card">
-              <span className="badge">BrowserStack</span>
-              <h2 className="section-title">Acompanhe execuções automatizadas</h2>
-              <p className="section-subtitle">
-                Adicione suas credenciais do BrowserStack no perfil para visualizar o quadro Kanban
-                de execuções.
-              </p>
+              <span className="badge">{t('userPage.browserstackBadge')}</span>
+              <h2 className="section-title">{t('userPage.browserstackTitle')}</h2>
+              <p className="section-subtitle">{t('userPage.browserstackSubtitle')}</p>
             </div>
           )}
         </section>

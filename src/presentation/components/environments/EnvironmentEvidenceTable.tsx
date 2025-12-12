@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import {
   Environment,
@@ -18,6 +19,7 @@ import { isAutomatedScenario } from '../../../shared/utils/automation';
 import { useToast } from '../../context/ToastContext';
 import { scenarioExecutionService } from '../../../application/use-cases/ScenarioExecutionUseCase';
 import { useAuth } from '../../hooks/useAuth';
+import { PaginationControls } from '../PaginationControls';
 
 interface EnvironmentEvidenceTableProps {
   environment: Environment;
@@ -28,24 +30,6 @@ interface EnvironmentEvidenceTableProps {
   organizationId?: string | null;
 }
 
-const BASE_STATUS_OPTIONS: { value: EnvironmentScenarioStatus; label: string }[] = [
-  { value: 'pendente', label: 'Pendente' },
-  { value: 'em_andamento', label: 'Em andamento' },
-  { value: 'bloqueado', label: 'Bloqueado' },
-  { value: 'concluido', label: 'Concluído' },
-  { value: 'nao_se_aplica', label: 'Não se aplica' },
-];
-
-const AUTOMATED_STATUS_OPTION: { value: EnvironmentScenarioStatus; label: string } = {
-  value: 'concluido_automatizado',
-  label: 'Concluído automatizado',
-};
-
-const getScenarioStatusOptions = (scenario: EnvironmentScenario) =>
-  isAutomatedScenario(scenario.automatizado)
-    ? [...BASE_STATUS_OPTIONS.slice(0, 3), AUTOMATED_STATUS_OPTION, ...BASE_STATUS_OPTIONS.slice(3)]
-    : BASE_STATUS_OPTIONS;
-
 export const EnvironmentEvidenceTable = ({
   environment,
   isLocked,
@@ -54,6 +38,7 @@ export const EnvironmentEvidenceTable = ({
   bugCountByScenario,
   organizationId,
 }: EnvironmentEvidenceTableProps) => {
+  const { t: translation } = useTranslation();
   const { isUpdating, handleEvidenceUpload, changeScenarioStatus } = useScenarioEvidence(
     environment.id,
   );
@@ -64,6 +49,30 @@ export const EnvironmentEvidenceTable = ({
   const [criticalityFilter, setCriticalityFilter] = useState('');
   const [scenarioStartTimes, setScenarioStartTimes] = useState<Record<string, number>>({});
   const [evidenceLinks, setEvidenceLinks] = useState<Record<string, string>>({});
+  const [visibleCount, setVisibleCount] = useState(20);
+
+  const BASE_STATUS_OPTIONS = [
+    { value: 'pendente', label: translation('environmentEvidenceTable.status_pendente') },
+    { value: 'em_andamento', label: translation('environmentEvidenceTable.status_em_andamento') },
+    { value: 'bloqueado', label: translation('environmentEvidenceTable.status_bloqueado') },
+    { value: 'concluido', label: translation('environmentEvidenceTable.status_concluido') },
+    { value: 'nao_se_aplica', label: translation('environmentEvidenceTable.status_nao_se_aplica') },
+  ];
+
+  const AUTOMATED_STATUS_OPTION = {
+    value: 'concluido_automatizado',
+    label: translation('environmentEvidenceTable.status_concluido_automatizado'),
+  };
+
+  const getScenarioStatusOptions = (scenario: EnvironmentScenario) =>
+    isAutomatedScenario(scenario.automatizado)
+      ? [
+          ...BASE_STATUS_OPTIONS.slice(0, 3),
+          AUTOMATED_STATUS_OPTION,
+          ...BASE_STATUS_OPTIONS.slice(3),
+        ]
+      : BASE_STATUS_OPTIONS;
+
   const environmentStartTimestamp = useMemo(() => {
     if (!environment?.timeTracking?.start) {
       return null;
@@ -139,7 +148,6 @@ export const EnvironmentEvidenceTable = ({
   };
   const scenarioEntries = useMemo(() => {
     const entries = Object.entries(environment.scenarios ?? {});
-
     return entries.sort(([firstId, first], [secondId, second]) => {
       const firstTitle = first.titulo?.trim() ?? '';
       const secondTitle = second.titulo?.trim() ?? '';
@@ -193,7 +201,6 @@ export const EnvironmentEvidenceTable = ({
     }
 
     const comparator = createScenarioSortComparator(scenarioSort);
-
     return filteredScenarioEntries.slice().sort(([, first], [, second]) =>
       comparator(
         {
@@ -211,7 +218,14 @@ export const EnvironmentEvidenceTable = ({
       ),
     );
   }, [filteredScenarioEntries, scenarioSort]);
+  const paginatedScenarioEntries = useMemo(
+    () => orderedScenarioEntries.slice(0, visibleCount),
+    [orderedScenarioEntries, visibleCount],
+  );
   const isReadOnly = Boolean(isLocked || readOnly);
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [categoryFilter, criticalityFilter, scenarioSort, scenarioEntries.length]);
   const handleStatusChange = async (
     scenarioId: string,
     platform: EnvironmentScenarioPlatform,
@@ -223,7 +237,10 @@ export const EnvironmentEvidenceTable = ({
 
     const scenario = environment.scenarios?.[scenarioId];
     if (!scenario) {
-      showToast({ type: 'error', message: 'Cenário não encontrado para registrar o tempo.' });
+      showToast({
+        type: 'error',
+        message: translation('environmentEvidenceTable.toast_not_found'),
+      });
       return;
     }
 
@@ -258,10 +275,7 @@ export const EnvironmentEvidenceTable = ({
     const startedAt = scenarioStartTimes[scenarioId] ?? environmentStartTimestamp ?? Date.now();
 
     if (!organizationId) {
-      showToast({
-        type: 'error',
-        message: 'Associe a loja a uma organização para registrar o tempo do cenário.',
-      });
+      showToast({ type: 'error', message: translation('environmentEvidenceTable.toast_sem_org') });
       return;
     }
 
@@ -287,7 +301,10 @@ export const EnvironmentEvidenceTable = ({
       });
     } catch (error) {
       console.error(error);
-      showToast({ type: 'error', message: 'Não foi possível registrar o tempo do cenário.' });
+      showToast({
+        type: 'error',
+        message: translation('environmentEvidenceTable.toast_exec_error'),
+      });
     }
   };
 
@@ -295,38 +312,52 @@ export const EnvironmentEvidenceTable = ({
     const link = (evidenceLinks[scenarioId] ?? '').trim();
 
     if (!link) {
-      showToast({ type: 'error', message: 'Informe um link válido para a evidência.' });
+      showToast({
+        type: 'error',
+        message: translation('environmentEvidenceTable.toast_save_error'),
+      });
       return;
     }
 
     try {
       await handleEvidenceUpload(scenarioId, link);
-      showToast({ type: 'success', message: 'Link de evidência salvo com sucesso.' });
-    } catch (error) {
-      console.error(error);
-      showToast({ type: 'error', message: 'Não foi possível salvar o link da evidência.' });
+      showToast({
+        type: 'success',
+        message: translation('environmentEvidenceTable.toast_save_success'),
+      });
+    } catch {
+      showToast({
+        type: 'error',
+        message: translation('environmentEvidenceTable.toast_save_error'),
+      });
     }
   };
 
   if (scenarioEntries.length === 0) {
-    return <p className="section-subtitle">Nenhum cenário associado a este ambiente.</p>;
+    return (
+      <p className="section-subtitle">{translation('environmentEvidenceTable.cenarios_vazio')}</p>
+    );
   }
 
   if (filteredScenarioEntries.length === 0) {
-    return <p className="section-subtitle">Nenhum cenário corresponde aos filtros selecionados.</p>;
+    return (
+      <p className="section-subtitle">
+        {translation('environmentEvidenceTable.cenarios_sem_filtro')}
+      </p>
+    );
   }
 
   return (
     <div className="environment-table">
       <div className="environment-table__filters">
         <label className="environment-table__filter">
-          <span>Categoria</span>
+          <span>{translation('environmentEvidenceTable.filters_categoria')}</span>
           <select
             value={categoryFilter}
             onChange={(event) => setCategoryFilter(event.target.value)}
-            aria-label="Filtrar cenários por categoria"
+            aria-label={translation('environmentEvidenceTable.filters_categoria')}
           >
-            <option value="">Todas</option>
+            <option value="">{translation('environmentEvidenceTable.filters_todas')}</option>
             {categoryOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -335,13 +366,13 @@ export const EnvironmentEvidenceTable = ({
           </select>
         </label>
         <label className="environment-table__filter">
-          <span>Criticidade</span>
+          <span>{translation('environmentEvidenceTable.filters_criticidade')}</span>
           <select
             value={criticalityFilter}
             onChange={(event) => setCriticalityFilter(event.target.value)}
-            aria-label="Filtrar cenários por criticidade"
+            aria-label={translation('environmentEvidenceTable.filters_criticidade')}
           >
-            <option value="">Todas</option>
+            <option value="">{translation('environmentEvidenceTable.filters_todas')}</option>
             {criticalityOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -353,10 +384,10 @@ export const EnvironmentEvidenceTable = ({
       <table className="data-table">
         <thead>
           <tr>
-            <th>Título</th>
+            <th>{translation('environmentEvidenceTable.table_titulo')}</th>
             <th>
               <ScenarioColumnSortControl
-                label="Categoria"
+                label={translation('environmentEvidenceTable.table_categoria')}
                 field="category"
                 sort={scenarioSort}
                 onChange={setScenarioSort}
@@ -364,28 +395,31 @@ export const EnvironmentEvidenceTable = ({
             </th>
             <th>
               <ScenarioColumnSortControl
-                label="Criticidade"
+                label={translation('environmentEvidenceTable.table_criticidade')}
                 field="criticality"
                 sort={scenarioSort}
                 onChange={setScenarioSort}
               />
             </th>
-            <th>Observação</th>
-            <th>Status Mobile</th>
-            <th>Status Desktop</th>
-            <th>Evidência</th>
-            <th>Bug</th>
+            <th>{translation('environmentEvidenceTable.table_observacao')}</th>
+            <th>{translation('environmentEvidenceTable.table_status_mobile')}</th>
+            <th>{translation('environmentEvidenceTable.table_status_desktop')}</th>
+            <th>{translation('environmentEvidenceTable.table_evidencia')}</th>
+            <th>{translation('environmentEvidenceTable.table_bug')}</th>
           </tr>
         </thead>
         <tbody>
-          {orderedScenarioEntries.map(([scenarioId, data]) => {
+          {paginatedScenarioEntries.map(([scenarioId, data]) => {
             const statusOptions = getScenarioStatusOptions(data);
             return (
               <tr key={scenarioId}>
                 <td>{data.titulo}</td>
                 <td>{data.categoria}</td>
                 <td>{data.criticidade}</td>
-                <td>{data.observacao || '—'}</td>
+                <td>
+                  {data.observacao || translation('environmentEvidenceTable.observacao_none')}
+                </td>
+
                 {(['mobile', 'desktop'] as EnvironmentScenarioPlatform[]).map((platform) => {
                   const currentStatus =
                     platform === 'mobile'
@@ -429,22 +463,25 @@ export const EnvironmentEvidenceTable = ({
                         rel="noreferrer noopener"
                         className="text-link"
                       >
-                        Abrir evidência
+                        {translation('environmentEvidenceTable.evidencia_abrir')}
                       </a>
                     ) : (
-                      <span className="section-subtitle">Sem evidência</span>
+                      <span className="section-subtitle">
+                        {translation('environmentEvidenceTable.evidencia_sem')}
+                      </span>
                     )}
                     {!isReadOnly && (
                       <div className="scenario-evidence-actions">
                         <input
                           type="url"
-                          className="scenario-evidence-input"
                           value={evidenceLinks[scenarioId] ?? ''}
                           onChange={(event) =>
                             handleEvidenceLinkChange(scenarioId, event.target.value)
                           }
-                          placeholder="https://exemplo.com/evidencia"
-                          aria-label={`Link da evidência do cenário ${data.titulo}`}
+                          placeholder={translation(
+                            'environmentEvidenceTable.evidencia_placeholder',
+                          )}
+                          className="scenario-evidence-input"
                         />
                         <button
                           type="button"
@@ -452,7 +489,7 @@ export const EnvironmentEvidenceTable = ({
                           onClick={() => handleEvidenceSave(scenarioId)}
                           disabled={isUpdating}
                         >
-                          Salvar link
+                          {translation('environmentEvidenceTable.evidencia_salvar')}
                         </button>
                       </div>
                     )}
@@ -464,14 +501,15 @@ export const EnvironmentEvidenceTable = ({
                       {(() => {
                         const count = bugCountByScenario?.[scenarioId] ?? 0;
                         if (count === 0) {
-                          return 'Nenhum bug registrado';
+                          return translation('environmentEvidenceTable.bug_nenhum');
                         }
                         if (count === 1) {
-                          return '1 bug registrado';
+                          return translation('environmentEvidenceTable.bug_um');
                         }
-                        return `${count} bugs registrados`;
+                        return translation('environmentEvidenceTable.bug_varios', { count });
                       })()}
                     </span>
+
                     {!isReadOnly && (
                       <button
                         type="button"
@@ -479,7 +517,7 @@ export const EnvironmentEvidenceTable = ({
                         onClick={() => onRegisterBug?.(scenarioId)}
                         disabled={isUpdating || !onRegisterBug}
                       >
-                        Registrar bug
+                        {translation('environmentEvidenceTable.bug_registrar')}
                       </button>
                     )}
                   </div>
@@ -489,7 +527,18 @@ export const EnvironmentEvidenceTable = ({
           })}
         </tbody>
       </table>
-      {isUpdating && <p className="section-subtitle">Sincronizando evidências...</p>}
+      <PaginationControls
+        total={orderedScenarioEntries.length}
+        visible={paginatedScenarioEntries.length}
+        step={20}
+        onShowLess={() => setVisibleCount(20)}
+        onShowMore={() =>
+          setVisibleCount((previous) => Math.min(previous + 20, orderedScenarioEntries.length))
+        }
+      />
+      {isUpdating && (
+        <p className="section-subtitle">{translation('environmentEvidenceTable.sincronizando')}</p>
+      )}
     </div>
   );
 };
