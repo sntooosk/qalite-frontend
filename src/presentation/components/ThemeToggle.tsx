@@ -1,7 +1,9 @@
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 export const ThemeToggle = () => {
   const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <button
@@ -16,7 +18,7 @@ export const ThemeToggle = () => {
         {theme === 'light' ? '🌞' : '🌙'}
       </span>
       <span className="theme-toggle__label">
-        {theme === 'light' ? 'Modo claro' : 'Modo escuro'}
+        {theme === 'light' ? t('themeToggle.light') : t('themeToggle.dark')}
       </span>
     </button>
   );
