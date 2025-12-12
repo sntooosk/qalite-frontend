@@ -73,7 +73,7 @@ export const Layout = ({ children }: LayoutProps) => {
                 {t('login')}
               </Link>
               <Button type="button" onClick={() => navigate('/register')}>
-                {t("register")}
+                {t('register')}
               </Button>
             </div>
           )}
