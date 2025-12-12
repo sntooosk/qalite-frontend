@@ -70,7 +70,7 @@ export const Layout = ({ children }: LayoutProps) => {
           ) : (
             <div className="header-auth">
               <Link to="/login" className="text-link">
-                {t("login")}
+                {t('login')}
               </Link>
               <Button type="button" onClick={() => navigate('/register')}>
                 {t("register")}
