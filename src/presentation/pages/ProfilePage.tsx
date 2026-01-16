@@ -6,34 +6,21 @@ import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { TextInput } from '../components/TextInput';
-import { ThemeToggle } from '../components/ThemeToggle';
-import { ThemeIcon } from '../components/icons';
+import { ConnectedAccountsSection } from '../components/ConnectedAccountsSection';
+import { UserPreferencesSection } from '../components/UserPreferencesSection';
 import { useTranslation } from 'react-i18next';
 
 export const ProfilePage = () => {
   const { user, updateProfile, isLoading } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [browserstackUsername, setBrowserstackUsername] = useState('');
-  const [browserstackAccessKey, setBrowserstackAccessKey] = useState('');
-  const [isBrowserstackSectionOpen, setIsBrowserstackSectionOpen] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
     setFirstName(user?.firstName ?? '');
     setLastName(user?.lastName ?? '');
-    const username = user?.browserstackCredentials?.username ?? '';
-    const accessKey = user?.browserstackCredentials?.accessKey ?? '';
-    setBrowserstackUsername(username);
-    setBrowserstackAccessKey(accessKey);
-    setIsBrowserstackSectionOpen(Boolean(username.trim() || accessKey.trim()));
-  }, [
-    user?.browserstackCredentials?.accessKey,
-    user?.browserstackCredentials?.username,
-    user?.firstName,
-    user?.lastName,
-  ]);
+  }, [user?.firstName, user?.lastName]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -51,25 +38,11 @@ export const ProfilePage = () => {
       return;
     }
 
-    const trimmedBrowserstackUsername = browserstackUsername.trim();
-    const trimmedBrowserstackAccessKey = browserstackAccessKey.trim();
-    const browserstackCredentials = isBrowserstackSectionOpen
-      ? {
-          username: trimmedBrowserstackUsername || undefined,
-          accessKey: trimmedBrowserstackAccessKey || undefined,
-        }
-      : null;
-
     try {
       await updateProfile({
         firstName: trimmedFirstName,
         lastName: trimmedLastName,
-        browserstackCredentials,
       });
-      if (!isBrowserstackSectionOpen) {
-        setBrowserstackUsername('');
-        setBrowserstackAccessKey('');
-      }
     } catch (err) {
       console.error(err);
     }
@@ -80,11 +53,6 @@ export const ProfilePage = () => {
       <section className="card profile-card">
         <div className="profile-toolbar">
           <BackButton label={t('back')} />
-          <div className="profile-theme">
-            <ThemeIcon aria-hidden className="icon" />
-            <span>{t('profilePage.displayMode')}</span>
-            <ThemeToggle />
-          </div>
         </div>
 
         <span className="badge">{t('profilePage.badge')}</span>
@@ -120,68 +88,14 @@ export const ProfilePage = () => {
             disabled
           />
 
-          <div className="collapsible-section">
-            <div className="collapsible-section__header">
-              <div className="collapsible-section__titles">
-                <img
-                  className="collapsible-section__icon"
-                  src="https://img.icons8.com/color/48/browser-stack.png"
-                  alt={t('profilePage.browserstackLogoAlt')}
-                />
-                <p className="collapsible-section__title">{t('profilePage.browserstackTitle')}</p>
-                <p className="collapsible-section__description">
-                  {t('profilePage.browserstackDescription')}
-                </p>
-              </div>
-              <label className="collapsible-section__toggle">
-                <input
-                  type="checkbox"
-                  checked={isBrowserstackSectionOpen}
-                  onChange={() => {
-                    setIsBrowserstackSectionOpen((previous) => {
-                      const nextValue = !previous;
-                      if (!nextValue) {
-                        setBrowserstackUsername('');
-                        setBrowserstackAccessKey('');
-                      }
-                      return nextValue;
-                    });
-                  }}
-                  aria-expanded={isBrowserstackSectionOpen}
-                  aria-controls="profile-browserstack-section"
-                />
-                <span>
-                  {isBrowserstackSectionOpen ? t('profilePage.enabled') : t('profilePage.disabled')}
-                </span>
-              </label>
-            </div>
-            {isBrowserstackSectionOpen && (
-              <div className="collapsible-section__body" id="profile-browserstack-section">
-                <TextInput
-                  id="browserstack-username"
-                  label={t('profilePage.browserstackUser')}
-                  value={browserstackUsername}
-                  onChange={(event) => setBrowserstackUsername(event.target.value)}
-                  placeholder={t('profilePage.browserstackUserPlaceholder')}
-                />
-                <TextInput
-                  id="browserstack-access-key"
-                  label={t('profilePage.browserstackPassword')}
-                  type="password"
-                  value={browserstackAccessKey}
-                  onChange={(event) => setBrowserstackAccessKey(event.target.value)}
-                  placeholder={t('profilePage.browserstackPasswordPlaceholder')}
-                />
-                <p className="form-hint">{t('profilePage.browserstackText')}</p>
-              </div>
-            )}
-          </div>
-
           <Button type="submit" isLoading={isLoading} loadingText={t('profilePage.loadingText')}>
             {t('profilePage.saveButton')}
           </Button>
         </form>
       </section>
+
+      <UserPreferencesSection />
+      <ConnectedAccountsSection />
     </Layout>
   );
 };

@@ -1,10 +1,11 @@
-import { ReactNode } from 'react';
+import { ChangeEvent, ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useUserPreferences } from '../context/UserPreferencesContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Button } from './Button';
 import { UserAvatar } from './UserAvatar';
-import { LogoutIcon, UserIcon } from './icons';
+import { LogoutIcon, SettingsIcon, UserIcon } from './icons';
 import qliteLogo from '../assets/logo.png';
 import { useTranslation } from 'react-i18next';
 
@@ -18,13 +19,17 @@ export const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const displayName = user?.displayName || user?.email || '';
   const brandSource = activeOrganization;
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { preferences, updatePreferences } = useUserPreferences();
   const brandName = brandSource?.name || t('app.brandName');
   const brandLogo = qliteLogo;
 
-  function changeLang(lang) {
-    i18n.changeLanguage(lang);
-  }
+  const handleLanguageChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    void updatePreferences({
+      ...preferences,
+      language: event.target.value as 'pt' | 'en',
+    });
+  };
 
   return (
     <div className="app-shell">
@@ -52,13 +57,21 @@ export const Layout = ({ children }: LayoutProps) => {
               </div>
               <select
                 className="language-switch"
-                onChange={(e) => changeLang(e.target.value)}
-                value={i18n.language}
+                onChange={handleLanguageChange}
+                value={preferences.language}
               >
                 <option value="pt">{t('language.optionShortPt')}</option>
                 <option value="en">{t('language.optionShortEn')}</option>
               </select>
               <div className="header-user-actions">
+                <button
+                  type="button"
+                  className="header-profile"
+                  onClick={() => navigate('/settings')}
+                >
+                  <SettingsIcon aria-hidden className="icon" />
+                  <span>{t('settings.title')}</span>
+                </button>
                 <button
                   type="button"
                   className="header-profile"
@@ -89,18 +102,3 @@ export const Layout = ({ children }: LayoutProps) => {
     </div>
   );
 };
-
-export default function LanguageSwitcher() {
-  const { i18n, t } = useTranslation();
-
-  function changeLang(lang) {
-    i18n.changeLanguage(lang);
-  }
-
-  return (
-    <select onChange={(e) => changeLang(e.target.value)} value={i18n.language}>
-      <option value="pt">{t('language.optionLongPt')}</option>
-      <option value="en">{t('language.optionLongEn')}</option>
-    </select>
-  );
-}

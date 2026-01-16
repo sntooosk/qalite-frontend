@@ -40,6 +40,45 @@
       "optionLongPt": "🇧🇷 Português",
       "optionLongEn": "🇺🇸 English"
     },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Manage appearance, language, and connected services."
+    },
+    "preferences": {
+      "title": "Preferences",
+      "subtitle": "Choose how the interface looks and the site language.",
+      "themeLabel": "Theme",
+      "languageLabel": "Language",
+      "themeSystem": "System default",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "save": "Save preferences",
+      "upToDate": "Preferences are up to date.",
+      "loading": "Loading preferences..."
+    },
+    "connectedAccounts": {
+      "title": "Connected accounts",
+      "subtitle": "Connect third-party services to speed up your QA routine.",
+      "browserstackTitle": "BrowserStack",
+      "browserstackDescription": "Use your credentials to connect BrowserStack automation.",
+      "username": "Username",
+      "accessKey": "Access key",
+      "disconnected": "Not connected",
+      "update": "Update credentials",
+      "disconnect": "Disconnect",
+      "connectPrompt": "Connect BrowserStack to start",
+      "usernamePlaceholder": "browserstack.user",
+      "accessKeyPlaceholder": "Paste your access key",
+      "browserstackHint": "We only store the required credentials and mask sensitive data.",
+      "save": "Save credentials",
+      "connect": "Connect",
+      "browserstackRequired": "Enter username and access key to connect BrowserStack."
+    },
+    "pagination": {
+      "showing": "Showing {{visible}} of {{total}}",
+      "showMore": "Load more",
+      "showLess": "Show less"
+    },
     "confirmDeleteModal": {
       "message": "Are you sure you want to delete?",
       "confirmText": "Confirm deletion",

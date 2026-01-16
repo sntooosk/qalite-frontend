@@ -39,6 +39,45 @@
       "optionLongPt": "🇧🇷 Português",
       "optionLongEn": "🇺🇸 English"
     },
+    "settings": {
+      "title": "Configurações",
+      "subtitle": "Gerencie aparência, idioma e integrações conectadas."
+    },
+    "preferences": {
+      "title": "Preferências",
+      "subtitle": "Defina o tema e o idioma do site.",
+      "themeLabel": "Tema",
+      "languageLabel": "Idioma",
+      "themeSystem": "Padrão do sistema",
+      "themeLight": "Claro",
+      "themeDark": "Escuro",
+      "save": "Salvar preferências",
+      "upToDate": "Preferências atualizadas.",
+      "loading": "Carregando preferências..."
+    },
+    "connectedAccounts": {
+      "title": "Contas conectadas",
+      "subtitle": "Conecte serviços externos para acelerar sua rotina de QA.",
+      "browserstackTitle": "BrowserStack",
+      "browserstackDescription": "Use suas credenciais para habilitar a integração com o BrowserStack.",
+      "username": "Usuário",
+      "accessKey": "Chave de acesso",
+      "disconnected": "Não conectado",
+      "update": "Atualizar credenciais",
+      "disconnect": "Desconectar",
+      "connectPrompt": "Conecte o BrowserStack para começar",
+      "usernamePlaceholder": "browserstack.user",
+      "accessKeyPlaceholder": "Cole sua chave de acesso",
+      "browserstackHint": "Armazenamos apenas as credenciais essenciais e mascaramos dados sensíveis.",
+      "save": "Salvar credenciais",
+      "connect": "Conectar",
+      "browserstackRequired": "Informe usuário e chave de acesso para conectar o BrowserStack."
+    },
+    "pagination": {
+      "showing": "Mostrando {{visible}} de {{total}}",
+      "showMore": "Carregar mais",
+      "showLess": "Mostrar menos"
+    },
     "suites": "Suítes",
     "confirmDeleteModal": {
       "message": "Você deseja mesmo excluir?",
