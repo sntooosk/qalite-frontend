@@ -3905,8 +3905,9 @@ button.store-summary-highlight:focus-visible {
 }
 
 .environment-card-status-dot--backlog {
-  background: #e2e8f0;
+  background: var(--color-surface);
   color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
 }
 
 .environment-card-status-dot--in_progress {

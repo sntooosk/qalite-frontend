@@ -222,9 +222,9 @@ export const addUserToOrganization = async (
       updatedAt: serverTimestamp(),
     });
 
-    const userRef = doc(firebaseFirestore, USERS_COLLECTION, userId);
+    const userDocRef = doc(firebaseFirestore, USERS_COLLECTION, userId);
     transaction.set(
-      userRef,
+      userDocRef,
       {
         organizationId: payload.organizationId,
         updatedAt: serverTimestamp(),
