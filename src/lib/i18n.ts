@@ -14,6 +14,11 @@ i18n.use(initReactI18next).init({
     },
   },
   lng: 'en',
+  fallbackLng: 'en',
+  supportedLngs: ['en', 'pt'],
+  interpolation: {
+    escapeValue: false,
+  },
 });
 
 export default i18n;

@@ -64,7 +64,7 @@ export const ProfilePage = () => {
     }
 
     if (file.size > MAX_PHOTO_SIZE) {
-      setLocalError(t("profilePage.errorSize"));
+      setLocalError(t('profilePage.errorSize'));
       return;
     }
 
@@ -85,12 +85,12 @@ export const ProfilePage = () => {
     const trimmedFirstName = firstName.trim();
     const trimmedLastName = lastName.trim();
     if (!trimmedFirstName) {
-      setLocalError(t("profilePage.name"));
+      setLocalError(t('profilePage.name'));
       return;
     }
 
     if (!trimmedLastName) {
-      setLocalError(t("profilePage.lastname"));
+      setLocalError(t('profilePage.lastname'));
       return;
     }
 
@@ -136,9 +136,7 @@ export const ProfilePage = () => {
 
         <span className="badge">{t('profilePage.badge')}</span>
         <h1 className="section-title">{t('profilePage.title')}</h1>
-        <p className="section-subtitle">
-          {t('profilePage.subtitle')}
-        </p>
+        <p className="section-subtitle">{t('profilePage.subtitle')}</p>
 
         {localError && <Alert type="error" message={localError} />}
 
@@ -176,7 +174,7 @@ export const ProfilePage = () => {
 
           <TextInput
             id="email"
-            label="E-mail"
+            label={t('profilePage.emailLabel')}
             type="email"
             value={user?.email ?? ''}
             onChange={() => {}}
@@ -190,7 +188,7 @@ export const ProfilePage = () => {
                 <img
                   className="collapsible-section__icon"
                   src="https://img.icons8.com/color/48/browser-stack.png"
-                  alt="BrowserStack"
+                  alt={t('profilePage.browserstackLogoAlt')}
                 />
                 <p className="collapsible-section__title">{t('profilePage.browserstackTitle')}</p>
                 <p className="collapsible-section__description">
@@ -214,7 +212,9 @@ export const ProfilePage = () => {
                   aria-expanded={isBrowserstackSectionOpen}
                   aria-controls="profile-browserstack-section"
                 />
-                <span>{isBrowserstackSectionOpen ? t('profilePage.enabled') : t('profilePage.disabled')}</span>
+                <span>
+                  {isBrowserstackSectionOpen ? t('profilePage.enabled') : t('profilePage.disabled')}
+                </span>
               </label>
             </div>
             {isBrowserstackSectionOpen && (
@@ -224,7 +224,7 @@ export const ProfilePage = () => {
                   label={t('profilePage.browserstackUser')}
                   value={browserstackUsername}
                   onChange={(event) => setBrowserstackUsername(event.target.value)}
-                  placeholder="username"
+                  placeholder={t('profilePage.browserstackUserPlaceholder')}
                 />
                 <TextInput
                   id="browserstack-access-key"
@@ -232,11 +232,9 @@ export const ProfilePage = () => {
                   type="password"
                   value={browserstackAccessKey}
                   onChange={(event) => setBrowserstackAccessKey(event.target.value)}
-                  placeholder="access key"
+                  placeholder={t('profilePage.browserstackPasswordPlaceholder')}
                 />
-                <p className="form-hint">
-                  {t('profilePage.browserstackText')}
-                </p>
+                <p className="form-hint">{t('profilePage.browserstackText')}</p>
               </div>
             )}
           </div>

@@ -10,7 +10,7 @@ export const ThemeToggle = () => {
       type="button"
       className="theme-toggle"
       onClick={toggleTheme}
-      aria-label="Alternar tema"
+      aria-label={t('themeToggle.ariaLabel')}
       aria-pressed={theme === 'dark'}
       data-theme-state={theme}
     >

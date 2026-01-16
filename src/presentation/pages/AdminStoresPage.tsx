@@ -113,7 +113,7 @@ export const AdminStoresPage = () => {
     };
 
     void fetchOrganizations();
-  }, [searchParams, showToast]);
+  }, [searchParams, showToast, translation]);
 
   useEffect(() => {
     if (!selectedOrganizationId) {
@@ -140,7 +140,7 @@ export const AdminStoresPage = () => {
     };
 
     void fetchStores();
-  }, [selectedOrganizationId, setSearchParams, showToast]);
+  }, [selectedOrganizationId, setSearchParams, showToast, translation]);
 
   const selectedOrganization = useMemo(
     () => organizations.find((organization) => organization.id === selectedOrganizationId) ?? null,
@@ -198,7 +198,7 @@ export const AdminStoresPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [selectedOrganizationId, stores, showToast]);
+  }, [selectedOrganizationId, stores, showToast, translation]);
 
   useEffect(() => {
     const searchTerm = newMemberEmail.trim();
@@ -262,7 +262,7 @@ export const AdminStoresPage = () => {
     } finally {
       setIsLoadingBrowserstack(false);
     }
-  }, [hasBrowserstackCredentials, showToast, user?.browserstackCredentials]);
+  }, [hasBrowserstackCredentials, showToast, translation, user?.browserstackCredentials]);
 
   useEffect(() => {
     void loadBrowserstackBuilds();
@@ -472,25 +472,19 @@ export const AdminStoresPage = () => {
 
     const trimmedEmail = newMemberEmail.trim();
     if (!trimmedEmail) {
-
       setOrganizationError('Informe um e-mail para adicionar.');
 
       return;
-
     }
 
     const normalizedEmail = trimmedEmail.toLowerCase();
 
     if (
-
       selectedOrganization.members.some((member) => member.email.toLowerCase() === normalizedEmail)
-
     ) {
-
       setOrganizationError('Usuário já está vinculado à organização.');
 
       return;
-
     }
     try {
       setIsManagingMembers(true);
@@ -503,10 +497,10 @@ export const AdminStoresPage = () => {
         previous.map((organization) =>
           organization.id === selectedOrganization.id
             ? {
-              ...organization,
-              members: [...organization.members, member],
-              memberIds: [...organization.memberIds, member.uid],
-            }
+                ...organization,
+                members: [...organization.members, member],
+                memberIds: [...organization.memberIds, member.uid],
+              }
             : organization,
         ),
       );
@@ -547,10 +541,10 @@ export const AdminStoresPage = () => {
         previous.map((organization) =>
           organization.id === selectedOrganization.id
             ? {
-              ...organization,
-              members: organization.members.filter((item) => item.uid !== member.uid),
-              memberIds: organization.memberIds.filter((item) => item !== member.uid),
-            }
+                ...organization,
+                members: organization.members.filter((item) => item.uid !== member.uid),
+                memberIds: organization.memberIds.filter((item) => item !== member.uid),
+              }
             : organization,
         ),
       );
@@ -646,8 +640,8 @@ export const AdminStoresPage = () => {
             <h1 className="section-title">
               {selectedOrganization
                 ? translation('AdminStoresPage.stores-title-org-selected', {
-                  organizationName: selectedOrganization.name,
-                })
+                    organizationName: selectedOrganization.name,
+                  })
                 : translation('AdminStoresPage.stores-title-no-org-selected')}
             </h1>
             <p className="section-subtitle">
@@ -753,8 +747,8 @@ export const AdminStoresPage = () => {
                       {selectedOrganization.members.length === 1
                         ? translation('AdminStoresPage.collaborators-count-singular')
                         : translation('AdminStoresPage.collaborators-count-plural', {
-                          count: selectedOrganization.members.length,
-                        })}
+                            count: selectedOrganization.members.length,
+                          })}
                     </span>
                   </div>
                   {selectedOrganization.members.length === 0 ? (
@@ -811,7 +805,9 @@ export const AdminStoresPage = () => {
                 />
               ) : (
                 <div className="card">
-                  <span className="badge">BrowserStack</span>
+                  <span className="badge">
+                    {translation('AdminStoresPage.browserstack-card-badge')}
+                  </span>
                   <h2 className="section-title">
                     {translation('AdminStoresPage.browserstack-card-title')}
                   </h2>
@@ -914,7 +910,7 @@ export const AdminStoresPage = () => {
                   emailDomain: event.target.value,
                 }))
               }
-              placeholder="@exemplo.com"
+              placeholder={translation('AdminStoresPage.org-email-domain-placeholder')}
               dataTestId="organization-settings-email-domain"
             />
             <p className="form-hint">{translation('AdminStoresPage.org-email-domain-hint')}</p>
@@ -924,7 +920,7 @@ export const AdminStoresPage = () => {
                   <img
                     className="collapsible-section__icon"
                     src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/48/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
-                    alt="Slack"
+                    alt={translation('AdminStoresPage.org-slack-icon-alt')}
                   />
                   <p className="collapsible-section__title">
                     {translation('AdminStoresPage.org-slack-section-title')}
@@ -964,7 +960,7 @@ export const AdminStoresPage = () => {
                         slackWebhookUrl: event.target.value,
                       }))
                     }
-                    placeholder="https://hooks.slack.com/services/..."
+                    placeholder={translation('AdminStoresPage.org-slack-webhook-placeholder')}
                     dataTestId="organization-settings-slack-webhook"
                   />
                   <p className="form-hint">
@@ -1034,9 +1030,15 @@ export const AdminStoresPage = () => {
               Convide qualquer usuário existente pelo e-mail, mesmo que não corresponda ao domínio
               configurado.
             </p>
-            {isSearchingUsers && <p className="form-hint">Buscando sugestões...</p>}
+            {isSearchingUsers && (
+              <p className="form-hint">{translation('AdminStoresPage.user-search-loading')}</p>
+            )}
             {!isSearchingUsers && userSuggestions.length > 0 && (
-              <ul className="suggestion-list" role="listbox" aria-label="Sugestões de usuários">
+              <ul
+                className="suggestion-list"
+                role="listbox"
+                aria-label={translation('AdminStoresPage.user-search-suggestions')}
+              >
                 {userSuggestions.map((suggestion) => (
                   <li key={suggestion.id}>
                     <button
@@ -1055,7 +1057,9 @@ export const AdminStoresPage = () => {
                         </span>
                         <span className="suggestion-option__email">{suggestion.email}</span>
                       </div>
-                      <span className="suggestion-option__hint">Usar e-mail</span>
+                      <span className="suggestion-option__hint">
+                        {translation('AdminStoresPage.user-search-email-hint')}
+                      </span>
                     </button>
                   </li>
                 ))}

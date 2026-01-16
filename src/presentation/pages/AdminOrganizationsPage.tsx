@@ -59,7 +59,7 @@ export const AdminOrganizationsPage = () => {
     };
 
     void fetchOrganizations();
-  }, [showToast]);
+  }, [showToast, translation]);
 
   const openCreateModal = () => {
     setOrganizationForm(initialOrganizationForm);
@@ -242,7 +242,7 @@ export const AdminOrganizationsPage = () => {
                 <img
                   className="collapsible-section__icon"
                   src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/48/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
-                  alt="Slack"
+                  alt={translation('adminOrganizationsPage.form.slack.iconAlt')}
                 />
 
                 <p className="collapsible-section__title">
