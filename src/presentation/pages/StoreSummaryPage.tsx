@@ -149,6 +149,7 @@ export const StoreSummaryPage = () => {
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
   const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
+  const [isSuitePreviewTableCollapsed, setIsSuitePreviewTableCollapsed] = useState(false);
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const [suiteForm, setSuiteForm] = useState<StoreSuiteInput>(emptySuiteForm);
   const [suiteFormError, setSuiteFormError] = useState<string | null>(null);
@@ -543,6 +544,10 @@ export const StoreSummaryPage = () => {
       setIsScenarioTableCollapsed(false);
     }
   }, [scenarios.length]);
+
+  useEffect(() => {
+    setIsSuitePreviewTableCollapsed(false);
+  }, [selectedSuitePreviewId]);
 
   useEffect(() => {
     setIsCategoryListCollapsed(true);
@@ -2243,9 +2248,24 @@ export const StoreSummaryPage = () => {
                             <span className="suite-preview-title">
                               {t('storeSummary.suitesRegistered')}
                             </span>
-                            <Button type="button" variant="ghost" onClick={handleBackToSuiteForm}>
-                              {t('storeSummary.backToForm')}
-                            </Button>
+                            <div className="suite-table-actions">
+                              {selectedSuitePreview && orderedSuitePreviewEntries.length > 0 && (
+                                <button
+                                  type="button"
+                                  className="scenario-table-toggle"
+                                  onClick={() =>
+                                    setIsSuitePreviewTableCollapsed((previous) => !previous)
+                                  }
+                                >
+                                  {isSuitePreviewTableCollapsed
+                                    ? t('storeSummary.maxTable')
+                                    : t('storeSummary.minTable')}
+                                </button>
+                              )}
+                              <Button type="button" variant="ghost" onClick={handleBackToSuiteForm}>
+                                {t('storeSummary.backToForm')}
+                              </Button>
+                            </div>
                           </div>
                           {isLoadingSuites ? (
                             <p className="section-subtitle">{t('storeSummary.suitesLoading')}</p>
@@ -2285,6 +2305,10 @@ export const StoreSummaryPage = () => {
                             <p className="section-subtitle">{t('storeSummary.suiteClick')}</p>
                           ) : orderedSuitePreviewEntries.length === 0 ? (
                             <p className="section-subtitle">{t('storeSummary.suiteNoScenarios')}</p>
+                          ) : isSuitePreviewTableCollapsed ? (
+                            <p className="section-subtitle">
+                              {t('storeSummary.suiteTableCollapsed')}
+                            </p>
                           ) : (
                             <div className="suite-preview suite-preview--cards">
                               <div className="suite-preview-description">

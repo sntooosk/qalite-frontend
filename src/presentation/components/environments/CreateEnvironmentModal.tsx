@@ -196,7 +196,7 @@ export const CreateEnvironmentModal = ({
         />
         <TextInput
           id="jiraTask"
-          label="Jira Task"
+          label={t('createEnvironment.jiraTask')}
           value={jiraTask}
           onChange={(event) => setJiraTask(event.target.value)}
         />
@@ -240,7 +240,7 @@ export const CreateEnvironmentModal = ({
         {shouldDisplayReleaseField && (
           <TextInput
             id="release"
-            label="Release"
+            label={t('createEnvironment.releaseLabel')}
             value={release}
             onChange={(event) => setRelease(event.target.value)}
           />
@@ -248,7 +248,8 @@ export const CreateEnvironmentModal = ({
         {selectedSuite && (
           <div className="environment-suite-preview">
             <p>
-            {t('createEnvironment.scenariosLoaded')} <strong>{selectedSuite.name}</strong>: {totalCenarios}
+              {t('createEnvironment.scenariosLoaded')} <strong>{selectedSuite.name}</strong>:{' '}
+              {totalCenarios}
             </p>
           </div>
         )}

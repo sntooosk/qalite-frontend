@@ -253,11 +253,7 @@ export const UserDashboardPage = () => {
                   <ul className="collaborator-list">
                     {organization.members.map((member) => (
                       <li key={member.uid} className="collaborator-card">
-                        <UserAvatar
-                          name={member.displayName || member.email}
-                          photoURL={member.photoURL ?? undefined}
-                          size="sm"
-                        />
+                        <UserAvatar name={member.displayName || member.email} size="sm" />
                         <div className="collaborator-card__details">
                           <strong>{member.displayName || member.email}</strong>
                         </div>

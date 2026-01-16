@@ -467,12 +467,13 @@ export const AdminStoresPage = () => {
 
   const handleAddMember = async () => {
     if (!selectedOrganization) {
+      setOrganizationError(translation('AdminStoresPage.member-add-no-organization'));
       return;
     }
 
     const trimmedEmail = newMemberEmail.trim();
     if (!trimmedEmail) {
-      setOrganizationError('Informe um e-mail para adicionar.');
+      setOrganizationError(translation('AdminStoresPage.member-add-email-required'));
 
       return;
     }
@@ -482,7 +483,7 @@ export const AdminStoresPage = () => {
     if (
       selectedOrganization.members.some((member) => member.email.toLowerCase() === normalizedEmail)
     ) {
-      setOrganizationError('Usuário já está vinculado à organização.');
+      setOrganizationError(translation('AdminStoresPage.member-add-already-linked'));
 
       return;
     }
@@ -518,7 +519,7 @@ export const AdminStoresPage = () => {
         error instanceof Error
           ? error.message
           : translation('AdminStoresPage.toast-error-add-member');
-      setNewMemberEmail(message);
+      setOrganizationError(message);
       showToast({ type: 'error', message });
     } finally {
       setIsManagingMembers(false);
@@ -759,11 +760,7 @@ export const AdminStoresPage = () => {
                     <ul className="collaborator-list">
                       {selectedOrganization.members.map((member) => (
                         <li key={member.uid} className="collaborator-card">
-                          <UserAvatar
-                            name={member.displayName || member.email}
-                            photoURL={member.photoURL ?? undefined}
-                            size="sm"
-                          />
+                          <UserAvatar name={member.displayName || member.email} size="sm" />
                           <div className="collaborator-card__details">
                             <strong>{member.displayName || member.email}</strong>
                           </div>
@@ -1001,8 +998,9 @@ export const AdminStoresPage = () => {
                 </p>
               </div>
               <span className="badge">
-                {selectedOrganization.members.length} membro
-                {selectedOrganization.members.length === 1 ? '' : 's'}
+                {translation('AdminStoresPage.member-count', {
+                  count: selectedOrganization.members.length,
+                })}
               </span>
             </div>
 
@@ -1026,10 +1024,7 @@ export const AdminStoresPage = () => {
                 {translation('AdminStoresPage.org-added-user')}
               </Button>
             </div>
-            <p className="form-hint">
-              Convide qualquer usuário existente pelo e-mail, mesmo que não corresponda ao domínio
-              configurado.
-            </p>
+            <p className="form-hint">{translation('AdminStoresPage.member-add-hint')}</p>
             {isSearchingUsers && (
               <p className="form-hint">{translation('AdminStoresPage.user-search-loading')}</p>
             )}
@@ -1046,11 +1041,7 @@ export const AdminStoresPage = () => {
                       className="suggestion-option"
                       onClick={() => setNewMemberEmail(suggestion.email)}
                     >
-                      <UserAvatar
-                        name={suggestion.displayName || suggestion.email}
-                        photoURL={suggestion.photoURL ?? undefined}
-                        size="sm"
-                      />
+                      <UserAvatar name={suggestion.displayName || suggestion.email} size="sm" />
                       <div className="suggestion-option__details">
                         <span className="suggestion-option__name">
                           {suggestion.displayName || suggestion.email}
@@ -1074,10 +1065,7 @@ export const AdminStoresPage = () => {
               <ul className="member-list">
                 {selectedOrganization.members.map((member) => (
                   <li key={member.uid} className="member-list-item">
-                    <UserAvatar
-                      name={member.displayName || member.email}
-                      photoURL={member.photoURL ?? undefined}
-                    />
+                    <UserAvatar name={member.displayName || member.email} />
                     <div className="member-list-details">
                       <span className="member-list-name">{member.displayName || member.email}</span>
                       <span className="member-list-email">{member.email}</span>

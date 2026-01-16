@@ -174,6 +174,16 @@ export const addUserToOrganization = async (
 
   let organizationName = '';
 
+  const usersRef = collection(firebaseFirestore, USERS_COLLECTION);
+  const userQuery = query(usersRef, where('email', '==', normalizedEmail), limit(1));
+  const userQuerySnapshot = await getDocs(userQuery);
+
+  if (userQuerySnapshot.empty) {
+    throw new Error('Usuário não encontrado.');
+  }
+
+  const userRef = userQuerySnapshot.docs[0].ref;
+
   const member = await runTransaction(firebaseFirestore, async (transaction) => {
     const organizationRef = doc(
       firebaseFirestore,
@@ -190,17 +200,13 @@ export const addUserToOrganization = async (
 
     const currentMembers = (organizationSnapshot.data()?.members as string[] | undefined) ?? [];
 
-    const usersRef = collection(firebaseFirestore, USERS_COLLECTION);
-    const userQuery = query(usersRef, where('email', '==', normalizedEmail), limit(1));
-    const userSnapshot = await transaction.get(userQuery);
-
-    if (userSnapshot.empty) {
+    const userSnapshot = await transaction.get(userRef);
+    if (!userSnapshot.exists()) {
       throw new Error('Usuário não encontrado.');
     }
 
-    const userDoc = userSnapshot.docs[0];
-    const userId = userDoc.id;
-    const userData = userDoc.data();
+    const userId = userRef.id;
+    const userData = userSnapshot.data();
 
     const existingOrganizationId = (userData.organizationId as string | null) ?? null;
     if (existingOrganizationId && existingOrganizationId !== payload.organizationId) {

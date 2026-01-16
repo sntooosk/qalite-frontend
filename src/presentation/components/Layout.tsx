@@ -41,7 +41,7 @@ export const Layout = ({ children }: LayoutProps) => {
           {user ? (
             <div className="header-user">
               <div className="header-user-info">
-                <UserAvatar name={displayName} photoURL={user.photoURL} size="sm" />
+                <UserAvatar name={displayName} size="sm" />
                 <div className="user-context">
                   <span className="user-greeting">{t('greeting')},</span>
                   <span className="user-name">{displayName}</span>
