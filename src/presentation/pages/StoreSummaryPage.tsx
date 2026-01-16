@@ -149,6 +149,7 @@ export const StoreSummaryPage = () => {
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
   const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
+  const [isSuitePreviewTableCollapsed, setIsSuitePreviewTableCollapsed] = useState(false);
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const [suiteForm, setSuiteForm] = useState<StoreSuiteInput>(emptySuiteForm);
   const [suiteFormError, setSuiteFormError] = useState<string | null>(null);
@@ -170,7 +171,10 @@ export const StoreSummaryPage = () => {
   const [exportingSuiteFormat, setExportingSuiteFormat] = useState<ExportFormat | null>(null);
   const [isImportingSuites, setIsImportingSuites] = useState(false);
   const { t } = useTranslation();
-  const storeSiteInfo = useMemo(() => normalizeStoreSite(store?.site, t('storeSummary.notInformed')), [store?.site]);
+  const storeSiteInfo = useMemo(
+    () => normalizeStoreSite(store?.site, t('storeSummary.notInformed')),
+    [store?.site, t],
+  );
   const [isStoreSettingsOpen, setIsStoreSettingsOpen] = useState(false);
   const [storeSettings, setStoreSettings] = useState({ name: '', site: '' });
   const [storeSettingsError, setStoreSettingsError] = useState<string | null>(null);
@@ -193,7 +197,7 @@ export const StoreSummaryPage = () => {
     selectedSuiteScenarioCount === 0
       ? t('storeSummary.noScenario')
       : `${selectedSuiteScenarioCount} ${t('storeSummary.scenario')} ${t('storeSummary.selected')}`;
-      
+
   const isPreparingStoreView =
     isLoadingStore ||
     isLoadingScenarios ||
@@ -264,6 +268,7 @@ export const StoreSummaryPage = () => {
     viewMode,
     setViewMode,
     setIsViewingSuitesOnly,
+    t,
   ]);
 
   const scenarioMap = useMemo(() => {
@@ -306,28 +311,28 @@ export const StoreSummaryPage = () => {
       { value: '', label: t('storeSummary.selectCategory') },
       ...availableCategories.map((category) => ({ value: category, label: category })),
     ];
-  }, [availableCategories]);
+  }, [availableCategories, t]);
 
   const automationSelectOptions = useMemo(
     () => [
       { value: '', label: t('storeSummary.selectAutomation') },
-      ...AUTOMATION_OPTIONS.map(opt => ({
+      ...AUTOMATION_OPTIONS.map((opt) => ({
         ...opt,
         label: t(opt.label),
       })),
     ],
-    [t]
+    [t],
   );
 
   const criticalitySelectOptions = useMemo(
     () => [
       { value: '', label: t('storeSummary.selectCriticality') },
-      ...CRITICALITY_OPTIONS.map(opt => ({
+      ...CRITICALITY_OPTIONS.map((opt) => ({
         ...opt,
         label: t(opt.label),
       })),
     ],
-    [t]
+    [t],
   );
 
   const categoryFilterOptions = useMemo(
@@ -335,12 +340,12 @@ export const StoreSummaryPage = () => {
       { value: '', label: t('storeSummary.allCategories') },
       ...availableCategories.map((category) => ({ value: category, label: category })),
     ],
-    [availableCategories],
+    [availableCategories, t],
   );
 
   const criticalityFilterOptions = useMemo(
     () => [{ value: '', label: t('storeSummary.allCriticalities') }, ...CRITICALITY_OPTIONS],
-    [],
+    [t],
   );
 
   const filteredScenarios = useMemo(
@@ -422,7 +427,7 @@ export const StoreSummaryPage = () => {
 
     if (isLoadingScenarioTimings) {
       return {
-        label:  t('storeSummary.loading'),
+        label: t('storeSummary.loading'),
         title: t('storeSummary.loadingAverageTime'),
       };
     }
@@ -495,7 +500,7 @@ export const StoreSummaryPage = () => {
     };
 
     void fetchData();
-  }, [isInitializing, navigate, showToast, storeId, user]);
+  }, [isInitializing, navigate, showToast, storeId, user, t]);
 
   useEffect(() => {
     if (!storeId) {
@@ -532,13 +537,17 @@ export const StoreSummaryPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [storeId]);
+  }, [storeId, t]);
 
   useEffect(() => {
     if (scenarios.length === 0) {
       setIsScenarioTableCollapsed(false);
     }
   }, [scenarios.length]);
+
+  useEffect(() => {
+    setIsSuitePreviewTableCollapsed(false);
+  }, [selectedSuitePreviewId]);
 
   useEffect(() => {
     setIsCategoryListCollapsed(true);
@@ -671,7 +680,7 @@ export const StoreSummaryPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [showToast, storeId, user]);
+  }, [showToast, storeId, t, user]);
 
   useEffect(() => {
     if (!store?.id) {
@@ -705,7 +714,7 @@ export const StoreSummaryPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [showToast, store?.id]);
+  }, [showToast, store?.id, t]);
 
   useEffect(() => {
     setNewCategoryName('');
@@ -927,13 +936,11 @@ export const StoreSummaryPage = () => {
       if (scenarioForm.category === category.name) {
         setScenarioForm((previous) => ({ ...previous, category: '' }));
       }
-      showToast({ type: 'success', message:  t('storeSummary.categoryRemoveSuccess') });
+      showToast({ type: 'success', message: t('storeSummary.categoryRemoveSuccess') });
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error
-          ? error.message
-          : t('storeSummary.categoryRemoveError');
+        error instanceof Error ? error.message : t('storeSummary.categoryRemoveError');
       setCategoryError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -1123,9 +1130,7 @@ export const StoreSummaryPage = () => {
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error
-          ? error.message
-          : t('storeSummary.scenarioExportError');
+        error instanceof Error ? error.message : t('storeSummary.scenarioExportError');
       showToast({ type: 'error', message });
       pdfWindow?.close();
     } finally {
@@ -1166,13 +1171,11 @@ export const StoreSummaryPage = () => {
       }
 
       if (parsed.scenarios.length === 0) {
-        showToast({ type: 'info', message:  t('storeSummary.importNoScenarios') });
+        showToast({ type: 'info', message: t('storeSummary.importNoScenarios') });
         return;
       }
 
-      const shouldReplace = window.confirm(
-        t('storeSummary.importConfirmReplace'),
-      );
+      const shouldReplace = window.confirm(t('storeSummary.importConfirmReplace'));
       const strategy = shouldReplace ? 'replace' : 'merge';
       const scenariosPayload = parsed.scenarios.map((scenario) => ({
         title: scenario.title,
@@ -1192,13 +1195,15 @@ export const StoreSummaryPage = () => {
       const feedbackMessage =
         result.strategy === 'replace'
           ? t('storeSummary.importReplaceSuccess', { count: result.scenarios.length })
-          : t('storeSummary.importMergeSuccess', { created: result.created, skipped: result.skipped });
-        console.log(feedbackMessage)
+          : t('storeSummary.importMergeSuccess', {
+              created: result.created,
+              skipped: result.skipped,
+            });
+      console.log(feedbackMessage);
       showToast({ type: 'success', message: feedbackMessage });
     } catch (error) {
       console.error(error);
-      const message =
-        error instanceof Error ? error.message :  t('storeSummary.importError');
+      const message = error instanceof Error ? error.message : t('storeSummary.importError');
       showToast({ type: 'error', message });
     } finally {
       setIsImportingScenarios(false);
@@ -1322,7 +1327,7 @@ export const StoreSummaryPage = () => {
       handleCancelSuiteEdit();
     } catch (error) {
       console.error(error);
-      const message = error instanceof Error ? error.message :  t('storeSummary.suiteSaveError');
+      const message = error instanceof Error ? error.message : t('storeSummary.suiteSaveError');
       setSuiteFormError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -1485,8 +1490,7 @@ export const StoreSummaryPage = () => {
       showToast({ type: 'success', message: t('storeSummary.suiteExportSuccess') });
     } catch (error) {
       console.error(error);
-      const message =
-        error instanceof Error ? error.message : t('storeSummary.suiteExportError');
+      const message = error instanceof Error ? error.message : t('storeSummary.suiteExportError');
       showToast({ type: 'error', message });
       pdfWindow?.close();
     } finally {
@@ -1531,9 +1535,7 @@ export const StoreSummaryPage = () => {
         return;
       }
 
-      const shouldReplace = window.confirm(
-        t('storeSummary.importSuiteConfirmReplace'),
-      );
+      const shouldReplace = window.confirm(t('storeSummary.importSuiteConfirmReplace'));
       const strategy = shouldReplace ? 'replace' : 'merge';
 
       const scenarioById = new Map(scenarios.map((scenario) => [scenario.id, scenario.id]));
@@ -1576,24 +1578,19 @@ export const StoreSummaryPage = () => {
         result.strategy === 'replace'
           ? t('storeSummary.suiteReplaceSuccess', { count: result.suites.length })
           : t('storeSummary.suiteImportSuccess', {
-            created: result.created,
-            skipped: result.skipped
-          }),
+              created: result.created,
+              skipped: result.skipped,
+            }),
       ];
 
       if (missingReferences > 0) {
-        summaryParts.push(
-          t('storeSummary.suiteMissingReferences', { count: missingReferences }),
-        );
+        summaryParts.push(t('storeSummary.suiteMissingReferences', { count: missingReferences }));
       }
 
       showToast({ type: 'success', message: summaryParts.join(' ') });
     } catch (error) {
       console.error(error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : t('storeSummary.suiteImportError');
+      const message = error instanceof Error ? error.message : t('storeSummary.suiteImportError');
       showToast({ type: 'error', message });
     } finally {
       setIsImportingSuites(false);
@@ -1635,7 +1632,9 @@ export const StoreSummaryPage = () => {
                 ← {t('back')}
               </Button>
               <h1 className="section-title">
-                {isLoadingStore ? t('storeSummary.loadingStore') : (store?.name ?? t('storeSummary.store'))}
+                {isLoadingStore
+                  ? t('storeSummary.loadingStore')
+                  : (store?.name ?? t('storeSummary.store'))}
               </h1>
               {store && (
                 <p className="section-subtitle">
@@ -1676,7 +1675,7 @@ export const StoreSummaryPage = () => {
                   <div
                     className="store-summary-highlights"
                     role="group"
-                    aria-label="Resumo da loja"
+                    aria-label={t('storeSummary.summaryAriaLabel')}
                   >
                     {storeHighlights.map((highlight) => {
                       const content = (
@@ -1721,7 +1720,9 @@ export const StoreSummaryPage = () => {
                     data-testid="scenario-form"
                   >
                     <h3 className="form-title">
-                      {editingScenarioId ? t('storeSummary.editScenario') : t('storeSummary.newScenario') }
+                      {editingScenarioId
+                        ? t('storeSummary.editScenario')
+                        : t('storeSummary.newScenario')}
                     </h3>
                     {scenarioFormError && (
                       <p className="form-message form-message--error">{scenarioFormError}</p>
@@ -1780,7 +1781,9 @@ export const StoreSummaryPage = () => {
                             }
                             aria-expanded={!isCategoryListCollapsed}
                           >
-                            {isCategoryListCollapsed ? t('storeSummary.maxList') : t('storeSummary.minList')}
+                            {isCategoryListCollapsed
+                              ? t('storeSummary.maxList')
+                              : t('storeSummary.minList')}
                           </button>
                         )}
                       </div>
@@ -1813,7 +1816,9 @@ export const StoreSummaryPage = () => {
                         <p className="form-message form-message--error">{categoryError}</p>
                       )}
                       {isLoadingCategories || isSyncingLegacyCategories ? (
-                        <p className="category-manager-description">{t('storeSummary.loadingCategories')}</p>
+                        <p className="category-manager-description">
+                          {t('storeSummary.loadingCategories')}
+                        </p>
                       ) : isCategoryListCollapsed && categories.length > 0 ? (
                         <p className="category-manager-description category-manager-collapsed-message">
                           {t('storeSummary.collapsedMessage')}
@@ -1894,9 +1899,7 @@ export const StoreSummaryPage = () => {
                           })}
                         </ul>
                       ) : (
-                        <p className="category-manager-empty">
-                          {t('storeSummary.emptyMessage')}
-                        </p>
+                        <p className="category-manager-empty">{t('storeSummary.emptyMessage')}</p>
                       )}
                     </div>
                     <TextArea
@@ -1907,7 +1910,7 @@ export const StoreSummaryPage = () => {
                     />
                     <TextArea
                       id="scenario-bdd"
-                      label="BDD"
+                      label={t('storeSummary.bdd')}
                       value={scenarioForm.bdd}
                       onChange={handleScenarioFormChange('bdd')}
                     />
@@ -1918,7 +1921,9 @@ export const StoreSummaryPage = () => {
                         loadingText={t('storeSummary.saving')}
                         data-testid="save-scenario-button"
                       >
-                        {editingScenarioId ? t('storeSummary.updateScenario') : t('storeSummary.addScenario')}
+                        {editingScenarioId
+                          ? t('storeSummary.updateScenario')
+                          : t('storeSummary.addScenario')}
                       </Button>
                       {editingScenarioId && (
                         <Button
@@ -1990,7 +1995,9 @@ export const StoreSummaryPage = () => {
                             className="scenario-table-toggle"
                             onClick={() => setIsScenarioTableCollapsed((previous) => !previous)}
                           >
-                            {isScenarioTableCollapsed ? t('storeSummary.maxTable') : t('storeSummary.minTable')}
+                            {isScenarioTableCollapsed
+                              ? t('storeSummary.maxTable')
+                              : t('storeSummary.minTable')}
                           </button>
                         )}
                       </>
@@ -2059,9 +2066,7 @@ export const StoreSummaryPage = () => {
                 <div className="scenario-table-wrapper">
                   {viewMode === 'scenarios' ? (
                     isScenarioTableCollapsed ? (
-                      <p className="section-subtitle">
-                        {t('storeSummary.tableCollapsed')}
-                      </p>
+                      <p className="section-subtitle">{t('storeSummary.tableCollapsed')}</p>
                     ) : isLoadingScenarios ? (
                       <p className="section-subtitle">{t('storeSummary.scenariosLoading')}</p>
                     ) : scenarios.length === 0 ? (
@@ -2079,13 +2084,13 @@ export const StoreSummaryPage = () => {
                             placeholder={t('storeSummary.scenarioSearch')}
                             value={scenarioFilters.search}
                             onChange={handleScenarioFilterChange('search')}
-                            aria-label="Buscar cenários por título"
+                            aria-label={t('storeSummary.scenarioSearchAriaLabel')}
                           />
                           <select
                             className="scenario-filter-input"
                             value={scenarioFilters.category}
                             onChange={handleScenarioFilterChange('category')}
-                            aria-label="Filtrar por categoria"
+                            aria-label={t('storeSummary.scenarioCategoryFilterAriaLabel')}
                           >
                             {categoryFilterOptions.map((option) => (
                               <option key={option.value} value={option.value}>
@@ -2097,7 +2102,7 @@ export const StoreSummaryPage = () => {
                             className="scenario-filter-input"
                             value={scenarioFilters.criticality}
                             onChange={handleScenarioFilterChange('criticality')}
-                            aria-label="Filtrar por criticidade"
+                            aria-label={t('storeSummary.scenarioCriticalityFilterAriaLabel')}
                           >
                             {criticalityFilterOptions.map((option) => (
                               <option key={option.value} value={option.value}>
@@ -2158,7 +2163,7 @@ export const StoreSummaryPage = () => {
                                   </th>
                                   <th>{t('storeSummary.testTime')}</th>
                                   <th>{t('storeSummary.observation')}</th>
-                                  <th>BDD</th>
+                                  <th>{t('storeSummary.bdd')}</th>
                                   {canManageScenarios && <th>{t('storeSummary.actions')}</th>}
                                 </tr>
                               </thead>
@@ -2240,17 +2245,32 @@ export const StoreSummaryPage = () => {
                       {isViewingSuitesOnly ? (
                         <div className="suite-cards-view">
                           <div className="suite-table-header">
-                            <span className="suite-preview-title">{t('storeSummary.suitesRegistered')}</span>
-                            <Button type="button" variant="ghost" onClick={handleBackToSuiteForm}>
-                              {t('storeSummary.backToForm')}
-                            </Button>
+                            <span className="suite-preview-title">
+                              {t('storeSummary.suitesRegistered')}
+                            </span>
+                            <div className="suite-table-actions">
+                              {selectedSuitePreview && orderedSuitePreviewEntries.length > 0 && (
+                                <button
+                                  type="button"
+                                  className="scenario-table-toggle"
+                                  onClick={() =>
+                                    setIsSuitePreviewTableCollapsed((previous) => !previous)
+                                  }
+                                >
+                                  {isSuitePreviewTableCollapsed
+                                    ? t('storeSummary.maxTable')
+                                    : t('storeSummary.minTable')}
+                                </button>
+                              )}
+                              <Button type="button" variant="ghost" onClick={handleBackToSuiteForm}>
+                                {t('storeSummary.backToForm')}
+                              </Button>
+                            </div>
                           </div>
                           {isLoadingSuites ? (
                             <p className="section-subtitle">{t('storeSummary.suitesLoading')}</p>
                           ) : suites.length === 0 ? (
-                            <p className="section-subtitle">
-                              {t('storeSummary.noSuites')}
-                            </p>
+                            <p className="section-subtitle">{t('storeSummary.noSuites')}</p>
                           ) : (
                             <div className="suite-cards-grid">
                               {suites
@@ -2282,18 +2302,19 @@ export const StoreSummaryPage = () => {
                             </div>
                           )}
                           {!selectedSuitePreview ? (
-                            <p className="section-subtitle">
-                              {t('storeSummary.suiteClick')}
-                            </p>
+                            <p className="section-subtitle">{t('storeSummary.suiteClick')}</p>
                           ) : orderedSuitePreviewEntries.length === 0 ? (
+                            <p className="section-subtitle">{t('storeSummary.suiteNoScenarios')}</p>
+                          ) : isSuitePreviewTableCollapsed ? (
                             <p className="section-subtitle">
-                              {t('storeSummary.suiteNoScenarios')}
+                              {t('storeSummary.suiteTableCollapsed')}
                             </p>
                           ) : (
                             <div className="suite-preview suite-preview--cards">
                               <div className="suite-preview-description">
                                 <p className="suite-description">
-                                  {selectedSuitePreview?.description ||  t('storeSummary.suiteNoDescription')}
+                                  {selectedSuitePreview?.description ||
+                                    t('storeSummary.suiteNoDescription')}
                                 </p>
                               </div>
                               <div className="table-scroll-area">
@@ -2432,7 +2453,9 @@ export const StoreSummaryPage = () => {
                               </div>
                               <div className="suite-scenario-selector">
                                 <div className="suite-scenario-selector-header">
-                                  <p className="field-label">{t('storeSummary.scenarioSelection')}</p>
+                                  <p className="field-label">
+                                    {t('storeSummary.scenarioSelection')}
+                                  </p>
                                   {scenarios.length === 0 && (
                                     <p className="suite-scenario-selector-description">
                                       {t('storeSummary.scenariosEmpty')}
@@ -2473,14 +2496,16 @@ export const StoreSummaryPage = () => {
                                         placeholder={t('storeSummary.scenarioSearch')}
                                         value={suiteScenarioFilters.search}
                                         onChange={handleSuiteScenarioFilterChange('search')}
-                                        aria-label="Buscar cenários por título"
+                                        aria-label={t('storeSummary.scenarioSearchAriaLabel')}
                                         data-testid="suite-filter-search"
                                       />
                                       <select
                                         className="scenario-filter-input"
                                         value={suiteScenarioFilters.category}
                                         onChange={handleSuiteScenarioFilterChange('category')}
-                                        aria-label="Filtrar por categoria"
+                                        aria-label={t(
+                                          'storeSummary.scenarioCategoryFilterAriaLabel',
+                                        )}
                                         data-testid="suite-filter-category"
                                       >
                                         {categoryFilterOptions.map((option) => (
@@ -2493,7 +2518,9 @@ export const StoreSummaryPage = () => {
                                         className="scenario-filter-input"
                                         value={suiteScenarioFilters.criticality}
                                         onChange={handleSuiteScenarioFilterChange('criticality')}
-                                        aria-label="Filtrar por criticidade"
+                                        aria-label={t(
+                                          'storeSummary.scenarioCriticalityFilterAriaLabel',
+                                        )}
                                         data-testid="suite-filter-criticality"
                                       >
                                         {criticalityFilterOptions.map((option) => (
@@ -2625,7 +2652,9 @@ export const StoreSummaryPage = () => {
                                   loadingText={t('storeSummary.saving')}
                                   data-testid="save-suite-button"
                                 >
-                                  {editingSuiteId ? t('storeSummary.updateSuite') : t('storeSummary.saveSuite')}
+                                  {editingSuiteId
+                                    ? t('storeSummary.updateSuite')
+                                    : t('storeSummary.saveSuite')}
                                 </Button>
                               </div>
                             </form>

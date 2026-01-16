@@ -2,6 +2,7 @@ import type { Environment } from '../../../domain/entities/environment';
 import type { UserSummary } from '../../../domain/entities/user';
 import { ENVIRONMENT_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 import { getReadableUserName, getUserInitials } from '../../utils/userDisplay';
+import { translateEnvironmentOption } from '../../constants/environmentOptions';
 import { useTranslation } from 'react-i18next';
 
 const buildJiraLink = (value: string | null | undefined): string | null => {
@@ -146,7 +147,7 @@ export const EnvironmentSummaryCard = ({
             <span className="summary-card__meta-label">
               {translation('environmentSummary.moment')}
             </span>
-            <strong>{environment.momento}</strong>
+            <strong>{translateEnvironmentOption(environment.momento, translation)}</strong>
           </div>
         )}
 
@@ -218,11 +219,7 @@ export const EnvironmentSummaryCard = ({
               const initials = getUserInitials(readableName);
               return (
                 <li key={participant.id} className="summary-card__avatar-item">
-                  {participant.photoURL ? (
-                    <img src={participant.photoURL} alt={readableName} />
-                  ) : (
-                    <span className="summary-card__avatar-fallback">{initials}</span>
-                  )}
+                  <span className="summary-card__avatar-fallback">{initials}</span>
                   <span>{readableName}</span>
                 </li>
               );

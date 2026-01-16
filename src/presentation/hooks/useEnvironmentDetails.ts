@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type {
   Environment,
@@ -9,6 +10,7 @@ import {
   SCENARIO_COMPLETED_STATUSES,
   getScenarioPlatformStatuses,
 } from '../../infrastructure/external/environments';
+import { translateEnvironmentOption } from '../constants/environmentOptions';
 
 interface ScenarioStats {
   total: number;
@@ -46,12 +48,16 @@ const buildInitialPlatformStats = (): Record<EnvironmentScenarioPlatform, Scenar
   desktop: createEmptyScenarioStats(),
 });
 
-const formatProgressLabel = (concluded: number, total: number) => {
+const formatProgressLabel = (
+  concluded: number,
+  total: number,
+  t: (key: string, options?: Record<string, number>) => string,
+) => {
   if (total === 0) {
-    return 'Nenhum cenário cadastrado ainda.';
+    return t('environmentDetails.noScenarios');
   }
 
-  return `${concluded} de ${total} concluídos`;
+  return t('environmentDetails.progress', { concluded, total });
 };
 
 const buildShareLinks = (environment: Environment | null | undefined) => {
@@ -72,8 +78,10 @@ const buildShareLinks = (environment: Environment | null | undefined) => {
 export const useEnvironmentDetails = (
   environment: Environment | null | undefined,
   bugs: EnvironmentBug[],
-): UseEnvironmentDetailsResult =>
-  useMemo(() => {
+): UseEnvironmentDetailsResult => {
+  const { t } = useTranslation();
+
+  return useMemo(() => {
     const bugCountByScenario = bugs.reduce<Record<string, number>>((acc, bug) => {
       if (bug.scenarioId) {
         acc[bug.scenarioId] = (acc[bug.scenarioId] ?? 0) + 1;
@@ -130,14 +138,25 @@ export const useEnvironmentDetails = (
       progressLabel: formatProgressLabel(
         combinedScenarioStats.concluded,
         combinedScenarioStats.total,
+        t,
       ),
       scenarioCount: combinedScenarioStats.total,
       executedScenariosCount: combinedScenarioStats.concluded,
       headerMeta: [
-        ...(environment?.momento ? [`Momento: ${environment.momento}`] : []),
-        ...(environment?.release ? [`Release: ${environment.release}`] : []),
+        ...(environment?.momento
+          ? [
+              `${t('environmentSummary.moment')}: ${translateEnvironmentOption(
+                environment.momento,
+                t,
+              )}`,
+            ]
+          : []),
+        ...(environment?.release
+          ? [`${t('environmentSummary.release')}: ${environment.release}`]
+          : []),
       ],
       urls: environment?.urls ?? [],
       shareLinks: buildShareLinks(environment),
     };
-  }, [bugs, environment]);
+  }, [bugs, environment, t]);
+};

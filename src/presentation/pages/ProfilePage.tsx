@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 
 import { useAuth } from '../hooks/useAuth';
 import { Alert } from '../components/Alert';
@@ -7,11 +7,8 @@ import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { TextInput } from '../components/TextInput';
 import { ThemeToggle } from '../components/ThemeToggle';
-import { UserAvatar } from '../components/UserAvatar';
 import { ThemeIcon } from '../components/icons';
 import { useTranslation } from 'react-i18next';
-
-const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
 
 export const ProfilePage = () => {
   const { user, updateProfile, isLoading } = useAuth();
@@ -20,8 +17,6 @@ export const ProfilePage = () => {
   const [browserstackUsername, setBrowserstackUsername] = useState('');
   const [browserstackAccessKey, setBrowserstackAccessKey] = useState('');
   const [isBrowserstackSectionOpen, setIsBrowserstackSectionOpen] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const { t } = useTranslation();
 
@@ -40,44 +35,6 @@ export const ProfilePage = () => {
     user?.lastName,
   ]);
 
-  useEffect(() => {
-    if (!photoFile) {
-      setPhotoPreview(user?.photoURL ?? null);
-    }
-  }, [user?.photoURL, photoFile]);
-
-  useEffect(
-    () => () => {
-      if (photoPreview && photoPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(photoPreview);
-      }
-    },
-    [photoPreview],
-  );
-
-  const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      setPhotoFile(null);
-      setPhotoPreview(user?.photoURL ?? null);
-      return;
-    }
-
-    if (file.size > MAX_PHOTO_SIZE) {
-      setLocalError(t("profilePage.errorSize"));
-      return;
-    }
-
-    setLocalError(null);
-    setPhotoFile(file);
-    setPhotoPreview((previous) => {
-      if (previous && previous.startsWith('blob:')) {
-        URL.revokeObjectURL(previous);
-      }
-      return URL.createObjectURL(file);
-    });
-  };
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLocalError(null);
@@ -85,12 +42,12 @@ export const ProfilePage = () => {
     const trimmedFirstName = firstName.trim();
     const trimmedLastName = lastName.trim();
     if (!trimmedFirstName) {
-      setLocalError(t("profilePage.name"));
+      setLocalError(t('profilePage.name'));
       return;
     }
 
     if (!trimmedLastName) {
-      setLocalError(t("profilePage.lastname"));
+      setLocalError(t('profilePage.lastname'));
       return;
     }
 
@@ -107,10 +64,8 @@ export const ProfilePage = () => {
       await updateProfile({
         firstName: trimmedFirstName,
         lastName: trimmedLastName,
-        photoFile,
         browserstackCredentials,
       });
-      setPhotoFile(null);
       if (!isBrowserstackSectionOpen) {
         setBrowserstackUsername('');
         setBrowserstackAccessKey('');
@@ -119,8 +74,6 @@ export const ProfilePage = () => {
       console.error(err);
     }
   };
-
-  const fullName = `${firstName} ${lastName}`.trim() || user?.displayName || user?.email || '';
 
   return (
     <Layout>
@@ -136,28 +89,11 @@ export const ProfilePage = () => {
 
         <span className="badge">{t('profilePage.badge')}</span>
         <h1 className="section-title">{t('profilePage.title')}</h1>
-        <p className="section-subtitle">
-          {t('profilePage.subtitle')}
-        </p>
+        <p className="section-subtitle">{t('profilePage.subtitle')}</p>
 
         {localError && <Alert type="error" message={localError} />}
 
         <form className="profile-editor" onSubmit={handleSubmit}>
-          <div className="profile-header">
-            <UserAvatar name={fullName} photoURL={photoPreview || undefined} />
-            <label className="upload-label">
-              <span>{t('profilePage.photo')}</span>
-              <span className="upload-trigger">{t('profilePage.newPhoto')}</span>
-              <input
-                className="upload-input"
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoChange}
-              />
-              <span className="upload-hint">{t('profilePage.formats')}</span>
-            </label>
-          </div>
-
           <TextInput
             id="firstName"
             label={t('name')}
@@ -176,7 +112,7 @@ export const ProfilePage = () => {
 
           <TextInput
             id="email"
-            label="E-mail"
+            label={t('profilePage.emailLabel')}
             type="email"
             value={user?.email ?? ''}
             onChange={() => {}}
@@ -190,7 +126,7 @@ export const ProfilePage = () => {
                 <img
                   className="collapsible-section__icon"
                   src="https://img.icons8.com/color/48/browser-stack.png"
-                  alt="BrowserStack"
+                  alt={t('profilePage.browserstackLogoAlt')}
                 />
                 <p className="collapsible-section__title">{t('profilePage.browserstackTitle')}</p>
                 <p className="collapsible-section__description">
@@ -214,7 +150,9 @@ export const ProfilePage = () => {
                   aria-expanded={isBrowserstackSectionOpen}
                   aria-controls="profile-browserstack-section"
                 />
-                <span>{isBrowserstackSectionOpen ? t('profilePage.enabled') : t('profilePage.disabled')}</span>
+                <span>
+                  {isBrowserstackSectionOpen ? t('profilePage.enabled') : t('profilePage.disabled')}
+                </span>
               </label>
             </div>
             {isBrowserstackSectionOpen && (
@@ -224,7 +162,7 @@ export const ProfilePage = () => {
                   label={t('profilePage.browserstackUser')}
                   value={browserstackUsername}
                   onChange={(event) => setBrowserstackUsername(event.target.value)}
-                  placeholder="username"
+                  placeholder={t('profilePage.browserstackUserPlaceholder')}
                 />
                 <TextInput
                   id="browserstack-access-key"
@@ -232,11 +170,9 @@ export const ProfilePage = () => {
                   type="password"
                   value={browserstackAccessKey}
                   onChange={(event) => setBrowserstackAccessKey(event.target.value)}
-                  placeholder="access key"
+                  placeholder={t('profilePage.browserstackPasswordPlaceholder')}
                 />
-                <p className="form-hint">
-                  {t('profilePage.browserstackText')}
-                </p>
+                <p className="form-hint">{t('profilePage.browserstackText')}</p>
               </div>
             )}
           </div>
