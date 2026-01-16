@@ -96,16 +96,16 @@
     },
     "environmentLabels": {
       "backlog": "Backlog",
-      "progress":"Em andamento",
+      "progress": "Em andamento",
       "done": "Concluído",
       "open": "Aberto",
       "resolved": "Resolvido"
     },
     "environmentBugModal": {
-      "progress":"Em andamento",
+      "progress": "Em andamento",
       "open": "Aberto",
       "resolved": "Resolvido",
-      "noScenario":"Nenhum cenário selecionado.",
+      "noScenario": "Nenhum cenário selecionado.",
       "deletedScenario": "Cenário removido",
       "bugUpdated": "Bug atualizado com sucesso.",
       "bugRegister": "Bug registrado com sucesso.",
@@ -122,7 +122,7 @@
     "environmentCard": {
       "displaySuiteName": "Suíte não informada",
       "participant": "participante",
-      "noParticipants":"Sem participantes"
+      "noParticipants": "Sem participantes"
     },
     "createEnvironment": {
       "identifier": "Informe um identificador para o ambiente.",
@@ -135,7 +135,7 @@
       "urls": "URLs (uma por linha)",
       "example": "https://exemplo.com",
       "environmentType": "Tipo de ambiente",
-      "testType":"Tipo de teste",
+      "testType": "Tipo de teste",
       "suiteId": "Suite existente",
       "none": "Nenhuma",
       "setMoment": "Momento/Quando",
@@ -241,6 +241,36 @@
       "emptyScenarios": "Ainda não identificamos cenários automatizados nas lojas desta organização.",
       "browserstackTitle": "Acompanhe execuções automatizadas",
       "browserstackSubtitle": "Adicione suas credenciais do BrowserStack no perfil para visualizar o quadro Kanban de execuções."
+    },
+    "testQueue": {
+      "badge": "Controle de fila",
+      "title": "Fila de execuções",
+      "subtitle": "Solicite novas execuções e acompanhe a capacidade global do BrowserStack.",
+      "running": "Em execução",
+      "waiting": "Em espera",
+      "capacity": "Paralelo máximo",
+      "position": "Sua posição na fila: {{position}}",
+      "project": "Projeto",
+      "selectProject": "Selecione um projeto",
+      "environment": "Ambiente",
+      "testType": "Tipo de teste",
+      "testTypeSmoke": "Smoke",
+      "testTypeRegression": "Regressão",
+      "testTypeFull": "Completo",
+      "submit": "Entrar na fila",
+      "submitting": "Enviando...",
+      "loading": "Carregando fila...",
+      "runningNow": "Executando agora",
+      "waitingList": "Aguardando",
+      "emptyRunning": "Nenhuma execução em andamento.",
+      "emptyWaiting": "A fila está vazia.",
+      "requestedBy": "Solicitado por {{name}}",
+      "startedAt": "Iniciado {{time}}",
+      "createdAt": "Criado {{time}}",
+      "success": "Execução adicionada à fila.",
+      "errorCreate": "Não foi possível criar a execução.",
+      "errorProject": "Selecione um projeto para continuar.",
+      "errorEnvironment": "Informe o ambiente para continuar."
     },
     "forbiddenPage": {
       "description": "Você não tem permissão para acessar esta página. Entre em contato com o administrador ou volte ao início."
@@ -666,6 +696,16 @@
       "browserstackUser": "Usuário do BrowserStack",
       "browserstackPassword": "Access key do BrowserStack",
       "browserstackText": "Armazenamos as credenciais apenas para uso nas suas integrações pessoais com o BrowserStack.",
+      "githubTitle": "Conexão com GitHub",
+      "githubDescription": "Conecte sua conta do GitHub para disparar workflows diretamente pela plataforma.",
+      "githubConnect": "Conectar GitHub",
+      "githubReconnect": "Reconectar GitHub",
+      "githubConnecting": "Conectando...",
+      "githubConnected": "GitHub conectado.",
+      "githubConnectedAs": "Conectado como {{username}}.",
+      "githubNotConnected": "Conecte sua conta do GitHub para liberar o disparo automático.",
+      "githubScopes": "Escopos obrigatórios: repo e workflow.",
+      "githubSuccess": "GitHub conectado com sucesso.",
       "loadingText": "Salvando...",
       "saveButton": "Salvar alterações"
     },

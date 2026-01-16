@@ -1,0 +1,32 @@
+name: Test Execution Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      executionId:
+        description: 'Firestore execution document id'
+        required: true
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Firebase Admin SDK
+        run: npm install firebase-admin
+
+      - name: Execute queued test run
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          EXECUTION_ID: ${{ inputs.executionId }}
+          TEST_COMMAND: ${{ secrets.TEST_COMMAND }}
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+        run: node scripts/test-execution.mjs

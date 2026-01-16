@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /testQueueExecutions/{executionId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.status == 'waiting'
+        && request.resource.data.requestedBy.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /queueControls/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}

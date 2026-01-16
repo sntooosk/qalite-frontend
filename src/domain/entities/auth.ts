@@ -1,4 +1,5 @@
 import type { BrowserstackCredentials } from './browserstack';
+import type { GithubIntegration } from './github';
 
 export type Role = 'admin' | 'user';
 
@@ -16,6 +17,7 @@ export interface AuthUser {
   accessToken?: string;
   photoURL?: string;
   browserstackCredentials?: BrowserstackCredentials | null;
+  githubIntegration?: GithubIntegration | null;
   isEmailVerified: boolean;
 }
 

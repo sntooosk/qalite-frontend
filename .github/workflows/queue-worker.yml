@@ -1,0 +1,32 @@
+name: Queue Worker
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/2 * * * *'
+
+jobs:
+  run-queue-worker:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Firebase Admin SDK
+        run: npm install firebase-admin
+
+      - name: Run queue worker
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          TEST_WORKFLOW_FILE: test-execution.yml
+        run: node scripts/queue-worker.mjs

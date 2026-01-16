@@ -26,6 +26,7 @@ interface AuthContextValue {
   resetPassword: (email: string) => Promise<void>;
   hasRole: (roles: Role[]) => boolean;
   updateProfile: (payload: UpdateProfilePayload) => Promise<AuthUser>;
+  connectGithub: () => Promise<AuthUser>;
 }
 
 type SuccessMessage<T> = string | null | ((result: T) => string | null);
@@ -179,6 +180,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     [runAuthAction, translation],
   );
 
+  const connectGithub = useCallback(
+    () =>
+      runAuthAction(() => authService.connectGithub(), {
+        onSuccess: (updated) => setUser(updated),
+        successMessage: translation('profilePage.githubSuccess'),
+      }),
+    [runAuthAction, translation],
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -191,6 +201,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       resetPassword,
       hasRole,
       updateProfile,
+      connectGithub,
     }),
     [
       user,
@@ -203,6 +214,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       resetPassword,
       hasRole,
       updateProfile,
+      connectGithub,
     ],
   );
 

@@ -18,4 +18,5 @@ export interface AuthRepository {
     lastName: string;
     browserstackCredentials?: AuthUser['browserstackCredentials'];
   }) => Promise<AuthUser>;
+  connectGithub: () => Promise<AuthUser>;
 }

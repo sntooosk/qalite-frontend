@@ -8,6 +8,7 @@ import {
   registerUser,
   sendPasswordReset,
   updateUserProfile,
+  connectGithubAccount,
 } from '../external/auth';
 
 export const firebaseAuthRepository: AuthRepository = {
@@ -19,4 +20,5 @@ export const firebaseAuthRepository: AuthRepository = {
   onAuthStateChanged,
   hasRequiredRole,
   updateProfile: updateUserProfile,
+  connectGithub: connectGithubAccount,
 };

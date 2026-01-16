@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
 
 export const ProfilePage = () => {
-  const { user, updateProfile, isLoading } = useAuth();
+  const { user, updateProfile, isLoading, connectGithub } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [browserstackUsername, setBrowserstackUsername] = useState('');
@@ -64,7 +64,7 @@ export const ProfilePage = () => {
     }
 
     if (file.size > MAX_PHOTO_SIZE) {
-      setLocalError(t("profilePage.errorSize"));
+      setLocalError(t('profilePage.errorSize'));
       return;
     }
 
@@ -85,12 +85,12 @@ export const ProfilePage = () => {
     const trimmedFirstName = firstName.trim();
     const trimmedLastName = lastName.trim();
     if (!trimmedFirstName) {
-      setLocalError(t("profilePage.name"));
+      setLocalError(t('profilePage.name'));
       return;
     }
 
     if (!trimmedLastName) {
-      setLocalError(t("profilePage.lastname"));
+      setLocalError(t('profilePage.lastname'));
       return;
     }
 
@@ -121,6 +121,10 @@ export const ProfilePage = () => {
   };
 
   const fullName = `${firstName} ${lastName}`.trim() || user?.displayName || user?.email || '';
+  const githubIntegration = user?.githubIntegration ?? null;
+  const githubConnectedLabel = githubIntegration?.username
+    ? t('profilePage.githubConnectedAs', { username: githubIntegration.username })
+    : t('profilePage.githubConnected');
 
   return (
     <Layout>
@@ -136,9 +140,7 @@ export const ProfilePage = () => {
 
         <span className="badge">{t('profilePage.badge')}</span>
         <h1 className="section-title">{t('profilePage.title')}</h1>
-        <p className="section-subtitle">
-          {t('profilePage.subtitle')}
-        </p>
+        <p className="section-subtitle">{t('profilePage.subtitle')}</p>
 
         {localError && <Alert type="error" message={localError} />}
 
@@ -214,7 +216,9 @@ export const ProfilePage = () => {
                   aria-expanded={isBrowserstackSectionOpen}
                   aria-controls="profile-browserstack-section"
                 />
-                <span>{isBrowserstackSectionOpen ? t('profilePage.enabled') : t('profilePage.disabled')}</span>
+                <span>
+                  {isBrowserstackSectionOpen ? t('profilePage.enabled') : t('profilePage.disabled')}
+                </span>
               </label>
             </div>
             {isBrowserstackSectionOpen && (
@@ -234,11 +238,42 @@ export const ProfilePage = () => {
                   onChange={(event) => setBrowserstackAccessKey(event.target.value)}
                   placeholder="access key"
                 />
-                <p className="form-hint">
-                  {t('profilePage.browserstackText')}
-                </p>
+                <p className="form-hint">{t('profilePage.browserstackText')}</p>
               </div>
             )}
+          </div>
+
+          <div className="collapsible-section">
+            <div className="collapsible-section__header">
+              <div className="collapsible-section__titles">
+                <img
+                  className="collapsible-section__icon"
+                  src="https://img.icons8.com/ios-glyphs/48/000000/github.png"
+                  alt="GitHub"
+                />
+                <p className="collapsible-section__title">{t('profilePage.githubTitle')}</p>
+                <p className="collapsible-section__description">
+                  {t('profilePage.githubDescription')}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant={githubIntegration ? 'secondary' : 'primary'}
+                onClick={() => connectGithub()}
+                isLoading={isLoading}
+                loadingText={t('profilePage.githubConnecting')}
+              >
+                {githubIntegration
+                  ? t('profilePage.githubReconnect')
+                  : t('profilePage.githubConnect')}
+              </Button>
+            </div>
+            <div className="collapsible-section__body">
+              <p className="form-hint">
+                {githubIntegration ? githubConnectedLabel : t('profilePage.githubNotConnected')}
+              </p>
+              <p className="form-hint">{t('profilePage.githubScopes')}</p>
+            </div>
           </div>
 
           <Button type="submit" isLoading={isLoading} loadingText={t('profilePage.loadingText')}>

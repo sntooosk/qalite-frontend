@@ -42,6 +42,10 @@ export class AuthUseCases {
   updateProfile(payload: UpdateProfilePayload): Promise<AuthUser> {
     return this.authRepository.updateProfile(payload);
   }
+
+  connectGithub(): Promise<AuthUser> {
+    return this.authRepository.connectGithub();
+  }
 }
 
 export const authService = new AuthUseCases(firebaseAuthRepository);

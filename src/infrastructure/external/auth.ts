@@ -1,14 +1,18 @@
 import {
   User as FirebaseUser,
   createUserWithEmailAndPassword,
+  getAdditionalUserInfo,
+  GithubAuthProvider,
+  linkWithPopup,
   onAuthStateChanged as firebaseOnAuthStateChanged,
+  reauthenticateWithPopup,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile as firebaseUpdateProfile,
 } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { Timestamp, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 import type {
   AuthStateListener,
@@ -19,8 +23,9 @@ import type {
   UpdateProfilePayload,
 } from '../../domain/entities/auth';
 import type { BrowserstackCredentials } from '../../domain/entities/browserstack';
+import type { GithubIntegration } from '../../domain/entities/github';
 import { DEFAULT_ROLE } from '../../domain/entities/auth';
-import { addUserToOrganizationByEmailDomain } from './organizations';
+import { addUserToOrganizationByEmailDomain, findOrganizationByEmailDomain } from './organizations';
 import { firebaseAuth, firebaseFirestore } from '../database/firebase';
 
 const USERS_COLLECTION = 'users';
@@ -49,6 +54,11 @@ export const hasRequiredRole = (user: AuthUser | null, allowedRoles: Role[]): bo
   Boolean(user && allowedRoles.includes(user.role));
 
 export const registerUser = async ({ role, ...payload }: RegisterPayload): Promise<AuthUser> => {
+  const organization = await findOrganizationByEmailDomain(payload.email);
+  if (!organization) {
+    throw new Error('Domínio de e-mail não autorizado para acesso.');
+  }
+
   const { user } = await createUserWithEmailAndPassword(
     firebaseAuth,
     payload.email,
@@ -96,6 +106,11 @@ export const registerUser = async ({ role, ...payload }: RegisterPayload): Promi
 };
 
 export const loginUser = async ({ email, password }: LoginPayload): Promise<AuthUser> => {
+  const organization = await findOrganizationByEmailDomain(email);
+  if (!organization) {
+    throw new Error('Domínio de e-mail não autorizado para acesso.');
+  }
+
   const credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
 
   if (!credential.user.emailVerified) {
@@ -188,6 +203,34 @@ const parseBrowserstackCredentials = (value: unknown): BrowserstackCredentials |
   return { username, accessKey };
 };
 
+const parseGithubIntegration = (value: unknown): GithubIntegration | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const integration = value as GithubIntegration;
+  const accessToken = typeof integration.accessToken === 'string' ? integration.accessToken : '';
+  const username = typeof integration.username === 'string' ? integration.username : null;
+  const scopes = Array.isArray(integration.scopes) ? integration.scopes.filter(Boolean) : [];
+  const connectedAt =
+    typeof integration.connectedAt === 'string'
+      ? integration.connectedAt
+      : integration.connectedAt instanceof Timestamp
+        ? integration.connectedAt.toDate().toISOString()
+        : null;
+
+  if (!accessToken) {
+    return null;
+  }
+
+  return {
+    accessToken,
+    username,
+    connectedAt,
+    scopes,
+  };
+};
+
 export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<AuthUser> => {
   const user = firebaseAuth.currentUser;
   if (!user) {
@@ -226,6 +269,46 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
   return mapToAuthUser(firebaseAuth.currentUser ?? user, refreshedProfile);
 };
 
+export const connectGithubAccount = async (): Promise<AuthUser> => {
+  const user = firebaseAuth.currentUser;
+  if (!user) {
+    throw new Error('Usuário não autenticado.');
+  }
+
+  const provider = new GithubAuthProvider();
+  provider.addScope('repo');
+  provider.addScope('workflow');
+
+  const hasGithubProvider = user.providerData.some((data) => data.providerId === 'github.com');
+  const result = hasGithubProvider
+    ? await reauthenticateWithPopup(user, provider)
+    : await linkWithPopup(user, provider);
+  const credential = GithubAuthProvider.credentialFromResult(result);
+  const additionalInfo = getAdditionalUserInfo(result);
+  const accessToken = credential?.accessToken;
+  if (!accessToken) {
+    throw new Error('Não foi possível obter o token do GitHub.');
+  }
+
+  const userDoc = doc(firebaseFirestore, USERS_COLLECTION, user.uid);
+  await setDoc(
+    userDoc,
+    {
+      githubIntegration: {
+        accessToken,
+        username: (typeof additionalInfo?.username === 'string' && additionalInfo.username) || null,
+        connectedAt: serverTimestamp(),
+        scopes: ['repo', 'workflow'],
+      },
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  const refreshedProfile = await fetchUserProfile(user.uid);
+  return mapToAuthUser(firebaseAuth.currentUser ?? user, refreshedProfile);
+};
+
 interface StoredProfile {
   role: Role;
   displayName?: string | null;
@@ -234,6 +317,7 @@ interface StoredProfile {
   photoURL?: string | null;
   organizationId?: string | null;
   browserstackCredentials?: BrowserstackCredentials | null;
+  githubIntegration?: GithubIntegration | null;
 }
 
 const mapToAuthUser = (user: FirebaseUser, profile: StoredProfile): AuthUser => {
@@ -259,6 +343,7 @@ const mapToAuthUser = (user: FirebaseUser, profile: StoredProfile): AuthUser => 
     role: profile.role,
     organizationId: profile.organizationId ?? null,
     browserstackCredentials: profile.browserstackCredentials ?? null,
+    githubIntegration: profile.githubIntegration ?? null,
     photoURL: profile.photoURL ?? null,
     accessToken: user.refreshToken,
     isEmailVerified: user.emailVerified,
@@ -312,6 +397,7 @@ const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
       photoURL: (data.photoURL as string | null) ?? null,
       organizationId: (data.organizationId as string | null) ?? null,
       browserstackCredentials: parseBrowserstackCredentials(data?.browserstackCredentials),
+      githubIntegration: parseGithubIntegration(data?.githubIntegration),
     };
   }
 
@@ -323,6 +409,7 @@ const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
     photoURL: null,
     organizationId: null,
     browserstackCredentials: null,
+    githubIntegration: null,
   };
 };
 
