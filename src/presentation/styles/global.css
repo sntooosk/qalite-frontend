@@ -1063,6 +1063,61 @@ a.text-link:hover {
   font-size: 0.9rem;
 }
 
+.scenario-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.scenario-details-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.scenario-details-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  padding: 1rem;
+  border-radius: 1rem;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+}
+
+.scenario-details-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.scenario-details-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.scenario-details-value {
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+}
+
+.scenario-details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.scenario-details-text {
+  margin: 0;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
 .store-summary {
   display: flex;
   flex-direction: column;
@@ -2953,6 +3008,10 @@ button.store-summary-highlight:focus-visible {
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: color var(--transition-base);
+}
+
+.scenario-actions .scenario-details-button {
+  color: var(--color-primary);
 }
 
 .scenario-actions button:disabled {

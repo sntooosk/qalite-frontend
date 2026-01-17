@@ -52,7 +52,7 @@ import {
   validateScenarioImportPayload,
   validateSuiteImportPayload,
 } from '../../shared/utils/storeImportExport';
-import { isAutomatedScenario } from '../../shared/utils/automation';
+import { isAutomatedScenario, normalizeAutomationValue } from '../../shared/utils/automation';
 import { formatDurationFromMs } from '../../shared/utils/time';
 import type { ScenarioAverageMap } from '../../infrastructure/external/scenarioExecutions';
 import { useTranslation } from 'react-i18next';
@@ -140,6 +140,10 @@ export const StoreSummaryPage = () => {
   const [scenarioForm, setScenarioForm] = useState<StoreScenarioInput>(emptyScenarioForm);
   const [scenarioFormError, setScenarioFormError] = useState<string | null>(null);
   const [editingScenarioId, setEditingScenarioId] = useState<string | null>(null);
+  const [scenarioDetails, setScenarioDetails] = useState<{
+    scenario: StoreScenario | null;
+    scenarioId: string | null;
+  } | null>(null);
   const [isSavingScenario, setIsSavingScenario] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryError, setCategoryError] = useState<string | null>(null);
@@ -170,7 +174,9 @@ export const StoreSummaryPage = () => {
   const [suiteScenarioVisibleCount, setSuiteScenarioVisibleCount] = useState(PAGE_SIZE);
   const [suitePreviewVisibleCount, setSuitePreviewVisibleCount] = useState(PAGE_SIZE);
   const [isViewingSuitesOnly, setIsViewingSuitesOnly] = useState(false);
+  const [isSuiteScenarioTableCollapsed, setIsSuiteScenarioTableCollapsed] = useState(false);
   const suiteListRef = useRef<HTMLDivElement | null>(null);
+  const scenarioFormRef = useRef<HTMLFormElement | null>(null);
   const scenarioFileInputRef = useRef<HTMLInputElement | null>(null);
   const suiteFileInputRef = useRef<HTMLInputElement | null>(null);
   const [exportingScenarioFormat, setExportingScenarioFormat] = useState<ExportFormat | null>(null);
@@ -979,24 +985,6 @@ export const StoreSummaryPage = () => {
     }
   };
 
-  const handleCopyBdd = async (bdd: string) => {
-    if (!bdd.trim()) {
-      showToast({ type: 'error', message: t('storeSummary.bddEmpty') });
-      return;
-    }
-
-    try {
-      if (!navigator?.clipboard) {
-        throw new Error(t('storeSummary.bddClipboardUnavailable'));
-      }
-      await navigator.clipboard.writeText(bdd);
-      showToast({ type: 'success', message: t('storeSummary.bddCopied') });
-    } catch (error) {
-      console.error(error);
-      showToast({ type: 'error', message: t('storeSummary.bddCopyError') });
-    }
-  };
-
   const handleCancelScenarioEdit = () => {
     setScenarioForm(emptyScenarioForm);
     setEditingScenarioId(null);
@@ -1072,16 +1060,22 @@ export const StoreSummaryPage = () => {
       return;
     }
 
+    const normalizedAutomation = normalizeAutomationValue(scenario.automation);
+    const automationMatch = AUTOMATION_OPTIONS.find(
+      (option) => normalizeAutomationValue(option.value) === normalizedAutomation,
+    );
+
     setScenarioForm({
       title: scenario.title,
       category: scenario.category,
-      automation: scenario.automation,
+      automation: automationMatch?.value ?? scenario.automation,
       criticality: scenario.criticality,
       observation: scenario.observation ?? '',
       bdd: scenario.bdd ?? '',
     });
     setEditingScenarioId(scenario.id);
     setScenarioFormError(null);
+    scenarioFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleDeleteScenario = async (scenario: StoreScenario) => {
@@ -1112,6 +1106,20 @@ export const StoreSummaryPage = () => {
     } finally {
       setIsSavingScenario(false);
     }
+  };
+
+  const handleOpenScenarioDetails = (
+    scenario: StoreScenario | null,
+    scenarioId?: string | null,
+  ) => {
+    setScenarioDetails({
+      scenario,
+      scenarioId: scenario?.id ?? scenarioId ?? null,
+    });
+  };
+
+  const handleCloseScenarioDetails = () => {
+    setScenarioDetails(null);
   };
 
   const handleScenarioExport = async (format: ExportFormat) => {
@@ -1745,6 +1753,7 @@ export const StoreSummaryPage = () => {
 
                 {store && canManageScenarios && viewMode === 'scenarios' && (
                   <form
+                    ref={scenarioFormRef}
                     className="scenario-form"
                     onSubmit={handleScenarioSubmit}
                     data-testid="scenario-form"
@@ -2184,81 +2193,45 @@ export const StoreSummaryPage = () => {
                                         onChange={setScenarioSort}
                                       />
                                     </th>
-                                    <th>
-                                      <ScenarioColumnSortControl
-                                        label={t('storeSummary.criticality')}
-                                        field="criticality"
-                                        sort={scenarioSort}
-                                        onChange={setScenarioSort}
-                                      />
-                                    </th>
-                                    <th>{t('storeSummary.testTime')}</th>
-                                    <th>{t('storeSummary.observation')}</th>
-                                    <th>{t('storeSummary.bdd')}</th>
-                                    {canManageScenarios && <th>{t('storeSummary.actions')}</th>}
+                                    <th>{t('storeSummary.actions')}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {paginatedScenarios.map((scenario) => {
-                                    const timingInfo = getScenarioTimingInfo(scenario.id);
-                                    const hasBdd = Boolean(scenario.bdd?.trim());
                                     return (
                                       <tr key={scenario.id}>
                                         <td>{scenario.title}</td>
                                         <td>{scenario.category}</td>
                                         <td>{scenario.automation}</td>
-                                        <td>
-                                          <span
-                                            className={`criticality-badge ${getCriticalityClassName(
-                                              scenario.criticality,
-                                            )}`}
+                                        <td className="scenario-actions">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenScenarioDetails(scenario)}
+                                            className="scenario-details-button"
                                           >
-                                            {scenario.criticality}
-                                          </span>
-                                        </td>
-                                        <td
-                                          className="scenario-duration"
-                                          data-label="Tempo de teste"
-                                          title={timingInfo.title}
-                                        >
-                                          {timingInfo.label}
-                                        </td>
-                                        <td className="scenario-observation">
-                                          {scenario.observation?.trim() || '—'}
-                                        </td>
-                                        <td className="scenario-bdd">
-                                          {hasBdd ? (
-                                            <button
-                                              type="button"
-                                              className="scenario-copy-button"
-                                              onClick={() => void handleCopyBdd(scenario.bdd)}
-                                            >
-                                              {t('storeSummary.copyBdd')}
-                                            </button>
-                                          ) : (
-                                            <span className="scenario-bdd--empty">—</span>
+                                            {t('storeSummary.viewDetails')}
+                                          </button>
+                                          {canManageScenarios && (
+                                            <>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleEditScenario(scenario)}
+                                                disabled={isSavingScenario}
+                                                className="edit-button"
+                                              >
+                                                {t('edit')}
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => openDeleteScenarioModal(scenario)}
+                                                disabled={isSavingScenario}
+                                                className="scenario-delete delete-button"
+                                              >
+                                                {t('storeSummary.deleteScenario')}
+                                              </button>
+                                            </>
                                           )}
                                         </td>
-                                        {canManageScenarios && (
-                                          <td className="scenario-actions">
-                                            <button
-                                              type="button"
-                                              onClick={() => handleEditScenario(scenario)}
-                                              disabled={isSavingScenario}
-                                              className="edit-button"
-                                            >
-                                              {t('edit')}
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => openDeleteScenarioModal(scenario)}
-                                              disabled={isSavingScenario}
-                                              className="scenario-delete delete-button"
-                                            >
-                                              {t('storeSummary.deleteScenario')}
-                                            </button>
-                                          </td>
-                                        )}
                                       </tr>
                                     );
                                   })}
@@ -2381,42 +2354,36 @@ export const StoreSummaryPage = () => {
                                           onChange={setSuitePreviewSort}
                                         />
                                       </th>
-                                      <th>
-                                        <ScenarioColumnSortControl
-                                          label={t('storeSummary.criticality')}
-                                          field="criticality"
-                                          sort={suitePreviewSort}
-                                          onChange={setSuitePreviewSort}
-                                        />
-                                      </th>
-                                      <th>{t('storeSummary.testTime')}</th>
+                                      <th>{t('storeSummary.actions')}</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {paginatedSuitePreviewEntries.map(
                                       ({ scenarioId, scenario }) => {
-                                        const timingInfo = getScenarioTimingInfo(
-                                          scenario?.id ?? scenarioId,
-                                        );
+                                        const title =
+                                          scenario?.title ?? t('storeSummary.deletedScenario');
                                         return (
                                           <tr key={`${selectedSuitePreview.id}-${scenarioId}`}>
-                                            <td data-label="Cenário">
-                                              {scenario?.title ?? t('storeSummary.deletedScenario')}
-                                            </td>
+                                            <td data-label="Cenário">{title}</td>
                                             <td data-label="Categoria">
                                               {scenario?.category ?? 'N/A'}
                                             </td>
                                             <td data-label="Automação">
                                               {scenario?.automation ?? '-'}
                                             </td>
-                                            <td data-label="Criticidade">
-                                              {scenario?.criticality ?? '-'}
-                                            </td>
-                                            <td
-                                              data-label="Tempo de teste"
-                                              title={timingInfo.title}
-                                            >
-                                              {timingInfo.label}
+                                            <td className="scenario-actions">
+                                              <button
+                                                type="button"
+                                                className="scenario-details-button"
+                                                onClick={() =>
+                                                  handleOpenScenarioDetails(
+                                                    scenario ?? null,
+                                                    scenarioId,
+                                                  )
+                                                }
+                                              >
+                                                {t('storeSummary.viewDetails')}
+                                              </button>
                                             </td>
                                           </tr>
                                         );
@@ -2518,6 +2485,19 @@ export const StoreSummaryPage = () => {
                                   <p className="field-label">
                                     {t('storeSummary.scenarioSelection')}
                                   </p>
+                                  {scenarios.length > 0 && (
+                                    <button
+                                      type="button"
+                                      className="scenario-table-toggle"
+                                      onClick={() =>
+                                        setIsSuiteScenarioTableCollapsed((previous) => !previous)
+                                      }
+                                    >
+                                      {isSuiteScenarioTableCollapsed
+                                        ? t('storeSummary.maxTable')
+                                        : t('storeSummary.minTable')}
+                                    </button>
+                                  )}
                                   {scenarios.length === 0 && (
                                     <p className="suite-scenario-selector-description">
                                       {t('storeSummary.scenariosEmpty')}
@@ -2548,6 +2528,10 @@ export const StoreSummaryPage = () => {
                                 {scenarios.length === 0 ? (
                                   <p className="category-manager-empty">
                                     {t('storeSummary.noScenariosAvailable')}
+                                  </p>
+                                ) : isSuiteScenarioTableCollapsed ? (
+                                  <p className="section-subtitle">
+                                    {t('storeSummary.suiteScenarioTableCollapsed')}
                                   </p>
                                 ) : (
                                   <>
@@ -2762,6 +2746,49 @@ export const StoreSummaryPage = () => {
           </section>
         )}
       </Layout>
+
+      <Modal
+        isOpen={Boolean(scenarioDetails)}
+        onClose={handleCloseScenarioDetails}
+        title={t('storeSummary.scenarioDetailsTitle')}
+      >
+        {(() => {
+          const detailScenario = scenarioDetails?.scenario ?? null;
+          const detailScenarioId = detailScenario?.id ?? scenarioDetails?.scenarioId ?? null;
+          const timingInfo = getScenarioTimingInfo(detailScenarioId);
+          const detailTitle = detailScenario?.title ?? t('storeSummary.deletedScenario');
+          const detailCriticality = detailScenario?.criticality ?? t('storeSummary.emptyValue');
+          const detailObservation =
+            detailScenario?.observation?.trim() || t('storeSummary.emptyValue');
+          const detailBdd = detailScenario?.bdd?.trim() || t('storeSummary.emptyValue');
+
+          return (
+            <div className="scenario-details">
+              <p className="scenario-details-title">{detailTitle}</p>
+              <div className="scenario-details-grid">
+                <div className="scenario-details-item">
+                  <span className="scenario-details-label">{t('storeSummary.testTime')}</span>
+                  <span className="scenario-details-value" title={timingInfo.title}>
+                    {timingInfo.label}
+                  </span>
+                </div>
+                <div className="scenario-details-item">
+                  <span className="scenario-details-label">{t('storeSummary.criticality')}</span>
+                  <span className="scenario-details-value">{detailCriticality}</span>
+                </div>
+              </div>
+              <div className="scenario-details-section">
+                <span className="scenario-details-label">{t('storeSummary.observation')}</span>
+                <p className="scenario-details-text">{detailObservation}</p>
+              </div>
+              <div className="scenario-details-section">
+                <span className="scenario-details-label">{t('storeSummary.bdd')}</span>
+                <p className="scenario-details-text">{detailBdd}</p>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
 
       <Modal
         isOpen={isStoreSettingsOpen}

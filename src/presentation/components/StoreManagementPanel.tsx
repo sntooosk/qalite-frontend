@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type {
@@ -97,6 +97,7 @@ export const StoreManagementPanel = ({
   const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
+  const scenarioFormRef = useRef<HTMLFormElement | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const canUseScenarioForm = canManageScenarios && showScenarioForm !== false;
   const canToggleCategoryList =
@@ -690,6 +691,7 @@ export const StoreManagementPanel = ({
     });
     setEditingScenarioId(scenario.id);
     setScenarioFormError(null);
+    scenarioFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleDeleteScenario = async (scenario: StoreScenario) => {
@@ -996,7 +998,7 @@ export const StoreManagementPanel = ({
             </div>
 
             {canUseScenarioForm && (
-              <form className="scenario-form" onSubmit={handleScenarioSubmit}>
+              <form ref={scenarioFormRef} className="scenario-form" onSubmit={handleScenarioSubmit}>
                 <h3 className="form-title">
                   {editingScenarioId
                     ? t('storeManagement.scenarioFormTitleEdit')
