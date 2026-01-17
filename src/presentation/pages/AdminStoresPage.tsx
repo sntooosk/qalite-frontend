@@ -1022,7 +1022,7 @@ export const AdminStoresPage = () => {
               <Button
                 type="submit"
                 isLoading={isSavingOrganization}
-                loadingText={translation('AdminStoresPage.save-organization-loading-text')}
+                loadingText={translation('saving')}
                 data-testid="save-organization-settings"
               >
                 {translation('saveChanges')}

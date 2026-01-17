@@ -31,6 +31,7 @@ import {
   buildScenarioMarkdown,
   downloadScenarioWorkbook,
 } from '../../shared/utils/storeImportExport';
+import { normalizeAutomationValue } from '../../shared/utils/automation';
 
 interface StoreManagementPanelProps {
   organizationId: string;
@@ -674,10 +675,15 @@ export const StoreManagementPanel = ({
       return;
     }
 
+    const normalizedAutomation = normalizeAutomationValue(scenario.automation);
+    const automationMatch = AUTOMATION_OPTIONS.find(
+      (option) => normalizeAutomationValue(option.value) === normalizedAutomation,
+    );
+
     setScenarioForm({
       title: scenario.title,
       category: scenario.category,
-      automation: scenario.automation,
+      automation: automationMatch?.value ?? scenario.automation,
       criticality: scenario.criticality,
       observation: scenario.observation ?? '',
       bdd: scenario.bdd ?? '',

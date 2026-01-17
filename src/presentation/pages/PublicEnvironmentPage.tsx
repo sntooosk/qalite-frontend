@@ -99,9 +99,6 @@ export const PublicEnvironmentPage = () => {
         </div>
 
         <div className="environment-evidence">
-          <div className="environment-evidence__header">
-            <h3 className="section-title">{t('publicEnvironment.scenarios')}</h3>
-          </div>
           <EnvironmentEvidenceTable
             environment={environment}
             isLocked
@@ -117,6 +114,7 @@ export const PublicEnvironmentPage = () => {
           isLoading={isLoadingBugs}
           onEdit={() => {}}
           showActions={false}
+          showHeader={false}
         />
       </section>
     </Layout>
