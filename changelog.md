@@ -7,21 +7,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-### Added
-- Per-user preference persistence (theme/language) applied early in the render tree and exposed on the profile screen.
-- Organization-level BrowserStack credentials with admin-managed toggles in both organization creation and management flows.
-- Public environment share language persistence and `?lang=` support to keep public views in the sharer’s language.
-- Incremental pagination controls for large scenario tables and store management lists.
-- Environment export localization (PDF/Markdown) with translated labels and fallbacks.
-- Scenario export PDF layout with a structured table similar to the environment PDF.
+## [1.1.0] – 2026-01-17
 
 ### Changed
 
-- Header greeting now reads “Olá {role} {name}” / “Hello {role} {name}” with role-aware labels.
-- Public environment view hides redundant headers in scenario and bug sections.
-- BrowserStack credentials display moved out of user profile and into organization administration.
+- [**QM-25**](https://qualitydigital.atlassian.net/browse/QM-25) – [UX] Melhoria de responsividade
+- [**QM-12**](https://qualitydigital.atlassian.net/browse/QM-12) – [UX] Adição de âncora ao editar cenário de teste
+- [**QM-14**](https://qualitydigital.atlassian.net/browse/QM-14) – [UX] Modal de detalhes do cenário
 
-### Fixed
+## [1.0.0] – 2025-12-05
 
-- Organization save loading label now uses the global “saving” translation to avoid extra text overlap.
-- Scenario edit form now normalizes automation values so “Não automatizado” pre-fills correctly.
+### Added
+
+- [**QM-8**](https://qualitydigital.atlassian.net/browse/QM-8) – Translation of `environmentPage`
+- [**QM-7**](https://qualitydigital.atlassian.net/browse/QM-7) – Translation of `homepage`
+- [**QM-6**](https://qualitydigital.atlassian.net/browse/QM-6) – Translation of `adminStorePage`
+- [**QM-5**](https://qualitydigital.atlassian.net/browse/QM-5) – Translation of `adminPage`
+- [**QM-4**](https://qualitydigital.atlassian.net/browse/QM-4) – Translation of `forbiddenPage`
+- [**QM-3**](https://qualitydigital.atlassian.net/browse/QM-3) – Translation of login flow
