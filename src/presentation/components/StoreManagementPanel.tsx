@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type {
@@ -25,12 +25,7 @@ import {
   sortScenarioList,
   type ScenarioSortConfig,
 } from './ScenarioColumnSortControl';
-import {
-  downloadMarkdownFile,
-  buildScenarioMarkdown,
-  downloadScenarioWorkbook,
-  openScenarioPdf,
-} from '../../shared/utils/storeImportExport';
+import { downloadScenarioWorkbook, openScenarioPdf } from '../../shared/utils/storeImportExport';
 import { normalizeAutomationValue } from '../../shared/utils/automation';
 
 interface StoreManagementPanelProps {
@@ -41,7 +36,7 @@ interface StoreManagementPanelProps {
   showScenarioForm?: boolean;
 }
 
-type ExportFormat = 'markdown' | 'pdf' | 'xlsx';
+type ExportFormat = 'pdf' | 'xlsx';
 
 const emptyScenarioForm: StoreScenarioInput = {
   title: '',
@@ -97,6 +92,7 @@ export const StoreManagementPanel = ({
   const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
+  const scenarioFormRef = useRef<HTMLFormElement | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const canUseScenarioForm = canManageScenarios && showScenarioForm !== false;
   const canToggleCategoryList =
@@ -690,6 +686,7 @@ export const StoreManagementPanel = ({
     });
     setEditingScenarioId(scenario.id);
     setScenarioFormError(null);
+    scenarioFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleDeleteScenario = async (scenario: StoreScenario) => {
@@ -800,11 +797,6 @@ export const StoreManagementPanel = ({
       setExportingFormat(format);
       const data = await storeService.exportStore(selectedStore.id);
       const baseFileName = `${selectedStore.name.replace(/\s+/g, '_')}_${t('storeManagement.exportFileSuffix')}`;
-
-      if (format === 'markdown') {
-        const markdown = buildScenarioMarkdown(data);
-        downloadMarkdownFile(markdown, `${baseFileName}.md`);
-      }
 
       if (format === 'xlsx') {
         downloadScenarioWorkbook(data, `${baseFileName}.xlsx`);
@@ -967,15 +959,6 @@ export const StoreManagementPanel = ({
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => void handleExport('markdown')}
-                    isLoading={exportingFormat === 'markdown'}
-                    loadingText={t('exporting')}
-                  >
-                    {t('storeSummary.exportMarkdown')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
                     onClick={() => void handleExport('xlsx')}
                     isLoading={exportingFormat === 'xlsx'}
                     loadingText={t('exporting')}
@@ -996,7 +979,7 @@ export const StoreManagementPanel = ({
             </div>
 
             {canUseScenarioForm && (
-              <form className="scenario-form" onSubmit={handleScenarioSubmit}>
+              <form ref={scenarioFormRef} className="scenario-form" onSubmit={handleScenarioSubmit}>
                 <h3 className="form-title">
                   {editingScenarioId
                     ? t('storeManagement.scenarioFormTitleEdit')
