@@ -368,10 +368,28 @@ export const StoreSummaryPage = () => {
     () => filterScenarios(scenarios, suiteScenarioFilters),
     [scenarios, suiteScenarioFilters],
   );
-  const orderedSuiteScenarios = useMemo(
-    () => sortScenarioList(filteredSuiteScenarios, suiteScenarioSort),
-    [filteredSuiteScenarios, suiteScenarioSort],
-  );
+  const orderedSuiteScenarios = useMemo(() => {
+    const ordered = sortScenarioList(filteredSuiteScenarios, suiteScenarioSort);
+    const selectedScenarioIds = new Set(suiteForm.scenarioIds);
+
+    if (selectedScenarioIds.size === 0) {
+      return ordered;
+    }
+
+    return ordered
+      .map((scenario, index) => ({
+        scenario,
+        index,
+        isSelected: selectedScenarioIds.has(scenario.id),
+      }))
+      .sort((first, second) => {
+        if (first.isSelected === second.isSelected) {
+          return first.index - second.index;
+        }
+        return first.isSelected ? -1 : 1;
+      })
+      .map(({ scenario }) => scenario);
+  }, [filteredSuiteScenarios, suiteForm.scenarioIds, suiteScenarioSort]);
   const paginatedSuiteScenarios = useMemo(
     () => orderedSuiteScenarios.slice(0, suiteScenarioVisibleCount),
     [orderedSuiteScenarios, suiteScenarioVisibleCount],
