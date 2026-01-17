@@ -37,9 +37,7 @@ import {
 import { useStoreEnvironments } from '../hooks/useStoreEnvironments';
 import {
   downloadJsonFile,
-  downloadMarkdownFile,
   openScenarioPdf,
-  buildScenarioMarkdown,
   validateScenarioImportPayload,
 } from '../../shared/utils/storeImportExport';
 import { isAutomatedScenario, normalizeAutomationValue } from '../../shared/utils/automation';
@@ -77,7 +75,7 @@ interface StoreHighlight {
   onClick?: () => void;
 }
 
-type ExportFormat = 'json' | 'markdown' | 'pdf';
+type ExportFormat = 'json' | 'pdf';
 
 const emptyScenarioFilters: ScenarioFilters = {
   search: '',
@@ -1147,11 +1145,6 @@ export const StoreSummaryPage = () => {
         downloadJsonFile(data, `${baseFileName}.json`);
       }
 
-      if (format === 'markdown') {
-        const markdown = buildScenarioMarkdown(data);
-        downloadMarkdownFile(markdown, `${baseFileName}.md`);
-      }
-
       if (format === 'pdf') {
         openScenarioPdf(data, `${store.name} - ${t('scenarios')}`, pdfWindow);
       }
@@ -1834,15 +1827,6 @@ export const StoreSummaryPage = () => {
                             loadingText={t('exporting')}
                           >
                             {t('storeSummary.exportJson')}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => void handleScenarioExport('markdown')}
-                            isLoading={exportingScenarioFormat === 'markdown'}
-                            loadingText={t('exporting')}
-                          >
-                            {t('storeSummary.exportMarkdown')}
                           </Button>
                           <Button
                             type="button"

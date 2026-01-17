@@ -25,12 +25,7 @@ import {
   sortScenarioList,
   type ScenarioSortConfig,
 } from './ScenarioColumnSortControl';
-import {
-  downloadMarkdownFile,
-  buildScenarioMarkdown,
-  downloadScenarioWorkbook,
-  openScenarioPdf,
-} from '../../shared/utils/storeImportExport';
+import { downloadScenarioWorkbook, openScenarioPdf } from '../../shared/utils/storeImportExport';
 import { normalizeAutomationValue } from '../../shared/utils/automation';
 
 interface StoreManagementPanelProps {
@@ -41,7 +36,7 @@ interface StoreManagementPanelProps {
   showScenarioForm?: boolean;
 }
 
-type ExportFormat = 'markdown' | 'pdf' | 'xlsx';
+type ExportFormat = 'pdf' | 'xlsx';
 
 const emptyScenarioForm: StoreScenarioInput = {
   title: '',
@@ -803,11 +798,6 @@ export const StoreManagementPanel = ({
       const data = await storeService.exportStore(selectedStore.id);
       const baseFileName = `${selectedStore.name.replace(/\s+/g, '_')}_${t('storeManagement.exportFileSuffix')}`;
 
-      if (format === 'markdown') {
-        const markdown = buildScenarioMarkdown(data);
-        downloadMarkdownFile(markdown, `${baseFileName}.md`);
-      }
-
       if (format === 'xlsx') {
         downloadScenarioWorkbook(data, `${baseFileName}.xlsx`);
       }
@@ -966,15 +956,6 @@ export const StoreManagementPanel = ({
               </div>
               <div className="store-details-actions">
                 <div className="store-action-group">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => void handleExport('markdown')}
-                    isLoading={exportingFormat === 'markdown'}
-                    loadingText={t('exporting')}
-                  >
-                    {t('storeSummary.exportMarkdown')}
-                  </Button>
                   <Button
                     type="button"
                     variant="ghost"

@@ -590,15 +590,17 @@ export const EnvironmentPage = () => {
           <div className="summary-card">
             <h3>{translation('environment.actions.shareExport')}</h3>
             <div className="share-actions">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => handleCopyLink(shareLinks.invite)}
-                disabled={isShareDisabled}
-                data-testid="copy-invite-button"
-              >
-                {translation('environment.share.invite')}
-              </Button>
+              {environment?.status !== 'done' && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => handleCopyLink(shareLinks.invite)}
+                  disabled={isShareDisabled}
+                  data-testid="copy-invite-button"
+                >
+                  {translation('environment.share.invite')}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="secondary"

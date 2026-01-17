@@ -1001,7 +1001,6 @@
       "editionCancelled": "Cancel editing",
       "testData": "Scenario and test suite dataset",
       "exportJson": "Export JSON",
-      "exportMarkdown": "Export Markdown",
       "exportPdf": "Export PDF",
       "importJson": "Import JSON",
       "maxTable": "Maximize table",
