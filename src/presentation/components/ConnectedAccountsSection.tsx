@@ -1,11 +1,13 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { Organization } from '../../domain/entities/organization';
+import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from './Button';
 import { TextInput } from './TextInput';
 import { Alert } from './Alert';
-import { BrowserstackIcon, LinkIcon } from './icons';
+import { BrowserstackIcon } from './icons';
 
 const maskSecret = (value: string) => {
   if (!value) {
@@ -18,33 +20,108 @@ const maskSecret = (value: string) => {
 
 export const ConnectedAccountsSection = () => {
   const { t } = useTranslation();
-  const { user, updateProfile, isLoading } = useAuth();
+  const { user } = useAuth();
+  const [organization, setOrganization] = useState<Organization | null>(null);
   const [username, setUsername] = useState('');
   const [accessKey, setAccessKey] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingOrganization, setIsLoadingOrganization] = useState(false);
 
-  const connectedCredentials = user?.browserstackCredentials ?? null;
+  const organizationId = user?.organizationId ?? null;
+  const connectedCredentials = organization?.browserstackCredentials ?? null;
   const isConnected = Boolean(connectedCredentials?.username || connectedCredentials?.accessKey);
 
   useEffect(() => {
     setUsername(connectedCredentials?.username ?? '');
     setAccessKey('');
-    setIsEditing(!isConnected);
+    setIsEditing(!isConnected && Boolean(organizationId));
     setLocalError(null);
-  }, [connectedCredentials?.accessKey, connectedCredentials?.username, isConnected]);
+  }, [
+    connectedCredentials?.accessKey,
+    connectedCredentials?.username,
+    isConnected,
+    organizationId,
+  ]);
+
+  useEffect(() => {
+    if (!organizationId) {
+      setOrganization(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchOrganization = async () => {
+      setIsLoadingOrganization(true);
+      try {
+        const data = await organizationService.getById(organizationId);
+        if (isMounted) {
+          setOrganization(data);
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setOrganization(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingOrganization(false);
+        }
+      }
+    };
+
+    void fetchOrganization();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [organizationId]);
 
   const maskedAccessKey = useMemo(
     () => maskSecret(connectedCredentials?.accessKey ?? ''),
     [connectedCredentials?.accessKey],
   );
 
+  const buildOrganizationPayload = (nextCredentials: Organization['browserstackCredentials']) => {
+    if (!organization) {
+      return null;
+    }
+
+    return {
+      name: organization.name,
+      description: organization.description,
+      slackWebhookUrl: organization.slackWebhookUrl ?? '',
+      emailDomain: organization.emailDomain ?? '',
+      browserstackCredentials: nextCredentials ?? null,
+    };
+  };
+
   const handleDisconnect = async () => {
+    if (!organization) {
+      setLocalError(t('connectedAccounts.organizationRequired'));
+      return;
+    }
+
     setLocalError(null);
-    await updateProfile({ browserstackCredentials: null });
-    setUsername('');
-    setAccessKey('');
-    setIsEditing(false);
+    try {
+      setIsSaving(true);
+      const payload = buildOrganizationPayload(null);
+      if (!payload) {
+        return;
+      }
+      const updated = await organizationService.update(organization.id, payload);
+      setOrganization(updated);
+      setUsername('');
+      setAccessKey('');
+      setIsEditing(false);
+    } catch (error) {
+      console.error(error);
+      setLocalError(t('connectedAccounts.saveError'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -59,21 +136,37 @@ export const ConnectedAccountsSection = () => {
       return;
     }
 
-    await updateProfile({
-      browserstackCredentials: {
+    if (!organization) {
+      setLocalError(t('connectedAccounts.organizationRequired'));
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const payload = buildOrganizationPayload({
         username: trimmedUsername,
         accessKey: trimmedAccessKey,
-      },
-    });
-    setAccessKey('');
-    setIsEditing(false);
+      });
+      if (!payload) {
+        return;
+      }
+      const updated = await organizationService.update(organization.id, payload);
+      setOrganization(updated);
+      setAccessKey('');
+      setIsEditing(false);
+    } catch (error) {
+      console.error(error);
+      setLocalError(t('connectedAccounts.saveError'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <section className="card settings-card">
       <div className="settings-card__header">
         <span className="card-title-icon">
-          <LinkIcon aria-hidden className="icon icon--lg" />
+          <BrowserstackIcon aria-hidden className="icon icon--lg" />
         </span>
         <div>
           <h2 className="section-title">{t('connectedAccounts.title')}</h2>
@@ -113,10 +206,20 @@ export const ConnectedAccountsSection = () => {
         <div className="connected-account__actions">
           {isConnected && !isEditing ? (
             <>
-              <Button type="button" variant="secondary" onClick={() => setIsEditing(true)}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsEditing(true)}
+                disabled={isSaving || isLoadingOrganization}
+              >
                 {t('connectedAccounts.update')}
               </Button>
-              <Button type="button" variant="ghost" onClick={() => void handleDisconnect()}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => void handleDisconnect()}
+                disabled={isSaving || isLoadingOrganization}
+              >
                 {t('connectedAccounts.disconnect')}
               </Button>
             </>
@@ -128,7 +231,11 @@ export const ConnectedAccountsSection = () => {
         </div>
       </div>
 
-      {(isEditing || !isConnected) && (
+      {!organizationId && (
+        <p className="section-subtitle">{t('connectedAccounts.organizationRequired')}</p>
+      )}
+
+      {organizationId && (isEditing || !isConnected) && (
         <form className="settings-form" onSubmit={handleSubmit}>
           <div className="settings-form__grid">
             <TextInput
@@ -151,11 +258,21 @@ export const ConnectedAccountsSection = () => {
           </div>
           <p className="form-hint">{t('connectedAccounts.browserstackHint')}</p>
           <div className="settings-form__actions">
-            <Button type="submit" isLoading={isLoading} loadingText={t('saving')}>
+            <Button
+              type="submit"
+              isLoading={isSaving}
+              loadingText={t('saving')}
+              disabled={isLoadingOrganization}
+            >
               {isConnected ? t('connectedAccounts.save') : t('connectedAccounts.connect')}
             </Button>
             {isConnected && (
-              <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsEditing(false)}
+                disabled={isSaving || isLoadingOrganization}
+              >
                 {t('cancel')}
               </Button>
             )}

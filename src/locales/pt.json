@@ -71,7 +71,9 @@
       "browserstackHint": "Armazenamos apenas as credenciais essenciais e mascaramos dados sensíveis.",
       "save": "Salvar credenciais",
       "connect": "Conectar",
-      "browserstackRequired": "Informe usuário e chave de acesso para conectar o BrowserStack."
+      "browserstackRequired": "Informe usuário e chave de acesso para conectar o BrowserStack.",
+      "organizationRequired": "Vincule-se a uma organização para configurar o BrowserStack.",
+      "saveError": "Não foi possível salvar as credenciais do BrowserStack."
     },
     "pagination": {
       "showing": "Mostrando {{visible}} de {{total}}",
@@ -336,7 +338,7 @@
       "emptyScenarios": "Ainda não identificamos cenários automatizados nas lojas desta organização.",
       "browserstackBadge": "BrowserStack",
       "browserstackTitle": "Acompanhe execuções automatizadas",
-      "browserstackSubtitle": "Adicione suas credenciais do BrowserStack no perfil para visualizar o quadro Kanban de execuções."
+      "browserstackSubtitle": "Adicione as credenciais do BrowserStack na organização para visualizar o quadro Kanban de execuções."
     },
     "forbiddenPage": {
       "description": "Você não tem permissão para acessar esta página. Entre em contato com o administrador ou volte ao início."
@@ -473,7 +475,7 @@
       "chart-automated-empty-message": "Ainda não identificamos cenários automatizados nas lojas desta organização.",
       "browserstack-card-badge": "BrowserStack",
       "browserstack-card-title": "Conecte sua conta",
-      "browserstack-card-subtitle": "Adicione usuário e access key do BrowserStack no seu perfil para acompanhar as execuções automatizadas.",
+      "browserstack-card-subtitle": "Adicione usuário e access key do BrowserStack na organização para acompanhar as execuções automatizadas.",
       "member-add-no-organization": "Selecione uma organização antes de adicionar membros.",
       "member-add-email-required": "Informe um e-mail para adicionar.",
       "member-add-already-linked": "Usuário já está vinculado à organização.",

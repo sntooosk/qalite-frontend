@@ -11,7 +11,6 @@ import { browserstackService } from '../../application/use-cases/BrowserstackUse
 import { userService } from '../../application/use-cases/UserUseCase';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
-import { useAuth } from '../hooks/useAuth';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
@@ -50,7 +49,6 @@ const initialOrganizationForm: OrganizationFormState = {
 export const AdminStoresPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { user } = useAuth();
   const { setActiveOrganization } = useOrganizationBranding();
   const [searchParams, setSearchParams] = useSearchParams();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -234,21 +232,24 @@ export const AdminStoresPage = () => {
     };
   }, [newMemberEmail, selectedOrganization]);
 
+  const selectedOrganizationCredentials = selectedOrganization?.browserstackCredentials ?? null;
   const hasBrowserstackCredentials = useMemo(
     () =>
-      Boolean(user?.browserstackCredentials?.username && user?.browserstackCredentials?.accessKey),
-    [user?.browserstackCredentials?.accessKey, user?.browserstackCredentials?.username],
+      Boolean(
+        selectedOrganizationCredentials?.username && selectedOrganizationCredentials?.accessKey,
+      ),
+    [selectedOrganizationCredentials?.accessKey, selectedOrganizationCredentials?.username],
   );
 
   const loadBrowserstackBuilds = useCallback(async () => {
-    if (!user?.browserstackCredentials || !hasBrowserstackCredentials) {
+    if (!selectedOrganizationCredentials || !hasBrowserstackCredentials) {
       setBrowserstackBuilds([]);
       return;
     }
 
     try {
       setIsLoadingBrowserstack(true);
-      const builds = await browserstackService.listBuilds(user.browserstackCredentials);
+      const builds = await browserstackService.listBuilds(selectedOrganizationCredentials);
       setBrowserstackBuilds(builds);
     } catch (error) {
       console.error(error);
@@ -262,7 +263,7 @@ export const AdminStoresPage = () => {
     } finally {
       setIsLoadingBrowserstack(false);
     }
-  }, [hasBrowserstackCredentials, showToast, translation, user?.browserstackCredentials]);
+  }, [hasBrowserstackCredentials, selectedOrganizationCredentials, showToast, translation]);
 
   useEffect(() => {
     void loadBrowserstackBuilds();
@@ -718,7 +719,9 @@ export const AdminStoresPage = () => {
                       </div>
                     </div>
                     <span className="badge">
-                      {translation('scenarios', { count: store.scenarioCount })}
+                      {translation('AdminStoresPage.store-card-scenarios-badge', {
+                        scenarioCount: store.scenarioCount,
+                      })}
                     </span>
                   </div>
                   <div className="card-link-hint">

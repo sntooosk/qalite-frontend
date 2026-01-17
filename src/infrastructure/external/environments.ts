@@ -216,6 +216,7 @@ const normalizeEnvironment = (id: string, data: Record<string, unknown>): Enviro
   bugs: Number(data.bugs ?? 0),
   totalCenarios: Number(data.totalCenarios ?? 0),
   participants: getStringArray(data.participants),
+  publicShareLanguage: getStringOrNull(data.publicShareLanguage),
 });
 
 export const createEnvironment = async (payload: CreateEnvironmentInput): Promise<Environment> => {

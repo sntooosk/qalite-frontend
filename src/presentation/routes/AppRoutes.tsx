@@ -44,9 +44,6 @@ const NoOrganizationPage = lazy(() =>
 const ProfilePage = lazy(() =>
   import('../pages/ProfilePage').then(({ ProfilePage }) => ({ default: ProfilePage })),
 );
-const SettingsPage = lazy(() =>
-  import('../pages/SettingsPage').then(({ SettingsPage }) => ({ default: SettingsPage })),
-);
 const StoreSummaryPage = lazy(() =>
   import('../pages/StoreSummaryPage').then(({ StoreSummaryPage }) => ({
     default: StoreSummaryPage,
@@ -81,7 +78,6 @@ export const AppRoutes = () => (
             <Route path="/organization" element={<OrganizationDashboardPage />} />
             <Route path="/no-organization" element={<NoOrganizationPage />} />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/stores/:storeId" element={<StoreSummaryPage />} />
             <Route path="/environments/:environmentId" element={<EnvironmentPage />} />
           </Route>

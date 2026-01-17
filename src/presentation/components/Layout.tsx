@@ -1,11 +1,10 @@
-import { ChangeEvent, ReactNode } from 'react';
+import { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useUserPreferences } from '../context/UserPreferencesContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Button } from './Button';
 import { UserAvatar } from './UserAvatar';
-import { LogoutIcon, SettingsIcon, UserIcon } from './icons';
+import { LogoutIcon, UserIcon } from './icons';
 import qliteLogo from '../assets/logo.png';
 import { useTranslation } from 'react-i18next';
 
@@ -20,16 +19,8 @@ export const Layout = ({ children }: LayoutProps) => {
   const displayName = user?.displayName || user?.email || '';
   const brandSource = activeOrganization;
   const { t } = useTranslation();
-  const { preferences, updatePreferences } = useUserPreferences();
   const brandName = brandSource?.name || t('app.brandName');
   const brandLogo = qliteLogo;
-
-  const handleLanguageChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    void updatePreferences({
-      ...preferences,
-      language: event.target.value as 'pt' | 'en',
-    });
-  };
 
   return (
     <div className="app-shell">
@@ -55,23 +46,7 @@ export const Layout = ({ children }: LayoutProps) => {
                   </span>
                 </div>
               </div>
-              <select
-                className="language-switch"
-                onChange={handleLanguageChange}
-                value={preferences.language}
-              >
-                <option value="pt">{t('language.optionShortPt')}</option>
-                <option value="en">{t('language.optionShortEn')}</option>
-              </select>
               <div className="header-user-actions">
-                <button
-                  type="button"
-                  className="header-profile"
-                  onClick={() => navigate('/settings')}
-                >
-                  <SettingsIcon aria-hidden className="icon" />
-                  <span>{t('settings.title')}</span>
-                </button>
                 <button
                   type="button"
                   className="header-profile"

@@ -72,7 +72,9 @@
       "browserstackHint": "We only store the required credentials and mask sensitive data.",
       "save": "Save credentials",
       "connect": "Connect",
-      "browserstackRequired": "Enter username and access key to connect BrowserStack."
+      "browserstackRequired": "Enter username and access key to connect BrowserStack.",
+      "organizationRequired": "Join an organization to configure BrowserStack.",
+      "saveError": "Could not save BrowserStack credentials."
     },
     "pagination": {
       "showing": "Showing {{visible}} of {{total}}",
@@ -336,7 +338,7 @@
       "emptyScenarios": "We haven’t identified any automated scenarios in this organization’s stores yet.",
       "browserstackBadge": "BrowserStack",
       "browserstackTitle": "Follow automated runs",
-      "browserstackSubtitle": "Add your BrowserStack credentials to your profile to view executions Kanban board."
+      "browserstackSubtitle": "Add your BrowserStack credentials to the organization to view executions Kanban board."
     },
     "forbiddenPage": {
       "description": "You do not have permission to access this page. Contact the administrator or return to the homepage."
@@ -473,7 +475,7 @@
       "chart-automated-empty-message": "We have not yet identified automated scenarios in the stores of this organization.",
       "browserstack-card-badge": "BrowserStack",
       "browserstack-card-title": "Connect your account",
-      "browserstack-card-subtitle": "Add your BrowserStack username and access key to your profile to track automated executions.",
+      "browserstack-card-subtitle": "Add your BrowserStack username and access key to the organization to track automated executions.",
       "member-add-no-organization": "Select an organization before adding members.",
       "member-add-email-required": "Enter an email to add.",
       "member-add-already-linked": "This user is already linked to the organization.",

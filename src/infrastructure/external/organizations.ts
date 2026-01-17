@@ -16,6 +16,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 
+import type { BrowserstackCredentials } from '../../domain/entities/browserstack';
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
 import { getNormalizedEmailDomain, normalizeEmailDomain } from '../../shared/utils/email';
 import { firebaseFirestore } from '../database/firebase';
@@ -36,6 +37,7 @@ export interface UpdateOrganizationPayload {
   description: string;
   slackWebhookUrl?: string | null;
   emailDomain?: string | null;
+  browserstackCredentials?: BrowserstackCredentials | null;
 }
 
 export interface AddUserToOrganizationPayload {
@@ -49,6 +51,19 @@ export interface RemoveUserFromOrganizationPayload {
 }
 
 const organizationsCollection = collection(firebaseFirestore, ORGANIZATIONS_COLLECTION);
+
+const normalizeBrowserstackCredentials = (
+  credentials: BrowserstackCredentials | null | undefined,
+): BrowserstackCredentials | null => {
+  const username = credentials?.username?.trim() || '';
+  const accessKey = credentials?.accessKey?.trim() || '';
+
+  if (!username && !accessKey) {
+    return null;
+  }
+
+  return { username, accessKey };
+};
 
 export const listOrganizations = async (): Promise<Organization[]> => {
   const snapshot = await getDocs(organizationsCollection);
@@ -84,6 +99,7 @@ export const createOrganization = async (
     logoUrl: null,
     slackWebhookUrl,
     emailDomain,
+    browserstackCredentials: null,
     members: [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -106,6 +122,7 @@ export const updateOrganization = async (
   payload: UpdateOrganizationPayload,
 ): Promise<Organization> => {
   const organizationRef = doc(firebaseFirestore, ORGANIZATIONS_COLLECTION, id);
+  const browserstackCredentials = normalizeBrowserstackCredentials(payload.browserstackCredentials);
 
   const updatePayload: Record<string, unknown> = {
     name: payload.name.trim(),
@@ -114,6 +131,10 @@ export const updateOrganization = async (
     emailDomain: normalizeEmailDomain(payload.emailDomain),
     updatedAt: serverTimestamp(),
   };
+
+  if (payload.browserstackCredentials !== undefined) {
+    updatePayload.browserstackCredentials = browserstackCredentials;
+  }
 
   await updateDoc(organizationRef, updatePayload);
 
@@ -423,6 +444,9 @@ const mapOrganization = async (
 ): Promise<Organization> => {
   const memberIds = (data?.members as string[] | undefined) ?? [];
   const members = await fetchMembers(memberIds);
+  const browserstackCredentials = normalizeBrowserstackCredentials(
+    (data?.browserstackCredentials as BrowserstackCredentials | null | undefined) ?? null,
+  );
 
   return {
     id,
@@ -431,6 +455,7 @@ const mapOrganization = async (
     logoUrl: ((data?.logoUrl as string) ?? '').trim() || null,
     slackWebhookUrl: ((data?.slackWebhookUrl as string) ?? '').trim() || null,
     emailDomain: normalizeEmailDomain((data?.emailDomain as string | null | undefined) ?? null),
+    browserstackCredentials,
     members,
     memberIds,
     createdAt: timestampToDate(data?.createdAt),
