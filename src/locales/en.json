@@ -379,6 +379,11 @@
           "hint": "Enter the domain (with or without @). Users with this email will be automatically linked."
         },
         "browserstack": {
+          "title": "BrowserStack",
+          "description": "Would you like to add credentials to follow automated runs?",
+          "iconAlt": "BrowserStack",
+          "enabled": "Enabled",
+          "disabled": "Disabled",
           "usernameLabel": "BrowserStack username",
           "usernamePlaceholder": "browserstack.user",
           "accessKeyLabel": "BrowserStack access key",
@@ -522,6 +527,11 @@
       "org-email-domain-label": "Organization email domain",
       "org-email-domain-placeholder": "@example.com",
       "org-email-domain-hint": "Enter the domain (with or without @). Users with this email are automatically included.",
+      "org-browserstack-section-title": "BrowserStack",
+      "org-browserstack-section-description": "Would you like to add credentials to follow automated runs?",
+      "org-browserstack-icon-alt": "BrowserStack",
+      "org-browserstack-toggle-on": "Enabled",
+      "org-browserstack-toggle-off": "Disabled",
       "org-browserstack-username-label": "BrowserStack username",
       "org-browserstack-username-placeholder": "browserstack.user",
       "org-browserstack-access-key-label": "BrowserStack access key",

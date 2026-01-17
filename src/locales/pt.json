@@ -380,6 +380,11 @@
           "hint": "Informe o domínio (com ou sem @). Usuários com esse e-mail serão vinculados automaticamente."
         },
         "browserstack": {
+          "title": "BrowserStack",
+          "description": "Deseja cadastrar credenciais para acompanhar execuções automatizadas?",
+          "iconAlt": "BrowserStack",
+          "enabled": "Ativado",
+          "disabled": "Desativado",
           "usernameLabel": "Usuário do BrowserStack",
           "usernamePlaceholder": "browserstack.user",
           "accessKeyLabel": "Access key do BrowserStack",
@@ -523,6 +528,11 @@
       "org-email-domain-label": "Domínio de e-mail da organização",
       "org-email-domain-placeholder": "@exemplo.com",
       "org-email-domain-hint": "Informe o domínio (com ou sem @). Usuários com esse e-mail entram automaticamente.",
+      "org-browserstack-section-title": "BrowserStack",
+      "org-browserstack-section-description": "Deseja cadastrar credenciais para acompanhar execuções automatizadas?",
+      "org-browserstack-icon-alt": "BrowserStack",
+      "org-browserstack-toggle-on": "Ativado",
+      "org-browserstack-toggle-off": "Desativado",
       "org-browserstack-username-label": "Usuário do BrowserStack",
       "org-browserstack-username-placeholder": "browserstack.user",
       "org-browserstack-access-key-label": "Access key do BrowserStack",

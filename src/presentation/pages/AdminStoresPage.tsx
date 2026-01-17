@@ -68,6 +68,8 @@ export const AdminStoresPage = () => {
   const [organizationForm, setOrganizationForm] =
     useState<OrganizationFormState>(initialOrganizationForm);
   const [isOrganizationSlackSectionOpen, setIsOrganizationSlackSectionOpen] = useState(false);
+  const [isOrganizationBrowserstackSectionOpen, setIsOrganizationBrowserstackSectionOpen] =
+    useState(false);
   const [organizationError, setOrganizationError] = useState<string | null>(null);
   const [isSavingOrganization, setIsSavingOrganization] = useState(false);
   const [isManagingMembers, setIsManagingMembers] = useState(false);
@@ -321,6 +323,9 @@ export const AdminStoresPage = () => {
       browserstackAccessKey,
     });
     setIsOrganizationSlackSectionOpen(Boolean(slackWebhookUrl.trim()));
+    setIsOrganizationBrowserstackSectionOpen(
+      Boolean(browserstackUsername.trim() || browserstackAccessKey.trim()),
+    );
     setOrganizationError(null);
     setIsOrganizationModalOpen(true);
   };
@@ -329,6 +334,7 @@ export const AdminStoresPage = () => {
     setIsOrganizationModalOpen(false);
     setOrganizationError(null);
     setIsOrganizationSlackSectionOpen(false);
+    setIsOrganizationBrowserstackSectionOpen(false);
     setOrganizationForm(initialOrganizationForm);
     setNewMemberEmail('');
     setUserSuggestions([]);
@@ -340,6 +346,22 @@ export const AdminStoresPage = () => {
 
       if (!nextValue) {
         setOrganizationForm((form) => ({ ...form, slackWebhookUrl: '' }));
+      }
+
+      return nextValue;
+    });
+  };
+
+  const toggleOrganizationBrowserstackSection = () => {
+    setIsOrganizationBrowserstackSectionOpen((previous) => {
+      const nextValue = !previous;
+
+      if (!nextValue) {
+        setOrganizationForm((form) => ({
+          ...form,
+          browserstackUsername: '',
+          browserstackAccessKey: '',
+        }));
       }
 
       return nextValue;
@@ -417,8 +439,12 @@ export const AdminStoresPage = () => {
         ? organizationForm.slackWebhookUrl.trim()
         : '';
       const emailDomain = organizationForm.emailDomain.trim();
-      const browserstackUsername = organizationForm.browserstackUsername.trim();
-      const browserstackAccessKey = organizationForm.browserstackAccessKey.trim();
+      const browserstackUsername = isOrganizationBrowserstackSectionOpen
+        ? organizationForm.browserstackUsername.trim()
+        : '';
+      const browserstackAccessKey = isOrganizationBrowserstackSectionOpen
+        ? organizationForm.browserstackAccessKey.trim()
+        : '';
 
       const updated = await organizationService.update(selectedOrganization.id, {
         name: trimmedName,
@@ -931,45 +957,92 @@ export const AdminStoresPage = () => {
               dataTestId="organization-settings-email-domain"
             />
             <p className="form-hint">{translation('AdminStoresPage.org-email-domain-hint')}</p>
-            <div className="form-grid">
-              <TextInput
-                id="organization-browserstack-username"
-                label={translation('AdminStoresPage.org-browserstack-username-label')}
-                value={organizationForm.browserstackUsername}
-                onChange={(event) =>
-                  setOrganizationForm((previous) => ({
-                    ...previous,
-                    browserstackUsername: event.target.value,
-                  }))
-                }
-                placeholder={translation('AdminStoresPage.org-browserstack-username-placeholder')}
-                dataTestId="organization-settings-browserstack-username"
-              />
-              <TextInput
-                id="organization-browserstack-access-key"
-                label={translation('AdminStoresPage.org-browserstack-access-key-label')}
-                value={organizationForm.browserstackAccessKey}
-                onChange={(event) =>
-                  setOrganizationForm((previous) => ({
-                    ...previous,
-                    browserstackAccessKey: event.target.value,
-                  }))
-                }
-                placeholder={translation('AdminStoresPage.org-browserstack-access-key-placeholder')}
-                type="password"
-                dataTestId="organization-settings-browserstack-access-key"
-              />
-            </div>
-            <p className="form-hint">
-              {translation('AdminStoresPage.org-browserstack-hint')}
-            </p>
             <div className="collapsible-section">
               <div className="collapsible-section__header">
                 <div className="collapsible-section__titles">
                   <img
                     className="collapsible-section__icon"
-                    src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/48/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
+                    src="https://img.icons8.com/color/48/browser-stack.png"
+                    alt={translation('AdminStoresPage.org-browserstack-icon-alt')}
+                    width={48}
+                    height={48}
+                  />
+                  <p className="collapsible-section__title">
+                    {translation('AdminStoresPage.org-browserstack-section-title')}
+                  </p>
+                  <p className="collapsible-section__description">
+                    {translation('AdminStoresPage.org-browserstack-section-description')}
+                  </p>
+                </div>
+                <label className="collapsible-section__toggle">
+                  <input
+                    type="checkbox"
+                    checked={isOrganizationBrowserstackSectionOpen}
+                    onChange={toggleOrganizationBrowserstackSection}
+                    aria-expanded={isOrganizationBrowserstackSectionOpen}
+                    aria-controls="organization-settings-browserstack-section"
+                  />
+                  <span>
+                    {isOrganizationBrowserstackSectionOpen
+                      ? translation('AdminStoresPage.org-browserstack-toggle-on')
+                      : translation('AdminStoresPage.org-browserstack-toggle-off')}
+                  </span>
+                </label>
+              </div>
+              {isOrganizationBrowserstackSectionOpen && (
+                <div
+                  className="collapsible-section__body"
+                  id="organization-settings-browserstack-section"
+                  data-testid="organization-settings-browserstack-section"
+                >
+                  <div className="form-grid">
+                    <TextInput
+                      id="organization-browserstack-username"
+                      label={translation('AdminStoresPage.org-browserstack-username-label')}
+                      value={organizationForm.browserstackUsername}
+                      onChange={(event) =>
+                        setOrganizationForm((previous) => ({
+                          ...previous,
+                          browserstackUsername: event.target.value,
+                        }))
+                      }
+                      placeholder={translation(
+                        'AdminStoresPage.org-browserstack-username-placeholder',
+                      )}
+                      dataTestId="organization-settings-browserstack-username"
+                    />
+                    <TextInput
+                      id="organization-browserstack-access-key"
+                      label={translation('AdminStoresPage.org-browserstack-access-key-label')}
+                      value={organizationForm.browserstackAccessKey}
+                      onChange={(event) =>
+                        setOrganizationForm((previous) => ({
+                          ...previous,
+                          browserstackAccessKey: event.target.value,
+                        }))
+                      }
+                      placeholder={translation(
+                        'AdminStoresPage.org-browserstack-access-key-placeholder',
+                      )}
+                      type="password"
+                      dataTestId="organization-settings-browserstack-access-key"
+                    />
+                  </div>
+                  <p className="form-hint">
+                    {translation('AdminStoresPage.org-browserstack-hint')}
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="collapsible-section">
+              <div className="collapsible-section__header">
+                <div className="collapsible-section__titles">
+                  <img
+                    className="collapsible-section__icon"
+                    src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/24/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
                     alt={translation('AdminStoresPage.org-slack-icon-alt')}
+                    width={24}
+                    height={24}
                   />
                   <p className="collapsible-section__title">
                     {translation('AdminStoresPage.org-slack-section-title')}

@@ -27,9 +27,9 @@ import {
 } from './ScenarioColumnSortControl';
 import {
   downloadMarkdownFile,
-  openPdfFromMarkdown,
   buildScenarioMarkdown,
   downloadScenarioWorkbook,
+  openScenarioPdf,
 } from '../../shared/utils/storeImportExport';
 import { normalizeAutomationValue } from '../../shared/utils/automation';
 
@@ -811,9 +811,8 @@ export const StoreManagementPanel = ({
       }
 
       if (format === 'pdf') {
-        const markdown = buildScenarioMarkdown(data);
-        openPdfFromMarkdown(
-          markdown,
+        openScenarioPdf(
+          data,
           t('storeManagement.exportTitle', { name: selectedStore.name }),
           pdfWindow,
         );

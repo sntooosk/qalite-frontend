@@ -45,6 +45,7 @@ import { useStoreEnvironments } from '../hooks/useStoreEnvironments';
 import {
   downloadJsonFile,
   downloadMarkdownFile,
+  openScenarioPdf,
   openPdfFromMarkdown,
   buildScenarioMarkdown,
   buildSuiteMarkdown,
@@ -1152,8 +1153,7 @@ export const StoreSummaryPage = () => {
       }
 
       if (format === 'pdf') {
-        const markdown = buildScenarioMarkdown(data);
-        openPdfFromMarkdown(markdown, `${store.name} - ${t('scenarios')}`, pdfWindow);
+        openScenarioPdf(data, `${store.name} - ${t('scenarios')}`, pdfWindow);
       }
 
       showToast({ type: 'success', message: t('storeSummary.scenarioExportSuccess') });
