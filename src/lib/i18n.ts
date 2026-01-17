@@ -3,10 +3,12 @@ import { initReactI18next } from 'react-i18next';
 
 import enTranslation from '../locales/en.json';
 import ptTranslation from '../locales/pt.json';
+import {
+  LANGUAGE_STORAGE_KEY,
+  getStoredLanguagePreference,
+} from '../shared/config/userPreferences';
 
-const LANGUAGE_STORAGE_KEY = 'qalite.language';
-const storedLanguage =
-  typeof window !== 'undefined' ? window.localStorage.getItem(LANGUAGE_STORAGE_KEY) : null;
+const storedLanguage = getStoredLanguagePreference();
 
 i18n.use(initReactI18next).init({
   resources: {

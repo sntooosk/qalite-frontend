@@ -183,6 +183,7 @@ export const EnvironmentPage = () => {
     enterEnvironment,
     leaveEnvironment,
   } = useEnvironmentEngagement(environment);
+  const { t: translation, i18n } = useTranslation();
   const {
     bugCountByScenario,
     progressPercentage,
@@ -192,8 +193,7 @@ export const EnvironmentPage = () => {
     headerMeta,
     urls,
     shareLinks,
-  } = useEnvironmentDetails(environment, bugs);
-  const { t: translation } = useTranslation();
+  } = useEnvironmentDetails(environment, bugs, i18n.language);
   const slackWebhookUrl = environmentOrganization?.slackWebhookUrl?.trim() || null;
   const canSendSlackSummary = Boolean(slackWebhookUrl);
   const inviteParam = searchParams.get('invite');
@@ -276,6 +276,25 @@ export const EnvironmentPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [showToast],
   );
+
+  const handleCopyPublicLink = useCallback(async () => {
+    if (!environment) {
+      return;
+    }
+
+    const shareLanguage = i18n.language ?? 'en';
+    if (!environment.publicShareLanguage) {
+      try {
+        await environmentService.update(environment.id, {
+          publicShareLanguage: shareLanguage,
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    await handleCopyLink(shareLinks.public);
+  }, [environment, handleCopyLink, i18n.language, shareLinks.public]);
 
   const handleExportPDF = useCallback(() => {
     if (!environment) {
@@ -583,7 +602,7 @@ export const EnvironmentPage = () => {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => handleCopyLink(shareLinks.public)}
+                onClick={handleCopyPublicLink}
                 disabled={!canCopyPublicLink}
                 data-testid="copy-public-link-button"
               >

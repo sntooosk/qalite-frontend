@@ -2,9 +2,13 @@
   "translation": {
     "user": "Colaborador",
     "greeting": "Olá",
+    "greetingAdmin": "Olá Administrador",
+    "greetingCollaborator": "Olá colaborador",
+    "greetingWithRole": "Olá {{role}} {{name}}",
     "profile": "Perfil",
     "logout": "Sair",
     "roleAdmin": "Administrador",
+    "roleUser": "Colaborador",
     "login": "Entrar",
     "register": "Criar conta",
     "info": "Informação",
@@ -38,6 +42,47 @@
       "optionShortEn": "En 🇺🇸",
       "optionLongPt": "🇧🇷 Português",
       "optionLongEn": "🇺🇸 English"
+    },
+    "settings": {
+      "title": "Configurações",
+      "subtitle": "Gerencie aparência, idioma e integrações conectadas."
+    },
+    "preferences": {
+      "title": "Preferências",
+      "subtitle": "Defina o tema e o idioma do site.",
+      "themeLabel": "Tema",
+      "languageLabel": "Idioma",
+      "themeSystem": "Padrão do sistema",
+      "themeLight": "Claro",
+      "themeDark": "Escuro",
+      "save": "Salvar preferências",
+      "upToDate": "Preferências atualizadas.",
+      "loading": "Carregando preferências..."
+    },
+    "connectedAccounts": {
+      "title": "Contas conectadas",
+      "subtitle": "Conecte serviços externos para acelerar sua rotina de QA.",
+      "browserstackTitle": "BrowserStack",
+      "browserstackDescription": "Use suas credenciais para habilitar a integração com o BrowserStack.",
+      "username": "Usuário",
+      "accessKey": "Chave de acesso",
+      "disconnected": "Não conectado",
+      "update": "Atualizar credenciais",
+      "disconnect": "Desconectar",
+      "connectPrompt": "Conecte o BrowserStack para começar",
+      "usernamePlaceholder": "browserstack.user",
+      "accessKeyPlaceholder": "Cole sua chave de acesso",
+      "browserstackHint": "Armazenamos apenas as credenciais essenciais e mascaramos dados sensíveis.",
+      "save": "Salvar credenciais",
+      "connect": "Conectar",
+      "browserstackRequired": "Informe usuário e chave de acesso para conectar o BrowserStack.",
+      "organizationRequired": "Vincule-se a uma organização para configurar o BrowserStack.",
+      "saveError": "Não foi possível salvar as credenciais do BrowserStack."
+    },
+    "pagination": {
+      "showing": "Mostrando {{visible}} de {{total}}",
+      "showMore": "Carregar mais",
+      "showLess": "Mostrar menos"
     },
     "suites": "Suítes",
     "confirmDeleteModal": {
@@ -297,7 +342,7 @@
       "emptyScenarios": "Ainda não identificamos cenários automatizados nas lojas desta organização.",
       "browserstackBadge": "BrowserStack",
       "browserstackTitle": "Acompanhe execuções automatizadas",
-      "browserstackSubtitle": "Adicione suas credenciais do BrowserStack no perfil para visualizar o quadro Kanban de execuções."
+      "browserstackSubtitle": "Adicione as credenciais do BrowserStack na organização para visualizar o quadro Kanban de execuções."
     },
     "forbiddenPage": {
       "description": "Você não tem permissão para acessar esta página. Entre em contato com o administrador ou volte ao início."
@@ -334,6 +379,18 @@
           "placeholder": "@exemplo.com",
           "hint": "Informe o domínio (com ou sem @). Usuários com esse e-mail serão vinculados automaticamente."
         },
+        "browserstack": {
+          "title": "BrowserStack",
+          "description": "Deseja cadastrar credenciais para acompanhar execuções automatizadas?",
+          "iconAlt": "BrowserStack",
+          "enabled": "Ativado",
+          "disabled": "Desativado",
+          "usernameLabel": "Usuário do BrowserStack",
+          "usernamePlaceholder": "browserstack.user",
+          "accessKeyLabel": "Access key do BrowserStack",
+          "accessKeyPlaceholder": "Cole a access key",
+          "hint": "Credenciais do BrowserStack são configuradas pela organização."
+        },
         "slack": {
           "title": "Webhook do Slack",
           "description": "Deseja cadastrar um webhook para enviar notificações automáticas no Slack?",
@@ -343,11 +400,6 @@
           "webhookLabel": "Webhook do Slack",
           "webhookPlaceholder": "https://hooks.slack.com/services/...",
           "hint": "Cole a URL gerada pelo aplicativo de Incoming Webhooks."
-        },
-        "logo": {
-          "label": "Logo da organização",
-          "button": "Selecionar arquivo",
-          "hint": "Formatos sugeridos: PNG, JPG ou SVG até 5MB."
         }
       },
       "success": {
@@ -434,7 +486,7 @@
       "chart-automated-empty-message": "Ainda não identificamos cenários automatizados nas lojas desta organização.",
       "browserstack-card-badge": "BrowserStack",
       "browserstack-card-title": "Conecte sua conta",
-      "browserstack-card-subtitle": "Adicione usuário e access key do BrowserStack no seu perfil para acompanhar as execuções automatizadas.",
+      "browserstack-card-subtitle": "Adicione usuário e access key do BrowserStack na organização para acompanhar as execuções automatizadas.",
       "member-add-no-organization": "Selecione uma organização antes de adicionar membros.",
       "member-add-email-required": "Informe um e-mail para adicionar.",
       "member-add-already-linked": "Usuário já está vinculado à organização.",
@@ -476,6 +528,16 @@
       "org-email-domain-label": "Domínio de e-mail da organização",
       "org-email-domain-placeholder": "@exemplo.com",
       "org-email-domain-hint": "Informe o domínio (com ou sem @). Usuários com esse e-mail entram automaticamente.",
+      "org-browserstack-section-title": "BrowserStack",
+      "org-browserstack-section-description": "Deseja cadastrar credenciais para acompanhar execuções automatizadas?",
+      "org-browserstack-icon-alt": "BrowserStack",
+      "org-browserstack-toggle-on": "Ativado",
+      "org-browserstack-toggle-off": "Desativado",
+      "org-browserstack-username-label": "Usuário do BrowserStack",
+      "org-browserstack-username-placeholder": "browserstack.user",
+      "org-browserstack-access-key-label": "Access key do BrowserStack",
+      "org-browserstack-access-key-placeholder": "Cole a access key",
+      "org-browserstack-hint": "Credenciais do BrowserStack são configuradas pela organização.",
       "org-slack-section-title": "Webhook do Slack",
       "org-slack-section-description": "Deseja cadastrar um webhook para enviar notificações automáticas no Slack?",
       "org-slack-icon-alt": "Slack",
@@ -484,9 +546,6 @@
       "org-slack-webhook-label": "Webhook do Slack",
       "org-slack-webhook-placeholder": "https://hooks.slack.com/services/...",
       "org-slack-webhook-hint": "Cole a URL gerada pelo aplicativo de Incoming Webhooks.",
-      "org-logo-label": "Logo da organização",
-      "org-logo-trigger": "Atualizar logo",
-      "org-logo-hint": "Envie um arquivo PNG, JPG ou SVG até 5MB.",
       "confirm-delete-org-message": "Você deseja mesmo excluir a organização \"{{organizationName}}\"?",
       "confirm-delete-org-description": "Os usuários serão desvinculados.",
       "confirm-remove-member-message": "Você deseja mesmo excluir {{memberName}}?",
@@ -654,6 +713,39 @@
       "toast_save_success": "Link de evidência salvo com sucesso.",
       "toast_save_error": "Não foi possível salvar o link da evidência.",
       "toast_exec_error": "Não foi possível registrar o tempo do cenário."
+    },
+    "environmentExport": {
+      "title": "Ambiente {{id}}",
+      "statusLabel": "Status",
+      "typeLabel": "Tipo",
+      "momentLabel": "Momento",
+      "releaseLabel": "Release",
+      "jiraLabel": "Jira",
+      "summaryTitle": "Resumo do ambiente",
+      "startLabel": "Início do teste",
+      "endLabel": "Término do teste",
+      "totalLabel": "Tempo total",
+      "suiteLabel": "Suíte",
+      "totalScenariosLabel": "Total de cenários",
+      "bugsLabel": "Bugs registrados",
+      "participantsLabel": "Participantes",
+      "monitoredUrlsTitle": "URLs monitoradas",
+      "urlsLabel": "URLs",
+      "noUrls": "Nenhuma URL cadastrada",
+      "participantsTitle": "Participantes",
+      "scenariosTitle": "Cenários",
+      "bugsTitle": "Bugs registrados",
+      "participantName": "Nome",
+      "participantEmail": "Email",
+      "bugTitle": "Título",
+      "bugStatus": "Status",
+      "bugScenario": "Cenário",
+      "bugDescription": "Descrição",
+      "noParticipants": "Nenhum participante registrado.",
+      "noBugs": "Nenhum bug registrado.",
+      "noScenarios": "Nenhum cenário cadastrado.",
+      "noDescription": "Sem descrição",
+      "printError": "Não foi possível abrir a janela para impressão."
     },
     "summary": {
       "participants": "Participantes",

@@ -19,6 +19,7 @@ import { isAutomatedScenario } from '../../../shared/utils/automation';
 import { useToast } from '../../context/ToastContext';
 import { scenarioExecutionService } from '../../../application/use-cases/ScenarioExecutionUseCase';
 import { useAuth } from '../../hooks/useAuth';
+import { PaginationControls } from '../PaginationControls';
 
 interface EnvironmentEvidenceTableProps {
   environment: Environment;
@@ -48,6 +49,7 @@ export const EnvironmentEvidenceTable = ({
   const [criticalityFilter, setCriticalityFilter] = useState('');
   const [scenarioStartTimes, setScenarioStartTimes] = useState<Record<string, number>>({});
   const [evidenceLinks, setEvidenceLinks] = useState<Record<string, string>>({});
+  const [visibleCount, setVisibleCount] = useState(20);
 
   const BASE_STATUS_OPTIONS = [
     { value: 'pendente', label: translation('environmentEvidenceTable.status_pendente') },
@@ -216,7 +218,14 @@ export const EnvironmentEvidenceTable = ({
       ),
     );
   }, [filteredScenarioEntries, scenarioSort]);
+  const paginatedScenarioEntries = useMemo(
+    () => orderedScenarioEntries.slice(0, visibleCount),
+    [orderedScenarioEntries, visibleCount],
+  );
   const isReadOnly = Boolean(isLocked || readOnly);
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [categoryFilter, criticalityFilter, scenarioSort, scenarioEntries.length]);
   const handleStatusChange = async (
     scenarioId: string,
     platform: EnvironmentScenarioPlatform,
@@ -400,7 +409,7 @@ export const EnvironmentEvidenceTable = ({
           </tr>
         </thead>
         <tbody>
-          {orderedScenarioEntries.map(([scenarioId, data]) => {
+          {paginatedScenarioEntries.map(([scenarioId, data]) => {
             const statusOptions = getScenarioStatusOptions(data);
             return (
               <tr key={scenarioId}>
@@ -518,6 +527,15 @@ export const EnvironmentEvidenceTable = ({
           })}
         </tbody>
       </table>
+      <PaginationControls
+        total={orderedScenarioEntries.length}
+        visible={paginatedScenarioEntries.length}
+        step={20}
+        onShowLess={() => setVisibleCount(20)}
+        onShowMore={() =>
+          setVisibleCount((previous) => Math.min(previous + 20, orderedScenarioEntries.length))
+        }
+      />
       {isUpdating && (
         <p className="section-subtitle">{translation('environmentEvidenceTable.sincronizando')}</p>
       )}

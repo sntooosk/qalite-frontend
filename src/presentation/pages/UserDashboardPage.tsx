@@ -143,21 +143,21 @@ export const UserDashboardPage = () => {
     [stores, storeAutomationCounts],
   );
 
+  const organizationCredentials = organization?.browserstackCredentials ?? null;
   const hasBrowserstackCredentials = useMemo(
-    () =>
-      Boolean(user?.browserstackCredentials?.username && user?.browserstackCredentials?.accessKey),
-    [user?.browserstackCredentials?.accessKey, user?.browserstackCredentials?.username],
+    () => Boolean(organizationCredentials?.username && organizationCredentials?.accessKey),
+    [organizationCredentials?.accessKey, organizationCredentials?.username],
   );
 
   const loadBrowserstackBuilds = useCallback(async () => {
-    if (!hasBrowserstackCredentials || !user?.browserstackCredentials) {
+    if (!hasBrowserstackCredentials || !organizationCredentials) {
       setBrowserstackBuilds([]);
       return;
     }
 
     try {
       setIsLoadingBrowserstack(true);
-      const builds = await browserstackService.listBuilds(user.browserstackCredentials);
+      const builds = await browserstackService.listBuilds(organizationCredentials);
       setBrowserstackBuilds(builds);
     } catch (error) {
       console.error(error);
@@ -166,7 +166,7 @@ export const UserDashboardPage = () => {
     } finally {
       setIsLoadingBrowserstack(false);
     }
-  }, [hasBrowserstackCredentials, showToast, t, user?.browserstackCredentials]);
+  }, [hasBrowserstackCredentials, organizationCredentials, showToast, t]);
 
   useEffect(() => {
     void loadBrowserstackBuilds();

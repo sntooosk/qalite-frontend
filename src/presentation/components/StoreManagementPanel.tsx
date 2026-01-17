@@ -11,6 +11,7 @@ import { storeService } from '../../application/use-cases/StoreUseCase';
 import { useToast } from '../context/ToastContext';
 import { Button } from './Button';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { PaginationControls } from './PaginationControls';
 import { TextInput } from './TextInput';
 import { TextArea } from './TextArea';
 import { SelectInput } from './SelectInput';
@@ -26,10 +27,11 @@ import {
 } from './ScenarioColumnSortControl';
 import {
   downloadMarkdownFile,
-  openPdfFromMarkdown,
   buildScenarioMarkdown,
   downloadScenarioWorkbook,
+  openScenarioPdf,
 } from '../../shared/utils/storeImportExport';
+import { normalizeAutomationValue } from '../../shared/utils/automation';
 
 interface StoreManagementPanelProps {
   organizationId: string;
@@ -49,6 +51,8 @@ const emptyScenarioForm: StoreScenarioInput = {
   observation: '',
   bdd: '',
 };
+
+const PAGE_SIZE = 20;
 
 export const StoreManagementPanel = ({
   organizationId,
@@ -93,6 +97,7 @@ export const StoreManagementPanel = ({
   const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const canUseScenarioForm = canManageScenarios && showScenarioForm !== false;
   const canToggleCategoryList =
     !isLoadingCategories && !isSyncingLegacyCategories && categories.length > 0;
@@ -111,6 +116,13 @@ export const StoreManagementPanel = ({
     () => sortScenarioList(scenarios, scenarioSort),
     [scenarioSort, scenarios],
   );
+  const paginatedScenarios = useMemo(
+    () => displayedScenarios.slice(0, visibleCount),
+    [displayedScenarios, visibleCount],
+  );
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [scenarioSort, scenarios.length]);
 
   const persistedCategoryNames = useMemo(
     () =>
@@ -663,10 +675,15 @@ export const StoreManagementPanel = ({
       return;
     }
 
+    const normalizedAutomation = normalizeAutomationValue(scenario.automation);
+    const automationMatch = AUTOMATION_OPTIONS.find(
+      (option) => normalizeAutomationValue(option.value) === normalizedAutomation,
+    );
+
     setScenarioForm({
       title: scenario.title,
       category: scenario.category,
-      automation: scenario.automation,
+      automation: automationMatch?.value ?? scenario.automation,
       criticality: scenario.criticality,
       observation: scenario.observation ?? '',
       bdd: scenario.bdd ?? '',
@@ -794,9 +811,8 @@ export const StoreManagementPanel = ({
       }
 
       if (format === 'pdf') {
-        const markdown = buildScenarioMarkdown(data);
-        openPdfFromMarkdown(
-          markdown,
+        openScenarioPdf(
+          data,
           t('storeManagement.exportTitle', { name: selectedStore.name }),
           pdfWindow,
         );
@@ -1253,7 +1269,7 @@ export const StoreManagementPanel = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {displayedScenarios.map((scenario) => {
+                    {paginatedScenarios.map((scenario) => {
                       const hasBdd = Boolean(scenario.bdd?.trim());
 
                       return (
@@ -1312,6 +1328,19 @@ export const StoreManagementPanel = ({
                 </table>
               )}
             </div>
+            {!isScenarioTableCollapsed && scenarios.length > 0 && (
+              <PaginationControls
+                total={displayedScenarios.length}
+                visible={paginatedScenarios.length}
+                step={PAGE_SIZE}
+                onShowLess={() => setVisibleCount(PAGE_SIZE)}
+                onShowMore={() =>
+                  setVisibleCount((previous) =>
+                    Math.min(previous + PAGE_SIZE, displayedScenarios.length),
+                  )
+                }
+              />
+            )}
           </>
         ) : (
           <div className="store-empty">

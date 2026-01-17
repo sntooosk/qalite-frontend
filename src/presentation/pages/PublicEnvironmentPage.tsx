@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 
 import { Layout } from '../components/Layout';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 export const PublicEnvironmentPage = () => {
   const { environmentId } = useParams<{ environmentId: string }>();
   const { environment, isLoading } = useEnvironmentRealtime(environmentId);
+  const [searchParams] = useSearchParams();
   const participants = useUserProfiles(environment?.participants ?? []);
   const { organization: environmentOrganization } = useStoreOrganizationBranding(
     environment?.storeId ?? null,
@@ -30,7 +31,8 @@ export const PublicEnvironmentPage = () => {
   const { bugCountByScenario, progressPercentage, progressLabel, scenarioCount, headerMeta, urls } =
     useEnvironmentDetails(environment, bugs);
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const shareLanguageParam = searchParams.get('lang');
 
   useEffect(() => {
     setActiveOrganization(environmentOrganization ?? null);
@@ -39,6 +41,13 @@ export const PublicEnvironmentPage = () => {
       setActiveOrganization(null);
     };
   }, [environmentOrganization, setActiveOrganization]);
+
+  useEffect(() => {
+    const resolvedLanguage = shareLanguageParam ?? environment?.publicShareLanguage;
+    if (resolvedLanguage && i18n.language !== resolvedLanguage) {
+      void i18n.changeLanguage(resolvedLanguage);
+    }
+  }, [environment?.publicShareLanguage, i18n, shareLanguageParam]);
 
   if (isLoading) {
     return (
@@ -90,9 +99,6 @@ export const PublicEnvironmentPage = () => {
         </div>
 
         <div className="environment-evidence">
-          <div className="environment-evidence__header">
-            <h3 className="section-title">{t('publicEnvironment.scenarios')}</h3>
-          </div>
           <EnvironmentEvidenceTable
             environment={environment}
             isLocked
@@ -108,6 +114,7 @@ export const PublicEnvironmentPage = () => {
           isLoading={isLoadingBugs}
           onEdit={() => {}}
           showActions={false}
+          showHeader={false}
         />
       </section>
     </Layout>

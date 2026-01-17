@@ -159,6 +159,7 @@ export const CreateEnvironmentModal = ({
         bugs: 0,
         totalCenarios,
         participants: [],
+        publicShareLanguage: null,
       });
 
       onCreated?.();

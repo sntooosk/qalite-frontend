@@ -18,13 +18,9 @@ export const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const displayName = user?.displayName || user?.email || '';
   const brandSource = activeOrganization;
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const brandName = brandSource?.name || t('app.brandName');
   const brandLogo = qliteLogo;
-
-  function changeLang(lang) {
-    i18n.changeLanguage(lang);
-  }
 
   return (
     <div className="app-shell">
@@ -43,21 +39,14 @@ export const Layout = ({ children }: LayoutProps) => {
               <div className="header-user-info">
                 <UserAvatar name={displayName} size="sm" />
                 <div className="user-context">
-                  <span className="user-greeting">{t('greeting')},</span>
-                  <span className="user-name">{displayName}</span>
-                  <span className="user-role">
-                    {user.role === 'admin' ? t('roleAdmin') : t('roleUser')}
+                  <span className="user-greeting">
+                    {t('greetingWithRole', {
+                      role: user.role === 'admin' ? t('roleAdmin') : t('roleUser'),
+                      name: displayName,
+                    })}
                   </span>
                 </div>
               </div>
-              <select
-                className="language-switch"
-                onChange={(e) => changeLang(e.target.value)}
-                value={i18n.language}
-              >
-                <option value="pt">{t('language.optionShortPt')}</option>
-                <option value="en">{t('language.optionShortEn')}</option>
-              </select>
               <div className="header-user-actions">
                 <button
                   type="button"
@@ -89,18 +78,3 @@ export const Layout = ({ children }: LayoutProps) => {
     </div>
   );
 };
-
-export default function LanguageSwitcher() {
-  const { i18n, t } = useTranslation();
-
-  function changeLang(lang) {
-    i18n.changeLanguage(lang);
-  }
-
-  return (
-    <select onChange={(e) => changeLang(e.target.value)} value={i18n.language}>
-      <option value="pt">{t('language.optionLongPt')}</option>
-      <option value="en">{t('language.optionLongEn')}</option>
-    </select>
-  );
-}
