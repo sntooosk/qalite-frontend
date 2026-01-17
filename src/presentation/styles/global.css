@@ -3173,6 +3173,12 @@ button.store-summary-highlight:focus-visible {
   gap: 1rem;
 }
 
+.suite-basic-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+}
+
 @media (min-width: 768px) {
   .suite-basic-info {
     grid-template-columns: repeat(2, minmax(0, 1fr));

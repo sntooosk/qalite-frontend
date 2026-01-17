@@ -31,7 +31,6 @@ import { PageLoader } from '../components/PageLoader';
 import {
   AUTOMATION_OPTIONS,
   CRITICALITY_OPTIONS,
-  getCriticalityClassName,
 } from '../constants/scenarioOptions';
 import { EnvironmentKanban } from '../components/environments/EnvironmentKanban';
 import { PaginationControls } from '../components/PaginationControls';
@@ -357,7 +356,13 @@ export const StoreSummaryPage = () => {
   );
 
   const criticalityFilterOptions = useMemo(
-    () => [{ value: '', label: t('storeSummary.allCriticalities') }, ...CRITICALITY_OPTIONS],
+    () => [
+      { value: '', label: t('storeSummary.allCriticalities') },
+      ...CRITICALITY_OPTIONS.map((opt) => ({
+        ...opt,
+        label: t(opt.label),
+      })),
+    ],
     [t],
   );
 
@@ -2479,6 +2484,18 @@ export const StoreSummaryPage = () => {
                                   required
                                   dataTestId="suite-name"
                                 />
+                                <div className="suite-basic-actions">
+                                  <Button
+                                    type="submit"
+                                    isLoading={isSavingSuite}
+                                    loadingText={t('storeSummary.saving')}
+                                    data-testid="save-suite-button"
+                                  >
+                                    {editingSuiteId
+                                      ? t('storeSummary.updateSuite')
+                                      : t('storeSummary.saveSuite')}
+                                  </Button>
+                                </div>
                               </div>
                               <div className="suite-scenario-selector">
                                 <div className="suite-scenario-selector-header">
@@ -2617,24 +2634,12 @@ export const StoreSummaryPage = () => {
                                                     onChange={setSuiteScenarioSort}
                                                   />
                                                 </th>
-                                                <th>
-                                                  <ScenarioColumnSortControl
-                                                    label={t('storeSummary.criticality')}
-                                                    field="criticality"
-                                                    sort={suiteScenarioSort}
-                                                    onChange={setSuiteScenarioSort}
-                                                  />
-                                                </th>
-                                                <th>{t('storeSummary.testTime')}</th>
-                                                <th>{t('storeSummary.observation')}</th>
+                                                <th>{t('storeSummary.actions')}</th>
                                               </tr>
                                             </thead>
                                             <tbody>
                                               {paginatedSuiteScenarios.map((scenario) => {
                                                 const isSelected = suiteForm.scenarioIds.includes(
-                                                  scenario.id,
-                                                );
-                                                const timingInfo = getScenarioTimingInfo(
                                                   scenario.id,
                                                 );
                                                 return (
@@ -2662,27 +2667,16 @@ export const StoreSummaryPage = () => {
                                                     <td data-label="Automação">
                                                       {scenario.automation}
                                                     </td>
-                                                    <td data-label="Criticidade">
-                                                      <span
-                                                        className={`criticality-badge ${getCriticalityClassName(
-                                                          scenario.criticality,
-                                                        )}`}
+                                                    <td className="scenario-actions">
+                                                      <button
+                                                        type="button"
+                                                        className="scenario-details-button"
+                                                        onClick={() =>
+                                                          handleOpenScenarioDetails(scenario)
+                                                        }
                                                       >
-                                                        {scenario.criticality}
-                                                      </span>
-                                                    </td>
-                                                    <td
-                                                      className="scenario-duration"
-                                                      data-label="Tempo de teste"
-                                                      title={timingInfo.title}
-                                                    >
-                                                      {timingInfo.label}
-                                                    </td>
-                                                    <td
-                                                      className="scenario-observation"
-                                                      data-label="Observação"
-                                                    >
-                                                      {scenario.observation}
+                                                        {t('storeSummary.viewDetails')}
+                                                      </button>
                                                     </td>
                                                   </tr>
                                                 );
@@ -2708,18 +2702,6 @@ export const StoreSummaryPage = () => {
                                     )}
                                   </>
                                 )}
-                              </div>
-                              <div className="suite-form-actions">
-                                <Button
-                                  type="submit"
-                                  isLoading={isSavingSuite}
-                                  loadingText={t('storeSummary.saving')}
-                                  data-testid="save-suite-button"
-                                >
-                                  {editingSuiteId
-                                    ? t('storeSummary.updateSuite')
-                                    : t('storeSummary.saveSuite')}
-                                </Button>
                               </div>
                             </form>
                           </div>
