@@ -10,10 +10,7 @@ import type {
   StoreSuite,
   StoreSuiteInput,
 } from '../../domain/entities/store';
-import type {
-  StoreExportPayload,
-  StoreSuiteExportPayload,
-} from '../../infrastructure/external/stores';
+import type { StoreExportPayload } from '../../infrastructure/external/stores';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { scenarioExecutionService } from '../../application/use-cases/ScenarioExecutionUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
@@ -28,10 +25,7 @@ import { TextArea } from '../components/TextArea';
 import { SelectInput } from '../components/SelectInput';
 import { Modal } from '../components/Modal';
 import { PageLoader } from '../components/PageLoader';
-import {
-  AUTOMATION_OPTIONS,
-  CRITICALITY_OPTIONS,
-} from '../constants/scenarioOptions';
+import { AUTOMATION_OPTIONS, CRITICALITY_OPTIONS } from '../constants/scenarioOptions';
 import { EnvironmentKanban } from '../components/environments/EnvironmentKanban';
 import { PaginationControls } from '../components/PaginationControls';
 import {
@@ -45,11 +39,8 @@ import {
   downloadJsonFile,
   downloadMarkdownFile,
   openScenarioPdf,
-  openPdfFromMarkdown,
   buildScenarioMarkdown,
-  buildSuiteMarkdown,
   validateScenarioImportPayload,
-  validateSuiteImportPayload,
 } from '../../shared/utils/storeImportExport';
 import { isAutomatedScenario, normalizeAutomationValue } from '../../shared/utils/automation';
 import { formatDurationFromMs } from '../../shared/utils/time';
@@ -173,15 +164,11 @@ export const StoreSummaryPage = () => {
   const [suiteScenarioVisibleCount, setSuiteScenarioVisibleCount] = useState(PAGE_SIZE);
   const [suitePreviewVisibleCount, setSuitePreviewVisibleCount] = useState(PAGE_SIZE);
   const [isViewingSuitesOnly, setIsViewingSuitesOnly] = useState(false);
-  const [isSuiteScenarioTableCollapsed, setIsSuiteScenarioTableCollapsed] = useState(false);
   const suiteListRef = useRef<HTMLDivElement | null>(null);
   const scenarioFormRef = useRef<HTMLFormElement | null>(null);
   const scenarioFileInputRef = useRef<HTMLInputElement | null>(null);
-  const suiteFileInputRef = useRef<HTMLInputElement | null>(null);
   const [exportingScenarioFormat, setExportingScenarioFormat] = useState<ExportFormat | null>(null);
   const [isImportingScenarios, setIsImportingScenarios] = useState(false);
-  const [exportingSuiteFormat, setExportingSuiteFormat] = useState<ExportFormat | null>(null);
-  const [isImportingSuites, setIsImportingSuites] = useState(false);
   const { t } = useTranslation();
   const storeSiteInfo = useMemo(
     () => normalizeStoreSite(store?.site, t('storeSummary.notInformed')),
@@ -1487,159 +1474,6 @@ export const StoreSummaryPage = () => {
     }
   };
 
-  const handleSuiteExport = async (format: ExportFormat) => {
-    if (!store) {
-      return;
-    }
-
-    let pdfWindow: Window | null = null;
-
-    if (format === 'pdf') {
-      pdfWindow = window.open('', '_blank');
-
-      if (!pdfWindow) {
-        showToast({
-          type: 'error',
-          message: t('storeSummary.pdfOpenError'),
-        });
-        return;
-      }
-
-      pdfWindow.document.write(
-        "<p style='font-family: Inter, system-ui, -apple-system, sans-serif; padding: 24px;'>${t('storeSummary.pdfGenerating')}</p>",
-      );
-      pdfWindow.document.close();
-    }
-
-    try {
-      setExportingSuiteFormat(format);
-      const data = await storeService.exportSuites(store.id);
-      const baseFileName = `${store.name.replace(/\s+/g, '_')}_suites`;
-
-      if (format === 'json') {
-        downloadJsonFile(data, `${baseFileName}.json`);
-      }
-
-      if (format === 'markdown') {
-        const markdown = buildSuiteMarkdown(data);
-        downloadMarkdownFile(markdown, `${baseFileName}.md`);
-      }
-
-      if (format === 'pdf') {
-        const markdown = buildSuiteMarkdown(data);
-        openPdfFromMarkdown(markdown, `${store.name} - ${t('suites')}`, pdfWindow);
-      }
-
-      showToast({ type: 'success', message: t('storeSummary.suiteExportSuccess') });
-    } catch (error) {
-      console.error(error);
-      const message = error instanceof Error ? error.message : t('storeSummary.suiteExportError');
-      showToast({ type: 'error', message });
-      pdfWindow?.close();
-    } finally {
-      setExportingSuiteFormat(null);
-    }
-  };
-
-  const handleSuiteImportClick = () => {
-    if (!canManageScenarios) {
-      return;
-    }
-
-    suiteFileInputRef.current?.click();
-  };
-
-  const handleSuiteImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (!file || !store) {
-      return;
-    }
-
-    try {
-      setIsImportingSuites(true);
-      const content = await file.text();
-      const parsed = JSON.parse(content) as StoreSuiteExportPayload;
-      validateSuiteImportPayload(parsed);
-
-      const importedStoreName = parsed.store.name.trim().toLowerCase();
-      const selectedStoreName = store.name.trim().toLowerCase();
-      if (
-        parsed.store.id &&
-        parsed.store.id !== store.id &&
-        importedStoreName !== selectedStoreName
-      ) {
-        throw new Error(t('storeSummary.importWrongStore'));
-      }
-
-      if (parsed.suites.length === 0) {
-        showToast({ type: 'info', message: t('storeSummary.importNoSuites') });
-        return;
-      }
-
-      const shouldReplace = window.confirm(t('storeSummary.importSuiteConfirmReplace'));
-      const strategy = shouldReplace ? 'replace' : 'merge';
-
-      const scenarioById = new Map(scenarios.map((scenario) => [scenario.id, scenario.id]));
-      const scenarioByTitle = new Map(
-        scenarios.map((scenario) => [scenario.title.trim().toLowerCase(), scenario.id]),
-      );
-      let missingReferences = 0;
-
-      const suitesPayload: StoreSuiteInput[] = parsed.suites.map((suite) => {
-        const mappedScenarioIds: string[] = [];
-
-        suite.scenarios.forEach((scenarioRef) => {
-          const normalizedTitle = scenarioRef.title.trim().toLowerCase();
-          const matchedId =
-            (scenarioRef.id ? scenarioById.get(scenarioRef.id) : undefined) ||
-            (normalizedTitle ? scenarioByTitle.get(normalizedTitle) : undefined);
-
-          if (matchedId && !mappedScenarioIds.includes(matchedId)) {
-            mappedScenarioIds.push(matchedId);
-          } else if (scenarioRef.id || normalizedTitle) {
-            missingReferences += 1;
-          }
-        });
-
-        return {
-          name: suite.name,
-          description: suite.description,
-          scenarioIds: mappedScenarioIds,
-        };
-      });
-
-      const result = await storeService.importSuites(store.id, suitesPayload, strategy);
-      setSuites(result.suites);
-
-      if (editingSuiteId && !result.suites.some((item) => item.id === editingSuiteId)) {
-        handleCancelSuiteEdit();
-      }
-
-      const summaryParts = [
-        result.strategy === 'replace'
-          ? t('storeSummary.suiteReplaceSuccess', { count: result.suites.length })
-          : t('storeSummary.suiteImportSuccess', {
-              created: result.created,
-              skipped: result.skipped,
-            }),
-      ];
-
-      if (missingReferences > 0) {
-        summaryParts.push(t('storeSummary.suiteMissingReferences', { count: missingReferences }));
-      }
-
-      showToast({ type: 'success', message: summaryParts.join(' ') });
-    } catch (error) {
-      console.error(error);
-      const message = error instanceof Error ? error.message : t('storeSummary.suiteImportError');
-      showToast({ type: 'error', message });
-    } finally {
-      setIsImportingSuites(false);
-    }
-  };
-
   const handleBackClick = () => {
     if (user?.role === 'admin') {
       const targetOrganizationId = organization?.id ?? store?.organizationId;
@@ -2045,52 +1879,7 @@ export const StoreSummaryPage = () => {
                           </button>
                         )}
                       </>
-                    ) : (
-                      <>
-                        <div className="scenario-action-group">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => void handleSuiteExport('json')}
-                            isLoading={exportingSuiteFormat === 'json'}
-                            loadingText={t('exporting')}
-                          >
-                            {t('storeSummary.exportJson')}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => void handleSuiteExport('markdown')}
-                            isLoading={exportingSuiteFormat === 'markdown'}
-                            loadingText={t('exporting')}
-                          >
-                            {t('storeSummary.exportMarkdown')}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => void handleSuiteExport('pdf')}
-                            isLoading={exportingSuiteFormat === 'pdf'}
-                            loadingText={t('exporting')}
-                          >
-                            {t('storeSummary.exportPdf')}
-                          </Button>
-                        </div>
-                        {canManageScenarios && (
-                          <div className="scenario-action-group">
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              onClick={handleSuiteImportClick}
-                              isLoading={isImportingSuites}
-                              loadingText={t('importing')}
-                            >
-                              {t('storeSummary.suiteImport')}
-                            </Button>
-                          </div>
-                        )}
-                      </>
-                    )}
+                    ) : null}
                   </div>
                 </div>
                 <input
@@ -2099,13 +1888,6 @@ export const StoreSummaryPage = () => {
                   accept="application/json"
                   className="hidden"
                   onChange={handleScenarioImportFile}
-                />
-                <input
-                  ref={suiteFileInputRef}
-                  type="file"
-                  accept="application/json"
-                  className="hidden"
-                  onChange={handleSuiteImportFile}
                 />
                 <div className="scenario-table-wrapper">
                   {viewMode === 'scenarios' ? (
@@ -2502,19 +2284,6 @@ export const StoreSummaryPage = () => {
                                   <p className="field-label">
                                     {t('storeSummary.scenarioSelection')}
                                   </p>
-                                  {scenarios.length > 0 && (
-                                    <button
-                                      type="button"
-                                      className="scenario-table-toggle"
-                                      onClick={() =>
-                                        setIsSuiteScenarioTableCollapsed((previous) => !previous)
-                                      }
-                                    >
-                                      {isSuiteScenarioTableCollapsed
-                                        ? t('storeSummary.maxTable')
-                                        : t('storeSummary.minTable')}
-                                    </button>
-                                  )}
                                   {scenarios.length === 0 && (
                                     <p className="suite-scenario-selector-description">
                                       {t('storeSummary.scenariosEmpty')}
@@ -2545,10 +2314,6 @@ export const StoreSummaryPage = () => {
                                 {scenarios.length === 0 ? (
                                   <p className="category-manager-empty">
                                     {t('storeSummary.noScenariosAvailable')}
-                                  </p>
-                                ) : isSuiteScenarioTableCollapsed ? (
-                                  <p className="section-subtitle">
-                                    {t('storeSummary.suiteScenarioTableCollapsed')}
                                   </p>
                                 ) : (
                                   <>
