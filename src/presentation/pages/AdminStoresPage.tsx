@@ -33,6 +33,8 @@ interface OrganizationFormState {
   name: string;
   slackWebhookUrl: string;
   emailDomain: string;
+  browserstackUsername: string;
+  browserstackAccessKey: string;
 }
 
 const initialStoreForm: StoreForm = {
@@ -44,6 +46,8 @@ const initialOrganizationForm: OrganizationFormState = {
   name: '',
   slackWebhookUrl: '',
   emailDomain: '',
+  browserstackUsername: '',
+  browserstackAccessKey: '',
 };
 
 export const AdminStoresPage = () => {
@@ -306,11 +310,15 @@ export const AdminStoresPage = () => {
 
     const slackWebhookUrl = selectedOrganization.slackWebhookUrl ?? '';
     const emailDomain = selectedOrganization.emailDomain ?? '';
+    const browserstackUsername = selectedOrganization.browserstackCredentials?.username ?? '';
+    const browserstackAccessKey = selectedOrganization.browserstackCredentials?.accessKey ?? '';
 
     setOrganizationForm({
       name: selectedOrganization.name,
       slackWebhookUrl,
       emailDomain,
+      browserstackUsername,
+      browserstackAccessKey,
     });
     setIsOrganizationSlackSectionOpen(Boolean(slackWebhookUrl.trim()));
     setOrganizationError(null);
@@ -409,12 +417,21 @@ export const AdminStoresPage = () => {
         ? organizationForm.slackWebhookUrl.trim()
         : '';
       const emailDomain = organizationForm.emailDomain.trim();
+      const browserstackUsername = organizationForm.browserstackUsername.trim();
+      const browserstackAccessKey = organizationForm.browserstackAccessKey.trim();
 
       const updated = await organizationService.update(selectedOrganization.id, {
         name: trimmedName,
         description: (selectedOrganization.description ?? '').trim(),
         slackWebhookUrl,
         emailDomain,
+        browserstackCredentials:
+          browserstackUsername || browserstackAccessKey
+            ? {
+                username: browserstackUsername,
+                accessKey: browserstackAccessKey,
+              }
+            : null,
       });
 
       setOrganizations((previous) =>
@@ -914,6 +931,38 @@ export const AdminStoresPage = () => {
               dataTestId="organization-settings-email-domain"
             />
             <p className="form-hint">{translation('AdminStoresPage.org-email-domain-hint')}</p>
+            <div className="form-grid">
+              <TextInput
+                id="organization-browserstack-username"
+                label={translation('AdminStoresPage.org-browserstack-username-label')}
+                value={organizationForm.browserstackUsername}
+                onChange={(event) =>
+                  setOrganizationForm((previous) => ({
+                    ...previous,
+                    browserstackUsername: event.target.value,
+                  }))
+                }
+                placeholder={translation('AdminStoresPage.org-browserstack-username-placeholder')}
+                dataTestId="organization-settings-browserstack-username"
+              />
+              <TextInput
+                id="organization-browserstack-access-key"
+                label={translation('AdminStoresPage.org-browserstack-access-key-label')}
+                value={organizationForm.browserstackAccessKey}
+                onChange={(event) =>
+                  setOrganizationForm((previous) => ({
+                    ...previous,
+                    browserstackAccessKey: event.target.value,
+                  }))
+                }
+                placeholder={translation('AdminStoresPage.org-browserstack-access-key-placeholder')}
+                type="password"
+                dataTestId="organization-settings-browserstack-access-key"
+              />
+            </div>
+            <p className="form-hint">
+              {translation('AdminStoresPage.org-browserstack-hint')}
+            </p>
             <div className="collapsible-section">
               <div className="collapsible-section__header">
                 <div className="collapsible-section__titles">

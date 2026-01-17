@@ -2,6 +2,8 @@
   "translation": {
     "user": "Colaborador",
     "greeting": "Olá",
+    "greetingAdmin": "Olá Administrador",
+    "greetingCollaborator": "Olá colaborador",
     "profile": "Perfil",
     "logout": "Sair",
     "roleAdmin": "Administrador",
@@ -375,6 +377,13 @@
           "placeholder": "@exemplo.com",
           "hint": "Informe o domínio (com ou sem @). Usuários com esse e-mail serão vinculados automaticamente."
         },
+        "browserstack": {
+          "usernameLabel": "Usuário do BrowserStack",
+          "usernamePlaceholder": "browserstack.user",
+          "accessKeyLabel": "Access key do BrowserStack",
+          "accessKeyPlaceholder": "Cole a access key",
+          "hint": "Credenciais do BrowserStack são configuradas pela organização."
+        },
         "slack": {
           "title": "Webhook do Slack",
           "description": "Deseja cadastrar um webhook para enviar notificações automáticas no Slack?",
@@ -384,11 +393,6 @@
           "webhookLabel": "Webhook do Slack",
           "webhookPlaceholder": "https://hooks.slack.com/services/...",
           "hint": "Cole a URL gerada pelo aplicativo de Incoming Webhooks."
-        },
-        "logo": {
-          "label": "Logo da organização",
-          "button": "Selecionar arquivo",
-          "hint": "Formatos sugeridos: PNG, JPG ou SVG até 5MB."
         }
       },
       "success": {
@@ -517,6 +521,11 @@
       "org-email-domain-label": "Domínio de e-mail da organização",
       "org-email-domain-placeholder": "@exemplo.com",
       "org-email-domain-hint": "Informe o domínio (com ou sem @). Usuários com esse e-mail entram automaticamente.",
+      "org-browserstack-username-label": "Usuário do BrowserStack",
+      "org-browserstack-username-placeholder": "browserstack.user",
+      "org-browserstack-access-key-label": "Access key do BrowserStack",
+      "org-browserstack-access-key-placeholder": "Cole a access key",
+      "org-browserstack-hint": "Credenciais do BrowserStack são configuradas pela organização.",
       "org-slack-section-title": "Webhook do Slack",
       "org-slack-section-description": "Deseja cadastrar um webhook para enviar notificações automáticas no Slack?",
       "org-slack-icon-alt": "Slack",
@@ -525,9 +534,6 @@
       "org-slack-webhook-label": "Webhook do Slack",
       "org-slack-webhook-placeholder": "https://hooks.slack.com/services/...",
       "org-slack-webhook-hint": "Cole a URL gerada pelo aplicativo de Incoming Webhooks.",
-      "org-logo-label": "Logo da organização",
-      "org-logo-trigger": "Atualizar logo",
-      "org-logo-hint": "Envie um arquivo PNG, JPG ou SVG até 5MB.",
       "confirm-delete-org-message": "Você deseja mesmo excluir a organização \"{{organizationName}}\"?",
       "confirm-delete-org-description": "Os usuários serão desvinculados.",
       "confirm-remove-member-message": "Você deseja mesmo excluir {{memberName}}?",

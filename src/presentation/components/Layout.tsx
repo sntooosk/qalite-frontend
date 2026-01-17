@@ -39,7 +39,9 @@ export const Layout = ({ children }: LayoutProps) => {
               <div className="header-user-info">
                 <UserAvatar name={displayName} size="sm" />
                 <div className="user-context">
-                  <span className="user-greeting">{t('greeting')},</span>
+                  <span className="user-greeting">
+                    {user.role === 'admin' ? t('greetingAdmin') : t('greetingCollaborator')}
+                  </span>
                   <span className="user-name">{displayName}</span>
                   <span className="user-role">
                     {user.role === 'admin' ? t('roleAdmin') : t('roleUser')}

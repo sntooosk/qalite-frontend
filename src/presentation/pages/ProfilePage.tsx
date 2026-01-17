@@ -6,7 +6,6 @@ import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { TextInput } from '../components/TextInput';
-import { ConnectedAccountsSection } from '../components/ConnectedAccountsSection';
 import { UserPreferencesSection } from '../components/UserPreferencesSection';
 import { useTranslation } from 'react-i18next';
 
@@ -95,7 +94,6 @@ export const ProfilePage = () => {
       </section>
 
       <UserPreferencesSection />
-      <ConnectedAccountsSection />
     </Layout>
   );
 };

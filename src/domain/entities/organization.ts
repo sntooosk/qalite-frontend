@@ -26,6 +26,7 @@ export interface CreateOrganizationPayload {
   description: string;
   slackWebhookUrl?: string | null;
   emailDomain?: string | null;
+  browserstackCredentials?: BrowserstackCredentials | null;
 }
 
 export interface UpdateOrganizationPayload {

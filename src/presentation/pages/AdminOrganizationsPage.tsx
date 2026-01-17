@@ -14,12 +14,16 @@ interface OrganizationFormState {
   name: string;
   slackWebhookUrl: string;
   emailDomain: string;
+  browserstackUsername: string;
+  browserstackAccessKey: string;
 }
 
 const initialOrganizationForm: OrganizationFormState = {
   name: '',
   slackWebhookUrl: '',
   emailDomain: '',
+  browserstackUsername: '',
+  browserstackAccessKey: '',
 };
 
 export const AdminOrganizationsPage = () => {
@@ -104,12 +108,21 @@ export const AdminOrganizationsPage = () => {
 
       const slackWebhookUrl = isSlackSectionOpen ? organizationForm.slackWebhookUrl.trim() : '';
       const emailDomain = organizationForm.emailDomain.trim();
+      const browserstackUsername = organizationForm.browserstackUsername.trim();
+      const browserstackAccessKey = organizationForm.browserstackAccessKey.trim();
 
       const created = await organizationService.create({
         name: trimmedName,
         description: '',
         slackWebhookUrl,
         emailDomain,
+        browserstackCredentials:
+          browserstackUsername || browserstackAccessKey
+            ? {
+                username: browserstackUsername,
+                accessKey: browserstackAccessKey,
+              }
+            : null,
       });
       setOrganizations((previous) => [...previous, created]);
       showToast({
@@ -236,6 +249,37 @@ export const AdminOrganizationsPage = () => {
           />
 
           <p className="form-hint">{translation('adminOrganizationsPage.form.emailDomain.hint')}</p>
+
+          <div className="form-grid">
+            <TextInput
+              id="organization-browserstack-username"
+              label={translation('adminOrganizationsPage.form.browserstack.usernameLabel')}
+              value={organizationForm.browserstackUsername}
+              onChange={(event) =>
+                setOrganizationForm((previous) => ({
+                  ...previous,
+                  browserstackUsername: event.target.value,
+                }))
+              }
+              placeholder={translation('adminOrganizationsPage.form.browserstack.usernamePlaceholder')}
+              dataTestId="organization-browserstack-username-input"
+            />
+            <TextInput
+              id="organization-browserstack-access-key"
+              label={translation('adminOrganizationsPage.form.browserstack.accessKeyLabel')}
+              value={organizationForm.browserstackAccessKey}
+              onChange={(event) =>
+                setOrganizationForm((previous) => ({
+                  ...previous,
+                  browserstackAccessKey: event.target.value,
+                }))
+              }
+              placeholder={translation('adminOrganizationsPage.form.browserstack.accessKeyPlaceholder')}
+              type="password"
+              dataTestId="organization-browserstack-access-key-input"
+            />
+          </div>
+          <p className="form-hint">{translation('adminOrganizationsPage.form.browserstack.hint')}</p>
           <div className="collapsible-section">
             <div className="collapsible-section__header">
               <div className="collapsible-section__titles">
@@ -295,30 +339,6 @@ export const AdminOrganizationsPage = () => {
             )}
           </div>
 
-          <label className="upload-label" htmlFor="organization-logo">
-            <span>{translation('adminOrganizationsPage.form.logo.label')}</span>
-
-            <span className="upload-trigger">
-              {translation('adminOrganizationsPage.form.logo.button')}
-            </span>
-
-            <input
-              id="organization-logo"
-              className="upload-input"
-              type="file"
-              accept="image/*"
-              data-testid="organization-logo-input"
-              onChange={(event) =>
-                setOrganizationForm((previous) => ({
-                  ...previous,
-                  logoFile: event.target.files?.[0] ?? null,
-                }))
-              }
-            />
-            <span className="upload-hint">
-              {translation('adminOrganizationsPage.form.logo.hint')}
-            </span>
-          </label>
           <div className="form-actions">
             <Button
               type="submit"

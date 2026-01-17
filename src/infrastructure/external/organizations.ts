@@ -30,6 +30,7 @@ export interface CreateOrganizationPayload {
   description: string;
   slackWebhookUrl?: string | null;
   emailDomain?: string | null;
+  browserstackCredentials?: BrowserstackCredentials | null;
 }
 
 export interface UpdateOrganizationPayload {
@@ -92,6 +93,7 @@ export const createOrganization = async (
   const trimmedDescription = payload.description.trim();
   const slackWebhookUrl = payload.slackWebhookUrl?.trim() || null;
   const emailDomain = normalizeEmailDomain(payload.emailDomain);
+  const browserstackCredentials = normalizeBrowserstackCredentials(payload.browserstackCredentials);
 
   const docRef = await addDoc(organizationsCollection, {
     name: trimmedName,
@@ -99,7 +101,7 @@ export const createOrganization = async (
     logoUrl: null,
     slackWebhookUrl,
     emailDomain,
-    browserstackCredentials: null,
+    browserstackCredentials,
     members: [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
