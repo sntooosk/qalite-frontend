@@ -42,6 +42,7 @@ import {
   getElapsedMilliseconds,
 } from '../../shared/utils/time';
 import i18n from '../../lib/i18n';
+import { firebaseDebug } from '../database/firebaseDebug';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
@@ -52,7 +53,14 @@ const getStoreOrganizationContext = async (
   storeId: string,
 ): Promise<{ organizationId: string | null; storeName: string }> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
+  firebaseDebug.trackQuery({
+    label: 'stores.getById',
+    collection: STORES_COLLECTION,
+    docPath: storeId,
+    source: 'getStoreOrganizationContext',
+  });
   const snapshot = await getDoc(storeRef);
+  firebaseDebug.trackRead({ label: 'stores.getById', count: snapshot.exists() ? 1 : 0 });
 
   if (!snapshot.exists()) {
     return { organizationId: null, storeName: '' };
@@ -228,7 +236,14 @@ export const createEnvironment = async (payload: CreateEnvironmentInput): Promis
     updatedAt: serverTimestamp(),
   });
 
+  firebaseDebug.trackQuery({
+    label: 'environments.getCreated',
+    collection: ENVIRONMENTS_COLLECTION,
+    docPath: docRef.id,
+    source: 'createEnvironment',
+  });
   const snapshot = await getDoc(docRef);
+  firebaseDebug.trackRead({ label: 'environments.getCreated', count: snapshot.exists() ? 1 : 0 });
   const environment = normalizeEnvironment(
     snapshot.id,
     (snapshot.data() ?? {}) as Record<string, unknown>,
@@ -260,7 +275,14 @@ export const updateEnvironment = async (
 
   await updateDoc(environmentRef, data);
 
+  firebaseDebug.trackQuery({
+    label: 'environments.getById',
+    collection: ENVIRONMENTS_COLLECTION,
+    docPath: environmentId,
+    source: 'updateEnvironment',
+  });
   const snapshot = await getDoc(environmentRef);
+  firebaseDebug.trackRead({ label: 'environments.getById', count: snapshot.exists() ? 1 : 0 });
   if (snapshot.exists()) {
     const environment = normalizeEnvironment(
       environmentId,
@@ -277,7 +299,14 @@ export const updateEnvironment = async (
 
 export const deleteEnvironment = async (environmentId: string): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  firebaseDebug.trackQuery({
+    label: 'environments.getById',
+    collection: ENVIRONMENTS_COLLECTION,
+    docPath: environmentId,
+    source: 'deleteEnvironment',
+  });
   const snapshot = await getDoc(environmentRef);
+  firebaseDebug.trackRead({ label: 'environments.getById', count: snapshot.exists() ? 1 : 0 });
 
   await deleteDoc(environmentRef);
 
@@ -300,7 +329,17 @@ export const observeEnvironment = (
   callback: (environment: Environment | null) => void,
 ): (() => void) => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  return onSnapshot(environmentRef, (snapshot) => {
+  firebaseDebug.trackSubscriptionStart({
+    label: 'environments.observeById',
+    collection: ENVIRONMENTS_COLLECTION,
+    docPath: environmentId,
+    source: 'observeEnvironment',
+  });
+  const unsubscribe = onSnapshot(environmentRef, (snapshot) => {
+    firebaseDebug.trackRead({
+      label: 'environments.observeById',
+      count: snapshot.exists() ? 1 : 0,
+    });
     if (!snapshot.exists()) {
       callback(null);
       return;
@@ -308,6 +347,15 @@ export const observeEnvironment = (
 
     callback(normalizeEnvironment(snapshot.id, snapshot.data() ?? {}));
   });
+  return () => {
+    firebaseDebug.trackSubscriptionStop({
+      label: 'environments.observeById',
+      collection: ENVIRONMENTS_COLLECTION,
+      docPath: environmentId,
+      source: 'observeEnvironment',
+    });
+    unsubscribe();
+  };
 };
 
 export const observeEnvironments = (
@@ -323,7 +371,19 @@ export const observeEnvironments = (
   const environmentsQuery =
     constraints.length > 0 ? query(environmentsCollection, ...constraints) : environmentsCollection;
 
-  return onSnapshot(environmentsQuery, (snapshot) => {
+  firebaseDebug.trackQuery({
+    label: 'environments.observeAll',
+    collection: ENVIRONMENTS_COLLECTION,
+    where: filters.storeId ? ['loja =='] : [],
+    source: 'observeEnvironments',
+  });
+  firebaseDebug.trackSubscriptionStart({
+    label: 'environments.observeAll',
+    collection: ENVIRONMENTS_COLLECTION,
+    source: 'observeEnvironments',
+  });
+  const unsubscribe = onSnapshot(environmentsQuery, (snapshot) => {
+    firebaseDebug.trackRead({ label: 'environments.observeAll', count: snapshot.size });
     const list = snapshot.docs
       .map((docSnapshot) => normalizeEnvironment(docSnapshot.id, docSnapshot.data() ?? {}))
       .sort((a, b) => {
@@ -334,6 +394,14 @@ export const observeEnvironments = (
 
     callback(list);
   });
+  return () => {
+    firebaseDebug.trackSubscriptionStop({
+      label: 'environments.observeAll',
+      collection: ENVIRONMENTS_COLLECTION,
+      source: 'observeEnvironments',
+    });
+    unsubscribe();
+  };
 };
 
 export const addEnvironmentUser = async (environmentId: string, userId: string): Promise<void> => {
@@ -460,7 +528,14 @@ export const updateScenarioStatus = async (
   platform?: EnvironmentScenarioPlatform,
 ): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  firebaseDebug.trackQuery({
+    label: 'environments.getById',
+    collection: ENVIRONMENTS_COLLECTION,
+    docPath: environmentId,
+    source: 'updateScenarioStatus',
+  });
   const snapshot = await getDoc(environmentRef);
+  firebaseDebug.trackRead({ label: 'environments.getById', count: snapshot.exists() ? 1 : 0 });
   const environment = snapshot.exists()
     ? normalizeEnvironment(environmentId, (snapshot.data() ?? {}) as Record<string, unknown>)
     : null;
@@ -523,7 +598,17 @@ export const uploadScenarioEvidence = async (
   }
 
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  firebaseDebug.trackQuery({
+    label: 'environments.getById',
+    collection: ENVIRONMENTS_COLLECTION,
+    docPath: environmentId,
+    source: 'uploadScenarioEvidence',
+  });
   const environmentSnapshot = await getDoc(environmentRef);
+  firebaseDebug.trackRead({
+    label: 'environments.getById',
+    count: environmentSnapshot.exists() ? 1 : 0,
+  });
   const environment = environmentSnapshot.exists()
     ? normalizeEnvironment(
         environmentId,
@@ -549,7 +634,14 @@ export const observeEnvironmentBugs = (
   callback: (bugs: EnvironmentBug[]) => void,
 ): (() => void) => {
   const bugsCollectionRef = getBugCollection(environmentId);
-  return onSnapshot(bugsCollectionRef, (snapshot) => {
+  firebaseDebug.trackSubscriptionStart({
+    label: 'environmentBugs.observeAll',
+    collection: BUGS_SUBCOLLECTION,
+    docPath: environmentId,
+    source: 'observeEnvironmentBugs',
+  });
+  const unsubscribe = onSnapshot(bugsCollectionRef, (snapshot) => {
+    firebaseDebug.trackRead({ label: 'environmentBugs.observeAll', count: snapshot.size });
     const bugs = snapshot.docs
       .map((docSnapshot) =>
         normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
@@ -562,6 +654,15 @@ export const observeEnvironmentBugs = (
 
     callback(bugs);
   });
+  return () => {
+    firebaseDebug.trackSubscriptionStop({
+      label: 'environmentBugs.observeAll',
+      collection: BUGS_SUBCOLLECTION,
+      docPath: environmentId,
+      source: 'observeEnvironmentBugs',
+    });
+    unsubscribe();
+  };
 };
 
 export const createEnvironmentBug = async (
@@ -569,7 +670,17 @@ export const createEnvironmentBug = async (
   payload: CreateEnvironmentBugInput,
 ): Promise<EnvironmentBug> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  firebaseDebug.trackQuery({
+    label: 'environments.getById',
+    collection: ENVIRONMENTS_COLLECTION,
+    docPath: environmentId,
+    source: 'createEnvironmentBug',
+  });
   const environmentSnapshot = await getDoc(environmentRef);
+  firebaseDebug.trackRead({
+    label: 'environments.getById',
+    count: environmentSnapshot.exists() ? 1 : 0,
+  });
   const environment = environmentSnapshot.exists()
     ? normalizeEnvironment(
         environmentId,
@@ -584,7 +695,17 @@ export const createEnvironmentBug = async (
     updatedAt: serverTimestamp(),
   });
 
+  firebaseDebug.trackQuery({
+    label: 'environmentBugs.getCreated',
+    collection: BUGS_SUBCOLLECTION,
+    docPath: docRef.id,
+    source: 'createEnvironmentBug',
+  });
   const snapshot = await getDoc(docRef);
+  firebaseDebug.trackRead({
+    label: 'environmentBugs.getCreated',
+    count: snapshot.exists() ? 1 : 0,
+  });
   const bug = normalizeBug(snapshot.id, (snapshot.data() ?? {}) as Record<string, unknown>);
 
   if (environment) {
@@ -606,7 +727,17 @@ export const updateEnvironmentBug = async (
   payload: UpdateEnvironmentBugInput,
 ): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  firebaseDebug.trackQuery({
+    label: 'environments.getById',
+    collection: ENVIRONMENTS_COLLECTION,
+    docPath: environmentId,
+    source: 'updateEnvironmentBug',
+  });
   const environmentSnapshot = await getDoc(environmentRef);
+  firebaseDebug.trackRead({
+    label: 'environments.getById',
+    count: environmentSnapshot.exists() ? 1 : 0,
+  });
   const environment = environmentSnapshot.exists()
     ? normalizeEnvironment(
         environmentId,
@@ -639,7 +770,17 @@ export const updateEnvironmentBug = async (
 
 export const deleteEnvironmentBug = async (environmentId: string, bugId: string): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  firebaseDebug.trackQuery({
+    label: 'environments.getById',
+    collection: ENVIRONMENTS_COLLECTION,
+    docPath: environmentId,
+    source: 'deleteEnvironmentBug',
+  });
   const environmentSnapshot = await getDoc(environmentRef);
+  firebaseDebug.trackRead({
+    label: 'environments.getById',
+    count: environmentSnapshot.exists() ? 1 : 0,
+  });
   const environment = environmentSnapshot.exists()
     ? normalizeEnvironment(
         environmentId,
@@ -790,9 +931,7 @@ const normalizeParticipants = (
   return uniqueIds.map((id) => {
     const profile = profileMap.get(id);
     const displayName =
-      profile?.displayName?.trim() ||
-      profile?.email ||
-      t('dynamic.fallbackParticipant', { id });
+      profile?.displayName?.trim() || profile?.email || t('dynamic.fallbackParticipant', { id });
 
     return {
       id,
@@ -830,10 +969,7 @@ const translateEnvironmentOption = (
   return translated === key ? value : translated;
 };
 
-const translateScenarioStatus = (
-  value: EnvironmentScenarioStatus,
-  t: (key: string) => string,
-) => {
+const translateScenarioStatus = (value: EnvironmentScenarioStatus, t: (key: string) => string) => {
   const key = `environmentEvidenceTable.status_${value}`;
   const translated = t(key);
   return translated === key ? value : translated;

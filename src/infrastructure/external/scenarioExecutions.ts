@@ -15,6 +15,7 @@ import type {
   ScenarioExecution,
 } from '../../domain/entities/scenarioExecution';
 import { firebaseFirestore } from '../database/firebase';
+import { firebaseDebug } from '../database/firebaseDebug';
 
 const SCENARIO_EXECUTIONS_COLLECTION = 'scenarioExecutions';
 const scenarioExecutionsCollection = collection(firebaseFirestore, SCENARIO_EXECUTIONS_COLLECTION);
@@ -46,7 +47,17 @@ export const listScenarioExecutionsByStore = async (
   storeId: string,
 ): Promise<ScenarioExecution[]> => {
   const executionQuery = query(scenarioExecutionsCollection, where('storeId', '==', storeId));
+  firebaseDebug.trackQuery({
+    label: 'scenarioExecutions.listByStore',
+    collection: SCENARIO_EXECUTIONS_COLLECTION,
+    where: ['storeId =='],
+    source: 'listScenarioExecutionsByStore',
+  });
   const snapshot = await getDocs(executionQuery);
+  firebaseDebug.trackRead({
+    label: 'scenarioExecutions.listByStore',
+    count: snapshot.size,
+  });
 
   return snapshot.docs.map((docSnapshot) => {
     const data = docSnapshot.data();

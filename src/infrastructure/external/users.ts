@@ -2,6 +2,7 @@ import { collection, doc, getDoc, getDocs, limit } from 'firebase/firestore';
 
 import type { UserSummary } from '../../domain/entities/user';
 import { firebaseFirestore } from '../database/firebase';
+import { firebaseDebug } from '../database/firebaseDebug';
 
 const USERS_COLLECTION = 'users';
 const DEFAULT_DISPLAY_NAME = 'Usuário';
@@ -24,7 +25,14 @@ export const searchUsersByTerm = async (term: string): Promise<UserSummary[]> =>
   }
 
   const usersRef = collection(firebaseFirestore, USERS_COLLECTION);
+  firebaseDebug.trackQuery({
+    label: 'users.searchByTerm',
+    collection: USERS_COLLECTION,
+    limit: 100,
+    source: 'searchUsersByTerm',
+  });
   const snapshot = await getDocs(limit(usersRef, 100));
+  firebaseDebug.trackRead({ label: 'users.searchByTerm', count: snapshot.size });
 
   const matches: UserSummary[] = [];
 
@@ -51,7 +59,14 @@ const fetchUserSummary = async (userId: string): Promise<UserSummary | null> => 
   }
 
   const userRef = doc(firebaseFirestore, USERS_COLLECTION, userId);
+  firebaseDebug.trackQuery({
+    label: 'users.getById',
+    collection: USERS_COLLECTION,
+    docPath: userId,
+    source: 'fetchUserSummary',
+  });
   const snapshot = await getDoc(userRef);
+  firebaseDebug.trackRead({ label: 'users.getById', count: snapshot.exists() ? 1 : 0 });
 
   const data = snapshot.data();
   const email = typeof data?.email === 'string' ? data.email : '';

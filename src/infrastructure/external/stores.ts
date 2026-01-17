@@ -32,6 +32,7 @@ import type {
 } from '../../domain/entities/store';
 import { firebaseFirestore } from '../database/firebase';
 import { logActivity } from './logs';
+import { firebaseDebug } from '../database/firebaseDebug';
 
 const STORES_COLLECTION = 'stores';
 const SCENARIOS_SUBCOLLECTION = 'scenarios';
@@ -151,14 +152,28 @@ const normalizeCategoryInput = (input: StoreCategoryInput): StoreCategoryInput =
 export const listStores = async (organizationId: string): Promise<Store[]> => {
   const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
   const storesQuery = query(storesCollection, where('organizationId', '==', organizationId));
+  firebaseDebug.trackQuery({
+    label: 'stores.listByOrganization',
+    collection: STORES_COLLECTION,
+    where: ['organizationId =='],
+    source: 'listStores',
+  });
   const snapshot = await getDocs(storesQuery);
+  firebaseDebug.trackRead({ label: 'stores.listByOrganization', count: snapshot.size });
   const stores = snapshot.docs.map((docSnapshot) => mapStore(docSnapshot.id, docSnapshot.data()));
   return stores.sort((a, b) => a.name.localeCompare(b.name));
 };
 
 export const getStore = async (storeId: string): Promise<Store | null> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
+  firebaseDebug.trackQuery({
+    label: 'stores.getById',
+    collection: STORES_COLLECTION,
+    docPath: storeId,
+    source: 'getStore',
+  });
   const snapshot = await getDoc(storeRef);
+  firebaseDebug.trackRead({ label: 'stores.getById', count: snapshot.exists() ? 1 : 0 });
   return snapshot.exists() ? mapStore(snapshot.id, snapshot.data() ?? {}) : null;
 };
 
@@ -251,7 +266,15 @@ export const listScenarios = async (storeId: string): Promise<StoreScenario[]> =
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
   const scenariosQuery = query(scenariosCollection, orderBy('title'));
+  firebaseDebug.trackQuery({
+    label: 'scenarios.listByStore',
+    collection: SCENARIOS_SUBCOLLECTION,
+    orderBy: ['title'],
+    docPath: storeId,
+    source: 'listScenarios',
+  });
   const snapshot = await getDocs(scenariosQuery);
+  firebaseDebug.trackRead({ label: 'scenarios.listByStore', count: snapshot.size });
   return snapshot.docs.map((docSnapshot) =>
     mapScenario(storeId, docSnapshot.id, docSnapshot.data()),
   );
@@ -501,7 +524,15 @@ export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
   const suitesQuery = query(suitesCollection, orderBy('name'));
+  firebaseDebug.trackQuery({
+    label: 'suites.listByStore',
+    collection: SUITES_SUBCOLLECTION,
+    orderBy: ['name'],
+    docPath: storeId,
+    source: 'listSuites',
+  });
   const snapshot = await getDocs(suitesQuery);
+  firebaseDebug.trackRead({ label: 'suites.listByStore', count: snapshot.size });
   return snapshot.docs.map((docSnapshot) => mapSuite(storeId, docSnapshot.id, docSnapshot.data()));
 };
 
@@ -701,7 +732,15 @@ export const listCategories = async (storeId: string): Promise<StoreCategory[]> 
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const categoriesCollection = collection(storeRef, CATEGORIES_SUBCOLLECTION);
   const categoriesQuery = query(categoriesCollection, orderBy('searchName'));
+  firebaseDebug.trackQuery({
+    label: 'categories.listByStore',
+    collection: CATEGORIES_SUBCOLLECTION,
+    orderBy: ['searchName'],
+    docPath: storeId,
+    source: 'listCategories',
+  });
   const snapshot = await getDocs(categoriesQuery);
+  firebaseDebug.trackRead({ label: 'categories.listByStore', count: snapshot.size });
   return snapshot.docs.map((docSnapshot) =>
     mapCategory(storeId, docSnapshot.id, docSnapshot.data()),
   );

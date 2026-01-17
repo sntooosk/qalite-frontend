@@ -13,6 +13,7 @@ import {
 import type { ActivityLog, ActivityLogInput } from '../../domain/entities/activityLog';
 import { getCurrentUser } from './auth';
 import { firebaseFirestore } from '../database/firebase';
+import { firebaseDebug } from '../database/firebaseDebug';
 
 const LOGS_COLLECTION = 'logs';
 const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
@@ -42,7 +43,14 @@ const cleanupOldLogs = async (organizationId: string): Promise<void> => {
     where('createdAt', '<', cutoff),
   );
 
+  firebaseDebug.trackQuery({
+    label: 'logs.cleanupOld',
+    collection: LOGS_COLLECTION,
+    where: ['organizationId ==', 'createdAt <'],
+    source: 'cleanupOldLogs',
+  });
   const snapshot = await getDocs(oldLogsQuery);
+  firebaseDebug.trackRead({ label: 'logs.cleanupOld', count: snapshot.size });
 
   if (snapshot.empty) {
     return;
@@ -79,6 +87,14 @@ export const listOrganizationLogs = async (organizationId: string): Promise<Acti
     orderBy('createdAt', 'desc'),
   );
 
+  firebaseDebug.trackQuery({
+    label: 'logs.listByOrganization',
+    collection: LOGS_COLLECTION,
+    where: ['organizationId =='],
+    orderBy: ['createdAt desc'],
+    source: 'listOrganizationLogs',
+  });
   const snapshot = await getDocs(logsQuery);
+  firebaseDebug.trackRead({ label: 'logs.listByOrganization', count: snapshot.size });
   return snapshot.docs.map((docSnapshot) => mapLog(docSnapshot.id, docSnapshot.data() ?? {}));
 };

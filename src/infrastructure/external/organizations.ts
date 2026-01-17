@@ -21,6 +21,7 @@ import type { Organization, OrganizationMember } from '../../domain/entities/org
 import { getNormalizedEmailDomain, normalizeEmailDomain } from '../../shared/utils/email';
 import { firebaseFirestore } from '../database/firebase';
 import { logActivity } from './logs';
+import { firebaseDebug } from '../database/firebaseDebug';
 
 const ORGANIZATIONS_COLLECTION = 'organizations';
 const USERS_COLLECTION = 'users';
@@ -67,7 +68,13 @@ const normalizeBrowserstackCredentials = (
 };
 
 export const listOrganizations = async (): Promise<Organization[]> => {
+  firebaseDebug.trackQuery({
+    label: 'organizations.listAll',
+    collection: ORGANIZATIONS_COLLECTION,
+    source: 'listOrganizations',
+  });
   const snapshot = await getDocs(organizationsCollection);
+  firebaseDebug.trackRead({ label: 'organizations.listAll', count: snapshot.size });
   const organizations = await Promise.all(
     snapshot.docs.map((docSnapshot) => mapOrganization(docSnapshot.id, docSnapshot.data())),
   );
@@ -77,7 +84,14 @@ export const listOrganizations = async (): Promise<Organization[]> => {
 
 export const getOrganization = async (id: string): Promise<Organization | null> => {
   const organizationRef = doc(firebaseFirestore, ORGANIZATIONS_COLLECTION, id);
+  firebaseDebug.trackQuery({
+    label: 'organizations.getById',
+    collection: ORGANIZATIONS_COLLECTION,
+    docPath: id,
+    source: 'getOrganization',
+  });
   const snapshot = await getDoc(organizationRef);
+  firebaseDebug.trackRead({ label: 'organizations.getById', count: snapshot.exists() ? 1 : 0 });
 
   if (!snapshot.exists()) {
     return null;
@@ -199,7 +213,15 @@ export const addUserToOrganization = async (
 
   const usersRef = collection(firebaseFirestore, USERS_COLLECTION);
   const userQuery = query(usersRef, where('email', '==', normalizedEmail), limit(1));
+  firebaseDebug.trackQuery({
+    label: 'users.findByEmail',
+    collection: USERS_COLLECTION,
+    where: ['email =='],
+    limit: 1,
+    source: 'addUserToOrganization',
+  });
   const userQuerySnapshot = await getDocs(userQuery);
+  firebaseDebug.trackRead({ label: 'users.findByEmail', count: userQuerySnapshot.size });
 
   if (userQuerySnapshot.empty) {
     throw new Error('Usuário não encontrado.');
@@ -359,7 +381,15 @@ export const findOrganizationByEmailDomain = async (
     where('emailDomain', '==', normalizedDomain),
     limit(1),
   );
+  firebaseDebug.trackQuery({
+    label: 'organizations.findByDomain',
+    collection: ORGANIZATIONS_COLLECTION,
+    where: ['emailDomain =='],
+    limit: 1,
+    source: 'findOrganizationByEmailDomain',
+  });
   const snapshot = await getDocs(organizationQuery);
+  firebaseDebug.trackRead({ label: 'organizations.findByDomain', count: snapshot.size });
 
   if (snapshot.empty) {
     return null;
