@@ -65,6 +65,11 @@ const AdminOrganizationsPage = lazy(() =>
 const AdminStoresPage = lazy(() =>
   import('../pages/AdminStoresPage').then(({ AdminStoresPage }) => ({ default: AdminStoresPage })),
 );
+const OrganizationManagePage = lazy(() =>
+  import('../pages/OrganizationManagePage').then(({ OrganizationManagePage }) => ({
+    default: OrganizationManagePage,
+  })),
+);
 const StoreManagePage = lazy(() =>
   import('../pages/StoreManagePage').then(({ StoreManagePage }) => ({
     default: StoreManagePage,
@@ -97,6 +102,10 @@ export const AppRoutes = () => (
           <Route element={<RoleProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin" element={<AdminOrganizationsPage />} />
             <Route path="/admin/organizations" element={<AdminStoresPage />} />
+            <Route
+              path="/admin/organizations/:organizationId/manage"
+              element={<OrganizationManagePage />}
+            />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

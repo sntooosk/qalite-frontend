@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import type { ActivityLog } from '../../domain/entities/activityLog';
+import type { ActivityEntityType, ActivityLog } from '../../domain/entities/activityLog';
 import { logService } from '../../application/use-cases/LogUseCase';
 import { useToast } from '../context/ToastContext';
 import { ActivityIcon, ChevronDownIcon, FilterIcon } from './icons';
@@ -9,6 +9,10 @@ import i18n from 'i18next';
 
 interface OrganizationLogPanelProps {
   organizationId: string;
+  entityTypes?: ActivityEntityType[];
+  entityId?: string;
+  defaultCollapsed?: boolean;
+  hideEntityFilter?: boolean;
 }
 
 const ENTITY_FILTERS = [
@@ -45,11 +49,17 @@ const formatLogDate = (value: Date | null): string => {
   }).format(value);
 };
 
-export const OrganizationLogPanel = ({ organizationId }: OrganizationLogPanelProps) => {
+export const OrganizationLogPanel = ({
+  organizationId,
+  entityTypes,
+  entityId,
+  defaultCollapsed = true,
+  hideEntityFilter = false,
+}: OrganizationLogPanelProps) => {
   const { showToast } = useToast();
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
   const [actionFilter, setActionFilter] = useState<ActivityLog['action'] | 'all'>('all');
   const [entityFilter, setEntityFilter] = useState<ActivityLog['entityType'] | 'all'>('all');
   const [visibleCount, setVisibleCount] = useState(INITIAL_LOG_PAGE_SIZE);
@@ -83,19 +93,29 @@ export const OrganizationLogPanel = ({ organizationId }: OrganizationLogPanelPro
     };
   }, [organizationId, showToast]);
 
-  const filteredLogs = useMemo(
-    () =>
-      logs.filter(
-        (log) =>
-          (actionFilter === 'all' || log.action === actionFilter) &&
-          (entityFilter === 'all' || log.entityType === entityFilter),
-      ),
-    [actionFilter, entityFilter, logs],
-  );
+  const scopedLogs = useMemo(() => {
+    if (!entityTypes && !entityId) {
+      return logs;
+    }
+
+    return logs.filter((log) => {
+      const matchesType = entityTypes ? entityTypes.includes(log.entityType) : true;
+      const matchesId = entityId ? log.entityId === entityId : true;
+      return matchesType && matchesId;
+    });
+  }, [entityId, entityTypes, logs]);
+
+  const filteredLogs = useMemo(() => {
+    return scopedLogs.filter(
+      (log) =>
+        (actionFilter === 'all' || log.action === actionFilter) &&
+        (hideEntityFilter || entityFilter === 'all' || log.entityType === entityFilter),
+    );
+  }, [actionFilter, entityFilter, hideEntityFilter, scopedLogs]);
 
   useEffect(() => {
     setVisibleCount(INITIAL_LOG_PAGE_SIZE);
-  }, [actionFilter, entityFilter, logs]);
+  }, [actionFilter, entityFilter, scopedLogs]);
 
   const displayedLogs = useMemo(
     () => filteredLogs.slice(0, visibleCount),
@@ -164,7 +184,8 @@ export const OrganizationLogPanel = ({ organizationId }: OrganizationLogPanelPro
             <div className="organization-log-panel__title-row">
               <span className="badge">{t('logPanel.headerAudit')}</span>
               <span className="badge badge--muted">
-                {logs.length} {t('logPanel.headerRecords')}
+                {(entityTypes || entityId ? filteredLogs.length : logs.length)}{' '}
+                {t('logPanel.headerRecords')}
               </span>
             </div>
             <h2 className="text-xl font-semibold text-primary">{t('logPanel.titleMain')}</h2>
@@ -193,20 +214,22 @@ export const OrganizationLogPanel = ({ organizationId }: OrganizationLogPanelPro
               <span>{t('logPanel.filterLabel')}</span>
             </div>
 
-            <label className="form-field">
-              <span className="form-label">{t('logPanel.filterEntity')}</span>
-              <select
-                className="organization-log-panel__select"
-                value={entityFilter}
-                onChange={(event) => setEntityFilter(event.target.value as typeof entityFilter)}
-              >
-                {ENTITY_FILTERS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {t(option.label)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {!hideEntityFilter && (
+              <label className="form-field">
+                <span className="form-label">{t('logPanel.filterEntity')}</span>
+                <select
+                  className="organization-log-panel__select"
+                  value={entityFilter}
+                  onChange={(event) => setEntityFilter(event.target.value as typeof entityFilter)}
+                >
+                  {ENTITY_FILTERS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {t(option.label)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <label className="form-field">
               <span className="form-label">{t('logPanel.filterAction')}</span>

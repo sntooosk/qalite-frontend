@@ -20,6 +20,7 @@ import { DeleteEnvironmentModal } from '../components/environments/DeleteEnviron
 import { OrganizationLogPanel } from '../components/OrganizationLogPanel';
 import { useStoreOrganizationBranding } from '../hooks/useStoreOrganizationBranding';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
+import { ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
 
 export const EnvironmentManagePage = () => {
   const { environmentId } = useParams<{ environmentId: string }>();
@@ -181,6 +182,10 @@ export const EnvironmentManagePage = () => {
             <h1 className="section-title">{translation('editEnvironmentModal.editEnvironment')}</h1>
             <p className="section-subtitle">{translation('editEnvironmentModal.updateInfo')}</p>
           </div>
+          <div className="page-actions">
+            <span className="badge">{translation(ENVIRONMENT_STATUS_LABEL[environment.status])}</span>
+            <span className="badge badge--muted">{environment.identificador}</span>
+          </div>
         </div>
 
         <div className="page-section">
@@ -267,9 +272,6 @@ export const EnvironmentManagePage = () => {
                 >
                   {translation('editEnvironmentModal.saveChanges')}
                 </Button>
-                <Button type="button" variant="ghost" onClick={() => navigate(-1)}>
-                  {translation('cancel')}
-                </Button>
               </div>
 
               <div className="modal-danger-zone">
@@ -292,7 +294,13 @@ export const EnvironmentManagePage = () => {
 
         {environmentOrganization && (
           <div className="page-section">
-            <OrganizationLogPanel organizationId={environmentOrganization.id} />
+            <OrganizationLogPanel
+              organizationId={environmentOrganization.id}
+              entityTypes={['environment']}
+              entityId={environment.id}
+              defaultCollapsed={false}
+              hideEntityFilter
+            />
           </div>
         )}
       </section>

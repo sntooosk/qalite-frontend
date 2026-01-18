@@ -228,6 +228,10 @@ export const StoreManagePage = () => {
               <h1 className="section-title">{t('storeSummary.storeSettings')}</h1>
               <p className="section-subtitle">{store.name}</p>
             </div>
+            <div className="page-actions">
+              {organization?.name && <span className="badge">{organization.name}</span>}
+              <span className="badge badge--muted">{store.site}</span>
+            </div>
           </div>
 
           <div className="page-section">
@@ -269,9 +273,6 @@ export const StoreManagePage = () => {
                   >
                     {t('storeSummary.saveChanges')}
                   </Button>
-                  <Button type="button" variant="ghost" onClick={() => navigate(-1)}>
-                    {t('cancel')}
-                  </Button>
                 </div>
               </form>
 
@@ -295,7 +296,13 @@ export const StoreManagePage = () => {
 
           {organization && (
             <div className="page-section">
-              <OrganizationLogPanel organizationId={organization.id} />
+              <OrganizationLogPanel
+                organizationId={organization.id}
+                entityTypes={['store']}
+                entityId={store.id}
+                defaultCollapsed={false}
+                hideEntityFilter
+              />
             </div>
           )}
         </section>
