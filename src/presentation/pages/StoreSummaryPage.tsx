@@ -608,10 +608,6 @@ export const StoreSummaryPage = () => {
   }, [scenarios.length]);
 
   useEffect(() => {
-    setIsSuitePreviewTableCollapsed(false);
-  }, [selectedSuitePreviewId]);
-
-  useEffect(() => {
     setIsCategoryListCollapsed(true);
     setScenarioSort(null);
     setSuiteScenarioSort(null);
