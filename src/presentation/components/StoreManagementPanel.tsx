@@ -18,15 +18,20 @@ import { SelectInput } from './SelectInput';
 import {
   AUTOMATION_OPTIONS,
   CRITICALITY_OPTIONS,
+  getAutomationLabelKey,
+  getCriticalityLabelKey,
   getCriticalityClassName,
 } from '../constants/scenarioOptions';
+import {
+  normalizeAutomationEnum,
+  normalizeCriticalityEnum,
+} from '../../shared/utils/scenarioEnums';
 import {
   ScenarioColumnSortControl,
   sortScenarioList,
   type ScenarioSortConfig,
 } from './ScenarioColumnSortControl';
 import { downloadScenarioWorkbook, openScenarioPdf } from '../../shared/utils/storeImportExport';
-import { normalizeAutomationValue } from '../../shared/utils/automation';
 
 interface StoreManagementPanelProps {
   organizationId: string;
@@ -145,14 +150,42 @@ export const StoreManagementPanel = ({
   }, [availableCategories, t]);
 
   const automationSelectOptions = useMemo(
-    () => [{ value: '', label: t('storeSummary.selectAutomation') }, ...AUTOMATION_OPTIONS],
+    () => [
+      { value: '', label: t('storeSummary.selectAutomation') },
+      ...AUTOMATION_OPTIONS.map((opt) => ({
+        ...opt,
+        label: t(opt.label),
+      })),
+    ],
     [t],
   );
 
   const criticalitySelectOptions = useMemo(
-    () => [{ value: '', label: t('storeSummary.selectCriticality') }, ...CRITICALITY_OPTIONS],
+    () => [
+      { value: '', label: t('storeSummary.selectCriticality') },
+      ...CRITICALITY_OPTIONS.map((opt) => ({
+        ...opt,
+        label: t(opt.label),
+      })),
+    ],
     [t],
   );
+
+  const formatAutomationLabel = (value?: string | null) => {
+    const labelKey = getAutomationLabelKey(value);
+    if (labelKey) {
+      return t(labelKey);
+    }
+    return value?.trim() || t('storeSummary.emptyValue');
+  };
+
+  const formatCriticalityLabel = (value?: string | null) => {
+    const labelKey = getCriticalityLabelKey(value);
+    if (labelKey) {
+      return t(labelKey);
+    }
+    return value?.trim() || t('storeSummary.emptyValue');
+  };
 
   useEffect(() => {
     const fetchStores = async () => {
@@ -608,8 +641,8 @@ export const StoreManagementPanel = ({
     const trimmedScenario: StoreScenarioInput = {
       title: scenarioForm.title.trim(),
       category: scenarioForm.category.trim(),
-      automation: scenarioForm.automation.trim(),
-      criticality: scenarioForm.criticality.trim(),
+      automation: normalizeAutomationEnum(scenarioForm.automation.trim()),
+      criticality: normalizeCriticalityEnum(scenarioForm.criticality.trim()),
       observation: scenarioForm.observation.trim(),
       bdd: scenarioForm.bdd.trim(),
     };
@@ -671,16 +704,16 @@ export const StoreManagementPanel = ({
       return;
     }
 
-    const normalizedAutomation = normalizeAutomationValue(scenario.automation);
+    const normalizedAutomation = normalizeAutomationEnum(scenario.automation);
     const automationMatch = AUTOMATION_OPTIONS.find(
-      (option) => normalizeAutomationValue(option.value) === normalizedAutomation,
+      (option) => option.value === normalizedAutomation,
     );
 
     setScenarioForm({
       title: scenario.title,
       category: scenario.category,
       automation: automationMatch?.value ?? scenario.automation,
-      criticality: scenario.criticality,
+      criticality: normalizeCriticalityEnum(scenario.criticality),
       observation: scenario.observation ?? '',
       bdd: scenario.bdd ?? '',
     });
@@ -1259,12 +1292,12 @@ export const StoreManagementPanel = ({
                         <tr key={scenario.id}>
                           <td>{scenario.title}</td>
                           <td>{scenario.category}</td>
-                          <td>{scenario.automation}</td>
+                          <td>{formatAutomationLabel(scenario.automation)}</td>
                           <td>
                             <span
                               className={`criticality-badge ${getCriticalityClassName(scenario.criticality)}`}
                             >
-                              {scenario.criticality}
+                              {formatCriticalityLabel(scenario.criticality)}
                             </span>
                           </td>
                           <td className="scenario-observation">

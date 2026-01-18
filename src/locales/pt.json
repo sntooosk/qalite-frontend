@@ -593,6 +593,7 @@
       "slack.sending": "Enviando...",
       "slack.success": "Resumo enviado para o Slack com sucesso.",
       "slack.error": "Não foi possível enviar o resumo para o Slack.",
+      "slack.summaryMessage": "Resumo da suíte {{suiteName}}: {{scenarioCount}} cenários, {{status}}. Link: {{link}}",
       "share.invite": "Convidar para o ambiente",
       "share.publicLink": "Copiar link público",
       "scenarios.title": "Cenários e evidências",

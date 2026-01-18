@@ -30,6 +30,10 @@ import type {
   StoreSuiteInput,
   UpdateStorePayload,
 } from '../../domain/entities/store';
+import {
+  normalizeAutomationEnum,
+  normalizeCriticalityEnum,
+} from '../../shared/utils/scenarioEnums';
 import { firebaseFirestore } from '../database/firebase';
 import { logActivity } from './logs';
 
@@ -91,8 +95,8 @@ const mapScenario = (
   storeId,
   title: ((data.title as string) ?? '').trim(),
   category: ((data.category as string) ?? '').trim(),
-  automation: ((data.automation as string) ?? '').trim(),
-  criticality: ((data.criticality as string) ?? '').trim(),
+  automation: normalizeAutomationEnum((data.automation as string) ?? '') || '',
+  criticality: normalizeCriticalityEnum((data.criticality as string) ?? '') || '',
   observation: ((data.observation as string) ?? '').trim(),
   bdd: ((data.bdd as string) ?? '').trim(),
   createdAt: timestampToDate(data.createdAt),
@@ -130,8 +134,8 @@ const mapCategory = (
 const normalizeScenarioInput = (input: StoreScenarioInput): StoreScenarioInput => ({
   title: input.title.trim(),
   category: input.category.trim(),
-  automation: input.automation.trim(),
-  criticality: input.criticality.trim(),
+  automation: normalizeAutomationEnum(input.automation.trim()),
+  criticality: normalizeCriticalityEnum(input.criticality.trim()),
   observation: input.observation.trim(),
   bdd: input.bdd.trim(),
 });
