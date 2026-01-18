@@ -59,7 +59,7 @@ export const OrganizationDashboardPage = () => {
     };
 
     void fetchOrganization();
-  }, [isInitializing, navigate, showToast, user]);
+  }, [isInitializing, navigate, showToast, user, t]);
 
   useEffect(() => {
     setActiveOrganization(organization ?? null);
