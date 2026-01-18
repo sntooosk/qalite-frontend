@@ -592,6 +592,7 @@
       "slack.sending": "Sending...",
       "slack.success": "Summary successfully sent to Slack.",
       "slack.error": "Failed to send the summary to Slack.",
+      "slack.summaryMessage": "Suite {{suiteName}} summary: {{scenarioCount}} scenarios, {{status}}. Link: {{link}}",
       "share.invite": "Invite to environment",
       "share.publicLink": "Copy public link",
       "scenarios.title": "Scenarios and evidence",

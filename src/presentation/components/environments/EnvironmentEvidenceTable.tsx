@@ -16,6 +16,8 @@ import {
 } from '../ScenarioColumnSortControl';
 import { ENVIRONMENT_PLATFORM_LABEL } from '../../../shared/config/environmentLabels';
 import { isAutomatedScenario } from '../../../shared/utils/automation';
+import { getCriticalityLabelKey } from '../../constants/scenarioOptions';
+import { normalizeCriticalityEnum } from '../../../shared/utils/scenarioEnums';
 import { useToast } from '../../context/ToastContext';
 import { scenarioExecutionService } from '../../../application/use-cases/ScenarioExecutionUseCase';
 import { useAuth } from '../../hooks/useAuth';
@@ -175,7 +177,7 @@ export const EnvironmentEvidenceTable = ({
   const criticalityOptions = useMemo(() => {
     const criticalities = new Set<string>();
     scenarioEntries.forEach(([, data]) => {
-      const normalized = data.criticidade?.trim();
+      const normalized = normalizeCriticalityEnum(data.criticidade);
       if (normalized) {
         criticalities.add(normalized);
       }
@@ -189,7 +191,7 @@ export const EnvironmentEvidenceTable = ({
       scenarioEntries.filter(([, data]) => {
         const matchesCategory = categoryFilter ? data.categoria === categoryFilter : true;
         const matchesCriticality = criticalityFilter
-          ? data.criticidade === criticalityFilter
+          ? normalizeCriticalityEnum(data.criticidade) === criticalityFilter
           : true;
         return matchesCategory && matchesCriticality;
       }),
@@ -226,6 +228,14 @@ export const EnvironmentEvidenceTable = ({
   useEffect(() => {
     setVisibleCount(20);
   }, [categoryFilter, criticalityFilter, scenarioSort, scenarioEntries.length]);
+
+  const formatCriticalityLabel = (value?: string | null) => {
+    const labelKey = getCriticalityLabelKey(value);
+    if (labelKey) {
+      return translation(labelKey);
+    }
+    return value?.trim() || translation('storeSummary.emptyValue');
+  };
   const handleStatusChange = async (
     scenarioId: string,
     platform: EnvironmentScenarioPlatform,
@@ -373,11 +383,15 @@ export const EnvironmentEvidenceTable = ({
             aria-label={translation('environmentEvidenceTable.filters_criticidade')}
           >
             <option value="">{translation('environmentEvidenceTable.filters_todas')}</option>
-            {criticalityOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
+            {criticalityOptions.map((option) => {
+              const labelKey = getCriticalityLabelKey(option);
+              const label = labelKey ? translation(labelKey) : option;
+              return (
+                <option key={option} value={option}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
         </label>
       </div>
@@ -415,7 +429,7 @@ export const EnvironmentEvidenceTable = ({
               <tr key={scenarioId}>
                 <td>{data.titulo}</td>
                 <td>{data.categoria}</td>
-                <td>{data.criticidade}</td>
+                <td>{formatCriticalityLabel(data.criticidade)}</td>
                 <td>
                   {data.observacao || translation('environmentEvidenceTable.observacao_none')}
                 </td>

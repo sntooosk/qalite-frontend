@@ -36,6 +36,8 @@ interface SlackSummaryBuilderOptions {
   totalTimeMs: number;
   scenarioCount: number;
   executedScenariosCount: number;
+  progressLabel: string;
+  publicLink: string;
   urls: string[];
   bugsCount: number;
   participantProfiles: UserSummary[];
@@ -113,6 +115,12 @@ const buildSlackTaskSummaryPayload = (
   translation: (key: string, opts?: TOptions) => string,
 ): SlackTaskSummaryPayload => {
   const suiteName = environment.suiteName?.trim() || translation('dynamic.suiteNameFallback');
+  const summaryMessage = translation('environment.slack.summaryMessage', {
+    suiteName,
+    scenarioCount: options.scenarioCount,
+    status: options.progressLabel,
+    link: options.publicLink,
+  });
   const attendees = buildAttendeesList(environment, options.participantProfiles, translation);
   const attendeeList = attendees ?? [];
   const uniqueParticipantsCount = new Set(environment.participants ?? []).size;
@@ -148,6 +156,7 @@ const buildSlackTaskSummaryPayload = (
       monitoredUrls,
       attendees: attendeeList,
     },
+    message: summaryMessage,
   };
 };
 
@@ -346,6 +355,8 @@ export const EnvironmentPage = () => {
             totalTimeMs: totalMs,
             scenarioCount,
             executedScenariosCount,
+            progressLabel,
+            publicLink: shareLinks.public,
             urls,
             bugsCount: bugs.length,
             participantProfiles,

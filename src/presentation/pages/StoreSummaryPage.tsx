@@ -10,7 +10,6 @@ import type {
   StoreSuite,
   StoreSuiteInput,
 } from '../../domain/entities/store';
-import type { StoreExportPayload } from '../../infrastructure/external/stores';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { scenarioExecutionService } from '../../application/use-cases/ScenarioExecutionUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
@@ -25,7 +24,16 @@ import { TextArea } from '../components/TextArea';
 import { SelectInput } from '../components/SelectInput';
 import { Modal } from '../components/Modal';
 import { PageLoader } from '../components/PageLoader';
-import { AUTOMATION_OPTIONS, CRITICALITY_OPTIONS } from '../constants/scenarioOptions';
+import {
+  AUTOMATION_OPTIONS,
+  CRITICALITY_OPTIONS,
+  getAutomationLabelKey,
+  getCriticalityLabelKey,
+} from '../constants/scenarioOptions';
+import {
+  normalizeAutomationEnum,
+  normalizeCriticalityEnum,
+} from '../../shared/utils/scenarioEnums';
 import { EnvironmentKanban } from '../components/environments/EnvironmentKanban';
 import { PaginationControls } from '../components/PaginationControls';
 import {
@@ -35,12 +43,8 @@ import {
   type ScenarioSortConfig,
 } from '../components/ScenarioColumnSortControl';
 import { useStoreEnvironments } from '../hooks/useStoreEnvironments';
-import {
-  downloadJsonFile,
-  openScenarioPdf,
-  validateScenarioImportPayload,
-} from '../../shared/utils/storeImportExport';
-import { isAutomatedScenario, normalizeAutomationValue } from '../../shared/utils/automation';
+import { openScenarioPdf } from '../../shared/utils/storeImportExport';
+import { isAutomatedScenario } from '../../shared/utils/automation';
 import { formatDurationFromMs } from '../../shared/utils/time';
 import type { ScenarioAverageMap } from '../../infrastructure/external/scenarioExecutions';
 import { useTranslation } from 'react-i18next';
@@ -75,7 +79,7 @@ interface StoreHighlight {
   onClick?: () => void;
 }
 
-type ExportFormat = 'json' | 'pdf';
+type ExportFormat = 'pdf';
 
 const emptyScenarioFilters: ScenarioFilters = {
   search: '',
@@ -145,7 +149,6 @@ export const StoreSummaryPage = () => {
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
   const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
   const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
-  const [isSuitePreviewTableCollapsed, setIsSuitePreviewTableCollapsed] = useState(false);
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const [suiteForm, setSuiteForm] = useState<StoreSuiteInput>(emptySuiteForm);
   const [suiteFormError, setSuiteFormError] = useState<string | null>(null);
@@ -164,9 +167,7 @@ export const StoreSummaryPage = () => {
   const [isViewingSuitesOnly, setIsViewingSuitesOnly] = useState(false);
   const suiteListRef = useRef<HTMLDivElement | null>(null);
   const scenarioFormRef = useRef<HTMLFormElement | null>(null);
-  const scenarioFileInputRef = useRef<HTMLInputElement | null>(null);
   const [exportingScenarioFormat, setExportingScenarioFormat] = useState<ExportFormat | null>(null);
-  const [isImportingScenarios, setIsImportingScenarios] = useState(false);
   const { t } = useTranslation();
   const storeSiteInfo = useMemo(
     () => normalizeStoreSite(store?.site, t('storeSummary.notInformed')),
@@ -350,6 +351,22 @@ export const StoreSummaryPage = () => {
     ],
     [t],
   );
+
+  const formatAutomationLabel = (value?: string | null) => {
+    const labelKey = getAutomationLabelKey(value);
+    if (labelKey) {
+      return t(labelKey);
+    }
+    return value?.trim() || t('storeSummary.emptyValue');
+  };
+
+  const formatCriticalityLabel = (value?: string | null) => {
+    const labelKey = getCriticalityLabelKey(value);
+    if (labelKey) {
+      return t(labelKey);
+    }
+    return value?.trim() || t('storeSummary.emptyValue');
+  };
 
   const filteredScenarios = useMemo(
     () => filterScenarios(scenarios, scenarioFilters),
@@ -589,10 +606,6 @@ export const StoreSummaryPage = () => {
       setIsScenarioTableCollapsed(false);
     }
   }, [scenarios.length]);
-
-  useEffect(() => {
-    setIsSuitePreviewTableCollapsed(false);
-  }, [selectedSuitePreviewId]);
 
   useEffect(() => {
     setIsCategoryListCollapsed(true);
@@ -1010,8 +1023,8 @@ export const StoreSummaryPage = () => {
     const trimmedScenario: StoreScenarioInput = {
       title: scenarioForm.title.trim(),
       category: scenarioForm.category.trim(),
-      automation: scenarioForm.automation.trim(),
-      criticality: scenarioForm.criticality.trim(),
+      automation: normalizeAutomationEnum(scenarioForm.automation.trim()),
+      criticality: normalizeCriticalityEnum(scenarioForm.criticality.trim()),
       observation: scenarioForm.observation.trim(),
       bdd: scenarioForm.bdd.trim(),
     };
@@ -1068,16 +1081,16 @@ export const StoreSummaryPage = () => {
       return;
     }
 
-    const normalizedAutomation = normalizeAutomationValue(scenario.automation);
+    const normalizedAutomation = normalizeAutomationEnum(scenario.automation);
     const automationMatch = AUTOMATION_OPTIONS.find(
-      (option) => normalizeAutomationValue(option.value) === normalizedAutomation,
+      (option) => option.value === normalizedAutomation,
     );
 
     setScenarioForm({
       title: scenario.title,
       category: scenario.category,
       automation: automationMatch?.value ?? scenario.automation,
-      criticality: scenario.criticality,
+      criticality: normalizeCriticalityEnum(scenario.criticality),
       observation: scenario.observation ?? '',
       bdd: scenario.bdd ?? '',
     });
@@ -1157,11 +1170,6 @@ export const StoreSummaryPage = () => {
     try {
       setExportingScenarioFormat(format);
       const data = await storeService.exportStore(store.id);
-      const baseFileName = `${store.name.replace(/\s+/g, '_')}_cenarios`;
-
-      if (format === 'json') {
-        downloadJsonFile(data, `${baseFileName}.json`);
-      }
 
       if (format === 'pdf') {
         openScenarioPdf(data, `${store.name} - ${t('scenarios')}`, pdfWindow);
@@ -1176,78 +1184,6 @@ export const StoreSummaryPage = () => {
       pdfWindow?.close();
     } finally {
       setExportingScenarioFormat(null);
-    }
-  };
-
-  const handleScenarioImportClick = () => {
-    if (!canManageScenarios) {
-      return;
-    }
-
-    scenarioFileInputRef.current?.click();
-  };
-
-  const handleScenarioImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (!file || !store) {
-      return;
-    }
-
-    try {
-      setIsImportingScenarios(true);
-      const content = await file.text();
-      const parsed = JSON.parse(content) as StoreExportPayload;
-      validateScenarioImportPayload(parsed);
-
-      const importedStoreName = parsed.store.name.trim().toLowerCase();
-      const selectedStoreName = store.name.trim().toLowerCase();
-      if (
-        parsed.store.id &&
-        parsed.store.id !== store.id &&
-        importedStoreName !== selectedStoreName
-      ) {
-        throw new Error(t('storeSummary.importWrongStore'));
-      }
-
-      if (parsed.scenarios.length === 0) {
-        showToast({ type: 'info', message: t('storeSummary.importNoScenarios') });
-        return;
-      }
-
-      const shouldReplace = window.confirm(t('storeSummary.importConfirmReplace'));
-      const strategy = shouldReplace ? 'replace' : 'merge';
-      const scenariosPayload = parsed.scenarios.map((scenario) => ({
-        title: scenario.title,
-        category: scenario.category,
-        automation: scenario.automation,
-        criticality: scenario.criticality,
-        observation: scenario.observation?.trim() ?? '',
-        bdd: scenario.bdd?.trim() ?? '',
-      }));
-
-      const result = await storeService.importScenarios(store.id, scenariosPayload, strategy);
-      setScenarios(result.scenarios);
-      setStore((previous) =>
-        previous ? { ...previous, scenarioCount: result.scenarios.length } : previous,
-      );
-
-      const feedbackMessage =
-        result.strategy === 'replace'
-          ? t('storeSummary.importReplaceSuccess', { count: result.scenarios.length })
-          : t('storeSummary.importMergeSuccess', {
-              created: result.created,
-              skipped: result.skipped,
-            });
-      console.log(feedbackMessage);
-      showToast({ type: 'success', message: feedbackMessage });
-    } catch (error) {
-      console.error(error);
-      const message = error instanceof Error ? error.message : t('storeSummary.importError');
-      showToast({ type: 'error', message });
-    } finally {
-      setIsImportingScenarios(false);
     }
   };
 
@@ -1334,7 +1270,7 @@ export const StoreSummaryPage = () => {
 
     const trimmedSuite: StoreSuiteInput = {
       name: suiteForm.name.trim(),
-      description: suiteForm.description.trim(),
+      description: '',
       scenarioIds: [...suiteForm.scenarioIds],
     };
 
@@ -1383,7 +1319,7 @@ export const StoreSummaryPage = () => {
 
     setSuiteForm({
       name: suite.name,
-      description: suite.description,
+      description: '',
       scenarioIds: suite.scenarioIds,
     });
     setEditingSuiteId(suite.id);
@@ -1840,15 +1776,6 @@ export const StoreSummaryPage = () => {
                           <Button
                             type="button"
                             variant="ghost"
-                            onClick={() => void handleScenarioExport('json')}
-                            isLoading={exportingScenarioFormat === 'json'}
-                            loadingText={t('exporting')}
-                          >
-                            {t('storeSummary.exportJson')}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
                             onClick={() => void handleScenarioExport('pdf')}
                             isLoading={exportingScenarioFormat === 'pdf'}
                             loadingText={t('exporting')}
@@ -1856,19 +1783,6 @@ export const StoreSummaryPage = () => {
                             {t('storeSummary.exportPdf')}
                           </Button>
                         </div>
-                        {canManageScenarios && (
-                          <div className="scenario-action-group">
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              onClick={handleScenarioImportClick}
-                              isLoading={isImportingScenarios}
-                              loadingText={t('importing')}
-                            >
-                              {t('storeSummary.importJson')}
-                            </Button>
-                          </div>
-                        )}
                         {scenarios.length > 0 && (
                           <button
                             type="button"
@@ -1884,13 +1798,6 @@ export const StoreSummaryPage = () => {
                     ) : null}
                   </div>
                 </div>
-                <input
-                  ref={scenarioFileInputRef}
-                  type="file"
-                  accept="application/json"
-                  className="hidden"
-                  onChange={handleScenarioImportFile}
-                />
                 <div className="scenario-table-wrapper">
                   {viewMode === 'scenarios' ? (
                     isScenarioTableCollapsed ? (
@@ -1991,7 +1898,7 @@ export const StoreSummaryPage = () => {
                                       <tr key={scenario.id}>
                                         <td>{scenario.title}</td>
                                         <td>{scenario.category}</td>
-                                        <td>{scenario.automation}</td>
+                                        <td>{formatAutomationLabel(scenario.automation)}</td>
                                         <td className="scenario-actions">
                                           <button
                                             type="button"
@@ -2054,19 +1961,6 @@ export const StoreSummaryPage = () => {
                               {t('storeSummary.suitesRegistered')}
                             </span>
                             <div className="suite-table-actions">
-                              {selectedSuitePreview && orderedSuitePreviewEntries.length > 0 && (
-                                <button
-                                  type="button"
-                                  className="scenario-table-toggle"
-                                  onClick={() =>
-                                    setIsSuitePreviewTableCollapsed((previous) => !previous)
-                                  }
-                                >
-                                  {isSuitePreviewTableCollapsed
-                                    ? t('storeSummary.maxTable')
-                                    : t('storeSummary.minTable')}
-                                </button>
-                              )}
                               <Button type="button" variant="ghost" onClick={handleBackToSuiteForm}>
                                 {t('storeSummary.backToForm')}
                               </Button>
@@ -2110,18 +2004,8 @@ export const StoreSummaryPage = () => {
                             <p className="section-subtitle">{t('storeSummary.suiteClick')}</p>
                           ) : orderedSuitePreviewEntries.length === 0 ? (
                             <p className="section-subtitle">{t('storeSummary.suiteNoScenarios')}</p>
-                          ) : isSuitePreviewTableCollapsed ? (
-                            <p className="section-subtitle">
-                              {t('storeSummary.suiteTableCollapsed')}
-                            </p>
                           ) : (
                             <div className="suite-preview suite-preview--cards">
-                              <div className="suite-preview-description">
-                                <p className="suite-description">
-                                  {selectedSuitePreview?.description ||
-                                    t('storeSummary.suiteNoDescription')}
-                                </p>
-                              </div>
                               <div className="table-scroll-area">
                                 <table className="suite-preview-table data-table">
                                   <thead>
@@ -2158,7 +2042,9 @@ export const StoreSummaryPage = () => {
                                               {scenario?.category ?? 'N/A'}
                                             </td>
                                             <td data-label="Automação">
-                                              {scenario?.automation ?? '-'}
+                                              {scenario
+                                                ? formatAutomationLabel(scenario.automation)
+                                                : t('storeSummary.emptyValue')}
                                             </td>
                                             <td className="scenario-actions">
                                               <button
@@ -2432,7 +2318,7 @@ export const StoreSummaryPage = () => {
                                                       {scenario.category}
                                                     </td>
                                                     <td data-label="Automação">
-                                                      {scenario.automation}
+                                                      {formatAutomationLabel(scenario.automation)}
                                                     </td>
                                                     <td className="scenario-actions">
                                                       <button
@@ -2506,7 +2392,9 @@ export const StoreSummaryPage = () => {
           const detailScenarioId = detailScenario?.id ?? scenarioDetails?.scenarioId ?? null;
           const timingInfo = getScenarioTimingInfo(detailScenarioId);
           const detailTitle = detailScenario?.title ?? t('storeSummary.deletedScenario');
-          const detailCriticality = detailScenario?.criticality ?? t('storeSummary.emptyValue');
+          const detailCriticality = detailScenario
+            ? formatCriticalityLabel(detailScenario.criticality)
+            : t('storeSummary.emptyValue');
           const detailObservation =
             detailScenario?.observation?.trim() || t('storeSummary.emptyValue');
           const detailBdd = detailScenario?.bdd?.trim() || t('storeSummary.emptyValue');
