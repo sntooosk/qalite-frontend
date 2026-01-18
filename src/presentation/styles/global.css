@@ -4831,6 +4831,10 @@ button.store-summary-highlight:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  .environment-kanban-archived-list {
+    grid-template-columns: 1fr;
+  }
+
   .environment-kanban-header,
   .environment-evidence__header,
   .environment-page__header {

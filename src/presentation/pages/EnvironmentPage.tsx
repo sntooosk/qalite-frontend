@@ -16,7 +16,6 @@ import { useTimeTracking } from '../hooks/useTimeTracking';
 import { useAuth } from '../hooks/useAuth';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
 import { EnvironmentBugList } from '../components/environments/EnvironmentBugList';
-import { EditEnvironmentModal } from '../components/environments/EditEnvironmentModal';
 import { DeleteEnvironmentModal } from '../components/environments/DeleteEnvironmentModal';
 import { copyToClipboard } from '../utils/clipboard';
 import { useStoreOrganizationBranding } from '../hooks/useStoreOrganizationBranding';
@@ -173,7 +172,6 @@ export const EnvironmentPage = () => {
     environment?.storeId ?? null,
   );
   const [searchParams, setSearchParams] = useSearchParams();
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isBugModalOpen, setIsBugModalOpen] = useState(false);
   const [editingBug, setEditingBug] = useState<EnvironmentBug | null>(null);
@@ -612,7 +610,7 @@ export const EnvironmentPage = () => {
                     <Button
                       type="button"
                       variant="ghost"
-                      onClick={() => setIsEditOpen(true)}
+                      onClick={() => navigate(`/environments/${environment.id}/manage`)}
                       data-testid="edit-environment-button"
                     >
                       {translation('environment.edit')}
@@ -731,12 +729,6 @@ export const EnvironmentPage = () => {
           onEdit={handleEditBug}
         />
       </section>
-
-      <EditEnvironmentModal
-        isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
-        environment={environment ?? null}
-      />
 
       <DeleteEnvironmentModal
         isOpen={isDeleteOpen}

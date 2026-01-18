@@ -52,6 +52,11 @@ const StoreSummaryPage = lazy(() =>
 const EnvironmentPage = lazy(() =>
   import('../pages/EnvironmentPage').then(({ EnvironmentPage }) => ({ default: EnvironmentPage })),
 );
+const EnvironmentManagePage = lazy(() =>
+  import('../pages/EnvironmentManagePage').then(({ EnvironmentManagePage }) => ({
+    default: EnvironmentManagePage,
+  })),
+);
 const AdminOrganizationsPage = lazy(() =>
   import('../pages/AdminOrganizationsPage').then(({ AdminOrganizationsPage }) => ({
     default: AdminOrganizationsPage,
@@ -59,6 +64,11 @@ const AdminOrganizationsPage = lazy(() =>
 );
 const AdminStoresPage = lazy(() =>
   import('../pages/AdminStoresPage').then(({ AdminStoresPage }) => ({ default: AdminStoresPage })),
+);
+const StoreManagePage = lazy(() =>
+  import('../pages/StoreManagePage').then(({ StoreManagePage }) => ({
+    default: StoreManagePage,
+  })),
 );
 
 export const AppRoutes = () => (
@@ -79,7 +89,9 @@ export const AppRoutes = () => (
             <Route path="/no-organization" element={<NoOrganizationPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/stores/:storeId" element={<StoreSummaryPage />} />
+            <Route path="/stores/:storeId/manage" element={<StoreManagePage />} />
             <Route path="/environments/:environmentId" element={<EnvironmentPage />} />
+            <Route path="/environments/:environmentId/manage" element={<EnvironmentManagePage />} />
           </Route>
 
           <Route element={<RoleProtectedRoute allowedRoles={['admin']} />}>

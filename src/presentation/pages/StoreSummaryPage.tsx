@@ -220,12 +220,6 @@ export const StoreSummaryPage = () => {
     () => normalizeStoreSite(store?.site, t('storeSummary.notInformed')),
     [store?.site, t],
   );
-  const [isStoreSettingsOpen, setIsStoreSettingsOpen] = useState(false);
-  const [storeSettings, setStoreSettings] = useState({ name: '', site: '' });
-  const [storeSettingsError, setStoreSettingsError] = useState<string | null>(null);
-  const [isUpdatingStore, setIsUpdatingStore] = useState(false);
-  const [isDeletingStore, setIsDeletingStore] = useState(false);
-
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     message: string;
     description?: string;
@@ -660,87 +654,6 @@ export const StoreSummaryPage = () => {
     setSuiteScenarioSort(null);
     setSuitePreviewSort(null);
   }, [storeId]);
-
-  const openStoreSettings = () => {
-    if (!store || !canManageStoreSettings) {
-      return;
-    }
-
-    setStoreSettings({ name: store.name, site: store.site });
-    setStoreSettingsError(null);
-    setIsStoreSettingsOpen(true);
-  };
-
-  const closeStoreSettings = () => {
-    setIsStoreSettingsOpen(false);
-    setStoreSettingsError(null);
-  };
-
-  const handleStoreSettingsSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!store || !canManageStoreSettings) {
-      return;
-    }
-
-    const trimmedName = storeSettings.name.trim();
-    const trimmedSite = storeSettings.site.trim();
-
-    if (!trimmedName) {
-      setStoreSettingsError(t('storeSummary.storeNameRequired'));
-      return;
-    }
-
-    if (!trimmedSite) {
-      setStoreSettingsError(t('storeSummary.storeSiteRequired'));
-      return;
-    }
-
-    try {
-      setIsUpdatingStore(true);
-      const updated = await storeService.update(store.id, {
-        name: trimmedName,
-        site: trimmedSite,
-        stage: store.stage,
-      });
-
-      setStore(updated);
-      setStoreSettings({ name: updated.name, site: updated.site });
-      closeStoreSettings();
-      showToast({ type: 'success', message: t('storeSummary.storeUpdateSuccess') });
-    } catch (error) {
-      console.error(error);
-      const message = error instanceof Error ? error.message : t('storeSummary.storeUpdateError');
-      setStoreSettingsError(message);
-      showToast({ type: 'error', message });
-    } finally {
-      setIsUpdatingStore(false);
-    }
-  };
-
-  const handleRemoveStore = async () => {
-    if (!store || !canManageStoreSettings) {
-      return;
-    }
-
-    try {
-      setIsDeletingStore(true);
-      await storeService.delete(store.id);
-      closeStoreSettings();
-      showToast({ type: 'success', message: t('storeSummary.storeRemoveSuccess') });
-      const redirectTo =
-        user?.role === 'admin'
-          ? `/admin/organizations?organizationId=${store.organizationId}`
-          : '/dashboard';
-      navigate(redirectTo, { replace: true });
-    } catch (error) {
-      console.error(error);
-      const message = error instanceof Error ? error.message : t('storeSummary.storeRemoveError');
-      showToast({ type: 'error', message });
-    } finally {
-      setIsDeletingStore(false);
-    }
-  };
 
   useEffect(() => {
     setSuiteForm(emptySuiteForm);
@@ -1421,18 +1334,6 @@ export const StoreSummaryPage = () => {
     }
   };
 
-  const openDeleteStoreModal = () => {
-    if (!store || !canManageStoreSettings) {
-      return;
-    }
-
-    setDeleteConfirmation({
-      message: t('storeSummary.storeDeleteConfirm', { name: store.name }),
-      description: t('storeSummary.storeDeleteWarning'),
-      onConfirm: handleRemoveStore,
-    });
-  };
-
   const openDeleteCategoryModal = (category: StoreCategory) => {
     if (!store) {
       return;
@@ -1537,7 +1438,11 @@ export const StoreSummaryPage = () => {
             </div>
             {store && canManageStoreSettings && (
               <div className="store-summary__actions">
-                <Button type="button" variant="secondary" onClick={openStoreSettings}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => navigate(`/stores/${store.id}/manage`)}
+                >
                   {t('storeSummary.storeConfigurations')}
                 </Button>
               </div>
@@ -2519,76 +2424,6 @@ export const StoreSummaryPage = () => {
         })()}
       </Modal>
 
-      <Modal
-        isOpen={isStoreSettingsOpen}
-        onClose={closeStoreSettings}
-        title={t('storeSummary.storeSettings')}
-      >
-        {storeSettingsError && (
-          <p className="form-message form-message--error">{storeSettingsError}</p>
-        )}
-        <form
-          className="form-grid"
-          onSubmit={handleStoreSettingsSubmit}
-          data-testid="store-settings-form"
-        >
-          <TextInput
-            id="store-settings-name"
-            label={t('storeSummary.storeName')}
-            value={storeSettings.name}
-            onChange={(event) =>
-              setStoreSettings((previous) => ({ ...previous, name: event.target.value }))
-            }
-            required
-            dataTestId="store-settings-name"
-          />
-          <TextInput
-            id="store-settings-site"
-            label={t('storeSummary.storeUrl')}
-            value={storeSettings.site}
-            onChange={(event) =>
-              setStoreSettings((previous) => ({ ...previous, site: event.target.value }))
-            }
-            required
-            dataTestId="store-settings-site"
-          />
-          <div className="form-actions">
-            <Button
-              type="submit"
-              isLoading={isUpdatingStore}
-              loadingText={t('storeSummary.saving')}
-              data-testid="save-store-settings"
-            >
-              {t('storeSummary.saveChanges')}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={closeStoreSettings}
-              disabled={isUpdatingStore}
-              data-testid="cancel-store-settings"
-            >
-              {t('cancel')}
-            </Button>
-          </div>
-        </form>
-
-        <div className="modal-danger-zone">
-          <div>
-            <h4>{t('storeSummary.removeStore')}</h4>
-            <p>{t('storeSummary.removeStoreWarning')}</p>
-          </div>
-          <button
-            type="button"
-            className="link-danger"
-            onClick={openDeleteStoreModal}
-            disabled={isDeletingStore}
-            data-testid="delete-store-button"
-          >
-            {t('storeSummary.removeStore')}
-          </button>
-        </div>
-      </Modal>
       <ConfirmDeleteModal
         isOpen={Boolean(deleteConfirmation)}
         message={deleteConfirmation?.message}
