@@ -31,7 +31,6 @@ import {
   getCriticalityClassName,
   getCriticalityLabelKey,
 } from '../constants/scenarioOptions';
-import { CopyIcon } from '../components/icons';
 import {
   normalizeAutomationEnum,
   normalizeCriticalityEnum,
@@ -1056,25 +1055,6 @@ export const StoreSummaryPage = () => {
     setScenarioForm(emptyScenarioForm);
     setEditingScenarioId(null);
     setScenarioFormError(null);
-  };
-
-  const handleCopyBdd = async (bdd: string) => {
-    if (!bdd.trim()) {
-      showToast({ type: 'error', message: t('storeSummary.bddEmpty') });
-      return;
-    }
-
-    try {
-      if (!navigator?.clipboard) {
-        showToast({ type: 'error', message: t('storeSummary.bddClipboardUnavailable') });
-        return;
-      }
-      await navigator.clipboard.writeText(bdd);
-      showToast({ type: 'success', message: t('storeSummary.bddCopied') });
-    } catch (error) {
-      console.error(error);
-      showToast({ type: 'error', message: t('storeSummary.bddCopyError') });
-    }
   };
 
   const handleScenarioSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -2455,7 +2435,6 @@ export const StoreSummaryPage = () => {
             ? translateBddKeywords(detailBddValue, i18n.language)
             : '';
           const detailBdd = localizedBdd || t('storeSummary.emptyValue');
-          const hasDetailBdd = Boolean(detailBddValue);
 
           return (
             <div className="scenario-details">
@@ -2487,18 +2466,7 @@ export const StoreSummaryPage = () => {
                 <p className="scenario-details-text">{detailObservation}</p>
               </div>
               <div className="scenario-details-section">
-                <div className="scenario-details-section-header">
-                  <span className="scenario-details-label">{t('storeSummary.bdd')}</span>
-                  <button
-                    type="button"
-                    className="scenario-copy-button scenario-copy-button--with-icon"
-                    onClick={() => void handleCopyBdd(localizedBdd)}
-                    disabled={!hasDetailBdd}
-                  >
-                    <CopyIcon aria-hidden className="icon" />
-                    {t('storeSummary.copyBdd')}
-                  </button>
-                </div>
+                <span className="scenario-details-label">{t('storeSummary.bdd')}</span>
                 <p className="scenario-details-text">{detailBdd}</p>
               </div>
             </div>
