@@ -11,6 +11,7 @@ import { useOrganizationBranding } from '../context/OrganizationBrandingContext'
 import { Layout } from '../components/Layout';
 import { PageLoader } from '../components/PageLoader';
 import { Button } from '../components/Button';
+import { BackButton } from '../components/BackButton';
 import { TextInput } from '../components/TextInput';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { OrganizationLogPanel } from '../components/OrganizationLogPanel';
@@ -402,9 +403,7 @@ export const OrganizationManagePage = () => {
     return (
       <Layout>
         <section className="page-container">
-          <Button type="button" variant="ghost" onClick={() => navigate('/admin')}>
-            ← {translation('back')}
-          </Button>
+          <BackButton label={translation('back')} onClick={() => navigate('/admin')} />
           <p className="section-subtitle">
             {translation('AdminStoresPage.stores-title-no-org-selected')}
           </p>
@@ -419,13 +418,12 @@ export const OrganizationManagePage = () => {
         <section className="page-container">
           <div className="page-header">
             <div>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => navigate(`/admin/organizations?organizationId=${organization.id}`)}
-              >
-                ← {translation('back')}
-              </Button>
+              <BackButton
+                label={translation('back')}
+                onClick={() =>
+                  navigate(`/admin/organizations?organizationId=${organization.id}`)
+                }
+              />
               <h1 className="section-title">
                 {translation('AdminStoresPage.modal-org-title', {
                   organizationName: organization.name,

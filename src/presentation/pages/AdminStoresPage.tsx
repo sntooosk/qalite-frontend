@@ -11,13 +11,13 @@ import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
+import { BackButton } from '../components/BackButton';
 import { TextInput } from '../components/TextInput';
 import { Modal } from '../components/Modal';
 import { UserAvatar } from '../components/UserAvatar';
 import { SimpleBarChart } from '../components/SimpleBarChart';
 import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanban';
 import { BarChartIcon, SparklesIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
-import { OrganizationLogPanel } from '../components/OrganizationLogPanel';
 import { isAutomatedScenario } from '../../shared/utils/automation';
 import { useTranslation } from 'react-i18next';
 
@@ -297,14 +297,11 @@ export const AdminStoresPage = () => {
       <section className="page-container" data-testid="stores-page">
         <div className="page-header">
           <div>
-            <button
-              type="button"
-              className="link-button"
+            <BackButton
+              label={translation('back')}
               onClick={() => navigate('/admin')}
-              data-testid="stores-back-button"
-            >
-              &larr; {translation('back')}
-            </button>
+              dataTestId="stores-back-button"
+            />
             <h1 className="section-title">
               {selectedOrganization
                 ? translation('AdminStoresPage.stores-title-org-selected', {
@@ -358,12 +355,6 @@ export const AdminStoresPage = () => {
           </div>
         ) : (
           <>
-            {selectedOrganization && (
-              <div className="page-section">
-                <OrganizationLogPanel organizationId={selectedOrganization.id} />
-              </div>
-            )}
-
             <div className="dashboard-grid">
               {stores.map((store) => (
                 <div

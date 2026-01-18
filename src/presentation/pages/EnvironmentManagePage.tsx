@@ -6,6 +6,7 @@ import { environmentService } from '../../application/use-cases/EnvironmentUseCa
 import { Layout } from '../components/Layout';
 import { PageLoader } from '../components/PageLoader';
 import { Button } from '../components/Button';
+import { BackButton } from '../components/BackButton';
 import { SelectInput } from '../components/SelectInput';
 import { TextArea } from '../components/TextArea';
 import { TextInput } from '../components/TextInput';
@@ -162,9 +163,7 @@ export const EnvironmentManagePage = () => {
     return (
       <Layout>
         <section className="page-container">
-          <button type="button" className="link-button" onClick={() => navigate(-1)}>
-            {translation('environment.back')}
-          </button>
+          <BackButton label={translation('back')} onClick={() => navigate(-1)} />
           <p className="section-subtitle">{translation('environment.notFound')}</p>
         </section>
       </Layout>
@@ -176,9 +175,7 @@ export const EnvironmentManagePage = () => {
       <section className="page-container">
         <div className="page-header">
           <div>
-            <Button type="button" variant="ghost" onClick={() => navigate(-1)}>
-              ← {translation('environment.back')}
-            </Button>
+            <BackButton label={translation('back')} onClick={() => navigate(-1)} />
             <h1 className="section-title">{translation('editEnvironmentModal.editEnvironment')}</h1>
             <p className="section-subtitle">{translation('editEnvironmentModal.updateInfo')}</p>
           </div>

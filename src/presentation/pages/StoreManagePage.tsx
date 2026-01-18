@@ -12,9 +12,9 @@ import { useOrganizationBranding } from '../context/OrganizationBrandingContext'
 import { Layout } from '../components/Layout';
 import { PageLoader } from '../components/PageLoader';
 import { Button } from '../components/Button';
+import { BackButton } from '../components/BackButton';
 import { TextInput } from '../components/TextInput';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
-import { OrganizationLogPanel } from '../components/OrganizationLogPanel';
 
 export const StoreManagePage = () => {
   const { storeId } = useParams<{ storeId: string }>();
@@ -207,9 +207,7 @@ export const StoreManagePage = () => {
     return (
       <Layout>
         <section className="page-container">
-          <Button type="button" variant="ghost" onClick={() => navigate(-1)}>
-            ← {t('back')}
-          </Button>
+          <BackButton label={t('back')} onClick={() => navigate(-1)} />
           <p className="section-subtitle">{t('storeSummary.notFound')}</p>
         </section>
       </Layout>
@@ -222,9 +220,10 @@ export const StoreManagePage = () => {
         <section className="page-container">
           <div className="page-header">
             <div>
-              <Button type="button" variant="ghost" onClick={() => navigate(`/stores/${store.id}`)}>
-                ← {t('back')}
-              </Button>
+              <BackButton
+                label={t('back')}
+                onClick={() => navigate(`/stores/${store.id}`)}
+              />
               <h1 className="section-title">{t('storeSummary.storeSettings')}</h1>
               <p className="section-subtitle">{store.name}</p>
             </div>
@@ -294,17 +293,6 @@ export const StoreManagePage = () => {
             </div>
           </div>
 
-          {organization && (
-            <div className="page-section">
-              <OrganizationLogPanel
-                organizationId={organization.id}
-                entityTypes={['store']}
-                entityId={store.id}
-                defaultCollapsed={false}
-                hideEntityFilter
-              />
-            </div>
-          )}
         </section>
       </Layout>
 

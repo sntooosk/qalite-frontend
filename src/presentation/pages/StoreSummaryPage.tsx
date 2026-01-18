@@ -18,6 +18,7 @@ import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
+import { BackButton } from '../components/BackButton';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { TextInput } from '../components/TextInput';
 import { TextArea } from '../components/TextArea';
@@ -1421,9 +1422,7 @@ export const StoreSummaryPage = () => {
         <section className="page-container">
           <div className="page-header">
             <div>
-              <Button type="button" variant="ghost" onClick={handleBackClick}>
-                ← {t('back')}
-              </Button>
+              <BackButton label={t('back')} onClick={handleBackClick} />
               <h1 className="section-title">
                 {isLoadingStore
                   ? t('storeSummary.loadingStore')

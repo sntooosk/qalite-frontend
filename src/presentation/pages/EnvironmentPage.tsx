@@ -9,6 +9,7 @@ import type { SlackTaskSummaryPayload } from '../../infrastructure/external/slac
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
 import { slackService } from '../../application/use-cases/SlackUseCase';
 import { Button } from '../components/Button';
+import { BackButton } from '../components/BackButton';
 import { Layout } from '../components/Layout';
 import { useToast } from '../context/ToastContext';
 import { useEnvironmentRealtime } from '../hooks/useEnvironmentRealtime';
@@ -530,9 +531,7 @@ export const EnvironmentPage = () => {
     return (
       <Layout>
         <section className="page-container environment-page">
-          <button type="button" className="link-button" onClick={() => navigate(-1)}>
-            {translation('environment.back')}
-          </button>
+          <BackButton label={translation('back')} onClick={() => navigate(-1)} />
           <p className="section-subtitle">{translation('environment.notFound')}</p>
         </section>
       </Layout>
@@ -544,9 +543,7 @@ export const EnvironmentPage = () => {
       <section className="page-container environment-page" data-testid="environment-page">
         <div className="environment-page__header">
           <div>
-            <button type="button" className="link-button" onClick={() => navigate(-1)}>
-              {translation('environment.back')}
-            </button>
+            <BackButton label={translation('back')} onClick={() => navigate(-1)} />
             <div>
               <h1 className="section-title">
                 {environment.identificador ?? translation('environment.anonymousEnvironment')}
