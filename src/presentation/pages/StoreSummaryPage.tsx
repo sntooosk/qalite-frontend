@@ -28,6 +28,7 @@ import {
   AUTOMATION_OPTIONS,
   CRITICALITY_OPTIONS,
   getAutomationLabelKey,
+  getCriticalityClassName,
   getCriticalityLabelKey,
 } from '../constants/scenarioOptions';
 import {
@@ -42,6 +43,7 @@ import {
   sortScenarioList,
   type ScenarioSortConfig,
 } from '../components/ScenarioColumnSortControl';
+import { CopyIcon } from '../components/icons';
 import { useStoreEnvironments } from '../hooks/useStoreEnvironments';
 import { openScenarioPdf } from '../../shared/utils/storeImportExport';
 import { isAutomatedScenario } from '../../shared/utils/automation';
@@ -1003,6 +1005,25 @@ export const StoreSummaryPage = () => {
       showToast({ type: 'error', message });
     } finally {
       setDeletingCategoryId(null);
+    }
+  };
+
+  const handleCopyBdd = async (bdd: string) => {
+    if (!bdd.trim()) {
+      showToast({ type: 'error', message: t('storeSummary.bddEmpty') });
+      return;
+    }
+
+    try {
+      if (!navigator?.clipboard) {
+        showToast({ type: 'error', message: t('storeSummary.bddClipboardUnavailable') });
+        return;
+      }
+      await navigator.clipboard.writeText(bdd);
+      showToast({ type: 'success', message: t('storeSummary.bddCopied') });
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: t('storeSummary.bddCopyError') });
     }
   };
 
@@ -2397,7 +2418,9 @@ export const StoreSummaryPage = () => {
             : t('storeSummary.emptyValue');
           const detailObservation =
             detailScenario?.observation?.trim() || t('storeSummary.emptyValue');
-          const detailBdd = detailScenario?.bdd?.trim() || t('storeSummary.emptyValue');
+          const detailBddValue = detailScenario?.bdd?.trim() ?? '';
+          const detailBdd = detailBddValue || t('storeSummary.emptyValue');
+          const hasDetailBdd = Boolean(detailBddValue);
 
           return (
             <div className="scenario-details">
@@ -2411,7 +2434,17 @@ export const StoreSummaryPage = () => {
                 </div>
                 <div className="scenario-details-item">
                   <span className="scenario-details-label">{t('storeSummary.criticality')}</span>
-                  <span className="scenario-details-value">{detailCriticality}</span>
+                  {detailScenario ? (
+                    <span
+                      className={`criticality-badge ${getCriticalityClassName(
+                        detailScenario.criticality,
+                      )}`}
+                    >
+                      {detailCriticality}
+                    </span>
+                  ) : (
+                    <span className="scenario-details-value">{detailCriticality}</span>
+                  )}
                 </div>
               </div>
               <div className="scenario-details-section">
@@ -2419,7 +2452,18 @@ export const StoreSummaryPage = () => {
                 <p className="scenario-details-text">{detailObservation}</p>
               </div>
               <div className="scenario-details-section">
-                <span className="scenario-details-label">{t('storeSummary.bdd')}</span>
+                <div className="scenario-details-section-header">
+                  <span className="scenario-details-label">{t('storeSummary.bdd')}</span>
+                  <button
+                    type="button"
+                    className="scenario-copy-button scenario-copy-button--with-icon"
+                    onClick={() => void handleCopyBdd(detailBddValue)}
+                    disabled={!hasDetailBdd}
+                  >
+                    <CopyIcon aria-hidden className="icon" />
+                    {t('storeSummary.copyBdd')}
+                  </button>
+                </div>
                 <p className="scenario-details-text">{detailBdd}</p>
               </div>
             </div>

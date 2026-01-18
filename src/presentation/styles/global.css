@@ -1038,6 +1038,14 @@ a.text-link:hover {
   gap: 0.5rem;
 }
 
+.scenario-details-section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .scenario-details-text {
   margin: 0;
   color: var(--color-text-secondary);
@@ -3229,6 +3237,9 @@ button.store-summary-highlight:focus-visible {
 }
 
 .scenario-copy-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   border: 1px solid var(--color-border);
   border-radius: 999px;
   background: var(--color-surface-alt);
@@ -3247,6 +3258,11 @@ button.store-summary-highlight:focus-visible {
   background: var(--color-primary);
   border-color: var(--color-primary);
   color: #fff;
+}
+
+.scenario-copy-button--with-icon .icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 .category-manager {

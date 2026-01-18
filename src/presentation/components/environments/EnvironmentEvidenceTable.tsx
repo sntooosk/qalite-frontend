@@ -16,7 +16,7 @@ import {
 } from '../ScenarioColumnSortControl';
 import { ENVIRONMENT_PLATFORM_LABEL } from '../../../shared/config/environmentLabels';
 import { isAutomatedScenario } from '../../../shared/utils/automation';
-import { getCriticalityLabelKey } from '../../constants/scenarioOptions';
+import { getCriticalityClassName, getCriticalityLabelKey } from '../../constants/scenarioOptions';
 import { normalizeCriticalityEnum } from '../../../shared/utils/scenarioEnums';
 import { useToast } from '../../context/ToastContext';
 import { scenarioExecutionService } from '../../../application/use-cases/ScenarioExecutionUseCase';
@@ -429,7 +429,13 @@ export const EnvironmentEvidenceTable = ({
               <tr key={scenarioId}>
                 <td>{data.titulo}</td>
                 <td>{data.categoria}</td>
-                <td>{formatCriticalityLabel(data.criticidade)}</td>
+                <td>
+                  <span
+                    className={`criticality-badge ${getCriticalityClassName(data.criticidade)}`}
+                  >
+                    {formatCriticalityLabel(data.criticidade)}
+                  </span>
+                </td>
                 <td>
                   {data.observacao || translation('environmentEvidenceTable.observacao_none')}
                 </td>
