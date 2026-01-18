@@ -789,8 +789,8 @@ const normalizeParticipants = (
 
   return uniqueIds.map((id) => {
     const profile = profileMap.get(id);
-    const displayName =
-      profile?.displayName?.trim() || profile?.email || t('dynamic.fallbackParticipant', { id });
+    const displayName = profile?.displayName?.trim() || profile?.email || t('dynamic.fallbackParticipant', { id });
+
 
     return {
       id,
@@ -828,7 +828,8 @@ const translateEnvironmentOption = (
   return translated === key ? value : translated;
 };
 
-const translateScenarioStatus = (value: EnvironmentScenarioStatus, t: (key: string) => string) => {
+ const translateScenarioStatus = (value: EnvironmentScenarioStatus, t: (key: string) => string) => {
+
   const key = `environmentEvidenceTable.status_${value}`;
   const translated = t(key);
   return translated === key ? value : translated;
