@@ -28,8 +28,10 @@ import {
   AUTOMATION_OPTIONS,
   CRITICALITY_OPTIONS,
   getAutomationLabelKey,
+  getCriticalityClassName,
   getCriticalityLabelKey,
 } from '../constants/scenarioOptions';
+import { CopyIcon } from '../components/icons';
 import {
   normalizeAutomationEnum,
   normalizeCriticalityEnum,
@@ -100,6 +102,50 @@ const normalizeStoreSite = (site?: string | null, message?: string) => {
   return { label: trimmed, href };
 };
 
+const translateBddKeywords = (bdd: string, locale: string) => {
+  const normalizedLocale = locale.toLowerCase();
+  const target = normalizedLocale.startsWith('pt') ? 'pt' : 'en';
+
+  const keywordMap =
+    target === 'pt'
+      ? {
+          given: 'Dado',
+          when: 'Quando',
+          then: 'Então',
+          and: 'E',
+          but: 'Mas',
+        }
+      : {
+          dado: 'Given',
+          quando: 'When',
+          então: 'Then',
+          entao: 'Then',
+          e: 'And',
+          mas: 'But',
+        };
+
+  const sourcePattern =
+    target === 'pt'
+      ? /^(?<indent>\s*)(?<keyword>Given|When|Then|And|But)\b/i
+      : /^(?<indent>\s*)(?<keyword>Dado|Quando|Então|Entao|E|Mas)\b/i;
+
+  return bdd
+    .split('\n')
+    .map((line) => {
+      const match = line.match(sourcePattern);
+      if (!match || !match.groups?.keyword) {
+        return line;
+      }
+      const keyword = match.groups.keyword.toLowerCase();
+      const translated = keywordMap[keyword as keyof typeof keywordMap];
+      if (!translated) {
+        return line;
+      }
+      return `${match.groups.indent}${translated}${line.slice(match[0].length)}`;
+    })
+    .join('\n');
+};
+
 const filterScenarios = (list: StoreScenario[], filters: ScenarioFilters) => {
   const searchValue = filters.search.trim().toLowerCase();
   const filtered = list.filter((scenario) => {
@@ -135,6 +181,7 @@ export const StoreSummaryPage = () => {
   const [scenarioDetails, setScenarioDetails] = useState<{
     scenario: StoreScenario | null;
     scenarioId: string | null;
+    source: 'scenario-table' | 'suite-preview';
   } | null>(null);
   const [isSavingScenario, setIsSavingScenario] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -168,7 +215,7 @@ export const StoreSummaryPage = () => {
   const suiteListRef = useRef<HTMLDivElement | null>(null);
   const scenarioFormRef = useRef<HTMLFormElement | null>(null);
   const [exportingScenarioFormat, setExportingScenarioFormat] = useState<ExportFormat | null>(null);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const storeSiteInfo = useMemo(
     () => normalizeStoreSite(store?.site, t('storeSummary.notInformed')),
     [store?.site, t],
@@ -1012,6 +1059,25 @@ export const StoreSummaryPage = () => {
     setScenarioFormError(null);
   };
 
+  const handleCopyBdd = async (bdd: string) => {
+    if (!bdd.trim()) {
+      showToast({ type: 'error', message: t('storeSummary.bddEmpty') });
+      return;
+    }
+
+    try {
+      if (!navigator?.clipboard) {
+        showToast({ type: 'error', message: t('storeSummary.bddClipboardUnavailable') });
+        return;
+      }
+      await navigator.clipboard.writeText(bdd);
+      showToast({ type: 'success', message: t('storeSummary.bddCopied') });
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: t('storeSummary.bddCopyError') });
+    }
+  };
+
   const handleScenarioSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setScenarioFormError(null);
@@ -1132,10 +1198,12 @@ export const StoreSummaryPage = () => {
   const handleOpenScenarioDetails = (
     scenario: StoreScenario | null,
     scenarioId?: string | null,
+    source: 'scenario-table' | 'suite-preview' = 'scenario-table',
   ) => {
     setScenarioDetails({
       scenario,
       scenarioId: scenario?.id ?? scenarioId ?? null,
+      source,
     });
   };
 
@@ -1902,7 +1970,13 @@ export const StoreSummaryPage = () => {
                                         <td className="scenario-actions">
                                           <button
                                             type="button"
-                                            onClick={() => handleOpenScenarioDetails(scenario)}
+                                            onClick={() =>
+                                              handleOpenScenarioDetails(
+                                                scenario,
+                                                scenario.id,
+                                                'scenario-table',
+                                              )
+                                            }
                                             className="scenario-details-button"
                                           >
                                             {t('storeSummary.viewDetails')}
@@ -2054,6 +2128,7 @@ export const StoreSummaryPage = () => {
                                                   handleOpenScenarioDetails(
                                                     scenario ?? null,
                                                     scenarioId,
+                                                    'suite-preview',
                                                   )
                                                 }
                                               >
@@ -2287,7 +2362,6 @@ export const StoreSummaryPage = () => {
                                                     onChange={setSuiteScenarioSort}
                                                   />
                                                 </th>
-                                                <th>{t('storeSummary.actions')}</th>
                                               </tr>
                                             </thead>
                                             <tbody>
@@ -2319,17 +2393,6 @@ export const StoreSummaryPage = () => {
                                                     </td>
                                                     <td data-label="Automação">
                                                       {formatAutomationLabel(scenario.automation)}
-                                                    </td>
-                                                    <td className="scenario-actions">
-                                                      <button
-                                                        type="button"
-                                                        className="scenario-details-button"
-                                                        onClick={() =>
-                                                          handleOpenScenarioDetails(scenario)
-                                                        }
-                                                      >
-                                                        {t('storeSummary.viewDetails')}
-                                                      </button>
                                                     </td>
                                                   </tr>
                                                 );
@@ -2397,7 +2460,13 @@ export const StoreSummaryPage = () => {
             : t('storeSummary.emptyValue');
           const detailObservation =
             detailScenario?.observation?.trim() || t('storeSummary.emptyValue');
-          const detailBdd = detailScenario?.bdd?.trim() || t('storeSummary.emptyValue');
+          const detailBddValue = detailScenario?.bdd?.trim() ?? '';
+          const localizedBdd = detailBddValue
+            ? translateBddKeywords(detailBddValue, i18n.language)
+            : '';
+          const detailBdd = localizedBdd || t('storeSummary.emptyValue');
+          const canCopyBdd = scenarioDetails?.source === 'scenario-table';
+          const hasDetailBdd = Boolean(detailBddValue);
 
           return (
             <div className="scenario-details">
@@ -2411,7 +2480,17 @@ export const StoreSummaryPage = () => {
                 </div>
                 <div className="scenario-details-item">
                   <span className="scenario-details-label">{t('storeSummary.criticality')}</span>
-                  <span className="scenario-details-value">{detailCriticality}</span>
+                  {detailScenario ? (
+                    <span
+                      className={`criticality-badge scenario-details-criticality ${getCriticalityClassName(
+                        detailScenario.criticality,
+                      )}`}
+                    >
+                      {detailCriticality}
+                    </span>
+                  ) : (
+                    <span className="scenario-details-value">{detailCriticality}</span>
+                  )}
                 </div>
               </div>
               <div className="scenario-details-section">
@@ -2419,7 +2498,20 @@ export const StoreSummaryPage = () => {
                 <p className="scenario-details-text">{detailObservation}</p>
               </div>
               <div className="scenario-details-section">
-                <span className="scenario-details-label">{t('storeSummary.bdd')}</span>
+                <div className="scenario-details-section-header">
+                  <span className="scenario-details-label">{t('storeSummary.bdd')}</span>
+                  {canCopyBdd && (
+                    <button
+                      type="button"
+                      className="scenario-copy-button scenario-copy-button--with-icon"
+                      onClick={() => void handleCopyBdd(localizedBdd)}
+                      disabled={!hasDetailBdd}
+                    >
+                      <CopyIcon aria-hidden className="icon" />
+                      {t('storeSummary.copyBdd')}
+                    </button>
+                  )}
+                </div>
                 <p className="scenario-details-text">{detailBdd}</p>
               </div>
             </div>

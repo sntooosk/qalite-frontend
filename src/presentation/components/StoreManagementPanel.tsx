@@ -611,25 +611,6 @@ export const StoreManagementPanel = ({
     }
   };
 
-  const handleCopyBdd = async (bdd: string) => {
-    if (!bdd.trim()) {
-      showToast({ type: 'error', message: t('storeSummary.bddEmpty') });
-      return;
-    }
-
-    try {
-      if (!navigator?.clipboard) {
-        showToast({ type: 'error', message: t('storeSummary.bddClipboardUnavailable') });
-        return;
-      }
-      await navigator.clipboard.writeText(bdd);
-      showToast({ type: 'success', message: t('storeSummary.bddCopied') });
-    } catch (error) {
-      console.error(error);
-      showToast({ type: 'error', message: t('storeSummary.bddCopyError') });
-    }
-  };
-
   const handleScenarioSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setScenarioFormError(null);
@@ -1305,13 +1286,7 @@ export const StoreManagementPanel = ({
                           </td>
                           <td className="scenario-bdd">
                             {hasBdd ? (
-                              <button
-                                type="button"
-                                className="scenario-copy-button"
-                                onClick={() => void handleCopyBdd(scenario.bdd)}
-                              >
-                                {t('storeSummary.copyBdd')}
-                              </button>
+                              <span className="scenario-details-text">{scenario.bdd}</span>
                             ) : (
                               <span className="scenario-bdd--empty">
                                 {t('storeManagement.emptyValue')}
