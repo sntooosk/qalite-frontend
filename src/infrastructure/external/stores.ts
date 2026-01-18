@@ -17,8 +17,6 @@ import {
 
 import type {
   CreateStorePayload,
-  ImportScenariosResult,
-  ImportSuitesResult,
   Store,
   StoreCategory,
   StoreCategoryInput,
@@ -26,7 +24,6 @@ import type {
   StoreScenario,
   StoreScenarioInput,
   StoreSuite,
-  StoreSuiteExportPayload,
   StoreSuiteInput,
   UpdateStorePayload,
 } from '../../domain/entities/store';
@@ -386,121 +383,6 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
   }
 };
 
-export const replaceScenarios = async (
-  storeId: string,
-  scenarios: StoreScenarioInput[],
-): Promise<StoreScenario[]> => {
-  const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-  const storeSnapshot = await getDoc(storeRef);
-
-  if (!storeSnapshot.exists()) {
-    throw new Error('Loja não encontrada.');
-  }
-
-  const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
-  const existingScenarios = await getDocs(scenariosCollection);
-
-  const batch = writeBatch(firebaseFirestore);
-
-  existingScenarios.forEach((docSnapshot) => {
-    batch.delete(docSnapshot.ref);
-  });
-
-  scenarios.forEach((scenario) => {
-    const scenarioRef = doc(scenariosCollection);
-    batch.set(scenarioRef, {
-      ...normalizeScenarioInput(scenario),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  });
-
-  batch.update(storeRef, {
-    scenarioCount: scenarios.length,
-    updatedAt: serverTimestamp(),
-  });
-
-  await batch.commit();
-
-  const context = await getStoreContext(storeId);
-  if (context.organizationId) {
-    await logActivity({
-      organizationId: context.organizationId,
-      entityId: storeId,
-      entityType: 'scenario',
-      action: 'update',
-      message: `Massa de cenários substituída (${scenarios.length} itens) em ${context.storeName || 'Loja'}`,
-    });
-  }
-
-  return listScenarios(storeId);
-};
-
-export const mergeScenarios = async (
-  storeId: string,
-  scenarios: StoreScenarioInput[],
-): Promise<ImportScenariosResult> => {
-  const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-  const storeSnapshot = await getDoc(storeRef);
-
-  if (!storeSnapshot.exists()) {
-    throw new Error('Loja não encontrada.');
-  }
-
-  const existingScenarios = await listScenarios(storeId);
-  const existingTitles = new Set(existingScenarios.map((scenario) => scenario.title.toLowerCase()));
-
-  const normalizedScenarios = scenarios.map((scenario) => normalizeScenarioInput(scenario));
-  const scenariosToCreate = normalizedScenarios.filter(
-    (scenario) => !existingTitles.has(scenario.title.toLowerCase()),
-  );
-
-  if (scenariosToCreate.length === 0) {
-    return {
-      created: 0,
-      skipped: normalizedScenarios.length,
-      scenarios: existingScenarios,
-    };
-  }
-
-  const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
-  const batch = writeBatch(firebaseFirestore);
-
-  scenariosToCreate.forEach((scenario) => {
-    const scenarioRef = doc(scenariosCollection);
-    batch.set(scenarioRef, {
-      ...scenario,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  });
-
-  batch.update(storeRef, {
-    scenarioCount: existingScenarios.length + scenariosToCreate.length,
-    updatedAt: serverTimestamp(),
-  });
-
-  await batch.commit();
-
-  const context = await getStoreContext(storeId, storeSnapshot.data() ?? {});
-  if (context.organizationId && scenariosToCreate.length > 0) {
-    await logActivity({
-      organizationId: context.organizationId,
-      entityId: storeId,
-      entityType: 'scenario',
-      action: 'update',
-      message: `Massa de cenários mesclada: ${scenariosToCreate.length} novo(s) em ${context.storeName || 'Loja'}`,
-    });
-  }
-
-  const updatedScenarios = await listScenarios(storeId);
-  return {
-    created: scenariosToCreate.length,
-    skipped: normalizedScenarios.length - scenariosToCreate.length,
-    scenarios: updatedScenarios,
-  };
-};
-
 export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
@@ -600,105 +482,6 @@ export const deleteSuite = async (storeId: string, suiteId: string): Promise<voi
       message: `Suíte removida: ${(snapshot.data()?.name as string | undefined) ?? suiteId} (${context.storeName || 'Loja'})`,
     });
   }
-};
-
-export const replaceSuites = async (
-  storeId: string,
-  suites: StoreSuiteInput[],
-): Promise<StoreSuite[]> => {
-  const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-  const storeSnapshot = await getDoc(storeRef);
-
-  if (!storeSnapshot.exists()) {
-    throw new Error('Loja não encontrada.');
-  }
-
-  const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
-  const existingSuites = await getDocs(suitesCollection);
-  const batch = writeBatch(firebaseFirestore);
-
-  existingSuites.forEach((docSnapshot) => {
-    batch.delete(docSnapshot.ref);
-  });
-
-  suites.forEach((suite) => {
-    const suiteRef = doc(suitesCollection);
-    batch.set(suiteRef, {
-      ...normalizeSuiteInput(suite),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  });
-
-  await batch.commit();
-  const context = await getStoreContext(storeId, storeSnapshot.data());
-  if (context.organizationId) {
-    await logActivity({
-      organizationId: context.organizationId,
-      entityId: storeId,
-      entityType: 'suite',
-      action: 'update',
-      message: `Suítes substituídas (${suites.length} itens) em ${context.storeName || 'Loja'}`,
-    });
-  }
-  return listSuites(storeId);
-};
-
-export const mergeSuites = async (
-  storeId: string,
-  suites: StoreSuiteInput[],
-): Promise<ImportSuitesResult> => {
-  const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-  const storeSnapshot = await getDoc(storeRef);
-
-  if (!storeSnapshot.exists()) {
-    throw new Error('Loja não encontrada.');
-  }
-
-  const existingSuites = await listSuites(storeId);
-  const existingNames = new Set(existingSuites.map((suite) => suite.name.trim().toLowerCase()));
-  const normalizedSuites = suites.map((suite) => normalizeSuiteInput(suite));
-  const suitesToCreate = normalizedSuites.filter(
-    (suite) => !existingNames.has(suite.name.trim().toLowerCase()),
-  );
-
-  if (suitesToCreate.length === 0) {
-    return {
-      created: 0,
-      skipped: normalizedSuites.length,
-      suites: existingSuites,
-    };
-  }
-
-  const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
-  const batch = writeBatch(firebaseFirestore);
-
-  suitesToCreate.forEach((suite) => {
-    const suiteRef = doc(suitesCollection);
-    batch.set(suiteRef, {
-      ...suite,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  });
-
-  await batch.commit();
-  const context = await getStoreContext(storeId, storeSnapshot.data());
-  if (context.organizationId && suitesToCreate.length > 0) {
-    await logActivity({
-      organizationId: context.organizationId,
-      entityId: storeId,
-      entityType: 'suite',
-      action: 'update',
-      message: `Suítes mescladas: ${suitesToCreate.length} nova(s) em ${context.storeName || 'Loja'}`,
-    });
-  }
-  const updatedSuites = await listSuites(storeId);
-  return {
-    created: suitesToCreate.length,
-    skipped: normalizedSuites.length - suitesToCreate.length,
-    suites: updatedSuites,
-  };
 };
 
 export const listCategories = async (storeId: string): Promise<StoreCategory[]> => {
@@ -863,93 +646,5 @@ export const exportStoreData = async (storeId: string): Promise<StoreExportPaylo
     },
     exportedAt: new Date().toISOString(),
     scenarios,
-  };
-};
-
-export const exportStoreSuites = async (storeId: string): Promise<StoreSuiteExportPayload> => {
-  const store = await getStore(storeId);
-
-  if (!store) {
-    throw new Error('Loja não encontrada.');
-  }
-
-  const [suites, scenarios] = await Promise.all([listSuites(storeId), listScenarios(storeId)]);
-  const scenarioMap = scenarios.reduce<Record<string, string>>((acc, scenario) => {
-    acc[scenario.id] = scenario.title;
-    return acc;
-  }, {});
-
-  return {
-    store: {
-      id: store.id,
-      name: store.name,
-      site: store.site,
-      stage: store.stage,
-      scenarioCount: scenarios.length,
-    },
-    exportedAt: new Date().toISOString(),
-    suites: suites.map((suite) => ({
-      id: suite.id,
-      name: suite.name,
-      description: suite.description,
-      scenarios: suite.scenarioIds.map((scenarioId) => ({
-        id: scenarioId,
-        title: scenarioMap[scenarioId] ?? '',
-      })),
-    })),
-  };
-};
-
-export const importStoreScenarios = async (
-  storeId: string,
-  scenarios: StoreScenarioInput[],
-  strategy: 'replace' | 'merge',
-): Promise<{
-  scenarios: StoreScenario[];
-  created: number;
-  skipped: number;
-  strategy: 'replace' | 'merge';
-}> => {
-  if (strategy === 'replace') {
-    const replaced = await replaceScenarios(storeId, scenarios);
-    return {
-      scenarios: replaced,
-      created: replaced.length,
-      skipped: 0,
-      strategy,
-    };
-  }
-
-  const result = await mergeScenarios(storeId, scenarios);
-  return {
-    ...result,
-    strategy,
-  };
-};
-
-export const importStoreSuites = async (
-  storeId: string,
-  suites: StoreSuiteInput[],
-  strategy: 'replace' | 'merge',
-): Promise<{
-  suites: StoreSuite[];
-  created: number;
-  skipped: number;
-  strategy: 'replace' | 'merge';
-}> => {
-  if (strategy === 'replace') {
-    const replaced = await replaceSuites(storeId, suites);
-    return {
-      suites: replaced,
-      created: replaced.length,
-      skipped: 0,
-      strategy,
-    };
-  }
-
-  const result = await mergeSuites(storeId, suites);
-  return {
-    ...result,
-    strategy,
   };
 };
