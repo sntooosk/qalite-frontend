@@ -8,6 +8,7 @@ import type { UserSummary } from '../../domain/entities/user';
 import type { SlackTaskSummaryPayload } from '../../infrastructure/external/slack';
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
 import { slackService } from '../../application/use-cases/SlackUseCase';
+import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { useToast } from '../context/ToastContext';
@@ -532,9 +533,7 @@ export const EnvironmentPage = () => {
     return (
       <Layout>
         <section className="page-container environment-page">
-          <button type="button" className="link-button" onClick={() => navigate(-1)}>
-            {translation('environment.back')}
-          </button>
+          <BackButton label={translation('back')} />
           <p className="section-subtitle">{translation('environment.notFound')}</p>
         </section>
       </Layout>
@@ -546,9 +545,7 @@ export const EnvironmentPage = () => {
       <section className="page-container environment-page" data-testid="environment-page">
         <div className="environment-page__header">
           <div>
-            <button type="button" className="link-button" onClick={() => navigate(-1)}>
-              {translation('environment.back')}
-            </button>
+            <BackButton label={translation('back')} />
             <div>
               <h1 className="section-title">
                 {environment.identificador ?? translation('environment.anonymousEnvironment')}

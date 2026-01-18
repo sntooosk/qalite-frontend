@@ -286,21 +286,13 @@ export const UserDashboardPage = () => {
         )}
       </section>
 
-      {organization && (
+      {organization && hasBrowserstackCredentials && (
         <section className="page-container">
-          {hasBrowserstackCredentials ? (
-            <BrowserstackKanban
-              builds={browserstackBuilds}
-              isLoading={isLoadingBrowserstack}
-              onRefresh={loadBrowserstackBuilds}
-            />
-          ) : (
-            <div className="card">
-              <span className="badge">{t('userPage.browserstackBadge')}</span>
-              <h2 className="section-title">{t('userPage.browserstackTitle')}</h2>
-              <p className="section-subtitle">{t('userPage.browserstackSubtitle')}</p>
-            </div>
-          )}
+          <BrowserstackKanban
+            builds={browserstackBuilds}
+            isLoading={isLoadingBrowserstack}
+            onRefresh={loadBrowserstackBuilds}
+          />
         </section>
       )}
     </Layout>

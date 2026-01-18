@@ -361,6 +361,8 @@
         "description": "Use the button above to register the first organization."
       },
       "viewStores": "View stores",
+      "storeCount": "{{count}} store",
+      "storeCount_plural": "{{count}} stores",
       "members": {
         "one": "member",
         "other": "members"

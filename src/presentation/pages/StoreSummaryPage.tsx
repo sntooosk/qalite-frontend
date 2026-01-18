@@ -17,6 +17,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Layout } from '../components/Layout';
+import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { TextInput } from '../components/TextInput';
@@ -1520,9 +1521,13 @@ export const StoreSummaryPage = () => {
         <section className="page-container">
           <div className="page-header">
             <div>
-              <Button type="button" variant="ghost" onClick={handleBackClick}>
-                ← {t('back')}
-              </Button>
+              <BackButton
+                label={t('back')}
+                onClick={(event) => {
+                  event.preventDefault();
+                  handleBackClick();
+                }}
+              />
               <h1 className="section-title">
                 {isLoadingStore
                   ? t('storeSummary.loadingStore')

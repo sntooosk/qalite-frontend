@@ -362,6 +362,8 @@
         "description": "Utilize o botão acima para cadastrar a primeira organização."
       },
       "viewStores": "Ver lojas",
+      "storeCount": "{{count}} loja",
+      "storeCount_plural": "{{count}} lojas",
       "members": {
         "one": "membro",
         "other": "membros"

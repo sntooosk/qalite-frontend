@@ -12,6 +12,7 @@ import { userService } from '../../application/use-cases/UserUseCase';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Layout } from '../components/Layout';
+import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { TextInput } from '../components/TextInput';
@@ -674,14 +675,14 @@ export const AdminStoresPage = () => {
       <section className="page-container" data-testid="stores-page">
         <div className="page-header">
           <div>
-            <button
-              type="button"
-              className="link-button"
-              onClick={() => navigate('/admin')}
+            <BackButton
+              label={translation('back')}
+              onClick={(event) => {
+                event.preventDefault();
+                navigate('/admin');
+              }}
               data-testid="stores-back-button"
-            >
-              &larr; {translation('back')}
-            </button>
+            />
             <h1 className="section-title">
               {selectedOrganization
                 ? translation('AdminStoresPage.stores-title-org-selected', {
@@ -840,24 +841,12 @@ export const AdminStoresPage = () => {
                 />
               </section>
 
-              {hasBrowserstackCredentials ? (
+              {hasBrowserstackCredentials && (
                 <BrowserstackKanban
                   builds={browserstackBuilds}
                   isLoading={isLoadingBrowserstack}
                   onRefresh={loadBrowserstackBuilds}
                 />
-              ) : (
-                <div className="card">
-                  <span className="badge">
-                    {translation('AdminStoresPage.browserstack-card-badge')}
-                  </span>
-                  <h2 className="section-title">
-                    {translation('AdminStoresPage.browserstack-card-title')}
-                  </h2>
-                  <p className="section-subtitle">
-                    {translation('AdminStoresPage.browserstack-card-subtitle')}
-                  </p>
-                </div>
               )}
             </div>
           </>
