@@ -102,6 +102,50 @@ const normalizeStoreSite = (site?: string | null, message?: string) => {
   return { label: trimmed, href };
 };
 
+const translateBddKeywords = (bdd: string, locale: string) => {
+  const normalizedLocale = locale.toLowerCase();
+  const target = normalizedLocale.startsWith('pt') ? 'pt' : 'en';
+
+  const keywordMap =
+    target === 'pt'
+      ? {
+          given: 'Dado',
+          when: 'Quando',
+          then: 'Então',
+          and: 'E',
+          but: 'Mas',
+        }
+      : {
+          dado: 'Given',
+          quando: 'When',
+          então: 'Then',
+          entao: 'Then',
+          e: 'And',
+          mas: 'But',
+        };
+
+  const sourcePattern =
+    target === 'pt'
+      ? /^(?<indent>\s*)(?<keyword>Given|When|Then|And|But)\b/i
+      : /^(?<indent>\s*)(?<keyword>Dado|Quando|Então|Entao|E|Mas)\b/i;
+
+  return bdd
+    .split('\n')
+    .map((line) => {
+      const match = line.match(sourcePattern);
+      if (!match || !match.groups?.keyword) {
+        return line;
+      }
+      const keyword = match.groups.keyword.toLowerCase();
+      const translated = keywordMap[keyword as keyof typeof keywordMap];
+      if (!translated) {
+        return line;
+      }
+      return `${match.groups.indent}${translated}${line.slice(match[0].length)}`;
+    })
+    .join('\n');
+};
+
 const filterScenarios = (list: StoreScenario[], filters: ScenarioFilters) => {
   const searchValue = filters.search.trim().toLowerCase();
   const filtered = list.filter((scenario) => {
@@ -170,7 +214,7 @@ export const StoreSummaryPage = () => {
   const suiteListRef = useRef<HTMLDivElement | null>(null);
   const scenarioFormRef = useRef<HTMLFormElement | null>(null);
   const [exportingScenarioFormat, setExportingScenarioFormat] = useState<ExportFormat | null>(null);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const storeSiteInfo = useMemo(
     () => normalizeStoreSite(store?.site, t('storeSummary.notInformed')),
     [store?.site, t],
@@ -2308,7 +2352,6 @@ export const StoreSummaryPage = () => {
                                                     onChange={setSuiteScenarioSort}
                                                   />
                                                 </th>
-                                                <th>{t('storeSummary.actions')}</th>
                                               </tr>
                                             </thead>
                                             <tbody>
@@ -2340,17 +2383,6 @@ export const StoreSummaryPage = () => {
                                                     </td>
                                                     <td data-label="Automação">
                                                       {formatAutomationLabel(scenario.automation)}
-                                                    </td>
-                                                    <td className="scenario-actions">
-                                                      <button
-                                                        type="button"
-                                                        className="scenario-details-button"
-                                                        onClick={() =>
-                                                          handleOpenScenarioDetails(scenario)
-                                                        }
-                                                      >
-                                                        {t('storeSummary.viewDetails')}
-                                                      </button>
                                                     </td>
                                                   </tr>
                                                 );
@@ -2419,7 +2451,10 @@ export const StoreSummaryPage = () => {
           const detailObservation =
             detailScenario?.observation?.trim() || t('storeSummary.emptyValue');
           const detailBddValue = detailScenario?.bdd?.trim() ?? '';
-          const detailBdd = detailBddValue || t('storeSummary.emptyValue');
+          const localizedBdd = detailBddValue
+            ? translateBddKeywords(detailBddValue, i18n.language)
+            : '';
+          const detailBdd = localizedBdd || t('storeSummary.emptyValue');
           const hasDetailBdd = Boolean(detailBddValue);
 
           return (
@@ -2436,7 +2471,7 @@ export const StoreSummaryPage = () => {
                   <span className="scenario-details-label">{t('storeSummary.criticality')}</span>
                   {detailScenario ? (
                     <span
-                      className={`criticality-badge ${getCriticalityClassName(
+                      className={`criticality-badge scenario-details-criticality ${getCriticalityClassName(
                         detailScenario.criticality,
                       )}`}
                     >
@@ -2457,7 +2492,7 @@ export const StoreSummaryPage = () => {
                   <button
                     type="button"
                     className="scenario-copy-button scenario-copy-button--with-icon"
-                    onClick={() => void handleCopyBdd(detailBddValue)}
+                    onClick={() => void handleCopyBdd(localizedBdd)}
                     disabled={!hasDetailBdd}
                   >
                     <CopyIcon aria-hidden className="icon" />
