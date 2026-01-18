@@ -31,7 +31,6 @@ import { useEnvironmentDetails } from '../hooks/useEnvironmentDetails';
 import { useEnvironmentEngagement } from '../hooks/useEnvironmentEngagement';
 import { EnvironmentSummaryCard } from '../components/environments/EnvironmentSummaryCard';
 import { TOptions } from 'i18next';
-import { getCriticalityClassName, getCriticalityLabelKey } from '../constants/scenarioOptions';
 
 interface SlackSummaryBuilderOptions {
   formattedTime: string;
@@ -729,31 +728,6 @@ export const EnvironmentPage = () => {
         {detailScenario ? (
           <div className="scenario-details">
             <p className="scenario-details-title">{detailScenario.titulo}</p>
-            <div className="scenario-details-grid">
-              <div className="scenario-details-item">
-                <span className="scenario-details-label">
-                  {translation('environmentEvidenceTable.table_categoria')}
-                </span>
-                <span className="scenario-details-value">
-                  {detailScenario.categoria || translation('storeSummary.emptyValue')}
-                </span>
-              </div>
-              <div className="scenario-details-item">
-                <span className="scenario-details-label">
-                  {translation('environmentEvidenceTable.table_criticidade')}
-                </span>
-                <span
-                  className={`criticality-badge scenario-details-criticality ${getCriticalityClassName(
-                    detailScenario.criticidade,
-                  )}`}
-                >
-                  {(() => {
-                    const labelKey = getCriticalityLabelKey(detailScenario.criticidade);
-                    return labelKey ? translation(labelKey) : detailScenario.criticidade;
-                  })()}
-                </span>
-              </div>
-            </div>
             <div className="scenario-details-section">
               <span className="scenario-details-label">
                 {translation('environmentEvidenceTable.table_observacao')}
@@ -762,6 +736,10 @@ export const EnvironmentPage = () => {
                 {detailScenario.observacao ||
                   translation('environmentEvidenceTable.observacao_none')}
               </p>
+            </div>
+            <div className="scenario-details-section">
+              <span className="scenario-details-label">{translation('storeSummary.bdd')}</span>
+              <p className="scenario-details-text">{translation('storeSummary.emptyValue')}</p>
             </div>
           </div>
         ) : (
