@@ -27,6 +27,7 @@ interface EnvironmentEvidenceTableProps {
   environment: Environment;
   isLocked?: boolean;
   readOnly?: boolean;
+  onViewDetails?: (scenarioId: string) => void;
   onRegisterBug?: (scenarioId: string) => void;
   bugCountByScenario?: Record<string, number>;
   organizationId?: string | null;
@@ -36,6 +37,7 @@ export const EnvironmentEvidenceTable = ({
   environment,
   isLocked,
   readOnly,
+  onViewDetails,
   onRegisterBug,
   bugCountByScenario,
   organizationId,
@@ -52,6 +54,7 @@ export const EnvironmentEvidenceTable = ({
   const [scenarioStartTimes, setScenarioStartTimes] = useState<Record<string, number>>({});
   const [evidenceLinks, setEvidenceLinks] = useState<Record<string, string>>({});
   const [visibleCount, setVisibleCount] = useState(20);
+  const canViewDetails = Boolean(onViewDetails);
 
   const BASE_STATUS_OPTIONS = [
     { value: 'pendente', label: translation('environmentEvidenceTable.status_pendente') },
@@ -415,11 +418,11 @@ export const EnvironmentEvidenceTable = ({
                 onChange={setScenarioSort}
               />
             </th>
-            <th>{translation('environmentEvidenceTable.table_observacao')}</th>
             <th>{translation('environmentEvidenceTable.table_status_mobile')}</th>
             <th>{translation('environmentEvidenceTable.table_status_desktop')}</th>
             <th>{translation('environmentEvidenceTable.table_evidencia')}</th>
             <th>{translation('environmentEvidenceTable.table_bug')}</th>
+            {canViewDetails && <th>{translation('storeSummary.viewDetails')}</th>}
           </tr>
         </thead>
         <tbody>
@@ -435,9 +438,6 @@ export const EnvironmentEvidenceTable = ({
                   >
                     {formatCriticalityLabel(data.criticidade)}
                   </span>
-                </td>
-                <td>
-                  {data.observacao || translation('environmentEvidenceTable.observacao_none')}
                 </td>
 
                 {(['mobile', 'desktop'] as EnvironmentScenarioPlatform[]).map((platform) => {
@@ -542,6 +542,17 @@ export const EnvironmentEvidenceTable = ({
                     )}
                   </div>
                 </td>
+                {canViewDetails && (
+                  <td className="scenario-actions">
+                    <button
+                      type="button"
+                      onClick={() => onViewDetails?.(scenarioId)}
+                      className="scenario-details-button"
+                    >
+                      {translation('storeSummary.viewDetails')}
+                    </button>
+                  </td>
+                )}
               </tr>
             );
           })}

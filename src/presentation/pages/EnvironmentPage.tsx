@@ -22,6 +22,7 @@ import { copyToClipboard } from '../utils/clipboard';
 import { useStoreOrganizationBranding } from '../hooks/useStoreOrganizationBranding';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { PageLoader } from '../components/PageLoader';
+import { Modal } from '../components/Modal';
 import { useUserProfiles } from '../hooks/useUserProfiles';
 import { useEnvironmentBugs } from '../hooks/useEnvironmentBugs';
 import { EnvironmentBugModal } from '../components/environments/EnvironmentBugModal';
@@ -30,6 +31,7 @@ import { useEnvironmentDetails } from '../hooks/useEnvironmentDetails';
 import { useEnvironmentEngagement } from '../hooks/useEnvironmentEngagement';
 import { EnvironmentSummaryCard } from '../components/environments/EnvironmentSummaryCard';
 import { TOptions } from 'i18next';
+import { getCriticalityClassName, getCriticalityLabelKey } from '../constants/scenarioOptions';
 
 interface SlackSummaryBuilderOptions {
   formattedTime: string;
@@ -175,6 +177,7 @@ export const EnvironmentPage = () => {
   const [isBugModalOpen, setIsBugModalOpen] = useState(false);
   const [editingBug, setEditingBug] = useState<EnvironmentBug | null>(null);
   const [defaultBugScenarioId, setDefaultBugScenarioId] = useState<string | null>(null);
+  const [scenarioDetailsId, setScenarioDetailsId] = useState<string | null>(null);
   const [isCopyingMarkdown, setIsCopyingMarkdown] = useState(false);
   const [isSendingSlackSummary, setIsSendingSlackSummary] = useState(false);
   const { setActiveOrganization } = useOrganizationBranding();
@@ -207,6 +210,7 @@ export const EnvironmentPage = () => {
   const canSendSlackSummary = Boolean(slackWebhookUrl);
   const inviteParam = searchParams.get('invite');
   const shouldAutoJoinFromInvite = inviteParam === 'true' || inviteParam === '1';
+  const detailScenario = scenarioDetailsId ? environment?.scenarios?.[scenarioDetailsId] : null;
 
   const clearInviteParam = useCallback(() => {
     if (!inviteParam) {
@@ -217,6 +221,14 @@ export const EnvironmentPage = () => {
     nextParams.delete('invite');
     setSearchParams(nextParams, { replace: true });
   }, [inviteParam, searchParams, setSearchParams]);
+
+  const handleOpenScenarioDetails = useCallback((scenarioId: string) => {
+    setScenarioDetailsId(scenarioId);
+  }, []);
+
+  const handleCloseScenarioDetails = useCallback(() => {
+    setScenarioDetailsId(null);
+  }, []);
 
   useEffect(() => {
     setActiveOrganization(environmentOrganization ?? null);
@@ -672,6 +684,7 @@ export const EnvironmentPage = () => {
             environment={environment}
             isLocked={Boolean(isScenarioLocked)}
             onRegisterBug={handleScenarioBugRequest}
+            onViewDetails={handleOpenScenarioDetails}
             bugCountByScenario={bugCountByScenario}
             organizationId={environmentOrganization?.id ?? null}
           />
@@ -707,6 +720,54 @@ export const EnvironmentPage = () => {
           initialScenarioId={editingBug ? (editingBug.scenarioId ?? null) : defaultBugScenarioId}
         />
       )}
+
+      <Modal
+        isOpen={Boolean(scenarioDetailsId)}
+        onClose={handleCloseScenarioDetails}
+        title={translation('storeSummary.scenarioDetailsTitle')}
+      >
+        {detailScenario ? (
+          <div className="scenario-details">
+            <p className="scenario-details-title">{detailScenario.titulo}</p>
+            <div className="scenario-details-grid">
+              <div className="scenario-details-item">
+                <span className="scenario-details-label">
+                  {translation('environmentEvidenceTable.table_categoria')}
+                </span>
+                <span className="scenario-details-value">
+                  {detailScenario.categoria || translation('storeSummary.emptyValue')}
+                </span>
+              </div>
+              <div className="scenario-details-item">
+                <span className="scenario-details-label">
+                  {translation('environmentEvidenceTable.table_criticidade')}
+                </span>
+                <span
+                  className={`criticality-badge scenario-details-criticality ${getCriticalityClassName(
+                    detailScenario.criticidade,
+                  )}`}
+                >
+                  {(() => {
+                    const labelKey = getCriticalityLabelKey(detailScenario.criticidade);
+                    return labelKey ? translation(labelKey) : detailScenario.criticidade;
+                  })()}
+                </span>
+              </div>
+            </div>
+            <div className="scenario-details-section">
+              <span className="scenario-details-label">
+                {translation('environmentEvidenceTable.table_observacao')}
+              </span>
+              <p className="scenario-details-text">
+                {detailScenario.observacao ||
+                  translation('environmentEvidenceTable.observacao_none')}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="section-subtitle">{translation('storeSummary.emptyValue')}</p>
+        )}
+      </Modal>
     </Layout>
   );
 };
