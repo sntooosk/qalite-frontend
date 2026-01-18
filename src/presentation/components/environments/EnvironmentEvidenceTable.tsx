@@ -28,8 +28,6 @@ interface EnvironmentEvidenceTableProps {
   isLocked?: boolean;
   readOnly?: boolean;
   onViewDetails?: (scenarioId: string) => void;
-  onRegisterBug?: (scenarioId: string) => void;
-  bugCountByScenario?: Record<string, number>;
   organizationId?: string | null;
 }
 
@@ -38,21 +36,16 @@ export const EnvironmentEvidenceTable = ({
   isLocked,
   readOnly,
   onViewDetails,
-  onRegisterBug,
-  bugCountByScenario,
   organizationId,
 }: EnvironmentEvidenceTableProps) => {
   const { t: translation } = useTranslation();
-  const { isUpdating, handleEvidenceUpload, changeScenarioStatus } = useScenarioEvidence(
-    environment.id,
-  );
+  const { isUpdating, changeScenarioStatus } = useScenarioEvidence(environment.id);
   const { showToast } = useToast();
   const { user } = useAuth();
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [criticalityFilter, setCriticalityFilter] = useState('');
   const [scenarioStartTimes, setScenarioStartTimes] = useState<Record<string, number>>({});
-  const [evidenceLinks, setEvidenceLinks] = useState<Record<string, string>>({});
   const [visibleCount, setVisibleCount] = useState(20);
   const canViewDetails = Boolean(onViewDetails);
 
@@ -140,17 +133,6 @@ export const EnvironmentEvidenceTable = ({
     });
   }, [environment?.scenarios, environmentStartTimestamp]);
 
-  useEffect(() => {
-    const nextLinks: Record<string, string> = {};
-    Object.entries(environment.scenarios ?? {}).forEach(([scenarioId, data]) => {
-      nextLinks[scenarioId] = data.evidenciaArquivoUrl ?? '';
-    });
-    setEvidenceLinks(nextLinks);
-  }, [environment.scenarios]);
-
-  const handleEvidenceLinkChange = (scenarioId: string, link: string) => {
-    setEvidenceLinks((previous) => ({ ...previous, [scenarioId]: link }));
-  };
   const scenarioEntries = useMemo(() => {
     const entries = Object.entries(environment.scenarios ?? {});
     return entries.sort(([firstId, first], [secondId, second]) => {
@@ -321,31 +303,6 @@ export const EnvironmentEvidenceTable = ({
     }
   };
 
-  const handleEvidenceSave = async (scenarioId: string) => {
-    const link = (evidenceLinks[scenarioId] ?? '').trim();
-
-    if (!link) {
-      showToast({
-        type: 'error',
-        message: translation('environmentEvidenceTable.toast_save_error'),
-      });
-      return;
-    }
-
-    try {
-      await handleEvidenceUpload(scenarioId, link);
-      showToast({
-        type: 'success',
-        message: translation('environmentEvidenceTable.toast_save_success'),
-      });
-    } catch {
-      showToast({
-        type: 'error',
-        message: translation('environmentEvidenceTable.toast_save_error'),
-      });
-    }
-  };
-
   if (scenarioEntries.length === 0) {
     return (
       <p className="section-subtitle">{translation('environmentEvidenceTable.cenarios_vazio')}</p>
@@ -420,8 +377,6 @@ export const EnvironmentEvidenceTable = ({
             </th>
             <th>{translation('environmentEvidenceTable.table_status_mobile')}</th>
             <th>{translation('environmentEvidenceTable.table_status_desktop')}</th>
-            <th>{translation('environmentEvidenceTable.table_evidencia')}</th>
-            <th>{translation('environmentEvidenceTable.table_bug')}</th>
             {canViewDetails && <th>{translation('storeSummary.viewDetails')}</th>}
           </tr>
         </thead>
@@ -474,74 +429,6 @@ export const EnvironmentEvidenceTable = ({
                     </td>
                   );
                 })}
-                <td>
-                  <div className="scenario-evidence-cell">
-                    {data.evidenciaArquivoUrl ? (
-                      <a
-                        href={data.evidenciaArquivoUrl}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="text-link"
-                      >
-                        {translation('environmentEvidenceTable.evidencia_abrir')}
-                      </a>
-                    ) : (
-                      <span className="section-subtitle">
-                        {translation('environmentEvidenceTable.evidencia_sem')}
-                      </span>
-                    )}
-                    {!isReadOnly && (
-                      <div className="scenario-evidence-actions">
-                        <input
-                          type="url"
-                          value={evidenceLinks[scenarioId] ?? ''}
-                          onChange={(event) =>
-                            handleEvidenceLinkChange(scenarioId, event.target.value)
-                          }
-                          placeholder={translation(
-                            'environmentEvidenceTable.evidencia_placeholder',
-                          )}
-                          className="scenario-evidence-input"
-                        />
-                        <button
-                          type="button"
-                          className="scenario-evidence-save"
-                          onClick={() => handleEvidenceSave(scenarioId)}
-                          disabled={isUpdating}
-                        >
-                          {translation('environmentEvidenceTable.evidencia_salvar')}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </td>
-                <td>
-                  <div className="scenario-bug-cell">
-                    <span className="scenario-bug-cell__label">
-                      {(() => {
-                        const count = bugCountByScenario?.[scenarioId] ?? 0;
-                        if (count === 0) {
-                          return translation('environmentEvidenceTable.bug_nenhum');
-                        }
-                        if (count === 1) {
-                          return translation('environmentEvidenceTable.bug_um');
-                        }
-                        return translation('environmentEvidenceTable.bug_varios', { count });
-                      })()}
-                    </span>
-
-                    {!isReadOnly && (
-                      <button
-                        type="button"
-                        className="scenario-bug-cell__action"
-                        onClick={() => onRegisterBug?.(scenarioId)}
-                        disabled={isUpdating || !onRegisterBug}
-                      >
-                        {translation('environmentEvidenceTable.bug_registrar')}
-                      </button>
-                    )}
-                  </div>
-                </td>
                 {canViewDetails && (
                   <td className="scenario-actions">
                     <button

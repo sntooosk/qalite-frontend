@@ -718,9 +718,7 @@ export const EnvironmentPage = () => {
           <EnvironmentEvidenceTable
             environment={environment}
             isLocked={Boolean(isScenarioLocked)}
-            onRegisterBug={handleScenarioBugRequest}
             onViewDetails={handleOpenScenarioDetails}
-            bugCountByScenario={bugCountByScenario}
             organizationId={environmentOrganization?.id ?? null}
           />
         </div>

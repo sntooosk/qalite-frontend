@@ -28,7 +28,7 @@ export const PublicEnvironmentPage = () => {
     Boolean(environment?.status === 'in_progress'),
   );
   const { bugs, isLoading: isLoadingBugs } = useEnvironmentBugs(environment?.id ?? null);
-  const { bugCountByScenario, progressPercentage, progressLabel, scenarioCount, headerMeta, urls } =
+  const { progressPercentage, progressLabel, scenarioCount, headerMeta, urls } =
     useEnvironmentDetails(environment, bugs);
 
   const { t, i18n } = useTranslation();
@@ -103,7 +103,6 @@ export const PublicEnvironmentPage = () => {
             environment={environment}
             isLocked
             readOnly
-            bugCountByScenario={bugCountByScenario}
             organizationId={environmentOrganization?.id ?? null}
           />
         </div>
