@@ -16,19 +16,4 @@ export const MOMENT_OPTIONS_BY_ENVIRONMENT: Record<string, string[]> = {
 
 export const requiresReleaseField = (tipoAmbiente: string): boolean => tipoAmbiente === 'TM';
 
-export const translateEnvironmentOption = (
-  value: string | null | undefined,
-  t: (key: string) => string,
-) => {
-  if (!value) {
-    return '';
-  }
-
-  if (value.startsWith('environmentOptions.')) {
-    return t(value);
-  }
-
-  const key = `environmentOptions.${value}`;
-  const translated = t(key);
-  return translated === key ? value : translated;
-};
+export { translateEnvironmentOption } from '../../shared/utils/environmentOptions';

@@ -1,4 +1,5 @@
 import type { StoreExportPayload, StoreScenario } from '../../domain/entities/store';
+import { formatDateTime } from './time';
 
 const textEncoder = new TextEncoder();
 
@@ -277,8 +278,6 @@ const downloadBlobFile = (blob: Blob, fileName: string) => {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
-
-const formatDateTime = (value: string) => new Date(value).toLocaleString('pt-BR');
 
 const createWorkbookBlob = (sheets: WorksheetDefinition[], exportedAt: string) => {
   const workbookContent = buildWorkbookZip(sheets, exportedAt);
