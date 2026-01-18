@@ -41,6 +41,7 @@ import {
   formatEndDateTime,
   getElapsedMilliseconds,
 } from '../../shared/utils/time';
+import { translateEnvironmentOption } from '../../shared/utils/environmentOptions';
 import i18n from '../../lib/i18n';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
@@ -789,8 +790,8 @@ const normalizeParticipants = (
 
   return uniqueIds.map((id) => {
     const profile = profileMap.get(id);
-    const displayName = profile?.displayName?.trim() || profile?.email || t('dynamic.fallbackParticipant', { id });
-
+    const displayName =
+      profile?.displayName?.trim() || profile?.email || t('dynamic.fallbackParticipant', { id });
 
     return {
       id,
@@ -811,25 +812,7 @@ const buildTimeTrackingSummary = (environment: Environment) => {
   };
 };
 
-const translateEnvironmentOption = (
-  value: string | null | undefined,
-  t: (key: string) => string,
-) => {
-  if (!value) {
-    return '';
-  }
-
-  if (value.startsWith('environmentOptions.')) {
-    return t(value);
-  }
-
-  const key = `environmentOptions.${value}`;
-  const translated = t(key);
-  return translated === key ? value : translated;
-};
-
- const translateScenarioStatus = (value: EnvironmentScenarioStatus, t: (key: string) => string) => {
-
+const translateScenarioStatus = (value: EnvironmentScenarioStatus, t: (key: string) => string) => {
   const key = `environmentEvidenceTable.status_${value}`;
   const translated = t(key);
   return translated === key ? value : translated;
