@@ -28,6 +28,11 @@ const mapLog = (id: string, data: Record<string, unknown>): ActivityLog => {
     entityType: (data.entityType as ActivityLog['entityType']) ?? 'organization',
     action: (data.action as ActivityLog['action']) ?? 'create',
     message: (data.message as string) ?? '',
+    messageKey: typeof data.messageKey === 'string' ? data.messageKey : undefined,
+    messageParams:
+      typeof data.messageParams === 'object' && data.messageParams !== null
+        ? (data.messageParams as Record<string, string | number>)
+        : undefined,
     actorId: (data.actorId as string | undefined | null) ?? null,
     actorName: (data.actorName as string | undefined | null) ?? 'Usuário não identificado',
     createdAt,
@@ -64,6 +69,8 @@ export const logActivity = async (input: ActivityLogInput): Promise<void> => {
     entityType: input.entityType,
     action: input.action,
     message: input.message,
+    messageKey: input.messageKey ?? null,
+    messageParams: input.messageParams ?? null,
     actorId: actor?.uid ?? null,
     actorName: actor?.displayName ?? actor?.email ?? 'Usuário não identificado',
     createdAt: serverTimestamp(),

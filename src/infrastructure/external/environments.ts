@@ -66,11 +66,17 @@ const getStoreOrganizationContext = async (
   };
 };
 
+interface EnvironmentLogMessage {
+  message: string;
+  messageKey: string;
+  messageParams: Record<string, string | number>;
+}
+
 const logEnvironmentActivity = async (
   storeId: string,
   environmentId: string,
   action: ActivityLog['action'],
-  message: string,
+  logMessage: EnvironmentLogMessage,
   entityType: ActivityLog['entityType'] = 'environment',
 ): Promise<void> => {
   const context = await getStoreOrganizationContext(storeId);
@@ -78,12 +84,18 @@ const logEnvironmentActivity = async (
     return;
   }
 
+  const storeLabel = context.storeName || storeId;
   await logActivity({
     organizationId: context.organizationId,
     entityId: environmentId,
     entityType,
     action,
-    message: `${message} (${context.storeName || 'Loja'})`,
+    message: `${logMessage.message} (${storeLabel})`,
+    messageKey: logMessage.messageKey,
+    messageParams: {
+      ...logMessage.messageParams,
+      storeName: storeLabel,
+    },
   });
 };
 
@@ -235,12 +247,11 @@ export const createEnvironment = async (payload: CreateEnvironmentInput): Promis
     (snapshot.data() ?? {}) as Record<string, unknown>,
   );
 
-  await logEnvironmentActivity(
-    environment.storeId,
-    environment.id,
-    'create',
-    `Ambiente criado: ${environment.identificador || environment.id}`,
-  );
+  await logEnvironmentActivity(environment.storeId, environment.id, 'create', {
+    message: `Ambiente criado: ${environment.identificador || environment.id}`,
+    messageKey: 'logMessages.environment.created',
+    messageParams: { environmentId: environment.identificador || environment.id },
+  });
 
   return environment;
 };
@@ -267,12 +278,11 @@ export const updateEnvironment = async (
       environmentId,
       (snapshot.data() ?? {}) as Record<string, unknown>,
     );
-    await logEnvironmentActivity(
-      environment.storeId,
-      environmentId,
-      'update',
-      `Ambiente atualizado: ${environment.identificador || environmentId}`,
-    );
+    await logEnvironmentActivity(environment.storeId, environmentId, 'update', {
+      message: `Ambiente atualizado: ${environment.identificador || environmentId}`,
+      messageKey: 'logMessages.environment.updated',
+      messageParams: { environmentId: environment.identificador || environmentId },
+    });
   }
 };
 
@@ -287,12 +297,11 @@ export const deleteEnvironment = async (environmentId: string): Promise<void> =>
       environmentId,
       (snapshot.data() ?? {}) as Record<string, unknown>,
     );
-    await logEnvironmentActivity(
-      environment.storeId,
-      environmentId,
-      'delete',
-      `Ambiente removido: ${environment.identificador || environmentId}`,
-    );
+    await logEnvironmentActivity(environment.storeId, environmentId, 'delete', {
+      message: `Ambiente removido: ${environment.identificador || environmentId}`,
+      messageKey: 'logMessages.environment.deleted',
+      messageParams: { environmentId: environment.identificador || environmentId },
+    });
   }
 };
 
@@ -381,7 +390,11 @@ export const addEnvironmentUser = async (environmentId: string, userId: string):
       storeId,
       environmentId,
       'participation',
-      `Participante adicionado ao ambiente (${environmentIdentifier})`,
+      {
+        message: `Participante adicionado ao ambiente (${environmentIdentifier})`,
+        messageKey: 'logMessages.environment.participantAdded',
+        messageParams: { environmentId: environmentIdentifier },
+      },
       'environment_participant',
     );
   }
@@ -433,7 +446,11 @@ export const removeEnvironmentUser = async (
       storeId,
       environmentId,
       'participation',
-      `Participante removido do ambiente (${environmentIdentifier})`,
+      {
+        message: `Participante removido do ambiente (${environmentIdentifier})`,
+        messageKey: 'logMessages.environment.participantRemoved',
+        messageParams: { environmentId: environmentIdentifier },
+      },
       'environment_participant',
     );
   }
@@ -469,12 +486,11 @@ export const updateScenarioStatus = async (
   if (platform === 'mobile') {
     await updateScenarioField(environmentId, scenarioId, { statusMobile: status });
     if (environment) {
-      await logEnvironmentActivity(
-        environment.storeId,
-        environmentId,
-        'status_change',
-        `Status do cenário atualizado (mobile): ${status} - ${environment.identificador || environmentId}`,
-      );
+      await logEnvironmentActivity(environment.storeId, environmentId, 'status_change', {
+        message: `Status do cenário atualizado (mobile): ${status} - ${environment.identificador || environmentId}`,
+        messageKey: 'logMessages.environment.scenarioStatusUpdatedMobile',
+        messageParams: { status, environmentId: environment.identificador || environmentId },
+      });
     }
     return;
   }
@@ -482,24 +498,22 @@ export const updateScenarioStatus = async (
   if (platform === 'desktop') {
     await updateScenarioField(environmentId, scenarioId, { statusDesktop: status });
     if (environment) {
-      await logEnvironmentActivity(
-        environment.storeId,
-        environmentId,
-        'status_change',
-        `Status do cenário atualizado (desktop): ${status} - ${environment.identificador || environmentId}`,
-      );
+      await logEnvironmentActivity(environment.storeId, environmentId, 'status_change', {
+        message: `Status do cenário atualizado (desktop): ${status} - ${environment.identificador || environmentId}`,
+        messageKey: 'logMessages.environment.scenarioStatusUpdatedDesktop',
+        messageParams: { status, environmentId: environment.identificador || environmentId },
+      });
     }
     return;
   }
 
   await updateScenarioField(environmentId, scenarioId, { status });
   if (environment) {
-    await logEnvironmentActivity(
-      environment.storeId,
-      environmentId,
-      'status_change',
-      `Status do cenário atualizado: ${status} - ${environment.identificador || environmentId}`,
-    );
+    await logEnvironmentActivity(environment.storeId, environmentId, 'status_change', {
+      message: `Status do cenário atualizado: ${status} - ${environment.identificador || environmentId}`,
+      messageKey: 'logMessages.environment.scenarioStatusUpdated',
+      messageParams: { status, environmentId: environment.identificador || environmentId },
+    });
   }
 };
 
@@ -535,12 +549,11 @@ export const uploadScenarioEvidence = async (
   await updateScenarioField(environmentId, scenarioId, { evidenciaArquivoUrl: trimmedLink });
 
   if (environment) {
-    await logEnvironmentActivity(
-      environment.storeId,
-      environmentId,
-      'attachment',
-      `Evidência vinculada ao cenário ${scenarioId} - ${environment.identificador || environmentId}`,
-    );
+    await logEnvironmentActivity(environment.storeId, environmentId, 'attachment', {
+      message: `Evidência vinculada ao cenário ${scenarioId} - ${environment.identificador || environmentId}`,
+      messageKey: 'logMessages.environment.scenarioEvidenceAdded',
+      messageParams: { scenarioId, environmentId: environment.identificador || environmentId },
+    });
   }
   return trimmedLink;
 };
@@ -593,7 +606,11 @@ export const createEnvironmentBug = async (
       environment.storeId,
       environmentId,
       'create',
-      `Bug criado: ${bug.title}`,
+      {
+        message: `Bug criado: ${bug.title}`,
+        messageKey: 'logMessages.environment.bugCreated',
+        messageParams: { bugTitle: bug.title },
+      },
       'environment_bug',
     );
   }
@@ -632,7 +649,11 @@ export const updateEnvironmentBug = async (
       environment.storeId,
       environmentId,
       'update',
-      `Bug atualizado: ${payload.title ?? bugId}`,
+      {
+        message: `Bug atualizado: ${payload.title ?? bugId}`,
+        messageKey: 'logMessages.environment.bugUpdated',
+        messageParams: { bugTitle: payload.title ?? bugId },
+      },
       'environment_bug',
     );
   }
@@ -662,7 +683,11 @@ export const deleteEnvironmentBug = async (environmentId: string, bugId: string)
       environment.storeId,
       environmentId,
       'delete',
-      `Bug removido (${bugId})`,
+      {
+        message: `Bug removido (${bugId})`,
+        messageKey: 'logMessages.environment.bugDeleted',
+        messageParams: { bugId },
+      },
       'environment_bug',
     );
   }
@@ -738,12 +763,14 @@ export const transitionEnvironmentStatus = async ({
 
   await updateEnvironment(environment.id, payload);
 
-  await logEnvironmentActivity(
-    environment.storeId,
-    environment.id,
-    'status_change',
-    `Status do ambiente atualizado para ${targetStatus} (${environment.identificador || environment.id})`,
-  );
+  await logEnvironmentActivity(environment.storeId, environment.id, 'status_change', {
+    message: `Status do ambiente atualizado para ${targetStatus} (${environment.identificador || environment.id})`,
+    messageKey: 'logMessages.environment.statusUpdated',
+    messageParams: {
+      status: targetStatus,
+      environmentId: environment.identificador || environment.id,
+    },
+  });
 };
 
 const computeNextTimeTracking = (

@@ -53,6 +53,7 @@ export const OrganizationLogPanel = ({ organizationId }: OrganizationLogPanelPro
   const [actionFilter, setActionFilter] = useState<ActivityLog['action'] | 'all'>('all');
   const [entityFilter, setEntityFilter] = useState<ActivityLog['entityType'] | 'all'>('all');
   const [visibleCount, setVisibleCount] = useState(INITIAL_LOG_PAGE_SIZE);
+  const { t } = useTranslation();
 
   useEffect(() => {
     let isMounted = true;
@@ -104,6 +105,15 @@ export const OrganizationLogPanel = ({ organizationId }: OrganizationLogPanelPro
 
   const toggleCollapse = () => setIsCollapsed((prev) => !prev);
 
+  const renderLogMessage = (log: ActivityLog) => {
+    if (!log.messageKey) {
+      return log.message;
+    }
+
+    const messageParams = log.messageParams ?? {};
+    return t(log.messageKey, { ...messageParams, defaultValue: log.message });
+  };
+
   const renderActionLabel = (action: ActivityLog['action']) => {
     switch (action) {
       case 'create':
@@ -148,8 +158,6 @@ export const OrganizationLogPanel = ({ organizationId }: OrganizationLogPanelPro
         return entity;
     }
   };
-
-  const { t } = useTranslation();
 
   return (
     <div
@@ -246,7 +254,7 @@ export const OrganizationLogPanel = ({ organizationId }: OrganizationLogPanelPro
                       </span>
                       <span className="chip chip--entity">{renderEntityLabel(log.entityType)}</span>
                     </div>
-                    <p className="activity-log-message">{log.message}</p>
+                    <p className="activity-log-message">{renderLogMessage(log)}</p>
                     <p className="activity-log-meta">
                       <span className="activity-log-user">{log.actorName}</span>
                       <span aria-hidden>•</span>

@@ -184,6 +184,8 @@ export const createStore = async (payload: CreateStorePayload): Promise<Store> =
     entityType: 'store',
     action: 'create',
     message: `Loja criada: ${createdStore.name}`,
+    messageKey: 'logMessages.store.created',
+    messageParams: { storeName: createdStore.name },
   });
 
   return createdStore;
@@ -207,6 +209,8 @@ export const updateStore = async (storeId: string, payload: UpdateStorePayload):
     entityType: 'store',
     action: 'update',
     message: `Loja atualizada: ${updated.name}`,
+    messageKey: 'logMessages.store.updated',
+    messageParams: { storeName: updated.name },
   });
 
   return updated;
@@ -244,6 +248,8 @@ export const deleteStore = async (storeId: string): Promise<void> => {
       entityType: 'store',
       action: 'delete',
       message: `Loja removida: ${context.storeName || storeId}`,
+      messageKey: 'logMessages.store.deleted',
+      messageParams: { storeName: context.storeName || storeId },
     });
   }
 };
@@ -305,7 +311,12 @@ export const createScenario = async (
       entityId: createdScenario.id,
       entityType: 'scenario',
       action: 'create',
-      message: `Cenário criado: ${createdScenario.title} (${context.storeName || 'Loja'})`,
+      message: `Cenário criado: ${createdScenario.title} (${context.storeName || payload.storeId})`,
+      messageKey: 'logMessages.scenario.created',
+      messageParams: {
+        scenarioTitle: createdScenario.title,
+        storeName: context.storeName || payload.storeId,
+      },
     });
   }
 
@@ -337,7 +348,12 @@ export const updateScenario = async (
       entityId: updatedScenario.id,
       entityType: 'scenario',
       action: 'update',
-      message: `Cenário atualizado: ${updatedScenario.title} (${context.storeName || 'Loja'})`,
+      message: `Cenário atualizado: ${updatedScenario.title} (${context.storeName || storeId})`,
+      messageKey: 'logMessages.scenario.updated',
+      messageParams: {
+        scenarioTitle: updatedScenario.title,
+        storeName: context.storeName || storeId,
+      },
     });
   }
 
@@ -378,7 +394,12 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
       entityId: scenarioId,
       entityType: 'scenario',
       action: 'delete',
-      message: `Cenário removido: ${scenarioTitle || scenarioId} (${context.storeName || 'Loja'})`,
+      message: `Cenário removido: ${scenarioTitle || scenarioId} (${context.storeName || storeId})`,
+      messageKey: 'logMessages.scenario.deleted',
+      messageParams: {
+        scenarioTitle: scenarioTitle || scenarioId,
+        storeName: context.storeName || storeId,
+      },
     });
   }
 };
@@ -419,7 +440,12 @@ export const createSuite = async (
       entityId: createdSuite.id,
       entityType: 'suite',
       action: 'create',
-      message: `Suíte criada: ${createdSuite.name} (${context.storeName || 'Loja'})`,
+      message: `Suíte criada: ${createdSuite.name} (${context.storeName || payload.storeId})`,
+      messageKey: 'logMessages.suite.created',
+      messageParams: {
+        suiteName: createdSuite.name,
+        storeName: context.storeName || payload.storeId,
+      },
     });
   }
 
@@ -454,7 +480,12 @@ export const updateSuite = async (
       entityId: updatedSuite.id,
       entityType: 'suite',
       action: 'update',
-      message: `Suíte atualizada: ${updatedSuite.name} (${context.storeName || 'Loja'})`,
+      message: `Suíte atualizada: ${updatedSuite.name} (${context.storeName || storeId})`,
+      messageKey: 'logMessages.suite.updated',
+      messageParams: {
+        suiteName: updatedSuite.name,
+        storeName: context.storeName || storeId,
+      },
     });
   }
 
@@ -479,7 +510,12 @@ export const deleteSuite = async (storeId: string, suiteId: string): Promise<voi
       entityId: suiteId,
       entityType: 'suite',
       action: 'delete',
-      message: `Suíte removida: ${(snapshot.data()?.name as string | undefined) ?? suiteId} (${context.storeName || 'Loja'})`,
+      message: `Suíte removida: ${(snapshot.data()?.name as string | undefined) ?? suiteId} (${context.storeName || storeId})`,
+      messageKey: 'logMessages.suite.deleted',
+      messageParams: {
+        suiteName: ((snapshot.data()?.name as string | undefined) ?? suiteId) as string,
+        storeName: context.storeName || storeId,
+      },
     });
   }
 };

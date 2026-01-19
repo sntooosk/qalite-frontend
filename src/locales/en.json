@@ -116,6 +116,46 @@
       "dateUnavailable": "Date unavailable",
       "listMore": "Load more"
     },
+    "logMessages": {
+      "organization": {
+        "created": "Organization created: {{organizationName}}",
+        "updated": "Organization updated: {{organizationName}}",
+        "deleted": "Organization removed: {{organizationName}}",
+        "memberAdded": "Member added: {{memberName}} to {{organizationName}}",
+        "memberRemoved": "Member removed: {{memberName}} from {{organizationName}}",
+        "memberAutoAdded": "Member automatically added: {{memberName}}"
+      },
+      "store": {
+        "created": "Store created: {{storeName}}",
+        "updated": "Store updated: {{storeName}}",
+        "deleted": "Store removed: {{storeName}}"
+      },
+      "scenario": {
+        "created": "Scenario created: {{scenarioTitle}} ({{storeName}})",
+        "updated": "Scenario updated: {{scenarioTitle}} ({{storeName}})",
+        "deleted": "Scenario removed: {{scenarioTitle}} ({{storeName}})"
+      },
+      "suite": {
+        "created": "Suite created: {{suiteName}} ({{storeName}})",
+        "updated": "Suite updated: {{suiteName}} ({{storeName}})",
+        "deleted": "Suite removed: {{suiteName}} ({{storeName}})"
+      },
+      "environment": {
+        "created": "Environment created: {{environmentId}} ({{storeName}})",
+        "updated": "Environment updated: {{environmentId}} ({{storeName}})",
+        "deleted": "Environment removed: {{environmentId}} ({{storeName}})",
+        "participantAdded": "Participant added to environment ({{environmentId}}) ({{storeName}})",
+        "participantRemoved": "Participant removed from environment ({{environmentId}}) ({{storeName}})",
+        "scenarioStatusUpdatedMobile": "Scenario status updated (mobile): {{status}} - {{environmentId}} ({{storeName}})",
+        "scenarioStatusUpdatedDesktop": "Scenario status updated (desktop): {{status}} - {{environmentId}} ({{storeName}})",
+        "scenarioStatusUpdated": "Scenario status updated: {{status}} - {{environmentId}} ({{storeName}})",
+        "scenarioEvidenceAdded": "Evidence attached to scenario {{scenarioId}} - {{environmentId}} ({{storeName}})",
+        "bugCreated": "Bug created: {{bugTitle}} ({{storeName}})",
+        "bugUpdated": "Bug updated: {{bugTitle}} ({{storeName}})",
+        "bugDeleted": "Bug removed ({{bugId}}) ({{storeName}})",
+        "statusUpdated": "Environment status updated to {{status}} ({{environmentId}}) ({{storeName}})"
+      }
+    },
     "passwordInput": {
       "hide": "Hide password",
       "show": "Show password"

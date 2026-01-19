@@ -16,6 +16,8 @@ export interface ActivityLog {
   entityType: ActivityEntityType;
   action: 'create' | 'update' | 'delete' | 'status_change' | 'attachment' | 'participation';
   message: string;
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
   actorId: string | null;
   actorName: string;
   createdAt: Date | null;
@@ -27,5 +29,7 @@ export interface ActivityLogInput {
   entityType: ActivityEntityType;
   action: ActivityLog['action'];
   message: string;
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
   actor?: AuthUser | null;
 }

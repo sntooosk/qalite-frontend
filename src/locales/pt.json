@@ -117,6 +117,46 @@
       "dateUnavailable": "Data indisponível",
       "listMore": "Ver mais"
     },
+    "logMessages": {
+      "organization": {
+        "created": "Organização criada: {{organizationName}}",
+        "updated": "Organização atualizada: {{organizationName}}",
+        "deleted": "Organização removida: {{organizationName}}",
+        "memberAdded": "Membro adicionado: {{memberName}} em {{organizationName}}",
+        "memberRemoved": "Membro removido: {{memberName}} de {{organizationName}}",
+        "memberAutoAdded": "Membro adicionado automaticamente: {{memberName}}"
+      },
+      "store": {
+        "created": "Loja criada: {{storeName}}",
+        "updated": "Loja atualizada: {{storeName}}",
+        "deleted": "Loja removida: {{storeName}}"
+      },
+      "scenario": {
+        "created": "Cenário criado: {{scenarioTitle}} ({{storeName}})",
+        "updated": "Cenário atualizado: {{scenarioTitle}} ({{storeName}})",
+        "deleted": "Cenário removido: {{scenarioTitle}} ({{storeName}})"
+      },
+      "suite": {
+        "created": "Suíte criada: {{suiteName}} ({{storeName}})",
+        "updated": "Suíte atualizada: {{suiteName}} ({{storeName}})",
+        "deleted": "Suíte removida: {{suiteName}} ({{storeName}})"
+      },
+      "environment": {
+        "created": "Ambiente criado: {{environmentId}} ({{storeName}})",
+        "updated": "Ambiente atualizado: {{environmentId}} ({{storeName}})",
+        "deleted": "Ambiente removido: {{environmentId}} ({{storeName}})",
+        "participantAdded": "Participante adicionado ao ambiente ({{environmentId}}) ({{storeName}})",
+        "participantRemoved": "Participante removido do ambiente ({{environmentId}}) ({{storeName}})",
+        "scenarioStatusUpdatedMobile": "Status do cenário atualizado (mobile): {{status}} - {{environmentId}} ({{storeName}})",
+        "scenarioStatusUpdatedDesktop": "Status do cenário atualizado (desktop): {{status}} - {{environmentId}} ({{storeName}})",
+        "scenarioStatusUpdated": "Status do cenário atualizado: {{status}} - {{environmentId}} ({{storeName}})",
+        "scenarioEvidenceAdded": "Evidência vinculada ao cenário {{scenarioId}} - {{environmentId}} ({{storeName}})",
+        "bugCreated": "Bug criado: {{bugTitle}} ({{storeName}})",
+        "bugUpdated": "Bug atualizado: {{bugTitle}} ({{storeName}})",
+        "bugDeleted": "Bug removido ({{bugId}}) ({{storeName}})",
+        "statusUpdated": "Status do ambiente atualizado para {{status}} ({{environmentId}}) ({{storeName}})"
+      }
+    },
     "passwordInput": {
       "hide": "Ocultar senha",
       "show": "Mostrar senha"

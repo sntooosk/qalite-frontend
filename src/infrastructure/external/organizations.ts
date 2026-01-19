@@ -113,6 +113,8 @@ export const createOrganization = async (
     entityType: 'organization',
     action: 'create',
     message: `Organização criada: ${trimmedName}`,
+    messageKey: 'logMessages.organization.created',
+    messageParams: { organizationName: trimmedName },
   });
 
   const snapshot = await getDoc(docRef);
@@ -146,6 +148,8 @@ export const updateOrganization = async (
     entityType: 'organization',
     action: 'update',
     message: `Organização atualizada: ${updatePayload.name}`,
+    messageKey: 'logMessages.organization.updated',
+    messageParams: { organizationName: updatePayload.name as string },
   });
 
   const snapshot = await getDoc(organizationRef);
@@ -184,6 +188,10 @@ export const deleteOrganization = async (id: string): Promise<void> => {
     entityType: 'organization',
     action: 'delete',
     message: `Organização removida: ${(snapshot.data()?.name as string | undefined) ?? id}`,
+    messageKey: 'logMessages.organization.deleted',
+    messageParams: {
+      organizationName: ((snapshot.data()?.name as string | undefined) ?? id) as string,
+    },
   });
 };
 
@@ -268,7 +276,12 @@ export const addUserToOrganization = async (
     entityId: payload.organizationId,
     entityType: 'organization',
     action: 'participation',
-    message: `Membro adicionado: ${member.displayName || member.email} em ${organizationName || 'organização'}`,
+    message: `Membro adicionado: ${member.displayName || member.email} em ${organizationName || payload.organizationId}`,
+    messageKey: 'logMessages.organization.memberAdded',
+    messageParams: {
+      memberName: member.displayName || member.email,
+      organizationName: organizationName || payload.organizationId,
+    },
   });
 
   return member;
@@ -325,7 +338,12 @@ export const removeUserFromOrganization = async (
     entityId: payload.organizationId,
     entityType: 'organization',
     action: 'participation',
-    message: `Membro removido: ${removedUserLabel ?? payload.userId} de ${organizationName || 'organização'}`,
+    message: `Membro removido: ${removedUserLabel ?? payload.userId} de ${organizationName || payload.organizationId}`,
+    messageKey: 'logMessages.organization.memberRemoved',
+    messageParams: {
+      memberName: removedUserLabel ?? payload.userId,
+      organizationName: organizationName || payload.organizationId,
+    },
   });
 };
 
@@ -434,6 +452,8 @@ export const addUserToOrganizationByEmailDomain = async (
       entityType: 'organization',
       action: 'participation',
       message: `Membro adicionado automaticamente: ${user.displayName || user.email}`,
+      messageKey: 'logMessages.organization.memberAutoAdded',
+      messageParams: { memberName: user.displayName || user.email },
     });
   }
 
