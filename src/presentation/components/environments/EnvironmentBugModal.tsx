@@ -13,6 +13,7 @@ interface EnvironmentBugModalProps {
   isOpen: boolean;
   bug: EnvironmentBug | null;
   onClose: () => void;
+  onSaved?: () => void;
   initialScenarioId?: string | null;
 }
 
@@ -27,6 +28,7 @@ export const EnvironmentBugModal = ({
   isOpen,
   bug,
   onClose,
+  onSaved,
   initialScenarioId,
 }: EnvironmentBugModalProps) => {
   const { t } = useTranslation();
@@ -43,7 +45,7 @@ export const EnvironmentBugModal = ({
     }
 
     return environment.scenarios?.[scenarioId]?.titulo ?? t('environmentBugModal.deletedScenario');
-  }, [environment.scenarios, scenarioId]);
+  }, [environment.scenarios, scenarioId, t]);
 
   useEffect(() => {
     if (bug) {
@@ -84,6 +86,7 @@ export const EnvironmentBugModal = ({
         showToast({ type: 'success', message: t('environmentBugModal.bugRegister') });
       }
 
+      onSaved?.();
       onClose();
     } catch (error) {
       console.error(error);
@@ -94,7 +97,11 @@ export const EnvironmentBugModal = ({
   };
 
   return (
-    <Modal isOpen={isOpen} title={bug ? t('environmentBugModal.bugEdit') : t('environmentBugModal.bugCreate')} onClose={onClose}>
+    <Modal
+      isOpen={isOpen}
+      title={bug ? t('environmentBugModal.bugEdit') : t('environmentBugModal.bugCreate')}
+      onClose={onClose}
+    >
       <form className="environment-bug-form" onSubmit={handleSubmit}>
         <div className="environment-bug-form__grid">
           <label>

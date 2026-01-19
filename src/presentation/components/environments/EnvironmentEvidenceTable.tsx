@@ -7,7 +7,6 @@ import {
   EnvironmentScenarioPlatform,
   EnvironmentScenarioStatus,
 } from '../../../domain/entities/environment';
-import { getScenarioPlatformStatuses } from '../../../infrastructure/external/environments';
 import { useScenarioEvidence } from '../../hooks/useScenarioEvidence';
 import {
   ScenarioColumnSortControl,
@@ -16,38 +15,33 @@ import {
 } from '../ScenarioColumnSortControl';
 import { ENVIRONMENT_PLATFORM_LABEL } from '../../../shared/config/environmentLabels';
 import { isAutomatedScenario } from '../../../shared/utils/automation';
+import { getCriticalityClassName, getCriticalityLabelKey } from '../../constants/scenarioOptions';
+import { normalizeCriticalityEnum } from '../../../shared/utils/scenarioEnums';
 import { useToast } from '../../context/ToastContext';
-import { scenarioExecutionService } from '../../../application/use-cases/ScenarioExecutionUseCase';
-import { useAuth } from '../../hooks/useAuth';
+import { PaginationControls } from '../PaginationControls';
+import { EyeIcon } from '../icons';
 
 interface EnvironmentEvidenceTableProps {
   environment: Environment;
   isLocked?: boolean;
   readOnly?: boolean;
-  onRegisterBug?: (scenarioId: string) => void;
-  bugCountByScenario?: Record<string, number>;
-  organizationId?: string | null;
+  onViewDetails?: (scenarioId: string) => void;
 }
 
 export const EnvironmentEvidenceTable = ({
   environment,
   isLocked,
   readOnly,
-  onRegisterBug,
-  bugCountByScenario,
-  organizationId,
+  onViewDetails,
 }: EnvironmentEvidenceTableProps) => {
   const { t: translation } = useTranslation();
-  const { isUpdating, handleEvidenceUpload, changeScenarioStatus } = useScenarioEvidence(
-    environment.id,
-  );
+  const { isUpdating, changeScenarioStatus } = useScenarioEvidence(environment.id);
   const { showToast } = useToast();
-  const { user } = useAuth();
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [criticalityFilter, setCriticalityFilter] = useState('');
-  const [scenarioStartTimes, setScenarioStartTimes] = useState<Record<string, number>>({});
-  const [evidenceLinks, setEvidenceLinks] = useState<Record<string, string>>({});
+  const [visibleCount, setVisibleCount] = useState(20);
+  const canViewDetails = Boolean(onViewDetails);
 
   const BASE_STATUS_OPTIONS = [
     { value: 'pendente', label: translation('environmentEvidenceTable.status_pendente') },
@@ -71,79 +65,6 @@ export const EnvironmentEvidenceTable = ({
         ]
       : BASE_STATUS_OPTIONS;
 
-  const environmentStartTimestamp = useMemo(() => {
-    if (!environment?.timeTracking?.start) {
-      return null;
-    }
-
-    return new Date(environment.timeTracking.start).getTime();
-  }, [environment?.timeTracking?.start]);
-  useEffect(() => {
-    if (!environment?.scenarios || Object.keys(environment.scenarios).length === 0) {
-      setScenarioStartTimes((previous) => {
-        if (Object.keys(previous).length === 0) {
-          return previous;
-        }
-        return {};
-      });
-      return;
-    }
-
-    setScenarioStartTimes((previous) => {
-      let next = previous;
-      let hasChanges = false;
-      const activeScenarioIds = new Set<string>();
-
-      Object.entries(environment.scenarios ?? {}).forEach(([scenarioId, data]) => {
-        activeScenarioIds.add(scenarioId);
-        const platformStatuses = getScenarioPlatformStatuses(data);
-        const isRunning = Object.values(platformStatuses).some(
-          (status) => status === 'em_andamento',
-        );
-        const hasStartTime = Boolean(previous[scenarioId]);
-
-        if (isRunning && !hasStartTime) {
-          if (!hasChanges) {
-            next = { ...previous };
-            hasChanges = true;
-          }
-          next[scenarioId] = environmentStartTimestamp ?? Date.now();
-        }
-
-        if (!isRunning && hasStartTime) {
-          if (!hasChanges) {
-            next = { ...previous };
-            hasChanges = true;
-          }
-          delete next[scenarioId];
-        }
-      });
-
-      Object.keys(previous).forEach((scenarioId) => {
-        if (!activeScenarioIds.has(scenarioId)) {
-          if (!hasChanges) {
-            next = { ...previous };
-            hasChanges = true;
-          }
-          delete next[scenarioId];
-        }
-      });
-
-      return hasChanges ? next : previous;
-    });
-  }, [environment?.scenarios, environmentStartTimestamp]);
-
-  useEffect(() => {
-    const nextLinks: Record<string, string> = {};
-    Object.entries(environment.scenarios ?? {}).forEach(([scenarioId, data]) => {
-      nextLinks[scenarioId] = data.evidenciaArquivoUrl ?? '';
-    });
-    setEvidenceLinks(nextLinks);
-  }, [environment.scenarios]);
-
-  const handleEvidenceLinkChange = (scenarioId: string, link: string) => {
-    setEvidenceLinks((previous) => ({ ...previous, [scenarioId]: link }));
-  };
   const scenarioEntries = useMemo(() => {
     const entries = Object.entries(environment.scenarios ?? {});
     return entries.sort(([firstId, first], [secondId, second]) => {
@@ -173,7 +94,7 @@ export const EnvironmentEvidenceTable = ({
   const criticalityOptions = useMemo(() => {
     const criticalities = new Set<string>();
     scenarioEntries.forEach(([, data]) => {
-      const normalized = data.criticidade?.trim();
+      const normalized = normalizeCriticalityEnum(data.criticidade);
       if (normalized) {
         criticalities.add(normalized);
       }
@@ -187,7 +108,7 @@ export const EnvironmentEvidenceTable = ({
       scenarioEntries.filter(([, data]) => {
         const matchesCategory = categoryFilter ? data.categoria === categoryFilter : true;
         const matchesCriticality = criticalityFilter
-          ? data.criticidade === criticalityFilter
+          ? normalizeCriticalityEnum(data.criticidade) === criticalityFilter
           : true;
         return matchesCategory && matchesCriticality;
       }),
@@ -216,7 +137,22 @@ export const EnvironmentEvidenceTable = ({
       ),
     );
   }, [filteredScenarioEntries, scenarioSort]);
+  const paginatedScenarioEntries = useMemo(
+    () => orderedScenarioEntries.slice(0, visibleCount),
+    [orderedScenarioEntries, visibleCount],
+  );
   const isReadOnly = Boolean(isLocked || readOnly);
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [categoryFilter, criticalityFilter, scenarioSort, scenarioEntries.length]);
+
+  const formatCriticalityLabel = (value?: string | null) => {
+    const labelKey = getCriticalityLabelKey(value);
+    if (labelKey) {
+      return translation(labelKey);
+    }
+    return value?.trim() || translation('storeSummary.emptyValue');
+  };
   const handleStatusChange = async (
     scenarioId: string,
     platform: EnvironmentScenarioPlatform,
@@ -236,92 +172,6 @@ export const EnvironmentEvidenceTable = ({
     }
 
     await changeScenarioStatus(scenarioId, status, platform);
-
-    if (status === 'em_andamento') {
-      setScenarioStartTimes((previous) => {
-        if (previous[scenarioId]) {
-          return previous;
-        }
-        return { ...previous, [scenarioId]: Date.now() };
-      });
-      return;
-    }
-
-    if (status === 'bloqueado' || status === 'nao_se_aplica' || status === 'pendente') {
-      setScenarioStartTimes((previous) => {
-        if (!previous[scenarioId]) {
-          return previous;
-        }
-        const next = { ...previous };
-        delete next[scenarioId];
-        return next;
-      });
-      return;
-    }
-
-    if (status !== 'concluido' && status !== 'concluido_automatizado') {
-      return;
-    }
-
-    const startedAt = scenarioStartTimes[scenarioId] ?? environmentStartTimestamp ?? Date.now();
-
-    if (!organizationId) {
-      showToast({ type: 'error', message: translation('environmentEvidenceTable.toast_sem_org') });
-      return;
-    }
-
-    const scenarioCount = Math.max(scenarioEntries.length, 1);
-    const payload = {
-      organizationId,
-      storeId: environment.storeId,
-      environmentId: environment.id,
-      scenarioId,
-      scenarioTitle: scenario.titulo,
-      qaId: user?.uid ?? null,
-      qaName: user?.displayName || user?.email || null,
-      totalMs: (Date.now() - startedAt) / scenarioCount,
-      executedAt: new Date().toISOString(),
-    };
-
-    try {
-      await scenarioExecutionService.logExecution(payload);
-      setScenarioStartTimes((previous) => {
-        const next = { ...previous };
-        delete next[scenarioId];
-        return next;
-      });
-    } catch (error) {
-      console.error(error);
-      showToast({
-        type: 'error',
-        message: translation('environmentEvidenceTable.toast_exec_error'),
-      });
-    }
-  };
-
-  const handleEvidenceSave = async (scenarioId: string) => {
-    const link = (evidenceLinks[scenarioId] ?? '').trim();
-
-    if (!link) {
-      showToast({
-        type: 'error',
-        message: translation('environmentEvidenceTable.toast_save_error'),
-      });
-      return;
-    }
-
-    try {
-      await handleEvidenceUpload(scenarioId, link);
-      showToast({
-        type: 'success',
-        message: translation('environmentEvidenceTable.toast_save_success'),
-      });
-    } catch {
-      showToast({
-        type: 'error',
-        message: translation('environmentEvidenceTable.toast_save_error'),
-      });
-    }
   };
 
   if (scenarioEntries.length === 0) {
@@ -364,11 +214,15 @@ export const EnvironmentEvidenceTable = ({
             aria-label={translation('environmentEvidenceTable.filters_criticidade')}
           >
             <option value="">{translation('environmentEvidenceTable.filters_todas')}</option>
-            {criticalityOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
+            {criticalityOptions.map((option) => {
+              const labelKey = getCriticalityLabelKey(option);
+              const label = labelKey ? translation(labelKey) : option;
+              return (
+                <option key={option} value={option}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
         </label>
       </div>
@@ -392,23 +246,26 @@ export const EnvironmentEvidenceTable = ({
                 onChange={setScenarioSort}
               />
             </th>
-            <th>{translation('environmentEvidenceTable.table_observacao')}</th>
             <th>{translation('environmentEvidenceTable.table_status_mobile')}</th>
             <th>{translation('environmentEvidenceTable.table_status_desktop')}</th>
-            <th>{translation('environmentEvidenceTable.table_evidencia')}</th>
-            <th>{translation('environmentEvidenceTable.table_bug')}</th>
+            {canViewDetails && (
+              <th className="scenario-actions-header">{translation('storeSummary.viewDetails')}</th>
+            )}
           </tr>
         </thead>
         <tbody>
-          {orderedScenarioEntries.map(([scenarioId, data]) => {
+          {paginatedScenarioEntries.map(([scenarioId, data]) => {
             const statusOptions = getScenarioStatusOptions(data);
             return (
               <tr key={scenarioId}>
                 <td>{data.titulo}</td>
                 <td>{data.categoria}</td>
-                <td>{data.criticidade}</td>
                 <td>
-                  {data.observacao || translation('environmentEvidenceTable.observacao_none')}
+                  <span
+                    className={`criticality-badge ${getCriticalityClassName(data.criticidade)}`}
+                  >
+                    {formatCriticalityLabel(data.criticidade)}
+                  </span>
                 </td>
 
                 {(['mobile', 'desktop'] as EnvironmentScenarioPlatform[]).map((platform) => {
@@ -445,79 +302,32 @@ export const EnvironmentEvidenceTable = ({
                     </td>
                   );
                 })}
-                <td>
-                  <div className="scenario-evidence-cell">
-                    {data.evidenciaArquivoUrl ? (
-                      <a
-                        href={data.evidenciaArquivoUrl}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="text-link"
-                      >
-                        {translation('environmentEvidenceTable.evidencia_abrir')}
-                      </a>
-                    ) : (
-                      <span className="section-subtitle">
-                        {translation('environmentEvidenceTable.evidencia_sem')}
-                      </span>
-                    )}
-                    {!isReadOnly && (
-                      <div className="scenario-evidence-actions">
-                        <input
-                          type="url"
-                          value={evidenceLinks[scenarioId] ?? ''}
-                          onChange={(event) =>
-                            handleEvidenceLinkChange(scenarioId, event.target.value)
-                          }
-                          placeholder={translation(
-                            'environmentEvidenceTable.evidencia_placeholder',
-                          )}
-                          className="scenario-evidence-input"
-                        />
-                        <button
-                          type="button"
-                          className="scenario-evidence-save"
-                          onClick={() => handleEvidenceSave(scenarioId)}
-                          disabled={isUpdating}
-                        >
-                          {translation('environmentEvidenceTable.evidencia_salvar')}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </td>
-                <td>
-                  <div className="scenario-bug-cell">
-                    <span className="scenario-bug-cell__label">
-                      {(() => {
-                        const count = bugCountByScenario?.[scenarioId] ?? 0;
-                        if (count === 0) {
-                          return translation('environmentEvidenceTable.bug_nenhum');
-                        }
-                        if (count === 1) {
-                          return translation('environmentEvidenceTable.bug_um');
-                        }
-                        return translation('environmentEvidenceTable.bug_varios', { count });
-                      })()}
-                    </span>
-
-                    {!isReadOnly && (
-                      <button
-                        type="button"
-                        className="scenario-bug-cell__action"
-                        onClick={() => onRegisterBug?.(scenarioId)}
-                        disabled={isUpdating || !onRegisterBug}
-                      >
-                        {translation('environmentEvidenceTable.bug_registrar')}
-                      </button>
-                    )}
-                  </div>
-                </td>
+                {canViewDetails && (
+                  <td className="scenario-actions">
+                    <button
+                      type="button"
+                      onClick={() => onViewDetails?.(scenarioId)}
+                      className="action-button action-button--primary"
+                    >
+                      <EyeIcon aria-hidden className="action-button__icon" />
+                      {translation('storeSummary.viewDetails')}
+                    </button>
+                  </td>
+                )}
               </tr>
             );
           })}
         </tbody>
       </table>
+      <PaginationControls
+        total={orderedScenarioEntries.length}
+        visible={paginatedScenarioEntries.length}
+        step={20}
+        onShowLess={() => setVisibleCount(20)}
+        onShowMore={() =>
+          setVisibleCount((previous) => Math.min(previous + 20, orderedScenarioEntries.length))
+        }
+      />
       {isUpdating && (
         <p className="section-subtitle">{translation('environmentEvidenceTable.sincronizando')}</p>
       )}

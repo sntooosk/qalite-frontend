@@ -14,7 +14,9 @@ interface EnvironmentBugListProps {
   isLocked?: boolean;
   isLoading?: boolean;
   onEdit: (bug: EnvironmentBug) => void;
+  onRefresh?: () => void;
   showActions?: boolean;
+  showHeader?: boolean;
 }
 
 export const EnvironmentBugList = ({
@@ -23,7 +25,9 @@ export const EnvironmentBugList = ({
   isLocked,
   isLoading,
   onEdit,
+  onRefresh,
   showActions = true,
+  showHeader = true,
 }: EnvironmentBugListProps) => {
   const { showToast } = useToast();
   const { t: translation } = useTranslation();
@@ -44,6 +48,7 @@ export const EnvironmentBugList = ({
         type: 'success',
         message: translation('environmentBugList.bugRemovedSuccess'),
       });
+      onRefresh?.();
     } catch (error) {
       console.error(error);
       showToast({
@@ -83,11 +88,17 @@ export const EnvironmentBugList = ({
     );
   };
 
+  if (!isLoading && bugs.length === 0) {
+    return <p className="section-subtitle">{translation('environmentBugList.noBugs')}</p>;
+  }
+
   return (
     <div className="environment-bugs">
-      <div className="environment-bugs__header">
-        <h3 className="section-title">{translation('environmentBugList.bugRegistry')}</h3>
-      </div>
+      {showHeader && (
+        <div className="environment-bugs__header">
+          <h3 className="section-title">{translation('environmentBugList.bugRegistry')}</h3>
+        </div>
+      )}
 
       {isLoading ? (
         <p className="section-subtitle">{translation('environmentBugList.loadingBugs')}</p>

@@ -5,6 +5,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   query,
   runTransaction,
@@ -14,7 +15,6 @@ import {
   type QueryConstraint,
 } from 'firebase/firestore';
 
-import type { ActivityLog } from '../../domain/entities/activityLog';
 import type {
   CreateEnvironmentBugInput,
   CreateEnvironmentInput,
@@ -33,57 +33,20 @@ import type {
 import type { UserSummary } from '../../domain/entities/user';
 import { firebaseFirestore } from '../database/firebase';
 import { EnvironmentStatusError } from '../../shared/errors/firebaseErrors';
-import { BUG_STATUS_LABEL } from '../../shared/config/environmentLabels';
-import { logActivity } from './logs';
+import { BUG_STATUS_LABEL, ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
 import {
   formatDateTime,
   formatDurationFromMs,
   formatEndDateTime,
   getElapsedMilliseconds,
 } from '../../shared/utils/time';
+import { translateEnvironmentOption } from '../../shared/utils/environmentOptions';
+import i18n from '../../lib/i18n';
+import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
-const STORES_COLLECTION = 'stores';
 const environmentsCollection = collection(firebaseFirestore, ENVIRONMENTS_COLLECTION);
-
-const getStoreOrganizationContext = async (
-  storeId: string,
-): Promise<{ organizationId: string | null; storeName: string }> => {
-  const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-  const snapshot = await getDoc(storeRef);
-
-  if (!snapshot.exists()) {
-    return { organizationId: null, storeName: '' };
-  }
-
-  const data = snapshot.data();
-  return {
-    organizationId: (data.organizationId as string | undefined | null) ?? null,
-    storeName: (data.name as string | undefined) ?? '',
-  };
-};
-
-const logEnvironmentActivity = async (
-  storeId: string,
-  environmentId: string,
-  action: ActivityLog['action'],
-  message: string,
-  entityType: ActivityLog['entityType'] = 'environment',
-): Promise<void> => {
-  const context = await getStoreOrganizationContext(storeId);
-  if (!context.organizationId) {
-    return;
-  }
-
-  await logActivity({
-    organizationId: context.organizationId,
-    entityId: environmentId,
-    entityType,
-    action,
-    message: `${message} (${context.storeName || 'Loja'})`,
-  });
-};
 
 export const SCENARIO_COMPLETED_STATUSES: EnvironmentScenarioStatus[] = [
   'concluido',
@@ -216,6 +179,7 @@ const normalizeEnvironment = (id: string, data: Record<string, unknown>): Enviro
   bugs: Number(data.bugs ?? 0),
   totalCenarios: Number(data.totalCenarios ?? 0),
   participants: getStringArray(data.participants),
+  publicShareLanguage: getStringOrNull(data.publicShareLanguage),
 });
 
 export const createEnvironment = async (payload: CreateEnvironmentInput): Promise<Environment> => {
@@ -230,13 +194,6 @@ export const createEnvironment = async (payload: CreateEnvironmentInput): Promis
   const environment = normalizeEnvironment(
     snapshot.id,
     (snapshot.data() ?? {}) as Record<string, unknown>,
-  );
-
-  await logEnvironmentActivity(
-    environment.storeId,
-    environment.id,
-    'create',
-    `Ambiente criado: ${environment.identificador || environment.id}`,
   );
 
   return environment;
@@ -257,40 +214,11 @@ export const updateEnvironment = async (
   }
 
   await updateDoc(environmentRef, data);
-
-  const snapshot = await getDoc(environmentRef);
-  if (snapshot.exists()) {
-    const environment = normalizeEnvironment(
-      environmentId,
-      (snapshot.data() ?? {}) as Record<string, unknown>,
-    );
-    await logEnvironmentActivity(
-      environment.storeId,
-      environmentId,
-      'update',
-      `Ambiente atualizado: ${environment.identificador || environmentId}`,
-    );
-  }
 };
 
 export const deleteEnvironment = async (environmentId: string): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  const snapshot = await getDoc(environmentRef);
-
   await deleteDoc(environmentRef);
-
-  if (snapshot.exists()) {
-    const environment = normalizeEnvironment(
-      environmentId,
-      (snapshot.data() ?? {}) as Record<string, unknown>,
-    );
-    await logEnvironmentActivity(
-      environment.storeId,
-      environmentId,
-      'delete',
-      `Ambiente removido: ${environment.identificador || environmentId}`,
-    );
-  }
 };
 
 export const observeEnvironment = (
@@ -336,7 +264,6 @@ export const observeEnvironments = (
 
 export const addEnvironmentUser = async (environmentId: string, userId: string): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  let environmentData: Record<string, unknown> | null = null;
   await runTransaction(firebaseFirestore, async (transaction) => {
     const snapshot = await transaction.get(environmentRef);
     if (!snapshot.exists()) {
@@ -344,7 +271,6 @@ export const addEnvironmentUser = async (environmentId: string, userId: string):
     }
 
     const data = snapshot.data();
-    environmentData = data;
     if (data.status === 'done') {
       throw new Error('Ambiente já concluído.');
     }
@@ -362,26 +288,6 @@ export const addEnvironmentUser = async (environmentId: string, userId: string):
       updatedAt: serverTimestamp(),
     });
   });
-
-  const environmentDetails = environmentData as Record<string, unknown> | null;
-  const storeId =
-    environmentDetails && typeof environmentDetails.storeId === 'string'
-      ? (environmentDetails.storeId as string)
-      : '';
-  const environmentIdentifier =
-    environmentDetails && typeof environmentDetails.identificador === 'string'
-      ? (environmentDetails.identificador as string)
-      : environmentId;
-
-  if (storeId) {
-    await logEnvironmentActivity(
-      storeId,
-      environmentId,
-      'participation',
-      `Participante adicionado ao ambiente (${environmentIdentifier})`,
-      'environment_participant',
-    );
-  }
 };
 
 export const removeEnvironmentUser = async (
@@ -389,7 +295,6 @@ export const removeEnvironmentUser = async (
   userId: string,
 ): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  let environmentData: Record<string, unknown> | null = null;
   await runTransaction(firebaseFirestore, async (transaction) => {
     const snapshot = await transaction.get(environmentRef);
     if (!snapshot.exists()) {
@@ -397,7 +302,6 @@ export const removeEnvironmentUser = async (
     }
 
     const data = snapshot.data();
-    environmentData = data;
     if (data?.status === 'done') {
       throw new Error('Não é possível sair de um ambiente concluído.');
     }
@@ -414,26 +318,6 @@ export const removeEnvironmentUser = async (
       updatedAt: serverTimestamp(),
     });
   });
-
-  const environmentDetails = environmentData as Record<string, unknown> | null;
-  const storeId =
-    environmentDetails && typeof environmentDetails.storeId === 'string'
-      ? (environmentDetails.storeId as string)
-      : '';
-  const environmentIdentifier =
-    environmentDetails && typeof environmentDetails.identificador === 'string'
-      ? (environmentDetails.identificador as string)
-      : environmentId;
-
-  if (storeId) {
-    await logEnvironmentActivity(
-      storeId,
-      environmentId,
-      'participation',
-      `Participante removido do ambiente (${environmentIdentifier})`,
-      'environment_participant',
-    );
-  }
 };
 
 const updateScenarioField = async (
@@ -457,47 +341,17 @@ export const updateScenarioStatus = async (
   status: EnvironmentScenarioStatus,
   platform?: EnvironmentScenarioPlatform,
 ): Promise<void> => {
-  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  const snapshot = await getDoc(environmentRef);
-  const environment = snapshot.exists()
-    ? normalizeEnvironment(environmentId, (snapshot.data() ?? {}) as Record<string, unknown>)
-    : null;
-
   if (platform === 'mobile') {
     await updateScenarioField(environmentId, scenarioId, { statusMobile: status });
-    if (environment) {
-      await logEnvironmentActivity(
-        environment.storeId,
-        environmentId,
-        'status_change',
-        `Status do cenário atualizado (mobile): ${status} - ${environment.identificador || environmentId}`,
-      );
-    }
     return;
   }
 
   if (platform === 'desktop') {
     await updateScenarioField(environmentId, scenarioId, { statusDesktop: status });
-    if (environment) {
-      await logEnvironmentActivity(
-        environment.storeId,
-        environmentId,
-        'status_change',
-        `Status do cenário atualizado (desktop): ${status} - ${environment.identificador || environmentId}`,
-      );
-    }
     return;
   }
 
   await updateScenarioField(environmentId, scenarioId, { status });
-  if (environment) {
-    await logEnvironmentActivity(
-      environment.storeId,
-      environmentId,
-      'status_change',
-      `Status do cenário atualizado: ${status} - ${environment.identificador || environmentId}`,
-    );
-  }
 };
 
 export const uploadScenarioEvidence = async (
@@ -520,61 +374,29 @@ export const uploadScenarioEvidence = async (
     throw new Error('Informe um link válido para a evidência.');
   }
 
-  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  const environmentSnapshot = await getDoc(environmentRef);
-  const environment = environmentSnapshot.exists()
-    ? normalizeEnvironment(
-        environmentId,
-        (environmentSnapshot.data() ?? {}) as Record<string, unknown>,
-      )
-    : null;
-
   await updateScenarioField(environmentId, scenarioId, { evidenciaArquivoUrl: trimmedLink });
 
-  if (environment) {
-    await logEnvironmentActivity(
-      environment.storeId,
-      environmentId,
-      'attachment',
-      `Evidência vinculada ao cenário ${scenarioId} - ${environment.identificador || environmentId}`,
-    );
-  }
   return trimmedLink;
 };
 
-export const observeEnvironmentBugs = (
-  environmentId: string,
-  callback: (bugs: EnvironmentBug[]) => void,
-): (() => void) => {
+export const listEnvironmentBugs = async (environmentId: string): Promise<EnvironmentBug[]> => {
   const bugsCollectionRef = getBugCollection(environmentId);
-  return onSnapshot(bugsCollectionRef, (snapshot) => {
-    const bugs = snapshot.docs
-      .map((docSnapshot) =>
-        normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
-      )
-      .sort((first, second) => {
-        const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
-        const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
-        return secondDate - firstDate;
-      });
-
-    callback(bugs);
-  });
+  const snapshot = await getDocs(bugsCollectionRef);
+  return snapshot.docs
+    .map((docSnapshot) =>
+      normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
+    )
+    .sort((first, second) => {
+      const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
+      const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
+      return secondDate - firstDate;
+    });
 };
 
 export const createEnvironmentBug = async (
   environmentId: string,
   payload: CreateEnvironmentBugInput,
 ): Promise<EnvironmentBug> => {
-  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  const environmentSnapshot = await getDoc(environmentRef);
-  const environment = environmentSnapshot.exists()
-    ? normalizeEnvironment(
-        environmentId,
-        (environmentSnapshot.data() ?? {}) as Record<string, unknown>,
-      )
-    : null;
-
   const bugsCollectionRef = getBugCollection(environmentId);
   const docRef = await addDoc(bugsCollectionRef, {
     ...payload,
@@ -585,16 +407,6 @@ export const createEnvironmentBug = async (
   const snapshot = await getDoc(docRef);
   const bug = normalizeBug(snapshot.id, (snapshot.data() ?? {}) as Record<string, unknown>);
 
-  if (environment) {
-    await logEnvironmentActivity(
-      environment.storeId,
-      environmentId,
-      'create',
-      `Bug criado: ${bug.title}`,
-      'environment_bug',
-    );
-  }
-
   return bug;
 };
 
@@ -603,15 +415,6 @@ export const updateEnvironmentBug = async (
   bugId: string,
   payload: UpdateEnvironmentBugInput,
 ): Promise<void> => {
-  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  const environmentSnapshot = await getDoc(environmentRef);
-  const environment = environmentSnapshot.exists()
-    ? normalizeEnvironment(
-        environmentId,
-        (environmentSnapshot.data() ?? {}) as Record<string, unknown>,
-      )
-    : null;
-
   const bugRef = doc(
     firebaseFirestore,
     ENVIRONMENTS_COLLECTION,
@@ -623,28 +426,9 @@ export const updateEnvironmentBug = async (
     ...payload,
     updatedAt: serverTimestamp(),
   });
-
-  if (environment) {
-    await logEnvironmentActivity(
-      environment.storeId,
-      environmentId,
-      'update',
-      `Bug atualizado: ${payload.title ?? bugId}`,
-      'environment_bug',
-    );
-  }
 };
 
 export const deleteEnvironmentBug = async (environmentId: string, bugId: string): Promise<void> => {
-  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  const environmentSnapshot = await getDoc(environmentRef);
-  const environment = environmentSnapshot.exists()
-    ? normalizeEnvironment(
-        environmentId,
-        (environmentSnapshot.data() ?? {}) as Record<string, unknown>,
-      )
-    : null;
-
   const bugRef = doc(
     firebaseFirestore,
     ENVIRONMENTS_COLLECTION,
@@ -653,16 +437,6 @@ export const deleteEnvironmentBug = async (environmentId: string, bugId: string)
     bugId,
   );
   await deleteDoc(bugRef);
-
-  if (environment) {
-    await logEnvironmentActivity(
-      environment.storeId,
-      environmentId,
-      'delete',
-      `Bug removido (${bugId})`,
-      'environment_bug',
-    );
-  }
 };
 
 interface TransitionEnvironmentStatusParams {
@@ -734,13 +508,6 @@ export const transitionEnvironmentStatus = async ({
   }
 
   await updateEnvironment(environment.id, payload);
-
-  await logEnvironmentActivity(
-    environment.storeId,
-    environment.id,
-    'status_change',
-    `Status do ambiente atualizado para ${targetStatus} (${environment.identificador || environment.id})`,
-  );
 };
 
 const computeNextTimeTracking = (
@@ -780,18 +547,20 @@ const getScenarioLabel = (environment: Environment, scenarioId: string | null) =
 const normalizeParticipants = (
   environment: Environment,
   participantProfiles: UserSummary[] = [],
+  t: (key: string, options?: Record<string, string>) => string,
 ) => {
   const uniqueIds = Array.from(new Set(environment.participants ?? []));
   const profileMap = new Map(participantProfiles.map((profile) => [profile.id, profile]));
 
   return uniqueIds.map((id) => {
     const profile = profileMap.get(id);
-    const displayName = profile?.displayName?.trim() || profile?.email || `Participante ${id}`;
+    const displayName =
+      profile?.displayName?.trim() || profile?.email || t('dynamic.fallbackParticipant', { id });
 
     return {
       id,
       name: displayName,
-      email: profile?.email ?? 'Não informado',
+      email: profile?.email ?? t('dynamic.noEmail'),
     };
   });
 };
@@ -807,6 +576,82 @@ const buildTimeTrackingSummary = (environment: Environment) => {
   };
 };
 
+const translateScenarioStatus = (value: EnvironmentScenarioStatus, t: (key: string) => string) => {
+  const key = `environmentEvidenceTable.status_${value}`;
+  const translated = t(key);
+  return translated === key ? value : translated;
+};
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const URL_PATTERN = /\b((https?:\/\/|www\.)[^\s]+|[a-z0-9.-]+\.[a-z]{2,}(?:\/[^\s]*)?)/gi;
+
+const buildHref = (value: string) => (/^https?:\/\//i.test(value) ? value : `https://${value}`);
+
+const linkifyHtml = (value: string) => {
+  if (!value) {
+    return '';
+  }
+
+  let result = '';
+  let lastIndex = 0;
+  const regex = new RegExp(URL_PATTERN);
+
+  value.replace(regex, (match, _value, _protocol, offset: number) => {
+    if (offset > lastIndex) {
+      result += escapeHtml(value.slice(lastIndex, offset));
+    }
+
+    const href = buildHref(match);
+    result += `<a href="${escapeHtml(href)}" target="_blank" rel="noreferrer noopener">${escapeHtml(match)}</a>`;
+    lastIndex = offset + match.length;
+    return match;
+  });
+
+  if (lastIndex < value.length) {
+    result += escapeHtml(value.slice(lastIndex));
+  }
+
+  return result || escapeHtml(value);
+};
+
+const buildExternalLink = (value: string | null | undefined) => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  if (trimmed.includes('.')) {
+    return `https://${trimmed}`;
+  }
+  return null;
+};
+
+const formatCriticalityLabel = (value: string, t: (key: string) => string) => {
+  const normalized = normalizeCriticalityEnum(value);
+  if (normalized === 'LOW') {
+    return t('scenarioOptions.low');
+  }
+  if (normalized === 'MEDIUM') {
+    return t('scenarioOptions.medium');
+  }
+  if (normalized === 'HIGH') {
+    return t('scenarioOptions.high');
+  }
+  if (normalized === 'CRITICAL') {
+    return t('scenarioOptions.critical');
+  }
+  return value?.trim() || t('storeSummary.emptyValue');
+};
+
 export const exportEnvironmentAsPDF = (
   environment: Environment,
   bugs: EnvironmentBug[] = [],
@@ -816,33 +661,60 @@ export const exportEnvironmentAsPDF = (
     return;
   }
 
-  const normalizedParticipants = normalizeParticipants(environment, participantProfiles);
+  const t = i18n.t.bind(i18n);
+  const normalizedParticipants = normalizeParticipants(environment, participantProfiles, t);
   const timeSummary = buildTimeTrackingSummary(environment);
   const scenarioCount = Object.values(environment.scenarios ?? {}).length * 2;
+  const statusLabel = t(ENVIRONMENT_STATUS_LABEL[environment.status]);
+  const testTypeLabel = translateEnvironmentOption(environment.tipoTeste, t);
+  const momentLabel = translateEnvironmentOption(environment.momento, t);
+  const exportTitle = t('environmentExport.title', { id: environment.identificador });
+  const jiraTask = environment.jiraTask?.trim() || '';
+  const jiraHref = buildExternalLink(jiraTask);
+  const jiraValue = jiraHref
+    ? `<a href="${escapeHtml(jiraHref)}" target="_blank" rel="noreferrer noopener">${escapeHtml(
+        jiraTask,
+      )}</a>`
+    : escapeHtml(jiraTask || t('dynamic.identifierFallback'));
   const urlList =
     (environment.urls ?? []).length > 0
       ? `<ul>${(environment.urls ?? [])
-          .map(
-            (url) =>
-              `<li><a href="${url}" target="_blank" rel="noreferrer noopener">${url}</a></li>`,
-          )
+          .map((url) => {
+            const href = buildExternalLink(url);
+            const label = escapeHtml(url);
+            return href
+              ? `<li><a href="${escapeHtml(
+                  href,
+                )}" target="_blank" rel="noreferrer noopener">${label}</a></li>`
+              : `<li>${label}</li>`;
+          })
           .join('')}</ul>`
-      : '<p>Nenhuma URL cadastrada.</p>';
+      : `<p>${t('environmentExport.noUrls')}</p>`;
   const scenarioRows = Object.values(environment.scenarios ?? {})
     .map((scenario) => {
       const statuses = getScenarioPlatformStatuses(scenario);
+      const statusMobile = translateScenarioStatus(statuses.mobile, t);
+      const statusDesktop = translateScenarioStatus(statuses.desktop, t);
+      const evidenceLabel = scenario.evidenciaArquivoUrl
+        ? t('environmentEvidenceTable.evidencia_abrir')
+        : t('environmentEvidenceTable.evidencia_sem');
+      const criticalityLabel = formatCriticalityLabel(scenario.criticidade, t);
+      const observation =
+        scenario.observacao?.trim() || t('environmentEvidenceTable.observacao_none');
       return `
         <tr>
-          <td>${scenario.titulo}</td>
-          <td>${scenario.categoria}</td>
-          <td>${scenario.criticidade}</td>
-          <td>${scenario.observacao || ''}</td>
-          <td>${statuses.mobile}</td>
-          <td>${statuses.desktop}</td>
+          <td>${linkifyHtml(scenario.titulo)}</td>
+          <td>${linkifyHtml(scenario.categoria)}</td>
+          <td>${escapeHtml(criticalityLabel)}</td>
+          <td>${linkifyHtml(observation)}</td>
+          <td>${escapeHtml(statusMobile)}</td>
+          <td>${escapeHtml(statusDesktop)}</td>
           <td>${
             scenario.evidenciaArquivoUrl
-              ? `<a href="${scenario.evidenciaArquivoUrl}">Arquivo</a>`
-              : 'Sem evidência'
+              ? `<a href="${escapeHtml(
+                  scenario.evidenciaArquivoUrl,
+                )}" target="_blank" rel="noreferrer noopener">${escapeHtml(evidenceLabel)}</a>`
+              : escapeHtml(evidenceLabel)
           }</td>
         </tr>
       `;
@@ -855,15 +727,15 @@ export const exportEnvironmentAsPDF = (
           .map(
             (participant) => `
         <tr>
-          <td>${participant.name}</td>
-          <td>${participant.email}</td>
+          <td>${escapeHtml(participant.name)}</td>
+          <td>${escapeHtml(participant.email)}</td>
         </tr>
       `,
           )
           .join('')
       : `
         <tr>
-          <td colspan="2">Nenhum participante registrado.</td>
+          <td colspan="2">${t('environmentExport.noParticipants')}</td>
         </tr>
       `;
 
@@ -873,24 +745,24 @@ export const exportEnvironmentAsPDF = (
           .map(
             (bug) => `
         <tr>
-          <td>${bug.title}</td>
-          <td>${BUG_STATUS_LABEL[bug.status]}</td>
-          <td>${getScenarioLabel(environment, bug.scenarioId)}</td>
-          <td>${bug.description ?? 'Sem descrição'}</td>
+          <td>${escapeHtml(bug.title)}</td>
+          <td>${escapeHtml(t(BUG_STATUS_LABEL[bug.status]))}</td>
+          <td>${escapeHtml(getScenarioLabel(environment, bug.scenarioId))}</td>
+          <td>${linkifyHtml(bug.description ?? t('environmentExport.noDescription'))}</td>
         </tr>
       `,
           )
           .join('')
       : `
         <tr>
-          <td colspan="4">Nenhum bug registrado.</td>
+          <td colspan="4">${t('environmentExport.noBugs')}</td>
         </tr>
       `;
 
   const documentContent = `
     <html>
       <head>
-        <title>Ambiente ${environment.identificador}</title>
+        <title>${escapeHtml(exportTitle)}</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 24px; }
           h1 { margin-bottom: 0; }
@@ -902,78 +774,90 @@ export const exportEnvironmentAsPDF = (
         </style>
       </head>
       <body>
-        <h1>Ambiente ${environment.identificador}</h1>
-        <p>Status: ${environment.status}</p>
-        <p>Tipo: ${environment.tipoAmbiente} · ${environment.tipoTeste}</p>
-        ${environment.momento ? `<p>Momento: ${environment.momento}</p>` : ''}
-        ${environment.release ? `<p>Release: ${environment.release}</p>` : ''}
-        <p>Jira: ${environment.jiraTask || 'Não informado'}</p>
-        <h2>Resumo do ambiente</h2>
+        <h1>${escapeHtml(exportTitle)}</h1>
+        <p>${escapeHtml(t('environmentExport.statusLabel'))}: ${escapeHtml(statusLabel)}</p>
+        <p>${escapeHtml(t('environmentExport.typeLabel'))}: ${escapeHtml(
+          environment.tipoAmbiente,
+        )} · ${escapeHtml(testTypeLabel)}</p>
+        ${
+          environment.momento
+            ? `<p>${escapeHtml(t('environmentExport.momentLabel'))}: ${escapeHtml(momentLabel)}</p>`
+            : ''
+        }
+        ${
+          environment.release
+            ? `<p>${escapeHtml(t('environmentExport.releaseLabel'))}: ${escapeHtml(
+                environment.release,
+              )}</p>`
+            : ''
+        }
+        <p>${t('environmentExport.jiraLabel')}: ${jiraValue}</p>
+        <h2>${t('environmentExport.summaryTitle')}</h2>
         <div class="summary-grid">
           <div>
-            <span>Início do teste</span>
-            <strong>${timeSummary.start}</strong>
+            <span>${t('environmentExport.startLabel')}</span>
+            <strong>${escapeHtml(timeSummary.start)}</strong>
           </div>
           <div>
-            <span>Término do teste</span>
-            <strong>${timeSummary.end}</strong>
+            <span>${t('environmentExport.endLabel')}</span>
+            <strong>${escapeHtml(timeSummary.end)}</strong>
           </div>
           <div>
-            <span>Tempo total</span>
-            <strong>${timeSummary.total}</strong>
+            <span>${t('environmentExport.totalLabel')}</span>
+            <strong>${escapeHtml(timeSummary.total)}</strong>
           </div>
           <div>
-            <span>Suíte</span>
-            <strong>${environment.suiteName ?? 'Não informada'}</strong>
+            <span>${t('environmentExport.suiteLabel')}</span>
+            <strong>${escapeHtml(environment.suiteName ?? t('dynamic.suiteNameFallback'))}</strong>
           </div>
           <div>
-            <span>Total de cenários</span>
+            <span>${t('environmentExport.totalScenariosLabel')}</span>
             <strong>${scenarioCount}</strong>
           </div>
           <div>
-            <span>Bugs registrados</span>
+            <span>${t('environmentExport.bugsLabel')}</span>
             <strong>${bugs.length}</strong>
           </div>
           <div>
-            <span>Participantes</span>
+            <span>${t('environmentExport.participantsLabel')}</span>
             <strong>${normalizedParticipants.length}</strong>
           </div>
         </div>
-        <h3>URLs monitoradas</h3>
+        <h3>${t('environmentExport.monitoredUrlsTitle')}</h3>
         ${urlList}
-        <h2>Participantes</h2>
+        <h2>${t('environmentExport.participantsTitle')}</h2>
         <table class="participants-table">
           <thead>
             <tr>
-              <th>Nome</th>
-              <th>Email</th>
+              <th>${t('environmentExport.participantName')}</th>
+              <th>${t('environmentExport.participantEmail')}</th>
             </tr>
           </thead>
           <tbody>${participantRows}</tbody>
         </table>
-        <h2>Cenários</h2>
+        <h2>${t('environmentExport.scenariosTitle')}</h2>
         <table>
           <thead>
             <tr>
-              <th>Título</th>
-              <th>Categoria</th>
-              <th>Criticidade</th>
-              <th>Observação</th>
-              <th>Status Mobile</th>
-              <th>Status Desktop</th>
-              <th>Evidência</th>
+              <th>${t('environmentEvidenceTable.table_titulo')}</th>
+              <th>${t('environmentEvidenceTable.table_categoria')}</th>
+              <th>${t('environmentEvidenceTable.table_criticidade')}</th>
+              <th>${t('environmentEvidenceTable.table_observacao')}</th>
+              <th>${t('environmentEvidenceTable.table_status_mobile')}</th>
+              <th>${t('environmentEvidenceTable.table_status_desktop')}</th>
+              <th>${t('environmentEvidenceTable.table_evidencia')}</th>
             </tr>
           </thead>
           <tbody>${scenarioRows}</tbody>
         </table>
-        <h2>Bugs registrados</h2>
+        <h2>${t('environmentExport.bugsTitle')}</h2>
         <table>
           <thead>
             <tr>
-              <th>Título</th>
-              <th>Status</th>
-              <th>Cenário</th>
-              <th>Descrição</th>
+              <th>${t('environmentExport.bugTitle')}</th>
+              <th>${t('environmentExport.bugStatus')}</th>
+              <th>${t('environmentExport.bugScenario')}</th>
+              <th>${t('environmentExport.bugDescription')}</th>
             </tr>
           </thead>
           <tbody>${bugRows}</tbody>
@@ -984,7 +868,7 @@ export const exportEnvironmentAsPDF = (
 
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
-    throw new Error('Não foi possível abrir a janela para impressão.');
+    throw new Error(t('environmentExport.printError'));
   }
 
   printWindow.document.write(documentContent);
@@ -1002,63 +886,73 @@ export const copyEnvironmentAsMarkdown = async (
     return;
   }
 
-  const normalizedParticipants = normalizeParticipants(environment, participantProfiles);
+  const t = i18n.t.bind(i18n);
+  const normalizedParticipants = normalizeParticipants(environment, participantProfiles, t);
   const timeSummary = buildTimeTrackingSummary(environment);
   const scenarioCount = Object.values(environment.scenarios ?? {}).length * 2;
+  const statusLabel = t(ENVIRONMENT_STATUS_LABEL[environment.status]);
+  const testTypeLabel = translateEnvironmentOption(environment.tipoTeste, t);
+  const momentLabel = translateEnvironmentOption(environment.momento, t);
   const scenarioTableRows = Object.values(environment.scenarios ?? {})
     .map((scenario) => {
       const statuses = getScenarioPlatformStatuses(scenario);
+      const statusMobile = translateScenarioStatus(statuses.mobile, t);
+      const statusDesktop = translateScenarioStatus(statuses.desktop, t);
+      const evidenceLabel = scenario.evidenciaArquivoUrl
+        ? t('environmentEvidenceTable.evidencia_abrir')
+        : t('environmentEvidenceTable.evidencia_sem');
       const evidenceLink = scenario.evidenciaArquivoUrl
-        ? `[evidência](${scenario.evidenciaArquivoUrl})`
-        : 'Sem evidência';
-      const observation = scenario.observacao?.trim() || '—';
-      return `| ${scenario.titulo} | ${scenario.categoria} | ${scenario.criticidade} | ${observation} | ${statuses.mobile} | ${statuses.desktop} | ${evidenceLink} |`;
+        ? `[${evidenceLabel}](${scenario.evidenciaArquivoUrl})`
+        : evidenceLabel;
+      const observation =
+        scenario.observacao?.trim() || t('environmentEvidenceTable.observacao_none');
+      return `| ${scenario.titulo} | ${scenario.categoria} | ${scenario.criticidade} | ${observation} | ${statusMobile} | ${statusDesktop} | ${evidenceLink} |`;
     })
     .join('\n');
   const scenarioTable = scenarioTableRows
-    ? `| Título | Categoria | Criticidade | Observação | Status Mobile | Status Desktop | Evidência |\n| --- | --- | --- | --- | --- | --- | --- |\n${scenarioTableRows}`
-    : '- Nenhum cenário cadastrado';
+    ? `| ${t('environmentEvidenceTable.table_titulo')} | ${t('environmentEvidenceTable.table_categoria')} | ${t('environmentEvidenceTable.table_criticidade')} | ${t('environmentEvidenceTable.table_observacao')} | ${t('environmentEvidenceTable.table_status_mobile')} | ${t('environmentEvidenceTable.table_status_desktop')} | ${t('environmentEvidenceTable.table_evidencia')} |\n| --- | --- | --- | --- | --- | --- | --- |\n${scenarioTableRows}`
+    : `- ${t('environmentExport.noScenarios')}`;
 
   const bugLines = bugs
     .map((bug) => {
       const scenarioLabel = getScenarioLabel(environment, bug.scenarioId);
       const description = bug.description ? ` — ${bug.description}` : '';
-      return `- **${bug.title}** (${BUG_STATUS_LABEL[bug.status]}) · Cenário: ${scenarioLabel}${description}`;
+      return `- **${bug.title}** (${t(BUG_STATUS_LABEL[bug.status])}) · ${t('environmentExport.bugScenario')}: ${scenarioLabel}${description}`;
     })
     .join('\n');
 
   const urls = (environment.urls ?? []).map((url) => `  - ${url}`).join('\n');
   const participants = normalizedParticipants
     .map((participant) => {
-      const email = participant.email !== 'Não informado' ? ` (${participant.email})` : '';
+      const email = participant.email !== t('dynamic.noEmail') ? ` (${participant.email})` : '';
       return `- **${participant.name}**${email}`;
     })
     .join('\n');
 
-  const markdown = `# Ambiente ${environment.identificador}
+  const markdown = `# ${t('environmentExport.title', { id: environment.identificador })}
 
-- Status: ${environment.status}
-- Tipo: ${environment.tipoAmbiente} · ${environment.tipoTeste}
-${environment.momento ? `- Momento: ${environment.momento}\n` : ''}${
-    environment.release ? `- Release: ${environment.release}\n` : ''
-  }- Jira: ${environment.jiraTask || 'Não informado'}
-- Início do teste: ${timeSummary.start}
-- Término do teste: ${timeSummary.end}
-- Tempo total: ${timeSummary.total}
-- Suíte: ${environment.suiteName ?? 'Não informada'}
-- Total de cenários: ${scenarioCount}
-- Bugs registrados: ${bugs.length}
-- Participantes: ${normalizedParticipants.length}
-- URLs:\n${urls || '  - Nenhuma URL cadastrada'}
+- ${t('environmentExport.statusLabel')}: ${statusLabel}
+- ${t('environmentExport.typeLabel')}: ${environment.tipoAmbiente} · ${testTypeLabel}
+${environment.momento ? `- ${t('environmentExport.momentLabel')}: ${momentLabel}\n` : ''}${
+    environment.release ? `- ${t('environmentExport.releaseLabel')}: ${environment.release}\n` : ''
+  }- ${t('environmentExport.jiraLabel')}: ${environment.jiraTask || t('dynamic.identifierFallback')}
+- ${t('environmentExport.startLabel')}: ${timeSummary.start}
+- ${t('environmentExport.endLabel')}: ${timeSummary.end}
+- ${t('environmentExport.totalLabel')}: ${timeSummary.total}
+- ${t('environmentExport.suiteLabel')}: ${environment.suiteName ?? t('dynamic.suiteNameFallback')}
+- ${t('environmentExport.totalScenariosLabel')}: ${scenarioCount}
+- ${t('environmentExport.bugsLabel')}: ${bugs.length}
+- ${t('environmentExport.participantsLabel')}: ${normalizedParticipants.length}
+- ${t('environmentExport.urlsLabel')}:\n${urls || `  - ${t('environmentExport.noUrls')}`}
 
-## Cenários
+## ${t('environmentExport.scenariosTitle')}
 ${scenarioTable}
 
-## Bugs
-${bugLines || '- Nenhum bug registrado'}
+## ${t('environmentExport.bugsTitle')}
+${bugLines || `- ${t('environmentExport.noBugs')}`}
 
-## Participantes
-${participants || '- Nenhum participante registrado'}
+## ${t('environmentExport.participantsTitle')}
+${participants || `- ${t('environmentExport.noParticipants')}`}
 `;
 
   if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
