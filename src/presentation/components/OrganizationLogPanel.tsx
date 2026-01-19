@@ -107,7 +107,8 @@ export const OrganizationLogPanel = ({ organizationId }: OrganizationLogPanelPro
 
   const renderLogMessage = (log: ActivityLog) => {
     if (!log.messageKey) {
-      return log.message;
+      const legacyMessage = translateLegacyMessage(log.message);
+      return legacyMessage;
     }
 
     const messageParams = log.messageParams ?? {};
@@ -157,6 +158,184 @@ export const OrganizationLogPanel = ({ organizationId }: OrganizationLogPanelPro
       default:
         return entity;
     }
+  };
+
+  const translateLegacyMessage = (message: string) => {
+    const rules: Array<{
+      regex: RegExp;
+      key: string;
+      buildParams: (match: RegExpMatchArray) => Record<string, string | number>;
+    }> = [
+      {
+        regex: /^Organização criada: (.+)$/i,
+        key: 'logMessages.organization.created',
+        buildParams: ([, organizationName]) => ({ organizationName }),
+      },
+      {
+        regex: /^Organização atualizada: (.+)$/i,
+        key: 'logMessages.organization.updated',
+        buildParams: ([, organizationName]) => ({ organizationName }),
+      },
+      {
+        regex: /^Organização removida: (.+)$/i,
+        key: 'logMessages.organization.deleted',
+        buildParams: ([, organizationName]) => ({ organizationName }),
+      },
+      {
+        regex: /^Membro adicionado: (.+) em (.+)$/i,
+        key: 'logMessages.organization.memberAdded',
+        buildParams: ([, memberName, organizationName]) => ({ memberName, organizationName }),
+      },
+      {
+        regex: /^Membro removido: (.+) de (.+)$/i,
+        key: 'logMessages.organization.memberRemoved',
+        buildParams: ([, memberName, organizationName]) => ({ memberName, organizationName }),
+      },
+      {
+        regex: /^Membro adicionado automaticamente: (.+)$/i,
+        key: 'logMessages.organization.memberAutoAdded',
+        buildParams: ([, memberName]) => ({ memberName }),
+      },
+      {
+        regex: /^Loja criada: (.+)$/i,
+        key: 'logMessages.store.created',
+        buildParams: ([, storeName]) => ({ storeName }),
+      },
+      {
+        regex: /^Loja atualizada: (.+)$/i,
+        key: 'logMessages.store.updated',
+        buildParams: ([, storeName]) => ({ storeName }),
+      },
+      {
+        regex: /^Loja removida: (.+)$/i,
+        key: 'logMessages.store.deleted',
+        buildParams: ([, storeName]) => ({ storeName }),
+      },
+      {
+        regex: /^Cenário criado: (.+) \\((.+)\\)$/i,
+        key: 'logMessages.scenario.created',
+        buildParams: ([, scenarioTitle, storeName]) => ({ scenarioTitle, storeName }),
+      },
+      {
+        regex: /^Cenário atualizado: (.+) \\((.+)\\)$/i,
+        key: 'logMessages.scenario.updated',
+        buildParams: ([, scenarioTitle, storeName]) => ({ scenarioTitle, storeName }),
+      },
+      {
+        regex: /^Cenário removido: (.+) \\((.+)\\)$/i,
+        key: 'logMessages.scenario.deleted',
+        buildParams: ([, scenarioTitle, storeName]) => ({ scenarioTitle, storeName }),
+      },
+      {
+        regex: /^Suíte criada: (.+) \\((.+)\\)$/i,
+        key: 'logMessages.suite.created',
+        buildParams: ([, suiteName, storeName]) => ({ suiteName, storeName }),
+      },
+      {
+        regex: /^Suíte atualizada: (.+) \\((.+)\\)$/i,
+        key: 'logMessages.suite.updated',
+        buildParams: ([, suiteName, storeName]) => ({ suiteName, storeName }),
+      },
+      {
+        regex: /^Suíte removida: (.+) \\((.+)\\)$/i,
+        key: 'logMessages.suite.deleted',
+        buildParams: ([, suiteName, storeName]) => ({ suiteName, storeName }),
+      },
+      {
+        regex: /^Ambiente criado: (.+) \\((.+)\\)$/i,
+        key: 'logMessages.environment.created',
+        buildParams: ([, environmentId, storeName]) => ({ environmentId, storeName }),
+      },
+      {
+        regex: /^Ambiente atualizado: (.+) \\((.+)\\)$/i,
+        key: 'logMessages.environment.updated',
+        buildParams: ([, environmentId, storeName]) => ({ environmentId, storeName }),
+      },
+      {
+        regex: /^Ambiente removido: (.+) \\((.+)\\)$/i,
+        key: 'logMessages.environment.deleted',
+        buildParams: ([, environmentId, storeName]) => ({ environmentId, storeName }),
+      },
+      {
+        regex: /^Participante adicionado ao ambiente \\((.+)\\) \\((.+)\\)$/i,
+        key: 'logMessages.environment.participantAdded',
+        buildParams: ([, environmentId, storeName]) => ({ environmentId, storeName }),
+      },
+      {
+        regex: /^Participante removido do ambiente \\((.+)\\) \\((.+)\\)$/i,
+        key: 'logMessages.environment.participantRemoved',
+        buildParams: ([, environmentId, storeName]) => ({ environmentId, storeName }),
+      },
+      {
+        regex: /^Status do cenário atualizado \\(mobile\\): (.+) - (.+) \\((.+)\\)$/i,
+        key: 'logMessages.environment.scenarioStatusUpdatedMobile',
+        buildParams: ([, status, environmentId, storeName]) => ({
+          status,
+          environmentId,
+          storeName,
+        }),
+      },
+      {
+        regex: /^Status do cenário atualizado \\(desktop\\): (.+) - (.+) \\((.+)\\)$/i,
+        key: 'logMessages.environment.scenarioStatusUpdatedDesktop',
+        buildParams: ([, status, environmentId, storeName]) => ({
+          status,
+          environmentId,
+          storeName,
+        }),
+      },
+      {
+        regex: /^Status do cenário atualizado: (.+) - (.+) \\((.+)\\)$/i,
+        key: 'logMessages.environment.scenarioStatusUpdated',
+        buildParams: ([, status, environmentId, storeName]) => ({ status, environmentId, storeName }),
+      },
+      {
+        regex: /^Evidência vinculada ao cenário (.+) - (.+) \\((.+)\\)$/i,
+        key: 'logMessages.environment.scenarioEvidenceAdded',
+        buildParams: ([, scenarioId, environmentId, storeName]) => ({
+          scenarioId,
+          environmentId,
+          storeName,
+        }),
+      },
+      {
+        regex: /^Bug criado: (.+) \\((.+)\\)$/i,
+        key: 'logMessages.environment.bugCreated',
+        buildParams: ([, bugTitle, storeName]) => ({ bugTitle, storeName }),
+      },
+      {
+        regex: /^Bug atualizado: (.+) \\((.+)\\)$/i,
+        key: 'logMessages.environment.bugUpdated',
+        buildParams: ([, bugTitle, storeName]) => ({ bugTitle, storeName }),
+      },
+      {
+        regex: /^Bug removido \\((.+)\\) \\((.+)\\)$/i,
+        key: 'logMessages.environment.bugDeleted',
+        buildParams: ([, bugId, storeName]) => ({ bugId, storeName }),
+      },
+      {
+        regex: /^Status do ambiente atualizado para (.+) \\((.+)\\) \\((.+)\\)$/i,
+        key: 'logMessages.environment.statusUpdated',
+        buildParams: ([, status, environmentId, storeName]) => ({
+          status,
+          environmentId,
+          storeName,
+        }),
+      },
+    ];
+
+    const matched = rules.find((rule) => rule.regex.test(message));
+    if (!matched) {
+      return message;
+    }
+
+    const match = message.match(matched.regex);
+    if (!match) {
+      return message;
+    }
+
+    const params = matched.buildParams(match);
+    return t(matched.key, { ...params, defaultValue: message });
   };
 
   return (
