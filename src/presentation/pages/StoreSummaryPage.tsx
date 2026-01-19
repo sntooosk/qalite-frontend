@@ -33,7 +33,7 @@ import {
   getCriticalityClassName,
   getCriticalityLabelKey,
 } from '../constants/scenarioOptions';
-import { CopyIcon, EyeIcon, PencilIcon, TrashIcon } from '../components/icons';
+import { CopyIcon, EyeIcon, PencilIcon, SettingsIcon, TrashIcon } from '../components/icons';
 import {
   normalizeAutomationEnum,
   normalizeCriticalityEnum,
@@ -1548,6 +1548,7 @@ export const StoreSummaryPage = () => {
             {store && canManageStoreSettings && (
               <div className="store-summary__actions">
                 <Button type="button" variant="secondary" onClick={openStoreSettings}>
+                  <SettingsIcon aria-hidden className="icon" />
                   {t('storeSummary.storeConfigurations')}
                 </Button>
               </div>
@@ -1992,34 +1993,6 @@ export const StoreSummaryPage = () => {
                                             <EyeIcon aria-hidden className="action-button__icon" />
                                             {t('storeSummary.viewDetails')}
                                           </button>
-                                          {canManageScenarios && (
-                                            <>
-                                              <button
-                                                type="button"
-                                                onClick={() => handleEditScenario(scenario)}
-                                                disabled={isSavingScenario}
-                                                className="action-button"
-                                              >
-                                                <PencilIcon
-                                                  aria-hidden
-                                                  className="action-button__icon"
-                                                />
-                                                {t('edit')}
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => openDeleteScenarioModal(scenario)}
-                                                disabled={isSavingScenario}
-                                                className="action-button action-button--danger"
-                                              >
-                                                <TrashIcon
-                                                  aria-hidden
-                                                  className="action-button__icon"
-                                                />
-                                                {t('storeSummary.deleteScenario')}
-                                              </button>
-                                            </>
-                                          )}
                                         </td>
                                       </tr>
                                     );
@@ -2497,6 +2470,8 @@ export const StoreSummaryPage = () => {
           const detailBdd = localizedBdd || t('storeSummary.emptyValue');
           const canCopyBdd = scenarioDetails?.source === 'scenario-table';
           const hasDetailBdd = Boolean(detailBddValue);
+          const canManageDetailScenario =
+            scenarioDetails?.source === 'scenario-table' && canManageScenarios && detailScenario;
 
           return (
             <div className="scenario-details">
@@ -2552,6 +2527,34 @@ export const StoreSummaryPage = () => {
                 </div>
                 <LinkifiedText text={detailBdd} className="scenario-details-text" as="p" />
               </div>
+              {canManageDetailScenario && (
+                <div className="scenario-details-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleCloseScenarioDetails();
+                      handleEditScenario(detailScenario);
+                    }}
+                    disabled={isSavingScenario}
+                    className="action-button"
+                  >
+                    <PencilIcon aria-hidden className="action-button__icon" />
+                    {t('edit')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleCloseScenarioDetails();
+                      openDeleteScenarioModal(detailScenario);
+                    }}
+                    disabled={isSavingScenario}
+                    className="action-button action-button--danger"
+                  >
+                    <TrashIcon aria-hidden className="action-button__icon" />
+                    {t('storeSummary.deleteScenario')}
+                  </button>
+                </div>
+              )}
             </div>
           );
         })()}

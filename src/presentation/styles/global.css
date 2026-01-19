@@ -1071,6 +1071,13 @@ a.text-link:hover {
   line-height: 1.5;
 }
 
+.scenario-details-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
 .store-summary {
   display: flex;
   flex-direction: column;

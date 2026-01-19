@@ -85,6 +85,10 @@ export const EnvironmentBugList = ({
     );
   };
 
+  if (!isLoading && bugs.length === 0) {
+    return <p className="section-subtitle">{translation('environmentBugList.noBugs')}</p>;
+  }
+
   return (
     <div className="environment-bugs">
       {showHeader && (

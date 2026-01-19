@@ -44,6 +44,14 @@ import {
   getCriticalityClassName,
   getCriticalityLabelKey,
 } from '../constants/scenarioOptions';
+import {
+  CopyIcon,
+  FileTextIcon,
+  LinkIcon,
+  LogoutIcon,
+  SettingsIcon,
+  UsersGroupIcon,
+} from '../components/icons';
 
 interface SlackSummaryBuilderOptions {
   formattedTime: string;
@@ -633,6 +641,7 @@ export const EnvironmentPage = () => {
                     loadingText={translation('environment.leaving')}
                     data-testid="leave-environment-button"
                   >
+                    <LogoutIcon aria-hidden className="icon" />
                     {translation('environment.leave')}
                   </Button>
                 )}
@@ -643,6 +652,7 @@ export const EnvironmentPage = () => {
                     onClick={() => setIsEditOpen(true)}
                     data-testid="edit-environment-button"
                   >
+                    <SettingsIcon aria-hidden className="icon" />
                     {translation('environment.manage')}
                   </Button>
                 )}
@@ -675,6 +685,7 @@ export const EnvironmentPage = () => {
                   disabled={isShareDisabled}
                   data-testid="copy-invite-button"
                 >
+                  <UsersGroupIcon aria-hidden className="icon" />
                   {translation('environment.share.invite')}
                 </Button>
               )}
@@ -685,6 +696,7 @@ export const EnvironmentPage = () => {
                 disabled={!canCopyPublicLink}
                 data-testid="copy-public-link-button"
               >
+                <LinkIcon aria-hidden className="icon" />
                 {translation('environment.share.publicLink')}
               </Button>
               <Button
@@ -694,6 +706,7 @@ export const EnvironmentPage = () => {
                 disabled={isShareDisabled}
                 data-testid="export-environment-pdf"
               >
+                <FileTextIcon aria-hidden className="icon" />
                 {translation('environment.exportPDF')}
               </Button>
               <Button
@@ -705,6 +718,7 @@ export const EnvironmentPage = () => {
                 loadingText={translation('environment.copying')}
                 data-testid="copy-markdown-button"
               >
+                <CopyIcon aria-hidden className="icon" />
                 {translation('environment.copyMarkdown')}
               </Button>
               {canSendSlackSummary && (
