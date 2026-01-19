@@ -158,6 +158,15 @@ export const FileTextIcon = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const ArchiveIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...baseProps} {...strokeProps} {...props}>
+    <path d="M3 7h18" />
+    <path d="M5 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2" />
+    <path d="M6 7v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7" />
+    <path d="M10 11h4" />
+  </svg>
+);
+
 export const PencilIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg {...baseProps} {...strokeProps} {...props}>
     <path d="M4 20h4l10-10-4-4L4 16v4Z" />

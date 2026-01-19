@@ -15,6 +15,7 @@ import { Button } from '../Button';
 import { PaginationControls } from '../PaginationControls';
 import { EnvironmentCard } from './EnvironmentCard';
 import { CreateEnvironmentModal } from './CreateEnvironmentModal';
+import { ArchiveIcon } from '../icons';
 
 interface EnvironmentKanbanProps {
   storeId: string;
@@ -286,7 +287,10 @@ export const EnvironmentKanban = ({
             >
               <div className="environment-kanban-column-header">
                 <div className="environment-kanban-column-title">
-                  <h4>{t('environmentKanban.archived')}</h4>
+                  <h4 className="environment-kanban-archived-title">
+                    <ArchiveIcon aria-hidden className="icon" />
+                    {t('environmentKanban.archived')}
+                  </h4>
                   <button
                     type="button"
                     className="environment-kanban-archive-toggle"
