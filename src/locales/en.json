@@ -1,12 +1,7 @@
 {
   "translation": {
-    "greeting": "Hello",
-    "greetingAdmin": "Hello Admin",
-    "greetingCollaborator": "Hello collaborator",
-    "greetingWithRole": "Hello {{role}} {{name}}",
     "profile": "Profile",
     "logout": "Logout",
-    "roleAdmin": "Admin",
     "roleUser": "User",
     "login": "Sign in",
     "register": "Create account",
@@ -667,6 +662,8 @@
       "moment": "Moment/When",
       "release": "Release",
       "suiteSummary": "Associated scenarios:",
+      "dangerZoneTitle": "Danger zone",
+      "dangerZoneDescription": "Delete the environment and its related data permanently.",
       "saving": "Saving...",
       "saveChanges": "Save changes"
     },

@@ -733,6 +733,10 @@ export const EnvironmentPage = () => {
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         environment={environment ?? null}
+        onDeleteRequest={() => {
+          setIsEditOpen(false);
+          setIsDeleteOpen(true);
+        }}
       />
 
       <DeleteEnvironmentModal

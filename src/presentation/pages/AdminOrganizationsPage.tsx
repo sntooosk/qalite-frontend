@@ -235,7 +235,14 @@ export const AdminOrganizationsPage = () => {
           </div>
         ) : (
           <div className="dashboard-grid">
-            {organizations.map((organization) => (
+            {organizations.map((organization) => {
+              const membersCount = organization.members.length;
+              const membersLabel =
+                membersCount === 1
+                  ? translation('adminOrganizationsPage.members.one')
+                  : translation('adminOrganizationsPage.members.other');
+
+              return (
               <div
                 key={organization.id}
                 className="card card-clickable"
@@ -260,9 +267,7 @@ export const AdminOrganizationsPage = () => {
                     })}
                   </span>
                   <span className="badge">
-                    {translation('adminOrganizationsPage.members', {
-                      count: organization.members.length,
-                    })}
+                    {membersCount} {membersLabel}
                   </span>
 
                   <div className="card-link-hint">
@@ -271,7 +276,8 @@ export const AdminOrganizationsPage = () => {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

@@ -1,13 +1,8 @@
 {
   "translation": {
     "user": "Colaborador",
-    "greeting": "Olá",
-    "greetingAdmin": "Olá Administrador",
-    "greetingCollaborator": "Olá colaborador",
-    "greetingWithRole": "Olá {{role}} {{name}}",
     "profile": "Perfil",
     "logout": "Sair",
-    "roleAdmin": "Administrador",
     "roleUser": "Colaborador",
     "login": "Entrar",
     "register": "Criar conta",
@@ -668,6 +663,8 @@
       "moment": "Momento/Quando",
       "release": "Release",
       "suiteSummary": "Cenários associados:",
+      "dangerZoneTitle": "Zona de perigo",
+      "dangerZoneDescription": "Exclua o ambiente e seus dados relacionados permanentemente.",
       "saving": "Salvando...",
       "saveChanges": "Salvar alterações"
     },
