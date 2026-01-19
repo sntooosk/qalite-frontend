@@ -605,24 +605,14 @@ export const EnvironmentPage = () => {
                   </Button>
                 )}
                 {hasEnteredEnvironment && environment.status !== 'done' && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => setIsEditOpen(true)}
-                      data-testid="edit-environment-button"
-                    >
-                      {translation('environment.manage')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setIsDeleteOpen(true)}
-                      data-testid="delete-environment-button"
-                    >
-                      {translation('environment.delete')}
-                    </Button>
-                  </>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setIsEditOpen(true)}
+                    data-testid="edit-environment-button"
+                  >
+                    {translation('environment.manage')}
+                  </Button>
                 )}
               </>
             )}

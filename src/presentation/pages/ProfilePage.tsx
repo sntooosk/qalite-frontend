@@ -8,18 +8,25 @@ import { Layout } from '../components/Layout';
 import { TextInput } from '../components/TextInput';
 import { UserPreferencesSection } from '../components/UserPreferencesSection';
 import { useTranslation } from 'react-i18next';
+import { useUserPreferences } from '../context/UserPreferencesContext';
 
 export const ProfilePage = () => {
   const { user, updateProfile, isLoading } = useAuth();
+  const { preferences, updatePreferences, isSaving } = useUserPreferences();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+  const [draftPreferences, setDraftPreferences] = useState(preferences);
   const { t } = useTranslation();
 
   useEffect(() => {
     setFirstName(user?.firstName ?? '');
     setLastName(user?.lastName ?? '');
   }, [user?.firstName, user?.lastName]);
+
+  useEffect(() => {
+    setDraftPreferences(preferences);
+  }, [preferences]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -42,6 +49,13 @@ export const ProfilePage = () => {
         firstName: trimmedFirstName,
         lastName: trimmedLastName,
       });
+
+      if (
+        draftPreferences.theme !== preferences.theme ||
+        draftPreferences.language !== preferences.language
+      ) {
+        await updatePreferences(draftPreferences);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -88,13 +102,21 @@ export const ProfilePage = () => {
               disabled
             />
 
-            <Button type="submit" isLoading={isLoading} loadingText={t('profilePage.loadingText')}>
+            <Button
+              type="submit"
+              isLoading={isLoading || isSaving}
+              loadingText={t('profilePage.loadingText')}
+            >
               {t('profilePage.saveButton')}
             </Button>
           </form>
         </section>
 
-        <UserPreferencesSection />
+        <UserPreferencesSection
+          draft={draftPreferences}
+          onDraftChange={setDraftPreferences}
+          showActions={false}
+        />
       </div>
     </Layout>
   );

@@ -221,6 +221,10 @@ export const UserDashboardPage = () => {
                     {t('storesPage.scenarios', { count: store.scenarioCount })}
                   </span>
                 </div>
+                <div className="card-link-hint">
+                  <span>{t('storesPage.openStore')}</span>
+                  <span aria-hidden="true">&rarr;</span>
+                </div>
               </button>
             ))}
           </div>
