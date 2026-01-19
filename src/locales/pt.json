@@ -1,13 +1,8 @@
 {
   "translation": {
     "user": "Colaborador",
-    "greeting": "Olá",
-    "greetingAdmin": "Olá Administrador",
-    "greetingCollaborator": "Olá colaborador",
-    "greetingWithRole": "Olá {{role}} {{name}}",
     "profile": "Perfil",
     "logout": "Sair",
-    "roleAdmin": "Administrador",
     "roleUser": "Colaborador",
     "login": "Entrar",
     "register": "Criar conta",
@@ -362,6 +357,8 @@
         "description": "Utilize o botão acima para cadastrar a primeira organização."
       },
       "viewStores": "Ver lojas",
+      "storeCount": "{{count}} loja",
+      "storeCount_plural": "{{count}} lojas",
       "members": {
         "one": "membro",
         "other": "membros"
@@ -574,6 +571,7 @@
       "leave": "Sair do ambiente",
       "leaving": "Saindo...",
       "edit": "Editar",
+      "manage": "Gerenciar ambiente",
       "delete": "Excluir",
       "startExecution": "Iniciar execução",
       "finishEnvironment": "Concluir ambiente",
@@ -593,6 +591,7 @@
       "slack.sending": "Enviando...",
       "slack.success": "Resumo enviado para o Slack com sucesso.",
       "slack.error": "Não foi possível enviar o resumo para o Slack.",
+      "slack.summaryMessage": "Resumo da suíte {{suiteName}}: {{scenarioCount}} cenários, {{status}}. Link: {{link}}",
       "share.invite": "Convidar para o ambiente",
       "share.publicLink": "Copiar link público",
       "scenarios.title": "Cenários e evidências",
@@ -664,6 +663,8 @@
       "moment": "Momento/Quando",
       "release": "Release",
       "suiteSummary": "Cenários associados:",
+      "dangerZoneTitle": "Zona de perigo",
+      "dangerZoneDescription": "Exclua o ambiente e seus dados relacionados permanentemente.",
       "saving": "Salvando...",
       "saveChanges": "Salvar alterações"
     },

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import type { Organization } from '../../domain/entities/organization';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
+import { storeService } from '../../application/use-cases/StoreUseCase';
 import { useToast } from '../context/ToastContext';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
@@ -31,6 +32,7 @@ export const AdminOrganizationsPage = () => {
   const { showToast } = useToast();
   const { t: translation } = useTranslation();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [storeCounts, setStoreCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [organizationForm, setOrganizationForm] =
@@ -65,6 +67,38 @@ export const AdminOrganizationsPage = () => {
 
     void fetchOrganizations();
   }, [showToast, translation]);
+
+  useEffect(() => {
+    if (organizations.length === 0) {
+      setStoreCounts({});
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchStoreCounts = async () => {
+      try {
+        const counts = await Promise.all(
+          organizations.map(async (organization) => {
+            const stores = await storeService.listByOrganization(organization.id);
+            return [organization.id, stores.length] as const;
+          }),
+        );
+
+        if (isMounted) {
+          setStoreCounts(Object.fromEntries(counts));
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void fetchStoreCounts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [organizations]);
 
   const openCreateModal = () => {
     setOrganizationForm(initialOrganizationForm);
@@ -201,37 +235,49 @@ export const AdminOrganizationsPage = () => {
           </div>
         ) : (
           <div className="dashboard-grid">
-            {organizations.map((organization) => (
-              <div
-                key={organization.id}
-                className="card card-clickable"
-                data-testid={`organization-card-${organization.id}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate(`/admin/organizations?organizationId=${organization.id}`)}
-                onKeyDown={(event) =>
-                  handleCardKeyDown(event, () =>
-                    navigate(`/admin/organizations?organizationId=${organization.id}`),
-                  )
-                }
-              >
-                <div className="organization-card-header">
-                  <h2 className="card-title">{organization.name}</h2>
-                </div>
+            {organizations.map((organization) => {
+              const membersCount = organization.members.length;
+              const membersLabel =
+                membersCount === 1
+                  ? translation('adminOrganizationsPage.members.one')
+                  : translation('adminOrganizationsPage.members.other');
 
-                <div className="organization-card-footer">
-                  <span className="badge">
-                    {organization.members.length}
-                    {organization.members.length === 1 ? '' : 's'}
-                  </span>
+              return (
+                <div
+                  key={organization.id}
+                  className="card card-clickable"
+                  data-testid={`organization-card-${organization.id}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/admin/organizations?organizationId=${organization.id}`)}
+                  onKeyDown={(event) =>
+                    handleCardKeyDown(event, () =>
+                      navigate(`/admin/organizations?organizationId=${organization.id}`),
+                    )
+                  }
+                >
+                  <div className="organization-card-header">
+                    <h2 className="card-title">{organization.name}</h2>
+                  </div>
 
-                  <div className="card-link-hint">
-                    <span>{translation('adminOrganizationsPage.viewStores')}</span>
-                    <span aria-hidden>&rarr;</span>
+                  <div className="organization-card-footer">
+                    <span className="badge">
+                      {translation('adminOrganizationsPage.storeCount', {
+                        count: storeCounts[organization.id] ?? 0,
+                      })}
+                    </span>
+                    <span className="badge">
+                      {membersCount} {membersLabel}
+                    </span>
+
+                    <div className="card-link-hint">
+                      <span>{translation('adminOrganizationsPage.viewStores')}</span>
+                      <span aria-hidden>&rarr;</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

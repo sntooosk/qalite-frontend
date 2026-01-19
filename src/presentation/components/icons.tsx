@@ -142,6 +142,13 @@ export const LinkIcon = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const CopyIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...baseProps} {...strokeProps} {...props}>
+    <rect x="9" y="9" width="11" height="11" rx="2" />
+    <rect x="4" y="4" width="11" height="11" rx="2" />
+  </svg>
+);
+
 export const BrowserstackIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg {...baseProps} {...strokeProps} {...props}>
     <rect x="3" y="5" width="18" height="10" rx="2" />

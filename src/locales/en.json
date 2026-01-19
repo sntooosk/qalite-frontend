@@ -1,12 +1,7 @@
 {
   "translation": {
-    "greeting": "Hello",
-    "greetingAdmin": "Hello Admin",
-    "greetingCollaborator": "Hello collaborator",
-    "greetingWithRole": "Hello {{role}} {{name}}",
     "profile": "Profile",
     "logout": "Logout",
-    "roleAdmin": "Admin",
     "roleUser": "User",
     "login": "Sign in",
     "register": "Create account",
@@ -361,6 +356,8 @@
         "description": "Use the button above to register the first organization."
       },
       "viewStores": "View stores",
+      "storeCount": "{{count}} store",
+      "storeCount_plural": "{{count}} stores",
       "members": {
         "one": "member",
         "other": "members"
@@ -573,6 +570,7 @@
       "leave": "Leave environment",
       "leaving": "Leaving...",
       "edit": "Edit",
+      "manage": "Manage environment",
       "delete": "Delete",
       "startExecution": "Start execution",
       "finishEnvironment": "Finish environment",
@@ -592,6 +590,7 @@
       "slack.sending": "Sending...",
       "slack.success": "Summary successfully sent to Slack.",
       "slack.error": "Failed to send the summary to Slack.",
+      "slack.summaryMessage": "Suite {{suiteName}} summary: {{scenarioCount}} scenarios, {{status}}. Link: {{link}}",
       "share.invite": "Invite to environment",
       "share.publicLink": "Copy public link",
       "scenarios.title": "Scenarios and evidence",
@@ -663,6 +662,8 @@
       "moment": "Moment/When",
       "release": "Release",
       "suiteSummary": "Associated scenarios:",
+      "dangerZoneTitle": "Danger zone",
+      "dangerZoneDescription": "Delete the environment and its related data permanently.",
       "saving": "Saving...",
       "saveChanges": "Save changes"
     },
