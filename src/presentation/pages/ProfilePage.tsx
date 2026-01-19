@@ -86,7 +86,7 @@ export const ProfilePage = () => {
 
             <TextInput
               id="lastName"
-              label={t('lastName')}
+              label={t('lastname')}
               value={lastName}
               onChange={(event) => setLastName(event.target.value)}
               required

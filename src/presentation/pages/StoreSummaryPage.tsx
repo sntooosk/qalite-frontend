@@ -2194,25 +2194,6 @@ export const StoreSummaryPage = () => {
                               onSubmit={handleSuiteSubmit}
                               data-testid="suite-form"
                             >
-                              <div className="suite-form-header-actions suite-editor-actions">
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  onClick={handleShowSuitesOnly}
-                                >
-                                  {t('storeSummary.goToRegistered')}
-                                </Button>
-                                {editingSuiteId && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    onClick={handleCancelSuiteEdit}
-                                    disabled={isSavingSuite}
-                                  >
-                                    {t('storeSummary.cancelEdit')}
-                                  </Button>
-                                )}
-                              </div>
                               <div className="suite-form-header">
                                 <div>
                                   <h3 className="form-title">
@@ -2245,6 +2226,16 @@ export const StoreSummaryPage = () => {
                                       ? t('storeSummary.updateSuite')
                                       : t('storeSummary.saveSuite')}
                                   </Button>
+                                  {editingSuiteId && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      onClick={handleCancelSuiteEdit}
+                                      disabled={isSavingSuite}
+                                    >
+                                      {t('storeSummary.cancelEdit')}
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                               <div className="suite-scenario-selector">
@@ -2325,17 +2316,29 @@ export const StoreSummaryPage = () => {
                                           </option>
                                         ))}
                                       </select>
-                                      {(suiteScenarioFilters.search ||
-                                        suiteScenarioFilters.category ||
-                                        suiteScenarioFilters.criticality) && (
-                                        <button
-                                          type="button"
-                                          className="scenario-filter-clear"
-                                          onClick={handleClearSuiteScenarioFilters}
-                                        >
-                                          {t('storeSummary.clearFilters')}
-                                        </button>
-                                      )}
+                                      <div className="suite-scenario-filters-actions">
+                                        {(suiteScenarioFilters.search ||
+                                          suiteScenarioFilters.category ||
+                                          suiteScenarioFilters.criticality) && (
+                                          <button
+                                            type="button"
+                                            className="scenario-filter-clear"
+                                            onClick={handleClearSuiteScenarioFilters}
+                                          >
+                                            {t('storeSummary.clearFilters')}
+                                          </button>
+                                        )}
+                                        {!editingSuiteId && (
+                                          <Button
+                                            type="button"
+                                            variant="secondary"
+                                            onClick={handleShowSuitesOnly}
+                                            className="suite-go-registered"
+                                          >
+                                            {t('storeSummary.goToRegistered')}
+                                          </Button>
+                                        )}
+                                      </div>
                                     </div>
                                     {filteredSuiteScenarios.length === 0 ? (
                                       <p className="category-manager-empty">
