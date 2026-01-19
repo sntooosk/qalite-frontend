@@ -608,11 +608,11 @@ export const EnvironmentPage = () => {
                   <>
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="secondary"
                       onClick={() => setIsEditOpen(true)}
                       data-testid="edit-environment-button"
                     >
-                      {translation('environment.edit')}
+                      {translation('environment.manage')}
                     </Button>
                     <Button
                       type="button"

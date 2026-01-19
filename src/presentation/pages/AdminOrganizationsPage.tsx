@@ -260,8 +260,9 @@ export const AdminOrganizationsPage = () => {
                     })}
                   </span>
                   <span className="badge">
-                    {organization.members.length}
-                    {organization.members.length === 1 ? '' : 's'}
+                    {translation('adminOrganizationsPage.members', {
+                      count: organization.members.length,
+                    })}
                   </span>
 
                   <div className="card-link-hint">

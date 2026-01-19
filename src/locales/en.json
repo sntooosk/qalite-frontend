@@ -575,6 +575,7 @@
       "leave": "Leave environment",
       "leaving": "Leaving...",
       "edit": "Edit",
+      "manage": "Manage environment",
       "delete": "Delete",
       "startExecution": "Start execution",
       "finishEnvironment": "Finish environment",

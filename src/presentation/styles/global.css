@@ -208,13 +208,6 @@ a.text-link:hover {
   justify-content: flex-end;
 }
 
-.header-user-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
 .header-user-actions {
   display: flex;
   align-items: center;
@@ -227,7 +220,7 @@ a.text-link:hover {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.6rem 1.1rem;
+  padding: 0.4rem 1rem 0.4rem 0.5rem;
   border-radius: 999px;
   border: 1px solid var(--color-border);
   background: var(--color-surface-alt);
@@ -316,10 +309,6 @@ a.text-link:hover {
   .header-user {
     width: 100%;
   }
-
-  .header-user-info {
-    flex: 1;
-  }
 }
 
 @media (max-width: 600px) {
@@ -334,16 +323,6 @@ a.text-link:hover {
   .header-user {
     align-items: stretch;
     gap: 1rem;
-  }
-
-  .header-user-info {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .user-context {
-    align-items: flex-start;
-    text-align: left;
   }
 
   .header-user-actions {
@@ -375,27 +354,8 @@ a.text-link:hover {
   }
 }
 
-.user-context {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
-}
-
-.user-greeting {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
-.user-name {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.user-role {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
+.header-profile .avatar {
+  border-radius: 999px;
 }
 
 .app-main {
@@ -940,6 +900,34 @@ a.text-link:hover {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 1rem;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: 90vh;
+    padding: 1.5rem;
+    border-radius: 1rem;
+  }
+
+  .modal-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .modal-danger-zone {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 .modal-header {
@@ -2897,28 +2885,35 @@ button.store-summary-highlight:focus-visible {
 }
 
 .suite-selection-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.5rem 0 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
 }
 
 .suite-selection-action {
-  border: 1px dashed var(--color-border-strong);
-  border-radius: var(--radius-full);
-  padding: 0.35rem 0.85rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  padding: 0.55rem 0.85rem;
   font-size: 0.85rem;
-  background: rgba(37, 99, 235, 0.08);
+  background: rgba(37, 99, 235, 0.12);
   color: var(--color-primary);
   cursor: pointer;
+  font-weight: 600;
   transition:
     background var(--transition-base),
-    border-color var(--transition-base);
+    border-color var(--transition-base),
+    transform var(--transition-base);
 }
 
 .suite-selection-action--ghost {
-  background: transparent;
+  background: var(--color-surface);
   color: var(--color-text-secondary);
+  border-color: var(--color-border);
 }
 
 .suite-selection-action:disabled {
@@ -2928,7 +2923,8 @@ button.store-summary-highlight:focus-visible {
 
 .suite-selection-action:not(:disabled):hover {
   border-color: var(--color-primary);
-  background: rgba(37, 99, 235, 0.12);
+  background: rgba(37, 99, 235, 0.18);
+  transform: translateY(-1px);
 }
 
 .suite-scenario-filters {
@@ -3681,7 +3677,13 @@ button.store-summary-highlight:focus-visible {
 
 .environment-card.is-locked {
   cursor: not-allowed;
-  opacity: 0.85;
+  opacity: 0.9;
+  background: var(--color-surface-alt);
+}
+
+.environment-card.is-locked:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .environment-card-header {
@@ -4860,6 +4862,19 @@ button.store-summary-highlight:focus-visible {
   .environment-page__header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .environment-card {
+    padding: 0.95rem;
+  }
+
+  .environment-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .environment-card.is-locked {
+    opacity: 1;
   }
 
   .summary-card__metrics,
