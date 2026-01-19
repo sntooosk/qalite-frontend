@@ -34,7 +34,7 @@ import {
 } from './ScenarioColumnSortControl';
 import { downloadScenarioWorkbook, openScenarioPdf } from '../../shared/utils/storeImportExport';
 import { buildExternalLink } from '../utils/externalLink';
-import { PencilIcon, TrashIcon } from './icons';
+import { FileTextIcon, PencilIcon, TrashIcon } from './icons';
 
 interface StoreManagementPanelProps {
   organizationId: string;
@@ -1026,6 +1026,7 @@ export const StoreManagementPanel = ({
                     isLoading={exportingFormat === 'pdf'}
                     loadingText={t('exporting')}
                   >
+                    <FileTextIcon aria-hidden className="icon" />
                     {t('storeSummary.exportPdf')}
                   </Button>
                 </div>

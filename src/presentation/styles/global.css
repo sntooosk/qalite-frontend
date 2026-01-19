@@ -3973,6 +3973,13 @@ button.store-summary-highlight:focus-visible {
   gap: 1rem;
 }
 
+.environment-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
 .environment-suite-preview {
   background: var(--color-surface);
   border: 1px dashed var(--color-border);

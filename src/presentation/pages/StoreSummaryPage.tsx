@@ -33,7 +33,14 @@ import {
   getCriticalityClassName,
   getCriticalityLabelKey,
 } from '../constants/scenarioOptions';
-import { CopyIcon, EyeIcon, PencilIcon, SettingsIcon, TrashIcon } from '../components/icons';
+import {
+  CopyIcon,
+  EyeIcon,
+  FileTextIcon,
+  PencilIcon,
+  SettingsIcon,
+  TrashIcon,
+} from '../components/icons';
 import {
   normalizeAutomationEnum,
   normalizeCriticalityEnum,
@@ -1859,6 +1866,7 @@ export const StoreSummaryPage = () => {
                             isLoading={exportingScenarioFormat === 'pdf'}
                             loadingText={t('exporting')}
                           >
+                            <FileTextIcon aria-hidden className="icon" />
                             {t('storeSummary.exportPdf')}
                           </Button>
                         </div>

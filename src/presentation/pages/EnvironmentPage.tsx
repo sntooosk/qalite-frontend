@@ -48,7 +48,6 @@ import {
   CopyIcon,
   FileTextIcon,
   LinkIcon,
-  LogoutIcon,
   SettingsIcon,
   UsersGroupIcon,
 } from '../components/icons';
@@ -635,19 +634,6 @@ export const EnvironmentPage = () => {
                 {hasEnteredEnvironment && environment.status !== 'done' && (
                   <Button
                     type="button"
-                    variant="ghost"
-                    onClick={handleLeaveEnvironment}
-                    isLoading={isLeavingEnvironment}
-                    loadingText={translation('environment.leaving')}
-                    data-testid="leave-environment-button"
-                  >
-                    <LogoutIcon aria-hidden className="icon" />
-                    {translation('environment.leave')}
-                  </Button>
-                )}
-                {hasEnteredEnvironment && environment.status !== 'done' && (
-                  <Button
-                    type="button"
                     variant="secondary"
                     onClick={() => setIsEditOpen(true)}
                     data-testid="edit-environment-button"
@@ -765,15 +751,18 @@ export const EnvironmentPage = () => {
         />
       </section>
 
-      <EditEnvironmentModal
-        isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
-        environment={environment ?? null}
-        onDeleteRequest={() => {
-          setIsEditOpen(false);
-          setIsDeleteOpen(true);
-        }}
-      />
+        <EditEnvironmentModal
+          isOpen={isEditOpen}
+          onClose={() => setIsEditOpen(false)}
+          environment={environment ?? null}
+          onDeleteRequest={() => {
+            setIsEditOpen(false);
+            setIsDeleteOpen(true);
+          }}
+          onLeave={handleLeaveEnvironment}
+          canLeave={hasEnteredEnvironment && environment.status !== 'done'}
+          isLeaving={isLeavingEnvironment}
+        />
 
       <DeleteEnvironmentModal
         isOpen={isDeleteOpen}
