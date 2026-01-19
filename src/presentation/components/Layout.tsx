@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Button } from './Button';
 import { UserAvatar } from './UserAvatar';
-import { LogoutIcon, UserIcon } from './icons';
+import { LogoutIcon } from './icons';
 import qliteLogo from '../assets/logo.png';
 import { useTranslation } from 'react-i18next';
 
@@ -36,24 +36,13 @@ export const Layout = ({ children }: LayoutProps) => {
         <nav className="header-actions">
           {user ? (
             <div className="header-user">
-              <div className="header-user-info">
-                <UserAvatar name={displayName} size="sm" />
-                <div className="user-context">
-                  <span className="user-greeting">
-                    {t('greetingWithRole', {
-                      role: user.role === 'admin' ? t('roleAdmin') : t('roleUser'),
-                      name: displayName,
-                    })}
-                  </span>
-                </div>
-              </div>
               <div className="header-user-actions">
                 <button
                   type="button"
                   className="header-profile"
                   onClick={() => navigate('/profile')}
                 >
-                  <UserIcon aria-hidden className="icon" />
+                  <UserAvatar name={displayName} size="sm" />
                   <span>{t('profile')}</span>
                 </button>
                 <Button type="button" variant="ghost" onClick={() => void logout()}>

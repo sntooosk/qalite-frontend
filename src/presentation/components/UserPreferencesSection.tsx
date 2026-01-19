@@ -7,14 +7,30 @@ import { SelectInput } from './SelectInput';
 import { SettingsIcon } from './icons';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 
-export const UserPreferencesSection = () => {
+interface UserPreferencesSectionProps {
+  draft?: UserPreferences;
+  onDraftChange?: (next: UserPreferences) => void;
+  showActions?: boolean;
+  isSaving?: boolean;
+}
+
+export const UserPreferencesSection = ({
+  draft: controlledDraft,
+  onDraftChange,
+  showActions = true,
+  isSaving,
+}: UserPreferencesSectionProps) => {
   const { t } = useTranslation();
-  const { preferences, updatePreferences, isSaving } = useUserPreferences();
+  const { preferences, updatePreferences, isSaving: isSavingContext } = useUserPreferences();
   const [draft, setDraft] = useState<UserPreferences>(preferences);
+  const resolvedDraft = controlledDraft ?? draft;
+  const resolvedIsSaving = isSaving ?? isSavingContext;
 
   useEffect(() => {
-    setDraft(preferences);
-  }, [preferences]);
+    if (!controlledDraft) {
+      setDraft(preferences);
+    }
+  }, [controlledDraft, preferences]);
 
   const themeOptions = [
     { value: 'system', label: t('preferences.themeSystem') },
@@ -29,14 +45,22 @@ export const UserPreferencesSection = () => {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (draft.theme === preferences.theme && draft.language === preferences.language) {
+    if (resolvedDraft.theme === preferences.theme && resolvedDraft.language === preferences.language) {
       return;
     }
 
-    await updatePreferences(draft);
+    await updatePreferences(resolvedDraft);
   };
 
-  const hasChanges = draft.theme !== preferences.theme || draft.language !== preferences.language;
+  const hasChanges =
+    resolvedDraft.theme !== preferences.theme || resolvedDraft.language !== preferences.language;
+  const handleDraftChange = (next: UserPreferences) => {
+    if (onDraftChange) {
+      onDraftChange(next);
+      return;
+    }
+    setDraft(next);
+  };
 
   return (
     <section className="card settings-card">
@@ -54,38 +78,43 @@ export const UserPreferencesSection = () => {
           <SelectInput
             id="preferences-theme"
             label={t('preferences.themeLabel')}
-            value={draft.theme}
+            value={resolvedDraft.theme}
             options={themeOptions}
             onChange={(event) => {
-              const next = { ...draft, theme: event.target.value as UserPreferences['theme'] };
-              setDraft(next);
+              const next = {
+                ...resolvedDraft,
+                theme: event.target.value as UserPreferences['theme'],
+              };
+              handleDraftChange(next);
             }}
           />
           <SelectInput
             id="preferences-language"
             label={t('preferences.languageLabel')}
-            value={draft.language}
+            value={resolvedDraft.language}
             options={languageOptions}
             onChange={(event) => {
               const next = {
-                ...draft,
+                ...resolvedDraft,
                 language: event.target.value as UserPreferences['language'],
               };
-              setDraft(next);
+              handleDraftChange(next);
             }}
           />
         </div>
-        <div className="settings-form__actions">
-          <Button
-            type="submit"
-            isLoading={isSaving}
-            loadingText={t('saving')}
-            disabled={!hasChanges}
-          >
-            {t('preferences.save')}
-          </Button>
-          {!hasChanges && <span className="settings-form__hint">{t('preferences.upToDate')}</span>}
-        </div>
+        {showActions && (
+          <div className="settings-form__actions">
+            <Button
+              type="submit"
+              isLoading={resolvedIsSaving}
+              loadingText={t('saving')}
+              disabled={!hasChanges}
+            >
+              {t('preferences.save')}
+            </Button>
+            {!hasChanges && <span className="settings-form__hint">{t('preferences.upToDate')}</span>}
+          </div>
+        )}
       </form>
     </section>
   );
