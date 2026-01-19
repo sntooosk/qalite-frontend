@@ -3,11 +3,16 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { EnvironmentStatusError } from '../../shared/errors/firebaseErrors';
-import type { Environment, EnvironmentStatus } from '../../domain/entities/environment';
+import type {
+  Environment,
+  EnvironmentScenarioStatus,
+  EnvironmentStatus,
+} from '../../domain/entities/environment';
 import type { UserSummary } from '../../domain/entities/user';
 import type { SlackTaskSummaryPayload } from '../../infrastructure/external/slack';
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
 import { slackService } from '../../application/use-cases/SlackUseCase';
+import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { useToast } from '../context/ToastContext';
@@ -22,6 +27,8 @@ import { copyToClipboard } from '../utils/clipboard';
 import { useStoreOrganizationBranding } from '../hooks/useStoreOrganizationBranding';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { PageLoader } from '../components/PageLoader';
+import { Modal } from '../components/Modal';
+import { LinkifiedText } from '../components/LinkifiedText';
 import { useUserProfiles } from '../hooks/useUserProfiles';
 import { useEnvironmentBugs } from '../hooks/useEnvironmentBugs';
 import { EnvironmentBugModal } from '../components/environments/EnvironmentBugModal';
@@ -30,12 +37,28 @@ import { useEnvironmentDetails } from '../hooks/useEnvironmentDetails';
 import { useEnvironmentEngagement } from '../hooks/useEnvironmentEngagement';
 import { EnvironmentSummaryCard } from '../components/environments/EnvironmentSummaryCard';
 import { TOptions } from 'i18next';
+import { useScenarioEvidence } from '../hooks/useScenarioEvidence';
+import { getScenarioPlatformStatuses } from '../../infrastructure/external/environments';
+import {
+  getAutomationLabelKey,
+  getCriticalityClassName,
+  getCriticalityLabelKey,
+} from '../constants/scenarioOptions';
+import {
+  CopyIcon,
+  FileTextIcon,
+  LinkIcon,
+  SettingsIcon,
+  UsersGroupIcon,
+} from '../components/icons';
 
 interface SlackSummaryBuilderOptions {
   formattedTime: string;
   totalTimeMs: number;
   scenarioCount: number;
   executedScenariosCount: number;
+  progressLabel: string;
+  publicLink: string;
   urls: string[];
   bugsCount: number;
   participantProfiles: UserSummary[];
@@ -113,6 +136,12 @@ const buildSlackTaskSummaryPayload = (
   translation: (key: string, opts?: TOptions) => string,
 ): SlackTaskSummaryPayload => {
   const suiteName = environment.suiteName?.trim() || translation('dynamic.suiteNameFallback');
+  const summaryMessage = translation('environment.slack.summaryMessage', {
+    suiteName,
+    scenarioCount: options.scenarioCount,
+    status: options.progressLabel,
+    link: options.publicLink,
+  });
   const attendees = buildAttendeesList(environment, options.participantProfiles, translation);
   const attendeeList = attendees ?? [];
   const uniqueParticipantsCount = new Set(environment.participants ?? []).size;
@@ -148,6 +177,7 @@ const buildSlackTaskSummaryPayload = (
       monitoredUrls,
       attendees: attendeeList,
     },
+    message: summaryMessage,
   };
 };
 
@@ -166,6 +196,8 @@ export const EnvironmentPage = () => {
   const [isBugModalOpen, setIsBugModalOpen] = useState(false);
   const [editingBug, setEditingBug] = useState<EnvironmentBug | null>(null);
   const [defaultBugScenarioId, setDefaultBugScenarioId] = useState<string | null>(null);
+  const [scenarioDetailsId, setScenarioDetailsId] = useState<string | null>(null);
+  const [modalEvidenceLink, setModalEvidenceLink] = useState('');
   const [isCopyingMarkdown, setIsCopyingMarkdown] = useState(false);
   const [isSendingSlackSummary, setIsSendingSlackSummary] = useState(false);
   const { setActiveOrganization } = useOrganizationBranding();
@@ -183,6 +215,10 @@ export const EnvironmentPage = () => {
     enterEnvironment,
     leaveEnvironment,
   } = useEnvironmentEngagement(environment);
+  const { isUpdating: isUpdatingEvidence, handleEvidenceUpload } = useScenarioEvidence(
+    environment?.id,
+  );
+  const { t: translation, i18n } = useTranslation();
   const {
     bugCountByScenario,
     progressPercentage,
@@ -192,12 +228,39 @@ export const EnvironmentPage = () => {
     headerMeta,
     urls,
     shareLinks,
-  } = useEnvironmentDetails(environment, bugs);
-  const { t: translation } = useTranslation();
+  } = useEnvironmentDetails(environment, bugs, i18n.language);
   const slackWebhookUrl = environmentOrganization?.slackWebhookUrl?.trim() || null;
   const canSendSlackSummary = Boolean(slackWebhookUrl);
   const inviteParam = searchParams.get('invite');
   const shouldAutoJoinFromInvite = inviteParam === 'true' || inviteParam === '1';
+  const detailScenario = scenarioDetailsId ? environment?.scenarios?.[scenarioDetailsId] : null;
+  const detailScenarioStatus = detailScenario ? getScenarioPlatformStatuses(detailScenario) : null;
+  const isDetailScenarioRunning = Boolean(
+    detailScenarioStatus &&
+      Object.values(detailScenarioStatus).some((status) => status === 'em_andamento'),
+  );
+  const formatAutomationLabel = (value?: string | null) => {
+    const labelKey = getAutomationLabelKey(value);
+    if (labelKey) {
+      return translation(labelKey);
+    }
+    return value?.trim() || translation('storeSummary.emptyValue');
+  };
+  const formatCriticalityLabel = (value?: string | null) => {
+    const labelKey = getCriticalityLabelKey(value);
+    if (labelKey) {
+      return translation(labelKey);
+    }
+    return value?.trim() || translation('storeSummary.emptyValue');
+  };
+  const formatScenarioStatusLabel = (value?: EnvironmentScenarioStatus | null) => {
+    if (!value) {
+      return translation('storeSummary.emptyValue');
+    }
+    const key = `environmentEvidenceTable.status_${value}`;
+    const translated = translation(key);
+    return translated === key ? value : translated;
+  };
 
   const clearInviteParam = useCallback(() => {
     if (!inviteParam) {
@@ -208,6 +271,39 @@ export const EnvironmentPage = () => {
     nextParams.delete('invite');
     setSearchParams(nextParams, { replace: true });
   }, [inviteParam, searchParams, setSearchParams]);
+
+  const handleOpenScenarioDetails = useCallback((scenarioId: string) => {
+    setScenarioDetailsId(scenarioId);
+  }, []);
+
+  const handleCloseScenarioDetails = useCallback(() => {
+    setScenarioDetailsId(null);
+  }, []);
+
+  const handleModalEvidenceSave = useCallback(async () => {
+    if (!scenarioDetailsId) {
+      return;
+    }
+    const link = modalEvidenceLink.trim();
+    if (!link) {
+      return;
+    }
+
+    try {
+      await handleEvidenceUpload(scenarioDetailsId, link);
+    } catch (error) {
+      console.error(error);
+    }
+  }, [handleEvidenceUpload, modalEvidenceLink, scenarioDetailsId]);
+
+  useEffect(() => {
+    if (!detailScenario) {
+      setModalEvidenceLink('');
+      return;
+    }
+
+    setModalEvidenceLink(detailScenario.evidenciaArquivoUrl ?? '');
+  }, [detailScenario]);
 
   useEffect(() => {
     setActiveOrganization(environmentOrganization ?? null);
@@ -277,6 +373,25 @@ export const EnvironmentPage = () => {
     [showToast],
   );
 
+  const handleCopyPublicLink = useCallback(async () => {
+    if (!environment) {
+      return;
+    }
+
+    const shareLanguage = i18n.language ?? 'en';
+    if (!environment.publicShareLanguage) {
+      try {
+        await environmentService.update(environment.id, {
+          publicShareLanguage: shareLanguage,
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    await handleCopyLink(shareLinks.public);
+  }, [environment, handleCopyLink, i18n.language, shareLinks.public]);
+
   const handleExportPDF = useCallback(() => {
     if (!environment) {
       return;
@@ -327,6 +442,8 @@ export const EnvironmentPage = () => {
             totalTimeMs: totalMs,
             scenarioCount,
             executedScenariosCount,
+            progressLabel,
+            publicLink: shareLinks.public,
             urls,
             bugsCount: bugs.length,
             participantProfiles,
@@ -455,9 +572,7 @@ export const EnvironmentPage = () => {
     return (
       <Layout>
         <section className="page-container environment-page">
-          <button type="button" className="link-button" onClick={() => navigate(-1)}>
-            {translation('environment.back')}
-          </button>
+          <BackButton label={translation('back')} />
           <p className="section-subtitle">{translation('environment.notFound')}</p>
         </section>
       </Layout>
@@ -469,9 +584,7 @@ export const EnvironmentPage = () => {
       <section className="page-container environment-page" data-testid="environment-page">
         <div className="environment-page__header">
           <div>
-            <button type="button" className="link-button" onClick={() => navigate(-1)}>
-              {translation('environment.back')}
-            </button>
+            <BackButton label={translation('back')} />
             <div>
               <h1 className="section-title">
                 {environment.identificador ?? translation('environment.anonymousEnvironment')}
@@ -521,34 +634,13 @@ export const EnvironmentPage = () => {
                 {hasEnteredEnvironment && environment.status !== 'done' && (
                   <Button
                     type="button"
-                    variant="ghost"
-                    onClick={handleLeaveEnvironment}
-                    isLoading={isLeavingEnvironment}
-                    loadingText={translation('environment.leaving')}
-                    data-testid="leave-environment-button"
+                    variant="secondary"
+                    onClick={() => setIsEditOpen(true)}
+                    data-testid="edit-environment-button"
                   >
-                    {translation('environment.leave')}
+                    <SettingsIcon aria-hidden className="icon" />
+                    {translation('environment.manage')}
                   </Button>
-                )}
-                {hasEnteredEnvironment && environment.status !== 'done' && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setIsEditOpen(true)}
-                      data-testid="edit-environment-button"
-                    >
-                      {translation('environment.edit')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setIsDeleteOpen(true)}
-                      data-testid="delete-environment-button"
-                    >
-                      {translation('environment.delete')}
-                    </Button>
-                  </>
                 )}
               </>
             )}
@@ -571,22 +663,26 @@ export const EnvironmentPage = () => {
           <div className="summary-card">
             <h3>{translation('environment.actions.shareExport')}</h3>
             <div className="share-actions">
+              {environment?.status !== 'done' && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => handleCopyLink(shareLinks.invite)}
+                  disabled={isShareDisabled}
+                  data-testid="copy-invite-button"
+                >
+                  <UsersGroupIcon aria-hidden className="icon" />
+                  {translation('environment.share.invite')}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => handleCopyLink(shareLinks.invite)}
-                disabled={isShareDisabled}
-                data-testid="copy-invite-button"
-              >
-                {translation('environment.share.invite')}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => handleCopyLink(shareLinks.public)}
+                onClick={handleCopyPublicLink}
                 disabled={!canCopyPublicLink}
                 data-testid="copy-public-link-button"
               >
+                <LinkIcon aria-hidden className="icon" />
                 {translation('environment.share.publicLink')}
               </Button>
               <Button
@@ -596,6 +692,7 @@ export const EnvironmentPage = () => {
                 disabled={isShareDisabled}
                 data-testid="export-environment-pdf"
               >
+                <FileTextIcon aria-hidden className="icon" />
                 {translation('environment.exportPDF')}
               </Button>
               <Button
@@ -607,6 +704,7 @@ export const EnvironmentPage = () => {
                 loadingText={translation('environment.copying')}
                 data-testid="copy-markdown-button"
               >
+                <CopyIcon aria-hidden className="icon" />
                 {translation('environment.copyMarkdown')}
               </Button>
               {canSendSlackSummary && (
@@ -639,8 +737,7 @@ export const EnvironmentPage = () => {
           <EnvironmentEvidenceTable
             environment={environment}
             isLocked={Boolean(isScenarioLocked)}
-            onRegisterBug={handleScenarioBugRequest}
-            bugCountByScenario={bugCountByScenario}
+            onViewDetails={handleOpenScenarioDetails}
             organizationId={environmentOrganization?.id ?? null}
           />
         </div>
@@ -658,6 +755,13 @@ export const EnvironmentPage = () => {
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         environment={environment ?? null}
+        onDeleteRequest={() => {
+          setIsEditOpen(false);
+          setIsDeleteOpen(true);
+        }}
+        onLeave={handleLeaveEnvironment}
+        canLeave={hasEnteredEnvironment && environment.status !== 'done'}
+        isLeaving={isLeavingEnvironment}
       />
 
       <DeleteEnvironmentModal
@@ -675,6 +779,154 @@ export const EnvironmentPage = () => {
           initialScenarioId={editingBug ? (editingBug.scenarioId ?? null) : defaultBugScenarioId}
         />
       )}
+
+      <Modal
+        isOpen={Boolean(scenarioDetailsId)}
+        onClose={handleCloseScenarioDetails}
+        title={translation('storeSummary.scenarioDetailsTitle')}
+      >
+        {detailScenario ? (
+          <div className="scenario-details">
+            <p className="scenario-details-title">{detailScenario.titulo}</p>
+            <div className="scenario-details-grid">
+              <div className="scenario-details-item">
+                <span className="scenario-details-label">
+                  {translation('environmentEvidenceTable.table_categoria')}
+                </span>
+                <span className="scenario-details-value">
+                  {detailScenario.categoria || translation('storeSummary.emptyValue')}
+                </span>
+              </div>
+              <div className="scenario-details-item">
+                <span className="scenario-details-label">
+                  {translation('storeSummary.automation')}
+                </span>
+                <span className="scenario-details-value">
+                  {formatAutomationLabel(detailScenario.automatizado)}
+                </span>
+              </div>
+              <div className="scenario-details-item">
+                <span className="scenario-details-label">
+                  {translation('environmentEvidenceTable.table_criticidade')}
+                </span>
+                <span
+                  className={`criticality-badge scenario-details-criticality ${getCriticalityClassName(
+                    detailScenario.criticidade,
+                  )}`}
+                >
+                  {formatCriticalityLabel(detailScenario.criticidade)}
+                </span>
+              </div>
+              <div className="scenario-details-item">
+                <span className="scenario-details-label">
+                  {translation('environmentEvidenceTable.table_status_mobile')}
+                </span>
+                <span className="scenario-details-value">
+                  {formatScenarioStatusLabel(detailScenarioStatus?.mobile ?? detailScenario.status)}
+                </span>
+              </div>
+              <div className="scenario-details-item">
+                <span className="scenario-details-label">
+                  {translation('environmentEvidenceTable.table_status_desktop')}
+                </span>
+                <span className="scenario-details-value">
+                  {formatScenarioStatusLabel(
+                    detailScenarioStatus?.desktop ?? detailScenario.status,
+                  )}
+                </span>
+              </div>
+            </div>
+            <div className="scenario-details-section">
+              <span className="scenario-details-label">
+                {translation('environmentEvidenceTable.table_observacao')}
+              </span>
+              <LinkifiedText
+                text={
+                  detailScenario.observacao ||
+                  translation('environmentEvidenceTable.observacao_none')
+                }
+                className="scenario-details-text"
+                as="p"
+              />
+            </div>
+            <div className="scenario-details-section">
+              <span className="scenario-details-label">{translation('storeSummary.bdd')}</span>
+              <LinkifiedText
+                text={translation('storeSummary.emptyValue')}
+                className="scenario-details-text"
+                as="p"
+              />
+            </div>
+            <div className="scenario-details-section">
+              <span className="scenario-details-label">
+                {translation('environmentEvidenceTable.table_evidencia')}
+              </span>
+              {detailScenario.evidenciaArquivoUrl ? (
+                <a
+                  href={detailScenario.evidenciaArquivoUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-link"
+                >
+                  {translation('environmentEvidenceTable.evidencia_abrir')}
+                </a>
+              ) : isDetailScenarioRunning && !isScenarioLocked ? (
+                <div className="scenario-evidence-actions">
+                  <input
+                    type="url"
+                    value={modalEvidenceLink}
+                    onChange={(event) => setModalEvidenceLink(event.target.value)}
+                    placeholder={translation('environmentEvidenceTable.evidencia_placeholder')}
+                    className="scenario-evidence-input"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleModalEvidenceSave}
+                    isLoading={isUpdatingEvidence}
+                    loadingText={translation('saving')}
+                  >
+                    {translation('environmentEvidenceTable.evidencia_salvar')}
+                  </Button>
+                </div>
+              ) : (
+                <span className="section-subtitle">
+                  {translation('environmentEvidenceTable.evidencia_sem')}
+                </span>
+              )}
+            </div>
+            <div className="scenario-details-section">
+              <span className="scenario-details-label">
+                {translation('environmentEvidenceTable.table_bug')}
+              </span>
+              <div className="scenario-bug-cell">
+                <span className="scenario-bug-cell__label">
+                  {(() => {
+                    const count = bugCountByScenario?.[scenarioDetailsId as string] ?? 0;
+                    if (count === 0) {
+                      return translation('environmentEvidenceTable.bug_nenhum');
+                    }
+                    if (count === 1) {
+                      return translation('environmentEvidenceTable.bug_um');
+                    }
+                    return translation('environmentEvidenceTable.bug_varios', { count });
+                  })()}
+                </span>
+                {!isInteractionLocked && (
+                  <button
+                    type="button"
+                    className="scenario-bug-cell__action"
+                    onClick={() => handleScenarioBugRequest(scenarioDetailsId as string)}
+                  >
+                    {translation('environmentEvidenceTable.bug_registrar')}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="section-subtitle">{translation('storeSummary.emptyValue')}</p>
+        )}
+      </Modal>
     </Layout>
   );
 };
