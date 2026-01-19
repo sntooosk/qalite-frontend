@@ -1,5 +1,7 @@
 import type { StoreExportPayload, StoreScenario } from '../../domain/entities/store';
 import { formatDateTime } from './time';
+import i18n from '../../lib/i18n';
+import { normalizeAutomationEnum, normalizeCriticalityEnum } from './scenarioEnums';
 
 const textEncoder = new TextEncoder();
 
@@ -323,39 +325,123 @@ const escapeHtml = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+const URL_PATTERN = /\b((https?:\/\/|www\.)[^\s]+|[a-z0-9.-]+\.[a-z]{2,}(?:\/[^\s]*)?)/gi;
+
+const buildHref = (value: string) => (/^https?:\/\//i.test(value) ? value : `https://${value}`);
+
+const linkifyHtml = (value: string) => {
+  if (!value) {
+    return '';
+  }
+
+  let result = '';
+  let lastIndex = 0;
+  const regex = new RegExp(URL_PATTERN);
+
+  value.replace(regex, (match, _value, _protocol, offset: number) => {
+    if (offset > lastIndex) {
+      result += escapeHtml(value.slice(lastIndex, offset));
+    }
+
+    const href = buildHref(match);
+    result += `<a href="${escapeHtml(href)}" target="_blank" rel="noreferrer noopener">${escapeHtml(match)}</a>`;
+    lastIndex = offset + match.length;
+    return match;
+  });
+
+  if (lastIndex < value.length) {
+    result += escapeHtml(value.slice(lastIndex));
+  }
+
+  return result || escapeHtml(value);
+};
+
+const formatAutomationLabel = (value: string | null | undefined, t: (key: string) => string) => {
+  const normalized = normalizeAutomationEnum(value);
+  if (normalized === 'AUTOMATED') {
+    return t('scenarioOptions.automated');
+  }
+  if (normalized === 'NOT_AUTOMATED') {
+    return t('scenarioOptions.notAutomated');
+  }
+  return value?.trim() || t('storeSummary.emptyValue');
+};
+
+const formatCriticalityLabel = (value: string | null | undefined, t: (key: string) => string) => {
+  const normalized = normalizeCriticalityEnum(value);
+  if (normalized === 'LOW') {
+    return t('scenarioOptions.low');
+  }
+  if (normalized === 'MEDIUM') {
+    return t('scenarioOptions.medium');
+  }
+  if (normalized === 'HIGH') {
+    return t('scenarioOptions.high');
+  }
+  if (normalized === 'CRITICAL') {
+    return t('scenarioOptions.critical');
+  }
+  return value?.trim() || t('storeSummary.emptyValue');
+};
+
+const buildExternalLink = (value: string | null | undefined) => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  if (trimmed.includes('.')) {
+    return `https://${trimmed}`;
+  }
+  return null;
+};
+
 export const openScenarioPdf = (
   payload: StoreExportPayload,
   title: string,
   targetWindow?: Window | null,
 ) => {
+  const t = i18n.t.bind(i18n);
   const printableWindow = targetWindow ?? window.open('', '_blank');
 
   if (!printableWindow) {
-    throw new Error('Não foi possível abrir a visualização para exportar em PDF.');
+    throw new Error(t('storeSummary.pdfOpenError'));
   }
 
   const scenarioRows = payload.scenarios
     .map((scenario, index) => {
-      const observation = scenario.observation?.trim() || '—';
-      const bdd = scenario.bdd?.trim() || '—';
+      const observation = scenario.observation?.trim() || t('storeSummary.emptyValue');
+      const bdd = scenario.bdd?.trim() || t('storeSummary.emptyValue');
+      const automation = formatAutomationLabel(scenario.automation, t);
+      const criticality = formatCriticalityLabel(scenario.criticality, t);
 
       return `
         <tr>
           <td>${index + 1}</td>
-          <td>${escapeHtml(scenario.title || '—')}</td>
-          <td>${escapeHtml(scenario.category || '—')}</td>
-          <td>${escapeHtml(scenario.automation || '—')}</td>
-          <td>${escapeHtml(scenario.criticality || '—')}</td>
-          <td>${escapeHtml(observation)}</td>
-          <td>${escapeHtml(bdd)}</td>
+          <td>${linkifyHtml(scenario.title || t('storeSummary.emptyValue'))}</td>
+          <td>${linkifyHtml(scenario.category || t('storeSummary.emptyValue'))}</td>
+          <td>${escapeHtml(automation)}</td>
+          <td>${escapeHtml(criticality)}</td>
+          <td>${linkifyHtml(observation)}</td>
+          <td>${linkifyHtml(bdd)}</td>
         </tr>
       `;
     })
     .join('');
 
+  const siteHref = buildExternalLink(payload.store.site);
+  const siteLabel = payload.store.site?.trim() || t('storeSummary.notProvided');
+  const siteValue = siteHref
+    ? `<a href="${escapeHtml(siteHref)}" target="_blank" rel="noreferrer noopener">${escapeHtml(
+        siteLabel,
+      )}</a>`
+    : escapeHtml(siteLabel);
+
   const content = `
     <!doctype html>
-    <html lang="pt-BR">
+    <html lang="${escapeHtml(i18n.language || 'pt-BR')}">
       <head>
         <meta charset="UTF-8" />
         <title>${escapeHtml(title)}</title>
@@ -374,23 +460,23 @@ export const openScenarioPdf = (
         <h1>${escapeHtml(title)}</h1>
         <div class="summary-grid">
           <div>
-            <span>Loja</span>
-            <strong>${escapeHtml(payload.store.name)}</strong>
+            <span>${escapeHtml(t('storeSummary.store'))}</span>
+            <strong>${linkifyHtml(payload.store.name)}</strong>
           </div>
           <div>
-            <span>Site</span>
-            <strong>${escapeHtml(payload.store.site || '—')}</strong>
+            <span>${escapeHtml(t('storeSummary.siteLabel'))}</span>
+            <strong>${siteValue}</strong>
           </div>
           <div>
-            <span>Ambiente</span>
-            <strong>${escapeHtml(payload.store.stage || 'Não informado')}</strong>
+            <span>${escapeHtml(t('storeSummary.environmentLabel'))}</span>
+            <strong>${escapeHtml(payload.store.stage || t('storeSummary.notInformed'))}</strong>
           </div>
           <div>
-            <span>Quantidade de cenários</span>
+            <span>${escapeHtml(t('storeSummary.scenarioCountLabel'))}</span>
             <strong>${payload.scenarios.length}</strong>
           </div>
           <div>
-            <span>Exportado em</span>
+            <span>${escapeHtml(t('storeSummary.exportedAtLabel'))}</span>
             <strong>${escapeHtml(formatDateTime(payload.exportedAt))}</strong>
           </div>
         </div>
@@ -398,16 +484,19 @@ export const openScenarioPdf = (
           <thead>
             <tr>
               <th>#</th>
-              <th>Título</th>
-              <th>Categoria</th>
-              <th>Automação</th>
-              <th>Criticidade</th>
-              <th>Observação</th>
-              <th>BDD</th>
+              <th>${escapeHtml(t('storeSummary.title'))}</th>
+              <th>${escapeHtml(t('storeSummary.category'))}</th>
+              <th>${escapeHtml(t('storeSummary.automation'))}</th>
+              <th>${escapeHtml(t('storeSummary.criticality'))}</th>
+              <th>${escapeHtml(t('storeSummary.observation'))}</th>
+              <th>${escapeHtml(t('storeSummary.bdd'))}</th>
             </tr>
           </thead>
           <tbody>
-            ${scenarioRows || `<tr><td colspan="7">Nenhum cenário cadastrado.</td></tr>`}
+            ${
+              scenarioRows ||
+              `<tr><td colspan="7">${escapeHtml(t('storeSummary.noScenariosRegistered'))}</td></tr>`
+            }
           </tbody>
         </table>
       </body>

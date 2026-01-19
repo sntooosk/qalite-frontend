@@ -22,6 +22,7 @@ import { useToast } from '../../context/ToastContext';
 import { scenarioExecutionService } from '../../../application/use-cases/ScenarioExecutionUseCase';
 import { useAuth } from '../../hooks/useAuth';
 import { PaginationControls } from '../PaginationControls';
+import { EyeIcon } from '../icons';
 
 interface EnvironmentEvidenceTableProps {
   environment: Environment;
@@ -434,8 +435,9 @@ export const EnvironmentEvidenceTable = ({
                     <button
                       type="button"
                       onClick={() => onViewDetails?.(scenarioId)}
-                      className="scenario-details-button"
+                      className="action-button action-button--primary"
                     >
+                      <EyeIcon aria-hidden className="action-button__icon" />
                       {translation('storeSummary.viewDetails')}
                     </button>
                   </td>

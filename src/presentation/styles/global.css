@@ -2341,13 +2341,19 @@ button.store-summary-highlight:focus-visible {
   transform: translateY(-2px);
 }
 
+.store-list-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem;
+}
+
 .store-list-button {
   all: unset;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  padding: 1rem 1.25rem;
 }
 
 .store-list-meta {
@@ -2370,12 +2376,6 @@ button.store-summary-highlight:focus-visible {
   color: var(--color-text-secondary);
 }
 
-.store-list-button p {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-}
-
 .store-list-count {
   align-self: flex-start;
   font-size: 0.8rem;
@@ -2383,39 +2383,20 @@ button.store-summary-highlight:focus-visible {
   color: var(--color-text-muted);
 }
 
+.store-list-site {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
 .store-list-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.5rem;
+  flex-wrap: wrap;
   border-top: 1px solid var(--color-border);
   padding: 0.75rem 1.25rem;
-}
-
-.store-list-actions button {
-  border: none;
-  background: transparent;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: color var(--transition-base);
-}
-
-.store-list-actions button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.store-list-actions button:hover:not(:disabled) {
-  color: var(--color-primary);
-}
-
-.store-list-delete {
-  color: var(--color-danger) !important;
-}
-
-.store-list-delete:hover:not(:disabled) {
-  color: #b91c1c !important;
 }
 
 .form-title {
@@ -2630,6 +2611,7 @@ button.store-summary-highlight:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 @media (min-width: 640px) {
@@ -2638,39 +2620,59 @@ button.store-summary-highlight:focus-visible {
   }
 }
 
-.scenario-actions button {
-  border: none;
-  background: transparent;
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
   font-weight: 600;
+  font-size: 0.82rem;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: color var(--transition-base);
+  transition:
+    border-color var(--transition-base),
+    color var(--transition-base),
+    background var(--transition-base),
+    transform var(--transition-fast);
 }
 
-.scenario-actions .scenario-details-button {
-  color: var(--color-primary);
+.action-button__icon {
+  width: 1rem;
+  height: 1rem;
 }
 
-.scenario-actions button:disabled {
+.action-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.delete-button,
-.edit-button {
-  padding: inherit;
-}
-
-.scenario-actions button:hover:not(:disabled) {
+.action-button:hover:not(:disabled) {
+  border-color: var(--color-primary);
   color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.08);
+  transform: translateY(-1px);
 }
 
-.scenario-delete {
-  color: var(--color-danger) !important;
+.action-button--primary {
+  border-color: rgba(59, 130, 246, 0.4);
+  color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.12);
 }
 
-.scenario-delete:hover:not(:disabled) {
-  color: #b91c1c !important;
+.action-button--danger {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: var(--color-danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.action-button--danger:hover:not(:disabled) {
+  border-color: rgba(239, 68, 68, 0.65);
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.14);
 }
 
 .scenario-table-header {
@@ -4049,35 +4051,12 @@ button.store-summary-highlight:focus-visible {
   background: var(--color-surface);
 }
 
-.scenario-evidence-save {
-  padding: 0.55rem 0.9rem;
-  border-radius: 10px;
-  border: 1px solid var(--color-primary);
-  background: var(--color-primary);
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    background var(--transition-base),
-    transform var(--transition-fast);
-}
-
 .scenario-bug-cell {
   gap: 0.6rem;
 }
 
 .scenario-bug-cell__action {
   font-weight: 600;
-}
-
-.scenario-evidence-save:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.scenario-evidence-save:not(:disabled):hover {
-  background: var(--color-primary-strong);
-  transform: translateY(-1px);
 }
 
 .environment-url-list {
