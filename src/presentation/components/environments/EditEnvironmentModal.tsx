@@ -13,12 +13,16 @@ import {
   requiresReleaseField,
 } from '../../constants/environmentOptions';
 import { useTranslation } from 'react-i18next';
+import { LogoutIcon } from '../icons';
 
 interface EditEnvironmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   environment: Environment | null;
   onDeleteRequest?: () => void;
+  onLeave?: () => void;
+  canLeave?: boolean;
+  isLeaving?: boolean;
 }
 
 export const EditEnvironmentModal = ({
@@ -26,6 +30,9 @@ export const EditEnvironmentModal = ({
   onClose,
   environment,
   onDeleteRequest,
+  onLeave,
+  canLeave,
+  isLeaving,
 }: EditEnvironmentModalProps) => {
   const { t: translation } = useTranslation();
 
@@ -212,14 +219,28 @@ export const EditEnvironmentModal = ({
         <p className="environment-suite-preview">
           {translation('editEnvironmentModal.suiteSummary')} {suiteSummary}
         </p>
-        <Button
-          type="submit"
-          disabled={isLocked}
-          isLoading={isSubmitting}
-          loadingText={translation('editEnvironmentModal.saving')}
-        >
-          {translation('editEnvironmentModal.saveChanges')}
-        </Button>
+        <div className="environment-form-actions">
+          <Button
+            type="submit"
+            disabled={isLocked}
+            isLoading={isSubmitting}
+            loadingText={translation('editEnvironmentModal.saving')}
+          >
+            {translation('editEnvironmentModal.saveChanges')}
+          </Button>
+          {canLeave && onLeave && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onLeave}
+              isLoading={isLeaving}
+              loadingText={translation('environment.leaving')}
+            >
+              <LogoutIcon aria-hidden className="icon" />
+              {translation('environment.leave')}
+            </Button>
+          )}
+        </div>
       </form>
       {canDelete && (
         <div className="modal-danger-zone">

@@ -149,6 +149,41 @@ export const CopyIcon = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const FileTextIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...baseProps} {...strokeProps} {...props}>
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9Z" />
+    <path d="M14 3v6h6" />
+    <path d="M9 13h6" />
+    <path d="M9 17h6" />
+  </svg>
+);
+
+export const ArchiveIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...baseProps} {...strokeProps} {...props}>
+    <path d="M3 7h18" />
+    <path d="M5 7V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2" />
+    <path d="M6 7v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7" />
+    <path d="M10 11h4" />
+  </svg>
+);
+
+export const PencilIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...baseProps} {...strokeProps} {...props}>
+    <path d="M4 20h4l10-10-4-4L4 16v4Z" />
+    <path d="m13 6 4 4" />
+  </svg>
+);
+
+export const TrashIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...baseProps} {...strokeProps} {...props}>
+    <path d="M3 6h18" />
+    <path d="M8 6V4h8v2" />
+    <path d="M6 6v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6" />
+    <path d="M10 11v6" />
+    <path d="M14 11v6" />
+  </svg>
+);
+
 export const BrowserstackIcon = (props: SVGProps<SVGSVGElement>) => (
   <svg {...baseProps} {...strokeProps} {...props}>
     <rect x="3" y="5" width="18" height="10" rx="2" />

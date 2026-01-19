@@ -25,6 +25,7 @@ import { TextArea } from '../components/TextArea';
 import { SelectInput } from '../components/SelectInput';
 import { Modal } from '../components/Modal';
 import { PageLoader } from '../components/PageLoader';
+import { LinkifiedText } from '../components/LinkifiedText';
 import {
   AUTOMATION_OPTIONS,
   CRITICALITY_OPTIONS,
@@ -32,7 +33,14 @@ import {
   getCriticalityClassName,
   getCriticalityLabelKey,
 } from '../constants/scenarioOptions';
-import { CopyIcon } from '../components/icons';
+import {
+  CopyIcon,
+  EyeIcon,
+  FileTextIcon,
+  PencilIcon,
+  SettingsIcon,
+  TrashIcon,
+} from '../components/icons';
 import {
   normalizeAutomationEnum,
   normalizeCriticalityEnum,
@@ -51,6 +59,7 @@ import { isAutomatedScenario } from '../../shared/utils/automation';
 import { formatDurationFromMs } from '../../shared/utils/time';
 import type { ScenarioAverageMap } from '../../infrastructure/external/scenarioExecutions';
 import { useTranslation } from 'react-i18next';
+import { buildExternalLink } from '../utils/externalLink';
 
 const emptyScenarioForm: StoreScenarioInput = {
   title: '',
@@ -91,17 +100,6 @@ const emptyScenarioFilters: ScenarioFilters = {
 };
 
 const PAGE_SIZE = 20;
-
-const normalizeStoreSite = (site?: string | null, message?: string) => {
-  const trimmed = site?.trim();
-
-  if (!trimmed) {
-    return { label: message, href: null };
-  }
-
-  const href = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  return { label: trimmed, href };
-};
 
 const translateBddKeywords = (bdd: string, locale: string) => {
   const normalizedLocale = locale.toLowerCase();
@@ -217,10 +215,13 @@ export const StoreSummaryPage = () => {
   const scenarioFormRef = useRef<HTMLFormElement | null>(null);
   const [exportingScenarioFormat, setExportingScenarioFormat] = useState<ExportFormat | null>(null);
   const { t, i18n } = useTranslation();
-  const storeSiteInfo = useMemo(
-    () => normalizeStoreSite(store?.site, t('storeSummary.notInformed')),
-    [store?.site, t],
-  );
+  const storeSiteInfo = useMemo(() => {
+    const link = buildExternalLink(store?.site);
+    return {
+      label: link.label || t('storeSummary.notInformed'),
+      href: link.href,
+    };
+  }, [store?.site, t]);
   const [isStoreSettingsOpen, setIsStoreSettingsOpen] = useState(false);
   const [storeSettings, setStoreSettings] = useState({ name: '', site: '' });
   const [storeSettingsError, setStoreSettingsError] = useState<string | null>(null);
@@ -1536,13 +1537,25 @@ export const StoreSummaryPage = () => {
               {store && (
                 <p className="section-subtitle">
                   {organization?.name ? `${organization.name} • ` : ''}
-                  {store.site || t('storeSummary.notProvided')}
+                  {storeSiteInfo.href ? (
+                    <a
+                      href={storeSiteInfo.href}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="text-link"
+                    >
+                      {storeSiteInfo.label}
+                    </a>
+                  ) : (
+                    storeSiteInfo.label
+                  )}
                 </p>
               )}
             </div>
             {store && canManageStoreSettings && (
               <div className="store-summary__actions">
                 <Button type="button" variant="secondary" onClick={openStoreSettings}>
+                  <SettingsIcon aria-hidden className="icon" />
                   {t('storeSummary.storeConfigurations')}
                 </Button>
               </div>
@@ -1853,6 +1866,7 @@ export const StoreSummaryPage = () => {
                             isLoading={exportingScenarioFormat === 'pdf'}
                             loadingText={t('exporting')}
                           >
+                            <FileTextIcon aria-hidden className="icon" />
                             {t('storeSummary.exportPdf')}
                           </Button>
                         </div>
@@ -1982,30 +1996,11 @@ export const StoreSummaryPage = () => {
                                                 'scenario-table',
                                               )
                                             }
-                                            className="scenario-details-button"
+                                            className="action-button action-button--primary"
                                           >
+                                            <EyeIcon aria-hidden className="action-button__icon" />
                                             {t('storeSummary.viewDetails')}
                                           </button>
-                                          {canManageScenarios && (
-                                            <>
-                                              <button
-                                                type="button"
-                                                onClick={() => handleEditScenario(scenario)}
-                                                disabled={isSavingScenario}
-                                                className="edit-button"
-                                              >
-                                                {t('edit')}
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => openDeleteScenarioModal(scenario)}
-                                                disabled={isSavingScenario}
-                                                className="scenario-delete delete-button"
-                                              >
-                                                {t('storeSummary.deleteScenario')}
-                                              </button>
-                                            </>
-                                          )}
                                         </td>
                                       </tr>
                                     );
@@ -2128,7 +2123,7 @@ export const StoreSummaryPage = () => {
                                             <td className="scenario-actions">
                                               <button
                                                 type="button"
-                                                className="scenario-details-button"
+                                                className="action-button action-button--primary"
                                                 onClick={() =>
                                                   handleOpenScenarioDetails(
                                                     scenario ?? null,
@@ -2137,6 +2132,10 @@ export const StoreSummaryPage = () => {
                                                   )
                                                 }
                                               >
+                                                <EyeIcon
+                                                  aria-hidden
+                                                  className="action-button__icon"
+                                                />
                                                 {t('storeSummary.viewDetails')}
                                               </button>
                                             </td>
@@ -2463,8 +2462,12 @@ export const StoreSummaryPage = () => {
           const detailScenarioId = detailScenario?.id ?? scenarioDetails?.scenarioId ?? null;
           const timingInfo = getScenarioTimingInfo(detailScenarioId);
           const detailTitle = detailScenario?.title ?? t('storeSummary.deletedScenario');
+          const detailCategory = detailScenario?.category ?? t('storeSummary.emptyValue');
           const detailCriticality = detailScenario
             ? formatCriticalityLabel(detailScenario.criticality)
+            : t('storeSummary.emptyValue');
+          const detailAutomation = detailScenario
+            ? formatAutomationLabel(detailScenario.automation)
             : t('storeSummary.emptyValue');
           const detailObservation =
             detailScenario?.observation?.trim() || t('storeSummary.emptyValue');
@@ -2475,6 +2478,8 @@ export const StoreSummaryPage = () => {
           const detailBdd = localizedBdd || t('storeSummary.emptyValue');
           const canCopyBdd = scenarioDetails?.source === 'scenario-table';
           const hasDetailBdd = Boolean(detailBddValue);
+          const canManageDetailScenario =
+            scenarioDetails?.source === 'scenario-table' && canManageScenarios && detailScenario;
 
           return (
             <div className="scenario-details">
@@ -2485,6 +2490,14 @@ export const StoreSummaryPage = () => {
                   <span className="scenario-details-value" title={timingInfo.title}>
                     {timingInfo.label}
                   </span>
+                </div>
+                <div className="scenario-details-item">
+                  <span className="scenario-details-label">{t('storeSummary.category')}</span>
+                  <span className="scenario-details-value">{detailCategory}</span>
+                </div>
+                <div className="scenario-details-item">
+                  <span className="scenario-details-label">{t('storeSummary.automation')}</span>
+                  <span className="scenario-details-value">{detailAutomation}</span>
                 </div>
                 <div className="scenario-details-item">
                   <span className="scenario-details-label">{t('storeSummary.criticality')}</span>
@@ -2503,7 +2516,7 @@ export const StoreSummaryPage = () => {
               </div>
               <div className="scenario-details-section">
                 <span className="scenario-details-label">{t('storeSummary.observation')}</span>
-                <p className="scenario-details-text">{detailObservation}</p>
+                <LinkifiedText text={detailObservation} className="scenario-details-text" as="p" />
               </div>
               <div className="scenario-details-section">
                 <div className="scenario-details-section-header">
@@ -2520,8 +2533,36 @@ export const StoreSummaryPage = () => {
                     </button>
                   )}
                 </div>
-                <p className="scenario-details-text">{detailBdd}</p>
+                <LinkifiedText text={detailBdd} className="scenario-details-text" as="p" />
               </div>
+              {canManageDetailScenario && (
+                <div className="scenario-details-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleCloseScenarioDetails();
+                      handleEditScenario(detailScenario);
+                    }}
+                    disabled={isSavingScenario}
+                    className="action-button"
+                  >
+                    <PencilIcon aria-hidden className="action-button__icon" />
+                    {t('edit')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleCloseScenarioDetails();
+                      openDeleteScenarioModal(detailScenario);
+                    }}
+                    disabled={isSavingScenario}
+                    className="action-button action-button--danger"
+                  >
+                    <TrashIcon aria-hidden className="action-button__icon" />
+                    {t('storeSummary.deleteScenario')}
+                  </button>
+                </div>
+              )}
             </div>
           );
         })()}

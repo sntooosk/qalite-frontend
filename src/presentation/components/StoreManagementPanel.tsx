@@ -15,6 +15,7 @@ import { PaginationControls } from './PaginationControls';
 import { TextInput } from './TextInput';
 import { TextArea } from './TextArea';
 import { SelectInput } from './SelectInput';
+import { LinkifiedText } from './LinkifiedText';
 import {
   AUTOMATION_OPTIONS,
   CRITICALITY_OPTIONS,
@@ -32,6 +33,8 @@ import {
   type ScenarioSortConfig,
 } from './ScenarioColumnSortControl';
 import { downloadScenarioWorkbook, openScenarioPdf } from '../../shared/utils/storeImportExport';
+import { buildExternalLink } from '../utils/externalLink';
+import { FileTextIcon, PencilIcon, TrashIcon } from './icons';
 
 interface StoreManagementPanelProps {
   organizationId: string;
@@ -870,39 +873,59 @@ export const StoreManagementPanel = ({
           <ul className="store-list">
             {stores.map((store) => {
               const isActive = store.id === selectedStoreId;
+              const storeSite = buildExternalLink(store.site);
+              const storeSiteLabel = storeSite.label || t('storeSummary.notProvided');
               return (
                 <li
                   key={store.id}
                   className={`store-list-item${isActive ? ' store-list-item--active' : ''}`}
                 >
-                  <button
-                    type="button"
-                    className="store-list-button"
-                    onClick={() => setSelectedStoreId(store.id)}
-                  >
-                    <div className="store-list-meta">
-                      <h3>{store.name}</h3>
+                  <div className="store-list-body">
+                    <button
+                      type="button"
+                      className="store-list-button"
+                      onClick={() => setSelectedStoreId(store.id)}
+                    >
+                      <div className="store-list-meta">
+                        <h3>{store.name}</h3>
+                      </div>
+                      <span className="store-list-count">
+                        {t('storeManagement.scenarioCount', { count: store.scenarioCount })}
+                      </span>
+                    </button>
+                    <div className="store-list-site">
+                      {storeSite.href ? (
+                        <a
+                          href={storeSite.href}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="text-link"
+                        >
+                          {storeSiteLabel}
+                        </a>
+                      ) : (
+                        <span>{storeSiteLabel}</span>
+                      )}
                     </div>
-                    <p>{store.site}</p>
-                    <span className="store-list-count">
-                      {t('storeManagement.scenarioCount', { count: store.scenarioCount })}
-                    </span>
-                  </button>
+                  </div>
                   {canManageStores && (
                     <div className="store-list-actions">
                       <button
                         type="button"
                         onClick={() => handleStartEditStore(store)}
                         disabled={isSavingStore}
+                        className="action-button"
                       >
+                        <PencilIcon aria-hidden className="action-button__icon" />
                         {t('edit')}
                       </button>
                       <button
                         type="button"
                         onClick={() => openDeleteStoreModal(store)}
                         disabled={isSavingStore}
-                        className="store-list-delete"
+                        className="action-button action-button--danger"
                       >
+                        <TrashIcon aria-hidden className="action-button__icon" />
                         {t('delete')}
                       </button>
                     </div>
@@ -966,7 +989,24 @@ export const StoreManagementPanel = ({
             <div className="store-details">
               <div>
                 <h2 className="text-xl font-semibold text-primary">{selectedStore.name}</h2>
-                <p className="section-subtitle">{selectedStore.site}</p>
+                <p className="section-subtitle">
+                  {(() => {
+                    const site = buildExternalLink(selectedStore.site);
+                    const siteLabel = site.label || t('storeSummary.notProvided');
+                    return site.href ? (
+                      <a
+                        href={site.href}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="text-link"
+                      >
+                        {siteLabel}
+                      </a>
+                    ) : (
+                      siteLabel
+                    );
+                  })()}
+                </p>
               </div>
               <div className="store-details-actions">
                 <div className="store-action-group">
@@ -986,6 +1026,7 @@ export const StoreManagementPanel = ({
                     isLoading={exportingFormat === 'pdf'}
                     loadingText={t('exporting')}
                   >
+                    <FileTextIcon aria-hidden className="icon" />
                     {t('storeSummary.exportPdf')}
                   </Button>
                 </div>
@@ -1282,11 +1323,21 @@ export const StoreManagementPanel = ({
                             </span>
                           </td>
                           <td className="scenario-observation">
-                            {scenario.observation?.trim() || t('storeManagement.emptyValue')}
+                            {scenario.observation?.trim() ? (
+                              <LinkifiedText
+                                text={scenario.observation}
+                                className="scenario-details-text"
+                              />
+                            ) : (
+                              t('storeManagement.emptyValue')
+                            )}
                           </td>
                           <td className="scenario-bdd">
                             {hasBdd ? (
-                              <span className="scenario-details-text">{scenario.bdd}</span>
+                              <LinkifiedText
+                                text={scenario.bdd ?? ''}
+                                className="scenario-details-text"
+                              />
                             ) : (
                               <span className="scenario-bdd--empty">
                                 {t('storeManagement.emptyValue')}
@@ -1299,15 +1350,18 @@ export const StoreManagementPanel = ({
                                 type="button"
                                 onClick={() => handleEditScenario(scenario)}
                                 disabled={isSavingScenario}
+                                className="action-button"
                               >
+                                <PencilIcon aria-hidden className="action-button__icon" />
                                 {t('edit')}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => openDeleteScenarioModal(scenario)}
                                 disabled={isSavingScenario}
-                                className="scenario-delete"
+                                className="action-button action-button--danger"
                               >
+                                <TrashIcon aria-hidden className="action-button__icon" />
                                 {t('delete')}
                               </button>
                             </td>

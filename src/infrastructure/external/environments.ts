@@ -43,6 +43,7 @@ import {
 } from '../../shared/utils/time';
 import { translateEnvironmentOption } from '../../shared/utils/environmentOptions';
 import i18n from '../../lib/i18n';
+import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
@@ -818,6 +819,76 @@ const translateScenarioStatus = (value: EnvironmentScenarioStatus, t: (key: stri
   return translated === key ? value : translated;
 };
 
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const URL_PATTERN = /\b((https?:\/\/|www\.)[^\s]+|[a-z0-9.-]+\.[a-z]{2,}(?:\/[^\s]*)?)/gi;
+
+const buildHref = (value: string) => (/^https?:\/\//i.test(value) ? value : `https://${value}`);
+
+const linkifyHtml = (value: string) => {
+  if (!value) {
+    return '';
+  }
+
+  let result = '';
+  let lastIndex = 0;
+  const regex = new RegExp(URL_PATTERN);
+
+  value.replace(regex, (match, _value, _protocol, offset: number) => {
+    if (offset > lastIndex) {
+      result += escapeHtml(value.slice(lastIndex, offset));
+    }
+
+    const href = buildHref(match);
+    result += `<a href="${escapeHtml(href)}" target="_blank" rel="noreferrer noopener">${escapeHtml(match)}</a>`;
+    lastIndex = offset + match.length;
+    return match;
+  });
+
+  if (lastIndex < value.length) {
+    result += escapeHtml(value.slice(lastIndex));
+  }
+
+  return result || escapeHtml(value);
+};
+
+const buildExternalLink = (value: string | null | undefined) => {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  if (trimmed.includes('.')) {
+    return `https://${trimmed}`;
+  }
+  return null;
+};
+
+const formatCriticalityLabel = (value: string, t: (key: string) => string) => {
+  const normalized = normalizeCriticalityEnum(value);
+  if (normalized === 'LOW') {
+    return t('scenarioOptions.low');
+  }
+  if (normalized === 'MEDIUM') {
+    return t('scenarioOptions.medium');
+  }
+  if (normalized === 'HIGH') {
+    return t('scenarioOptions.high');
+  }
+  if (normalized === 'CRITICAL') {
+    return t('scenarioOptions.critical');
+  }
+  return value?.trim() || t('storeSummary.emptyValue');
+};
+
 export const exportEnvironmentAsPDF = (
   environment: Environment,
   bugs: EnvironmentBug[] = [],
@@ -834,13 +905,26 @@ export const exportEnvironmentAsPDF = (
   const statusLabel = t(ENVIRONMENT_STATUS_LABEL[environment.status]);
   const testTypeLabel = translateEnvironmentOption(environment.tipoTeste, t);
   const momentLabel = translateEnvironmentOption(environment.momento, t);
+  const exportTitle = t('environmentExport.title', { id: environment.identificador });
+  const jiraTask = environment.jiraTask?.trim() || '';
+  const jiraHref = buildExternalLink(jiraTask);
+  const jiraValue = jiraHref
+    ? `<a href="${escapeHtml(jiraHref)}" target="_blank" rel="noreferrer noopener">${escapeHtml(
+        jiraTask,
+      )}</a>`
+    : escapeHtml(jiraTask || t('dynamic.identifierFallback'));
   const urlList =
     (environment.urls ?? []).length > 0
       ? `<ul>${(environment.urls ?? [])
-          .map(
-            (url) =>
-              `<li><a href="${url}" target="_blank" rel="noreferrer noopener">${url}</a></li>`,
-          )
+          .map((url) => {
+            const href = buildExternalLink(url);
+            const label = escapeHtml(url);
+            return href
+              ? `<li><a href="${escapeHtml(
+                  href,
+                )}" target="_blank" rel="noreferrer noopener">${label}</a></li>`
+              : `<li>${label}</li>`;
+          })
           .join('')}</ul>`
       : `<p>${t('environmentExport.noUrls')}</p>`;
   const scenarioRows = Object.values(environment.scenarios ?? {})
@@ -851,18 +935,23 @@ export const exportEnvironmentAsPDF = (
       const evidenceLabel = scenario.evidenciaArquivoUrl
         ? t('environmentEvidenceTable.evidencia_abrir')
         : t('environmentEvidenceTable.evidencia_sem');
+      const criticalityLabel = formatCriticalityLabel(scenario.criticidade, t);
+      const observation =
+        scenario.observacao?.trim() || t('environmentEvidenceTable.observacao_none');
       return `
         <tr>
-          <td>${scenario.titulo}</td>
-          <td>${scenario.categoria}</td>
-          <td>${scenario.criticidade}</td>
-          <td>${scenario.observacao || ''}</td>
-          <td>${statusMobile}</td>
-          <td>${statusDesktop}</td>
+          <td>${linkifyHtml(scenario.titulo)}</td>
+          <td>${linkifyHtml(scenario.categoria)}</td>
+          <td>${escapeHtml(criticalityLabel)}</td>
+          <td>${linkifyHtml(observation)}</td>
+          <td>${escapeHtml(statusMobile)}</td>
+          <td>${escapeHtml(statusDesktop)}</td>
           <td>${
             scenario.evidenciaArquivoUrl
-              ? `<a href="${scenario.evidenciaArquivoUrl}">${evidenceLabel}</a>`
-              : evidenceLabel
+              ? `<a href="${escapeHtml(
+                  scenario.evidenciaArquivoUrl,
+                )}" target="_blank" rel="noreferrer noopener">${escapeHtml(evidenceLabel)}</a>`
+              : escapeHtml(evidenceLabel)
           }</td>
         </tr>
       `;
@@ -875,8 +964,8 @@ export const exportEnvironmentAsPDF = (
           .map(
             (participant) => `
         <tr>
-          <td>${participant.name}</td>
-          <td>${participant.email}</td>
+          <td>${escapeHtml(participant.name)}</td>
+          <td>${escapeHtml(participant.email)}</td>
         </tr>
       `,
           )
@@ -893,10 +982,10 @@ export const exportEnvironmentAsPDF = (
           .map(
             (bug) => `
         <tr>
-          <td>${bug.title}</td>
-          <td>${t(BUG_STATUS_LABEL[bug.status])}</td>
-          <td>${getScenarioLabel(environment, bug.scenarioId)}</td>
-          <td>${bug.description ?? t('environmentExport.noDescription')}</td>
+          <td>${escapeHtml(bug.title)}</td>
+          <td>${escapeHtml(t(BUG_STATUS_LABEL[bug.status]))}</td>
+          <td>${escapeHtml(getScenarioLabel(environment, bug.scenarioId))}</td>
+          <td>${linkifyHtml(bug.description ?? t('environmentExport.noDescription'))}</td>
         </tr>
       `,
           )
@@ -910,7 +999,7 @@ export const exportEnvironmentAsPDF = (
   const documentContent = `
     <html>
       <head>
-        <title>${t('environmentExport.title', { id: environment.identificador })}</title>
+        <title>${escapeHtml(exportTitle)}</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 24px; }
           h1 { margin-bottom: 0; }
@@ -922,29 +1011,41 @@ export const exportEnvironmentAsPDF = (
         </style>
       </head>
       <body>
-        <h1>${t('environmentExport.title', { id: environment.identificador })}</h1>
-        <p>${t('environmentExport.statusLabel')}: ${statusLabel}</p>
-        <p>${t('environmentExport.typeLabel')}: ${environment.tipoAmbiente} · ${testTypeLabel}</p>
-        ${environment.momento ? `<p>${t('environmentExport.momentLabel')}: ${momentLabel}</p>` : ''}
-        ${environment.release ? `<p>${t('environmentExport.releaseLabel')}: ${environment.release}</p>` : ''}
-        <p>${t('environmentExport.jiraLabel')}: ${environment.jiraTask || t('dynamic.identifierFallback')}</p>
+        <h1>${escapeHtml(exportTitle)}</h1>
+        <p>${escapeHtml(t('environmentExport.statusLabel'))}: ${escapeHtml(statusLabel)}</p>
+        <p>${escapeHtml(t('environmentExport.typeLabel'))}: ${escapeHtml(
+          environment.tipoAmbiente,
+        )} · ${escapeHtml(testTypeLabel)}</p>
+        ${
+          environment.momento
+            ? `<p>${escapeHtml(t('environmentExport.momentLabel'))}: ${escapeHtml(momentLabel)}</p>`
+            : ''
+        }
+        ${
+          environment.release
+            ? `<p>${escapeHtml(t('environmentExport.releaseLabel'))}: ${escapeHtml(
+                environment.release,
+              )}</p>`
+            : ''
+        }
+        <p>${t('environmentExport.jiraLabel')}: ${jiraValue}</p>
         <h2>${t('environmentExport.summaryTitle')}</h2>
         <div class="summary-grid">
           <div>
             <span>${t('environmentExport.startLabel')}</span>
-            <strong>${timeSummary.start}</strong>
+            <strong>${escapeHtml(timeSummary.start)}</strong>
           </div>
           <div>
             <span>${t('environmentExport.endLabel')}</span>
-            <strong>${timeSummary.end}</strong>
+            <strong>${escapeHtml(timeSummary.end)}</strong>
           </div>
           <div>
             <span>${t('environmentExport.totalLabel')}</span>
-            <strong>${timeSummary.total}</strong>
+            <strong>${escapeHtml(timeSummary.total)}</strong>
           </div>
           <div>
             <span>${t('environmentExport.suiteLabel')}</span>
-            <strong>${environment.suiteName ?? t('dynamic.suiteNameFallback')}</strong>
+            <strong>${escapeHtml(environment.suiteName ?? t('dynamic.suiteNameFallback'))}</strong>
           </div>
           <div>
             <span>${t('environmentExport.totalScenariosLabel')}</span>

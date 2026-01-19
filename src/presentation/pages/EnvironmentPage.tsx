@@ -3,7 +3,11 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { EnvironmentStatusError } from '../../shared/errors/firebaseErrors';
-import type { Environment, EnvironmentStatus } from '../../domain/entities/environment';
+import type {
+  Environment,
+  EnvironmentScenarioStatus,
+  EnvironmentStatus,
+} from '../../domain/entities/environment';
 import type { UserSummary } from '../../domain/entities/user';
 import type { SlackTaskSummaryPayload } from '../../infrastructure/external/slack';
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
@@ -24,6 +28,7 @@ import { useStoreOrganizationBranding } from '../hooks/useStoreOrganizationBrand
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { PageLoader } from '../components/PageLoader';
 import { Modal } from '../components/Modal';
+import { LinkifiedText } from '../components/LinkifiedText';
 import { useUserProfiles } from '../hooks/useUserProfiles';
 import { useEnvironmentBugs } from '../hooks/useEnvironmentBugs';
 import { EnvironmentBugModal } from '../components/environments/EnvironmentBugModal';
@@ -34,6 +39,18 @@ import { EnvironmentSummaryCard } from '../components/environments/EnvironmentSu
 import { TOptions } from 'i18next';
 import { useScenarioEvidence } from '../hooks/useScenarioEvidence';
 import { getScenarioPlatformStatuses } from '../../infrastructure/external/environments';
+import {
+  getAutomationLabelKey,
+  getCriticalityClassName,
+  getCriticalityLabelKey,
+} from '../constants/scenarioOptions';
+import {
+  CopyIcon,
+  FileTextIcon,
+  LinkIcon,
+  SettingsIcon,
+  UsersGroupIcon,
+} from '../components/icons';
 
 interface SlackSummaryBuilderOptions {
   formattedTime: string;
@@ -222,6 +239,28 @@ export const EnvironmentPage = () => {
     detailScenarioStatus &&
       Object.values(detailScenarioStatus).some((status) => status === 'em_andamento'),
   );
+  const formatAutomationLabel = (value?: string | null) => {
+    const labelKey = getAutomationLabelKey(value);
+    if (labelKey) {
+      return translation(labelKey);
+    }
+    return value?.trim() || translation('storeSummary.emptyValue');
+  };
+  const formatCriticalityLabel = (value?: string | null) => {
+    const labelKey = getCriticalityLabelKey(value);
+    if (labelKey) {
+      return translation(labelKey);
+    }
+    return value?.trim() || translation('storeSummary.emptyValue');
+  };
+  const formatScenarioStatusLabel = (value?: EnvironmentScenarioStatus | null) => {
+    if (!value) {
+      return translation('storeSummary.emptyValue');
+    }
+    const key = `environmentEvidenceTable.status_${value}`;
+    const translated = translation(key);
+    return translated === key ? value : translated;
+  };
 
   const clearInviteParam = useCallback(() => {
     if (!inviteParam) {
@@ -595,22 +634,11 @@ export const EnvironmentPage = () => {
                 {hasEnteredEnvironment && environment.status !== 'done' && (
                   <Button
                     type="button"
-                    variant="ghost"
-                    onClick={handleLeaveEnvironment}
-                    isLoading={isLeavingEnvironment}
-                    loadingText={translation('environment.leaving')}
-                    data-testid="leave-environment-button"
-                  >
-                    {translation('environment.leave')}
-                  </Button>
-                )}
-                {hasEnteredEnvironment && environment.status !== 'done' && (
-                  <Button
-                    type="button"
                     variant="secondary"
                     onClick={() => setIsEditOpen(true)}
                     data-testid="edit-environment-button"
                   >
+                    <SettingsIcon aria-hidden className="icon" />
                     {translation('environment.manage')}
                   </Button>
                 )}
@@ -643,6 +671,7 @@ export const EnvironmentPage = () => {
                   disabled={isShareDisabled}
                   data-testid="copy-invite-button"
                 >
+                  <UsersGroupIcon aria-hidden className="icon" />
                   {translation('environment.share.invite')}
                 </Button>
               )}
@@ -653,6 +682,7 @@ export const EnvironmentPage = () => {
                 disabled={!canCopyPublicLink}
                 data-testid="copy-public-link-button"
               >
+                <LinkIcon aria-hidden className="icon" />
                 {translation('environment.share.publicLink')}
               </Button>
               <Button
@@ -662,6 +692,7 @@ export const EnvironmentPage = () => {
                 disabled={isShareDisabled}
                 data-testid="export-environment-pdf"
               >
+                <FileTextIcon aria-hidden className="icon" />
                 {translation('environment.exportPDF')}
               </Button>
               <Button
@@ -673,6 +704,7 @@ export const EnvironmentPage = () => {
                 loadingText={translation('environment.copying')}
                 data-testid="copy-markdown-button"
               >
+                <CopyIcon aria-hidden className="icon" />
                 {translation('environment.copyMarkdown')}
               </Button>
               {canSendSlackSummary && (
@@ -727,6 +759,9 @@ export const EnvironmentPage = () => {
           setIsEditOpen(false);
           setIsDeleteOpen(true);
         }}
+        onLeave={handleLeaveEnvironment}
+        canLeave={hasEnteredEnvironment && environment.status !== 'done'}
+        isLeaving={isLeavingEnvironment}
       />
 
       <DeleteEnvironmentModal
@@ -753,18 +788,74 @@ export const EnvironmentPage = () => {
         {detailScenario ? (
           <div className="scenario-details">
             <p className="scenario-details-title">{detailScenario.titulo}</p>
+            <div className="scenario-details-grid">
+              <div className="scenario-details-item">
+                <span className="scenario-details-label">
+                  {translation('environmentEvidenceTable.table_categoria')}
+                </span>
+                <span className="scenario-details-value">
+                  {detailScenario.categoria || translation('storeSummary.emptyValue')}
+                </span>
+              </div>
+              <div className="scenario-details-item">
+                <span className="scenario-details-label">
+                  {translation('storeSummary.automation')}
+                </span>
+                <span className="scenario-details-value">
+                  {formatAutomationLabel(detailScenario.automatizado)}
+                </span>
+              </div>
+              <div className="scenario-details-item">
+                <span className="scenario-details-label">
+                  {translation('environmentEvidenceTable.table_criticidade')}
+                </span>
+                <span
+                  className={`criticality-badge scenario-details-criticality ${getCriticalityClassName(
+                    detailScenario.criticidade,
+                  )}`}
+                >
+                  {formatCriticalityLabel(detailScenario.criticidade)}
+                </span>
+              </div>
+              <div className="scenario-details-item">
+                <span className="scenario-details-label">
+                  {translation('environmentEvidenceTable.table_status_mobile')}
+                </span>
+                <span className="scenario-details-value">
+                  {formatScenarioStatusLabel(detailScenarioStatus?.mobile ?? detailScenario.status)}
+                </span>
+              </div>
+              <div className="scenario-details-item">
+                <span className="scenario-details-label">
+                  {translation('environmentEvidenceTable.table_status_desktop')}
+                </span>
+                <span className="scenario-details-value">
+                  {formatScenarioStatusLabel(
+                    detailScenarioStatus?.desktop ?? detailScenario.status,
+                  )}
+                </span>
+              </div>
+            </div>
             <div className="scenario-details-section">
               <span className="scenario-details-label">
                 {translation('environmentEvidenceTable.table_observacao')}
               </span>
-              <p className="scenario-details-text">
-                {detailScenario.observacao ||
-                  translation('environmentEvidenceTable.observacao_none')}
-              </p>
+              <LinkifiedText
+                text={
+                  detailScenario.observacao ||
+                  translation('environmentEvidenceTable.observacao_none')
+                }
+                className="scenario-details-text"
+                as="p"
+              />
             </div>
             <div className="scenario-details-section">
               <span className="scenario-details-label">{translation('storeSummary.bdd')}</span>
-              <p className="scenario-details-text">{translation('storeSummary.emptyValue')}</p>
+              <LinkifiedText
+                text={translation('storeSummary.emptyValue')}
+                className="scenario-details-text"
+                as="p"
+              />
             </div>
             <div className="scenario-details-section">
               <span className="scenario-details-label">
@@ -788,14 +879,14 @@ export const EnvironmentPage = () => {
                     placeholder={translation('environmentEvidenceTable.evidencia_placeholder')}
                     className="scenario-evidence-input"
                   />
-                  <button
+                  <Button
                     type="button"
-                    className="scenario-evidence-save"
                     onClick={handleModalEvidenceSave}
-                    disabled={isUpdatingEvidence}
+                    isLoading={isUpdatingEvidence}
+                    loadingText={translation('saving')}
                   >
                     {translation('environmentEvidenceTable.evidencia_salvar')}
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <span className="section-subtitle">

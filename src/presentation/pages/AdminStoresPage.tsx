@@ -20,7 +20,13 @@ import { Modal } from '../components/Modal';
 import { UserAvatar } from '../components/UserAvatar';
 import { SimpleBarChart } from '../components/SimpleBarChart';
 import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanban';
-import { BarChartIcon, SparklesIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
+import {
+  BarChartIcon,
+  SettingsIcon,
+  SparklesIcon,
+  StorefrontIcon,
+  UsersGroupIcon,
+} from '../components/icons';
 import { OrganizationLogPanel } from '../components/OrganizationLogPanel';
 import { isAutomatedScenario } from '../../shared/utils/automation';
 import { useTranslation } from 'react-i18next';
@@ -704,6 +710,7 @@ export const AdminStoresPage = () => {
                 onClick={openOrganizationModal}
                 data-testid="manage-organization-button"
               >
+                <SettingsIcon aria-hidden className="icon" />
                 {translation('AdminStoresPage.manage-organization-button')}
               </Button>
             )}
