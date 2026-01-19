@@ -2814,6 +2814,8 @@ button.store-summary-highlight:focus-visible {
   display: flex;
   align-items: flex-end;
   justify-content: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 @media (min-width: 768px) {
@@ -2955,6 +2957,18 @@ button.store-summary-highlight:focus-visible {
 
 .suite-scenario-filters .scenario-filter-clear {
   justify-self: flex-start;
+}
+
+.suite-scenario-filters-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.suite-scenario-filters-actions .scenario-filter-clear {
+  margin: 0;
 }
 
 .suite-scenario-table-wrapper {
@@ -3621,7 +3635,7 @@ button.store-summary-highlight:focus-visible {
 
 .environment-kanban-archived-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 0.9rem;
   align-items: stretch;
 }
@@ -3629,6 +3643,7 @@ button.store-summary-highlight:focus-visible {
 .environment-kanban-archived-list .environment-card {
   margin-bottom: 0;
   height: 100%;
+  min-width: 0;
 }
 
 .environment-kanban-archive-toggle {
@@ -4863,6 +4878,7 @@ button.store-summary-highlight:focus-visible {
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1.5rem;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 768px) {
@@ -4873,6 +4889,10 @@ button.store-summary-highlight:focus-visible {
   .environment-kanban-columns,
   .environment-summary-grid,
   .environment-participants {
+    grid-template-columns: 1fr;
+  }
+
+  .environment-kanban-archived-list {
     grid-template-columns: 1fr;
   }
 
