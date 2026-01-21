@@ -5,6 +5,7 @@ import type { Environment } from '../../../domain/entities/environment';
 import type { UserSummary } from '../../../domain/entities/user';
 import { getReadableUserName, getUserInitials } from '../../utils/userDisplay';
 import { ENVIRONMENT_STATUS_LABEL } from '../../../shared/config/environmentLabels';
+import { translateEnvironmentOption } from '../../constants/environmentOptions';
 
 interface EnvironmentCardProps {
   environment: Environment;
@@ -34,6 +35,7 @@ export const EnvironmentCard = ({
       ? t('environmentCard.bugStoryfix')
       : t('environmentCard.bugBugs');
   const totalScenariosWithPlatforms = environment.totalCenarios * 2;
+  const momentLabel = translateEnvironmentOption(environment.momento, t);
 
   const handleOpen = () => onOpen(environment);
 
@@ -69,6 +71,13 @@ export const EnvironmentCard = ({
         <span className="environment-card-suite-label">{t('environmentCard.suiteLabel')}</span>
         <span className="environment-card-suite-name">{displaySuiteName}</span>
       </div>
+
+      {environment.momento && (
+        <div className="environment-card-moment-row">
+          <span className="environment-card-moment-label">{t('environmentCard.momentLabel')}</span>
+          <span className="environment-card-moment-name">{momentLabel}</span>
+        </div>
+      )}
 
       <div className="environment-card-stats">
         <div className="environment-card-stat">
