@@ -258,7 +258,7 @@ export const EnvironmentPage = () => {
     headerMeta,
     urls,
     shareLinks,
-  } = useEnvironmentDetails(environment, bugs, i18n.language);
+  } = useEnvironmentDetails(environment, bugs);
   const slackWebhookUrl = environmentOrganization?.slackWebhookUrl?.trim() || null;
   const inviteParam = searchParams.get('invite');
   const shouldAutoJoinFromInvite = inviteParam === 'true' || inviteParam === '1';

@@ -16,6 +16,7 @@ import { useTheme } from './ThemeContext';
 import {
   getStoredLanguagePreference,
   getStoredThemePreference,
+  getDeviceLanguagePreference,
   normalizeUserPreferences,
   persistPreferencesLocally,
 } from '../../shared/config/userPreferences';
@@ -31,7 +32,10 @@ const UserPreferencesContext = createContext<UserPreferencesContextValue | undef
 
 const getFallbackPreferences = (languageFallback: string): UserPreferences => {
   const themeFallback = getStoredThemePreference() ?? DEFAULT_USER_PREFERENCES.theme;
-  const language = getStoredLanguagePreference() ?? (languageFallback === 'pt' ? 'pt' : 'en');
+  const language =
+    getStoredLanguagePreference() ??
+    getDeviceLanguagePreference() ??
+    (languageFallback === 'pt' ? 'pt' : 'en');
 
   return {
     theme: themeFallback,
