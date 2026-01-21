@@ -5,7 +5,8 @@ import {
   deleteDoc,
   doc,
   getDoc,
-  onSnapshot,
+  getDocs,
+  limit,
   query,
   runTransaction,
   serverTimestamp,
@@ -49,6 +50,7 @@ const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
 const STORES_COLLECTION = 'stores';
 const environmentsCollection = collection(firebaseFirestore, ENVIRONMENTS_COLLECTION);
+const ENVIRONMENTS_FETCH_LIMIT = 100;
 
 const getStoreOrganizationContext = async (
   storeId: string,
@@ -297,45 +299,38 @@ export const deleteEnvironment = async (environmentId: string): Promise<void> =>
   }
 };
 
-export const observeEnvironment = (
-  environmentId: string,
-  callback: (environment: Environment | null) => void,
-): (() => void) => {
+export const getEnvironment = async (environmentId: string): Promise<Environment | null> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  return onSnapshot(environmentRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      callback(null);
-      return;
-    }
+  const snapshot = await getDoc(environmentRef);
 
-    callback(normalizeEnvironment(snapshot.id, snapshot.data() ?? {}));
-  });
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  return normalizeEnvironment(snapshot.id, snapshot.data() ?? {});
 };
 
-export const observeEnvironments = (
+export const getEnvironments = async (
   filters: EnvironmentRealtimeFilters,
-  callback: (environments: Environment[]) => void,
-): (() => void) => {
+): Promise<Environment[]> => {
   const constraints: QueryConstraint[] = [];
 
   if (filters.storeId) {
     constraints.push(where('loja', '==', filters.storeId));
   }
 
-  const environmentsQuery =
-    constraints.length > 0 ? query(environmentsCollection, ...constraints) : environmentsCollection;
+  constraints.push(limit(ENVIRONMENTS_FETCH_LIMIT));
 
-  return onSnapshot(environmentsQuery, (snapshot) => {
-    const list = snapshot.docs
-      .map((docSnapshot) => normalizeEnvironment(docSnapshot.id, docSnapshot.data() ?? {}))
-      .sort((a, b) => {
-        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return bDate - aDate;
-      });
+  const environmentsQuery = query(environmentsCollection, ...constraints);
+  const snapshot = await getDocs(environmentsQuery);
 
-    callback(list);
-  });
+  return snapshot.docs
+    .map((docSnapshot) => normalizeEnvironment(docSnapshot.id, docSnapshot.data() ?? {}))
+    .sort((a, b) => {
+      const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bDate - aDate;
+    });
 };
 
 export const addEnvironmentUser = async (environmentId: string, userId: string): Promise<void> => {
@@ -546,24 +541,19 @@ export const uploadScenarioEvidence = async (
   return trimmedLink;
 };
 
-export const observeEnvironmentBugs = (
-  environmentId: string,
-  callback: (bugs: EnvironmentBug[]) => void,
-): (() => void) => {
+export const getEnvironmentBugs = async (environmentId: string): Promise<EnvironmentBug[]> => {
   const bugsCollectionRef = getBugCollection(environmentId);
-  return onSnapshot(bugsCollectionRef, (snapshot) => {
-    const bugs = snapshot.docs
-      .map((docSnapshot) =>
-        normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
-      )
-      .sort((first, second) => {
-        const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
-        const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
-        return secondDate - firstDate;
-      });
+  const snapshot = await getDocs(bugsCollectionRef);
 
-    callback(bugs);
-  });
+  return snapshot.docs
+    .map((docSnapshot) =>
+      normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
+    )
+    .sort((first, second) => {
+      const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
+      const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
+      return secondDate - firstDate;
+    });
 };
 
 export const createEnvironmentBug = async (

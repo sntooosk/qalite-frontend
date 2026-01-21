@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Environment, EnvironmentStatus } from '../../domain/entities/environment';
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
@@ -11,6 +11,7 @@ interface UseStoreEnvironmentsResult {
   environments: Environment[];
   isLoading: boolean;
   statusCounts: StatusCounts;
+  refetch: () => Promise<void>;
 }
 
 const buildEmptyCounts = (): StatusCounts => ({
@@ -25,22 +26,45 @@ export const useStoreEnvironments = (
 ): UseStoreEnvironmentsResult => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(storeId));
+  const isMountedRef = useRef(true);
 
-  useEffect(() => {
+  const refetch = useCallback(async () => {
     if (!storeId) {
-      setEnvironments([]);
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setEnvironments([]);
+        setIsLoading(false);
+      }
       return;
     }
 
-    setIsLoading(true);
-    const unsubscribe = environmentService.observeAll({ storeId }, (list) => {
-      setEnvironments(list);
-      setIsLoading(false);
-    });
+    if (isMountedRef.current) {
+      setIsLoading(true);
+    }
 
-    return () => unsubscribe();
+    try {
+      const list = await environmentService.getAll({ storeId });
+      if (isMountedRef.current) {
+        setEnvironments(list);
+      }
+    } catch (error) {
+      console.error('Failed to fetch environments', error);
+    } finally {
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
+    }
   }, [storeId]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    void refetch();
+  }, [refetch]);
 
   const statusCounts = useMemo(() => {
     if (environments.length === 0) {
@@ -60,5 +84,6 @@ export const useStoreEnvironments = (
     environments,
     isLoading,
     statusCounts,
+    refetch,
   };
 };

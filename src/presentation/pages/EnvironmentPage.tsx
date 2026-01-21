@@ -17,7 +17,7 @@ import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { useToast } from '../context/ToastContext';
-import { useEnvironmentRealtime } from '../hooks/useEnvironmentRealtime';
+import { useEnvironmentResource } from '../hooks/useEnvironmentResource';
 import { useTimeTracking } from '../hooks/useTimeTracking';
 import { useAuth } from '../hooks/useAuth';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
@@ -214,7 +214,11 @@ export const EnvironmentPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { user } = useAuth();
-  const { environment, isLoading } = useEnvironmentRealtime(environmentId);
+  const {
+    environment,
+    isLoading,
+    refetch: refetchEnvironment,
+  } = useEnvironmentResource(environmentId);
   const { organization: environmentOrganization } = useStoreOrganizationBranding(
     environment?.storeId ?? null,
   );
@@ -232,7 +236,11 @@ export const EnvironmentPage = () => {
   const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
-  const { bugs, isLoading: isLoadingBugs } = useEnvironmentBugs(environment?.id ?? null);
+  const {
+    bugs,
+    isLoading: isLoadingBugs,
+    refetch: refetchBugs,
+  } = useEnvironmentBugs(environment?.id ?? null);
   const {
     hasEnteredEnvironment,
     isLocked,
@@ -244,9 +252,10 @@ export const EnvironmentPage = () => {
     isLeavingEnvironment,
     enterEnvironment,
     leaveEnvironment,
-  } = useEnvironmentEngagement(environment);
+  } = useEnvironmentEngagement(environment, { onEnvironmentUpdated: refetchEnvironment });
   const { isUpdating: isUpdatingEvidence, handleEvidenceUpload } = useScenarioEvidence(
     environment?.id,
+    { onUpdated: refetchEnvironment },
   );
   const { t: translation, i18n } = useTranslation();
   const {
@@ -448,6 +457,8 @@ export const EnvironmentPage = () => {
           await sendSlackSummary();
         }
 
+        await refetchEnvironment();
+
         showToast({
           type: 'success',
           message:
@@ -469,7 +480,7 @@ export const EnvironmentPage = () => {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [environment, showToast, user?.uid],
+    [environment, refetchEnvironment, showToast, user?.uid],
   );
 
   const handleCopyLink = useCallback(
@@ -501,13 +512,14 @@ export const EnvironmentPage = () => {
         await environmentService.update(environment.id, {
           publicShareLanguage: shareLanguage,
         });
+        await refetchEnvironment();
       } catch (error) {
         console.error(error);
       }
     }
 
     await handleCopyLink(shareLinks.public);
-  }, [environment, handleCopyLink, i18n.language, shareLinks.public]);
+  }, [environment, handleCopyLink, i18n.language, refetchEnvironment, shareLinks.public]);
 
   const handleExportPDF = useCallback(() => {
     if (!environment) {
@@ -769,6 +781,7 @@ export const EnvironmentPage = () => {
             isLocked={Boolean(isScenarioLocked)}
             onViewDetails={handleOpenScenarioDetails}
             organizationId={environmentOrganization?.id ?? null}
+            onScenarioUpdated={refetchEnvironment}
           />
         </div>
 
@@ -778,6 +791,7 @@ export const EnvironmentPage = () => {
           isLocked={Boolean(isInteractionLocked)}
           isLoading={isLoadingBugs}
           onEdit={handleEditBug}
+          onUpdated={refetchBugs}
         />
       </section>
 
@@ -794,6 +808,7 @@ export const EnvironmentPage = () => {
         onLeave={handleLeaveEnvironment}
         canLeave={hasEnteredEnvironment && environment.status !== 'done'}
         isLeaving={isLeavingEnvironment}
+        onUpdated={refetchEnvironment}
       />
 
       <DeleteEnvironmentModal
@@ -809,6 +824,7 @@ export const EnvironmentPage = () => {
           bug={editingBug}
           onClose={closeBugModal}
           initialScenarioId={editingBug ? (editingBug.scenarioId ?? null) : defaultBugScenarioId}
+          onUpdated={refetchBugs}
         />
       )}
 
