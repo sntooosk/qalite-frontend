@@ -3853,6 +3853,30 @@ button.store-summary-highlight:focus-visible {
   font-weight: 600;
 }
 
+.environment-card-moment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.65rem;
+  background: var(--color-surface-alt);
+  border-radius: 12px;
+  margin-top: 0.75rem;
+}
+
+.environment-card-moment-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.environment-card-moment-name {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
 .environment-card-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -209,6 +209,7 @@
       "participant_plural": "{{count}} participants",
       "participantsLabel": "Participants",
       "participantsListLabel": "Registered participants",
+      "momentLabel": "Moment/When",
       "bugStoryfix": "Storyfix",
       "bugBugs": "Bugs",
       "noParticipants": "No participants"
