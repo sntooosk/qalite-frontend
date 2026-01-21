@@ -1630,15 +1630,17 @@ export const StoreSummaryPage = () => {
                 {store && canManageScenarios && viewMode === 'scenarios' && (
                   <form
                     ref={scenarioFormRef}
-                    className="scenario-form"
+                    className="scenario-form create-card"
                     onSubmit={handleScenarioSubmit}
                     data-testid="scenario-form"
                   >
-                    <h3 className="form-title">
-                      {editingScenarioId
-                        ? t('storeSummary.editScenario')
-                        : t('storeSummary.newScenario')}
-                    </h3>
+                    <div className="create-card__header">
+                      <h3 className="form-title">
+                        {editingScenarioId
+                          ? t('storeSummary.editScenario')
+                          : t('storeSummary.newScenario')}
+                      </h3>
+                    </div>
                     {scenarioFormError && (
                       <p className="form-message form-message--error">{scenarioFormError}</p>
                     )}
@@ -2223,7 +2225,7 @@ export const StoreSummaryPage = () => {
                         <>
                           <div className="suite-form">
                             <form
-                              className="suite-card suite-editor-card"
+                              className="suite-card suite-editor-card create-card"
                               onSubmit={handleSuiteSubmit}
                               data-testid="suite-form"
                             >

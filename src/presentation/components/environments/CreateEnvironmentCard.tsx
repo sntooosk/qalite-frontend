@@ -184,8 +184,8 @@ export const CreateEnvironmentCard = ({
   };
 
   return (
-    <div className="environment-create-card">
-      <div className="environment-create-card__header">
+    <div className="create-card">
+      <div className="create-card__header">
         <h3 className="form-title">{t('createEnvironment.create')}</h3>
         <p className="environment-kanban-description">{t('createEnvironment.description')}</p>
       </div>

@@ -3547,7 +3547,7 @@ button.store-summary-highlight:focus-visible {
   color: var(--color-text-secondary);
 }
 
-.environment-create-card {
+.create-card {
   width: 100%;
   border: 1px solid var(--color-border-strong);
   border-radius: 16px;
@@ -3559,7 +3559,7 @@ button.store-summary-highlight:focus-visible {
   gap: 1rem;
 }
 
-.environment-create-card__header {
+.create-card__header {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
