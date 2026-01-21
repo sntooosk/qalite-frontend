@@ -515,7 +515,7 @@ export const uploadScenarioEvidence = async (
       throw new Error('Informe um link válido para a evidência.');
     }
   } catch (error) {
-    console.error(error);
+    void error;
     throw new Error('Informe um link válido para a evidência.');
   }
 

@@ -51,7 +51,7 @@ export const OrganizationDashboardPage = () => {
 
         setOrganization(data);
       } catch (error) {
-        console.error(error);
+        void error;
         showToast({ type: 'error', message: t('organizationPage.loadingError') });
       } finally {
         setIsLoading(false);

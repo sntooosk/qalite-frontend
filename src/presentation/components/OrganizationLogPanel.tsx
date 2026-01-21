@@ -90,7 +90,7 @@ export const OrganizationLogPanel = ({ organizationId }: OrganizationLogPanelPro
         hasMoreRef.current = hasMore;
         setHasMoreLogs(hasMore);
       } catch (error) {
-        console.error(error);
+        void error;
         showToast({ type: 'error', message: i18n.t('logPanel.errorLoading') });
       } finally {
         if (shouldReset) {

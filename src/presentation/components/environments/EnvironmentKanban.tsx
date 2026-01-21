@@ -72,7 +72,7 @@ export const EnvironmentKanban = ({
           setUserProfilesMap(nextMap);
         }
       } catch (error) {
-        console.error('Failed to fetch user summaries', error);
+        void error;
       }
     };
 
@@ -182,6 +182,7 @@ export const EnvironmentKanban = ({
       await onRefresh?.();
       showToast({ type: 'success', message: t('environmentKanban.statusUpdate') });
     } catch (error) {
+      void error;
       if (error instanceof EnvironmentStatusError && error.code === 'PENDING_SCENARIOS') {
         showToast({
           type: 'error',
@@ -190,7 +191,6 @@ export const EnvironmentKanban = ({
         return;
       }
 
-      console.error(error);
       showToast({ type: 'error', message: t('environmentKanban.updateError') });
     }
   };

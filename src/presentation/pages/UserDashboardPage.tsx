@@ -87,7 +87,7 @@ export const UserDashboardPage = () => {
           setStoreAutomationCounts(Object.fromEntries(stats));
         }
       } catch (error) {
-        console.error(error);
+        void error;
         if (isMounted) {
           setStoreAutomationCounts({});
         }
@@ -160,7 +160,7 @@ export const UserDashboardPage = () => {
       const builds = await browserstackService.listBuilds(organizationCredentials);
       setBrowserstackBuilds(builds);
     } catch (error) {
-      console.error(error);
+      void error;
       const message = error instanceof Error ? error.message : t('userPage.errorBrowserstack');
       showToast({ type: 'error', message });
     } finally {

@@ -86,6 +86,7 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
       try {
         await updateProfile({ preferences: next });
       } catch (error) {
+        void error;
         setPreferences(previous);
         await applyPreferences(previous);
         throw error;

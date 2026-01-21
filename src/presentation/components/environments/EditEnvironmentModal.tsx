@@ -170,7 +170,7 @@ export const EditEnvironmentModal = ({
       await onUpdated?.();
       onClose();
     } catch (error) {
-      console.error(error);
+      void error;
       showToast({
         type: 'error',
         message: translation('editEnvironmentModal.updateEnvironmentError'),

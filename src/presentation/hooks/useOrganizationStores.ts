@@ -54,7 +54,7 @@ export const useOrganizationStores = (organizationId: string | null) => {
           error: null,
         });
       } catch (error) {
-        console.error(error);
+        void error;
         if (!isSubscribed) {
           return;
         }

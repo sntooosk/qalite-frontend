@@ -59,7 +59,7 @@ export const RegisterPage = () => {
       });
       navigate('/');
     } catch (err) {
-      console.error(err);
+      void err;
       const message = err instanceof Error ? err.message : translation('registerPage.genericError');
       setFormError(message);
     }

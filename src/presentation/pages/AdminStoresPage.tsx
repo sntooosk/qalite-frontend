@@ -118,7 +118,7 @@ export const AdminStoresPage = () => {
           setSelectedOrganizationId('');
         }
       } catch (error) {
-        console.error(error);
+        void error;
         showToast({ type: 'error', message: translation('AdminStoresPage.toast-error-load-orgs') });
       }
     };
@@ -140,7 +140,7 @@ export const AdminStoresPage = () => {
         setStores(data);
         setSearchParams({ organizationId: selectedOrganizationId });
       } catch (error) {
-        console.error(error);
+        void error;
         showToast({
           type: 'error',
           message: translation('AdminStoresPage.toast-error-load-stores'),
@@ -190,7 +190,7 @@ export const AdminStoresPage = () => {
           setStoreAutomationCounts(Object.fromEntries(results));
         }
       } catch (error) {
-        console.error(error);
+        void error;
         if (isMounted) {
           showToast({
             type: 'error',
@@ -230,7 +230,7 @@ export const AdminStoresPage = () => {
 
           setUserSuggestions(filteredResults);
         } catch (error) {
-          console.error(error);
+          void error;
           setUserSuggestions([]);
         } finally {
           setIsSearchingUsers(false);
@@ -265,7 +265,7 @@ export const AdminStoresPage = () => {
       const builds = await browserstackService.listBuilds(selectedOrganizationCredentials);
       setBrowserstackBuilds(builds);
     } catch (error) {
-      console.error(error);
+      void error;
       const message =
         error instanceof Error
           ? error.message
@@ -414,7 +414,7 @@ export const AdminStoresPage = () => {
       });
       closeStoreModal();
     } catch (error) {
-      console.error(error);
+      void error;
       const message =
         error instanceof Error
           ? error.message
@@ -476,7 +476,7 @@ export const AdminStoresPage = () => {
       });
       closeOrganizationModal();
     } catch (error) {
-      console.error(error);
+      void error;
       const message =
         error instanceof Error
           ? error.message
@@ -505,7 +505,7 @@ export const AdminStoresPage = () => {
       setSearchParams({});
       navigate('/admin');
     } catch (error) {
-      console.error(error);
+      void error;
       const message =
         error instanceof Error
           ? error.message
@@ -565,7 +565,7 @@ export const AdminStoresPage = () => {
         message: translation('AdminStoresPage.toast-success-member-added'),
       });
     } catch (error) {
-      console.error(error);
+      void error;
       const message =
         error instanceof Error
           ? error.message
@@ -606,7 +606,7 @@ export const AdminStoresPage = () => {
         message: translation('AdminStoresPage.toast-success-member-removed'),
       });
     } catch (error) {
-      console.error(error);
+      void error;
       const message =
         error instanceof Error
           ? error.message

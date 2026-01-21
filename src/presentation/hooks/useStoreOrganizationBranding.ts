@@ -36,7 +36,7 @@ export const useStoreOrganizationBranding = (storeId: string | null | undefined)
           setOrganization(org);
         }
       } catch (error) {
-        console.error(error);
+        void error;
         if (isMounted) {
           setOrganization(null);
         }
