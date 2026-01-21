@@ -14,6 +14,7 @@ import {
   TEST_TYPES_BY_ENVIRONMENT,
   requiresReleaseField,
 } from '../../constants/environmentOptions';
+import { useToast } from '../../context/ToastContext';
 
 interface CreateEnvironmentModalProps {
   isOpen: boolean;
@@ -71,8 +72,8 @@ export const CreateEnvironmentModal = ({
   const [momento, setMomento] = useState('');
   const [release, setRelease] = useState('');
   const [suiteId, setSuiteId] = useState('');
-  const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToast();
   const { t } = useTranslation();
 
   const selectedSuite = useMemo(
@@ -116,21 +117,25 @@ export const CreateEnvironmentModal = ({
     event.preventDefault();
 
     if (!identificador.trim()) {
-      setFormError(t('createEnvironment.identifier'));
+      showToast({ type: 'error', message: t('createEnvironment.identifier') });
+      return;
+    }
+
+    if (!suiteId) {
+      showToast({ type: 'error', message: t('createEnvironment.suiteRequired') });
       return;
     }
 
     if (momentoOptions.length > 0 && !momento) {
-      setFormError(t('createEnvironment.moment'));
+      showToast({ type: 'error', message: t('createEnvironment.moment') });
       return;
     }
 
     if (shouldDisplayReleaseField && !release.trim()) {
-      setFormError(t('createEnvironment.release'));
+      showToast({ type: 'error', message: t('createEnvironment.release') });
       return;
     }
 
-    setFormError(null);
     setIsSubmitting(true);
     try {
       const urlsList = urls
@@ -166,7 +171,7 @@ export const CreateEnvironmentModal = ({
       onClose();
     } catch (error) {
       console.error(error);
-      setFormError(t('createEnvironment.createError'));
+      showToast({ type: 'error', message: t('createEnvironment.createError') });
     } finally {
       setIsSubmitting(false);
     }
@@ -180,7 +185,6 @@ export const CreateEnvironmentModal = ({
       description={t('createEnvironment.description')}
     >
       <form className="environment-form" onSubmit={handleSubmit}>
-        {formError && <p className="form-message form-message--error">{formError}</p>}
         <TextInput
           id="identificador"
           label={t('createEnvironment.id')}
