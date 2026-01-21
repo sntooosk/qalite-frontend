@@ -2809,8 +2809,10 @@ button.store-summary-highlight:focus-visible {
 }
 
 .suite-basic-info {
-  display: grid;
+  display: flex;
   gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
 }
 
 .suite-basic-actions {
@@ -2821,10 +2823,8 @@ button.store-summary-highlight:focus-visible {
   flex-wrap: wrap;
 }
 
-@media (min-width: 768px) {
-  .suite-basic-info {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.suite-basic-info .field {
+  flex: 1 1 280px;
 }
 
 .suite-form-header {
@@ -3535,8 +3535,8 @@ button.store-summary-highlight:focus-visible {
 
 .environment-kanban-header {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  align-items: stretch;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 1rem;
 }
@@ -3545,6 +3545,24 @@ button.store-summary-highlight:focus-visible {
   margin: 0.25rem 0 0;
   font-size: 0.9rem;
   color: var(--color-text-secondary);
+}
+
+.environment-create-card {
+  width: 100%;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 16px;
+  padding: 1.5rem;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.environment-create-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .environment-kanban-summary {
