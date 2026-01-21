@@ -1174,16 +1174,6 @@ button.store-summary-highlight:focus-visible {
   color: var(--color-text-muted);
 }
 
-.store-summary-environment {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.store-summary-highlight--environment {
-  max-width: 320px;
-  width: 100%;
-}
-
 .section-title,
 .section-subtitle,
 .badge {

@@ -200,7 +200,7 @@ export const StoreSummaryPage = () => {
   const [suiteFormError, setSuiteFormError] = useState<string | null>(null);
   const [editingSuiteId, setEditingSuiteId] = useState<string | null>(null);
   const [isSavingSuite, setIsSavingSuite] = useState(false);
-  const [viewMode, setViewMode] = useState<'scenarios' | 'suites'>('scenarios');
+  const [viewMode, setViewMode] = useState<'scenarios' | 'suites' | 'environments'>('scenarios');
   const [scenarioFilters, setScenarioFilters] = useState<ScenarioFilters>(emptyScenarioFilters);
   const [suiteScenarioFilters, setSuiteScenarioFilters] =
     useState<ScenarioFilters>(emptyScenarioFilters);
@@ -266,7 +266,6 @@ export const StoreSummaryPage = () => {
   );
   const environmentInProgressCount = environmentStatusCounts.in_progress;
   const environmentTotalCount = environmentStatusCounts.total;
-  const environmentSectionRef = useRef<HTMLDivElement | null>(null);
   const storeHighlights = useMemo<StoreHighlight[]>(() => {
     const scenarioDescription = `${automatedScenarioCount} ${t('storeSummary.automatedCount')}${
       automatedScenarioCount === 1 ? '' : 's'
@@ -295,9 +294,25 @@ export const StoreSummaryPage = () => {
         isActive: viewMode === 'suites',
         onClick: () => setViewMode('suites'),
       },
+      {
+        id: 'environments',
+        label: t('storeSummary.environments'),
+        value: isLoadingEnvironments ? '...' : environmentTotalCount.toString(),
+        description: isLoadingEnvironments
+          ? t('storeSummary.syncingEnvironments')
+          : `${environmentInProgressCount} ${t('storeSummary.environmentsInProgress')}`,
+        isActive: viewMode === 'environments',
+        onClick: () => {
+          setViewMode('environments');
+          setIsViewingSuitesOnly(false);
+        },
+      },
     ];
   }, [
     automatedScenarioCount,
+    environmentInProgressCount,
+    environmentTotalCount,
+    isLoadingEnvironments,
     scenarios.length,
     suites.length,
     suitesWithScenariosCount,
@@ -306,16 +321,6 @@ export const StoreSummaryPage = () => {
     setIsViewingSuitesOnly,
     t,
   ]);
-  const environmentHighlight = useMemo(() => {
-    const description = isLoadingEnvironments
-      ? t('storeSummary.syncingEnvironments')
-      : `${environmentInProgressCount} ${t('storeSummary.environmentsInProgress')}`;
-    return {
-      label: t('storeSummary.environments'),
-      value: isLoadingEnvironments ? '...' : environmentTotalCount.toString(),
-      description,
-    };
-  }, [environmentInProgressCount, environmentTotalCount, isLoadingEnvironments, t]);
 
   const scenarioMap = useMemo(() => {
     const map = new Map<string, StoreScenario>();
@@ -1850,40 +1855,42 @@ export const StoreSummaryPage = () => {
                   </form>
                 )}
 
-                <div className="scenario-table-header">
-                  <div>
-                    <h3 className="section-subtitle">{t('storeSummary.testData')}</h3>
+                {viewMode !== 'environments' && (
+                  <div className="scenario-table-header">
+                    <div>
+                      <h3 className="section-subtitle">{t('storeSummary.testData')}</h3>
+                    </div>
+                    <div className="scenario-table-actions">
+                      {viewMode === 'scenarios' ? (
+                        <>
+                          <div className="scenario-action-group">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => void handleScenarioExport('pdf')}
+                              isLoading={exportingScenarioFormat === 'pdf'}
+                              loadingText={t('exporting')}
+                            >
+                              <FileTextIcon aria-hidden className="icon" />
+                              {t('storeSummary.exportPdf')}
+                            </Button>
+                          </div>
+                          {scenarios.length > 0 && (
+                            <button
+                              type="button"
+                              className="scenario-table-toggle"
+                              onClick={() => setIsScenarioTableCollapsed((previous) => !previous)}
+                            >
+                              {isScenarioTableCollapsed
+                                ? t('storeSummary.maxTable')
+                                : t('storeSummary.minTable')}
+                            </button>
+                          )}
+                        </>
+                      ) : null}
+                    </div>
                   </div>
-                  <div className="scenario-table-actions">
-                    {viewMode === 'scenarios' ? (
-                      <>
-                        <div className="scenario-action-group">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => void handleScenarioExport('pdf')}
-                            isLoading={exportingScenarioFormat === 'pdf'}
-                            loadingText={t('exporting')}
-                          >
-                            <FileTextIcon aria-hidden className="icon" />
-                            {t('storeSummary.exportPdf')}
-                          </Button>
-                        </div>
-                        {scenarios.length > 0 && (
-                          <button
-                            type="button"
-                            className="scenario-table-toggle"
-                            onClick={() => setIsScenarioTableCollapsed((previous) => !previous)}
-                          >
-                            {isScenarioTableCollapsed
-                              ? t('storeSummary.maxTable')
-                              : t('storeSummary.minTable')}
-                          </button>
-                        )}
-                      </>
-                    ) : null}
-                  </div>
-                </div>
+                )}
                 <div className="scenario-table-wrapper">
                   {viewMode === 'scenarios' ? (
                     isScenarioTableCollapsed ? (
@@ -2048,7 +2055,7 @@ export const StoreSummaryPage = () => {
                         )}
                       </>
                     )
-                  ) : (
+                  ) : viewMode === 'suites' ? (
                     <div
                       ref={suiteListRef}
                       className={`suite-manager ${isViewingSuitesOnly ? 'suite-manager--suites-only' : ''}`}
@@ -2456,47 +2463,20 @@ export const StoreSummaryPage = () => {
                         </>
                       )}
                     </div>
+                  ) : (
+                    <EnvironmentKanban
+                      storeId={storeId ?? ''}
+                      suites={suites}
+                      scenarios={scenarios}
+                      environments={environments}
+                      isLoading={isLoadingEnvironments}
+                    />
                   )}
                 </div>
               </div>
             )}
           </div>
         </section>
-        {store && (
-          <section className="page-container">
-            <div className="store-summary-environment">
-              <button
-                type="button"
-                className="store-summary-highlight store-summary-highlight--environment"
-                onClick={() =>
-                  environmentSectionRef.current?.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start',
-                  })
-                }
-              >
-                <span className="store-summary-highlight__value">{environmentHighlight.value}</span>
-                <span className="store-summary-highlight__label">{environmentHighlight.label}</span>
-                <span className="store-summary-highlight__description">
-                  {environmentHighlight.description}
-                </span>
-              </button>
-            </div>
-          </section>
-        )}
-        {storeId && (
-          <section className="page-container" ref={environmentSectionRef}>
-            <div className="card">
-              <EnvironmentKanban
-                storeId={storeId}
-                suites={suites}
-                scenarios={scenarios}
-                environments={environments}
-                isLoading={isLoadingEnvironments}
-              />
-            </div>
-          </section>
-        )}
       </Layout>
 
       <Modal
