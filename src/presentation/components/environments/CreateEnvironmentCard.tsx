@@ -187,7 +187,7 @@ export const CreateEnvironmentCard = ({
     <div className="create-card">
       <div className="create-card__header">
         <h3 className="form-title">{t('createEnvironment.create')}</h3>
-        <p className="environment-kanban-description">{t('createEnvironment.description')}</p>
+        <p className="create-card__description">{t('createEnvironment.description')}</p>
       </div>
       <form className="environment-form" onSubmit={handleSubmit}>
         <TextInput

@@ -1638,8 +1638,11 @@ export const StoreSummaryPage = () => {
                       <h3 className="form-title">
                         {editingScenarioId
                           ? t('storeSummary.editScenario')
-                          : t('storeSummary.newScenario')}
+                          : t('storeSummary.createScenarioTitle')}
                       </h3>
+                      <p className="create-card__description">
+                        {t('storeSummary.createScenarioDescription')}
+                      </p>
                     </div>
                     {scenarioFormError && (
                       <p className="form-message form-message--error">{scenarioFormError}</p>
@@ -2234,8 +2237,11 @@ export const StoreSummaryPage = () => {
                                   <h3 className="form-title">
                                     {editingSuiteId
                                       ? t('storeSummary.editTestSuite')
-                                      : t('storeSummary.newTestSuite')}
+                                      : t('storeSummary.createSuiteTitle')}
                                   </h3>
+                                  <p className="create-card__description">
+                                    {t('storeSummary.createSuiteDescription')}
+                                  </p>
                                 </div>
                               </div>
                               {suiteFormError && (

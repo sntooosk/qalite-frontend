@@ -3541,7 +3541,7 @@ button.store-summary-highlight:focus-visible {
   gap: 1rem;
 }
 
-.environment-kanban-description {
+.create-card__description {
   margin: 0.25rem 0 0;
   font-size: 0.9rem;
   color: var(--color-text-secondary);
