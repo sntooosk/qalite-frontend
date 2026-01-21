@@ -16,6 +16,7 @@ interface EnvironmentBugListProps {
   onEdit: (bug: EnvironmentBug) => void;
   showActions?: boolean;
   showHeader?: boolean;
+  onUpdated?: () => void | Promise<void>;
 }
 
 export const EnvironmentBugList = ({
@@ -26,6 +27,7 @@ export const EnvironmentBugList = ({
   onEdit,
   showActions = true,
   showHeader = true,
+  onUpdated,
 }: EnvironmentBugListProps) => {
   const { showToast } = useToast();
   const { t: translation } = useTranslation();
@@ -46,6 +48,7 @@ export const EnvironmentBugList = ({
         type: 'success',
         message: translation('environmentBugList.bugRemovedSuccess'),
       });
+      await onUpdated?.();
     } catch (error) {
       console.error(error);
       showToast({

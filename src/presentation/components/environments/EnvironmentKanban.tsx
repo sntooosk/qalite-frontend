@@ -22,6 +22,7 @@ interface EnvironmentKanbanProps {
   scenarios: StoreScenario[];
   environments: Environment[];
   isLoading: boolean;
+  onRefresh?: () => void | Promise<void>;
 }
 
 const COLUMNS: { status: EnvironmentStatus; title: string }[] = [
@@ -36,6 +37,7 @@ export const EnvironmentKanban = ({
   scenarios,
   environments,
   isLoading,
+  onRefresh,
 }: EnvironmentKanbanProps) => {
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -177,6 +179,7 @@ export const EnvironmentKanban = ({
         targetStatus: status,
         currentUserId: user?.uid ?? null,
       });
+      await onRefresh?.();
       showToast({ type: 'success', message: t('environmentKanban.statusUpdate') });
     } catch (error) {
       if (error instanceof EnvironmentStatusError && error.code === 'PENDING_SCENARIOS') {
@@ -214,9 +217,10 @@ export const EnvironmentKanban = ({
           storeId={storeId}
           suites={suites}
           scenarios={scenarios}
-          onCreated={() =>
-            showToast({ type: 'success', message: t('environmentKanban.environmentCreated') })
-          }
+          onCreated={async () => {
+            await onRefresh?.();
+            showToast({ type: 'success', message: t('environmentKanban.environmentCreated') });
+          }}
         />
       </header>
 

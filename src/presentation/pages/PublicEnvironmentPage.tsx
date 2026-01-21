@@ -5,7 +5,7 @@ import { Layout } from '../components/Layout';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
 import { EnvironmentBugList } from '../components/environments/EnvironmentBugList';
 import { EnvironmentSummaryCard } from '../components/environments/EnvironmentSummaryCard';
-import { useEnvironmentRealtime } from '../hooks/useEnvironmentRealtime';
+import { useEnvironmentResource } from '../hooks/useEnvironmentResource';
 import { useTimeTracking } from '../hooks/useTimeTracking';
 import { useUserProfiles } from '../hooks/useUserProfiles';
 import { useStoreOrganizationBranding } from '../hooks/useStoreOrganizationBranding';
@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 
 export const PublicEnvironmentPage = () => {
   const { environmentId } = useParams<{ environmentId: string }>();
-  const { environment, isLoading } = useEnvironmentRealtime(environmentId);
+  const { environment, isLoading } = useEnvironmentResource(environmentId);
   const participants = useUserProfiles(environment?.participants ?? []);
   const { organization: environmentOrganization } = useStoreOrganizationBranding(
     environment?.storeId ?? null,

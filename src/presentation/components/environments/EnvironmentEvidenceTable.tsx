@@ -30,6 +30,7 @@ interface EnvironmentEvidenceTableProps {
   readOnly?: boolean;
   onViewDetails?: (scenarioId: string) => void;
   organizationId?: string | null;
+  onScenarioUpdated?: () => void | Promise<void>;
 }
 
 export const EnvironmentEvidenceTable = ({
@@ -38,9 +39,12 @@ export const EnvironmentEvidenceTable = ({
   readOnly,
   onViewDetails,
   organizationId,
+  onScenarioUpdated,
 }: EnvironmentEvidenceTableProps) => {
   const { t: translation } = useTranslation();
-  const { isUpdating, changeScenarioStatus } = useScenarioEvidence(environment.id);
+  const { isUpdating, changeScenarioStatus } = useScenarioEvidence(environment.id, {
+    onUpdated: onScenarioUpdated,
+  });
   const { showToast } = useToast();
   const { user } = useAuth();
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);

@@ -238,6 +238,7 @@ export const StoreSummaryPage = () => {
     environments,
     isLoading: isLoadingEnvironments,
     statusCounts: environmentStatusCounts,
+    refetch: refetchEnvironments,
   } = useStoreEnvironments(storeId);
   const selectedSuiteScenarioCount = suiteForm.scenarioIds.length;
   const suiteSelectionSummary =
@@ -2480,6 +2481,7 @@ export const StoreSummaryPage = () => {
                       scenarios={scenarios}
                       environments={environments}
                       isLoading={isLoadingEnvironments}
+                      onRefresh={refetchEnvironments}
                     />
                   )}
                 </div>

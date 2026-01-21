@@ -6,8 +6,16 @@ import type {
 } from '../../domain/entities/environment';
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
 
-export const useScenarioEvidence = (environmentId: string | null | undefined) => {
+interface UseScenarioEvidenceOptions {
+  onUpdated?: () => void | Promise<void>;
+}
+
+export const useScenarioEvidence = (
+  environmentId: string | null | undefined,
+  options: UseScenarioEvidenceOptions = {},
+) => {
   const [isUpdating, setIsUpdating] = useState(false);
+  const { onUpdated } = options;
 
   const handleEvidenceUpload = useCallback(
     async (scenarioId: string, link: string) => {
@@ -17,12 +25,18 @@ export const useScenarioEvidence = (environmentId: string | null | undefined) =>
 
       setIsUpdating(true);
       try {
-        return await environmentService.uploadScenarioEvidence(environmentId, scenarioId, link);
+        const result = await environmentService.uploadScenarioEvidence(
+          environmentId,
+          scenarioId,
+          link,
+        );
+        await onUpdated?.();
+        return result;
       } finally {
         setIsUpdating(false);
       }
     },
-    [environmentId],
+    [environmentId, onUpdated],
   );
 
   const changeScenarioStatus = useCallback(
@@ -38,11 +52,12 @@ export const useScenarioEvidence = (environmentId: string | null | undefined) =>
       setIsUpdating(true);
       try {
         await environmentService.updateScenarioStatus(environmentId, scenarioId, status, platform);
+        await onUpdated?.();
       } finally {
         setIsUpdating(false);
       }
     },
-    [environmentId],
+    [environmentId, onUpdated],
   );
 
   return { isUpdating, handleEvidenceUpload, changeScenarioStatus };
