@@ -14,7 +14,7 @@ import type {
   ScenarioAverageMap,
   ScenarioExecution,
 } from '../../domain/entities/scenarioExecution';
-import { firebaseFirestore } from '../database/firebase';
+import { firebaseFirestore } from '../../lib/firebase';
 
 const SCENARIO_EXECUTIONS_COLLECTION = 'scenarioExecutions';
 const scenarioExecutionsCollection = collection(firebaseFirestore, SCENARIO_EXECUTIONS_COLLECTION);

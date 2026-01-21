@@ -22,7 +22,7 @@ import type {
 import type { BrowserstackCredentials } from '../../domain/entities/browserstack';
 import { DEFAULT_ROLE, DEFAULT_USER_PREFERENCES } from '../../domain/entities/auth';
 import { addUserToOrganizationByEmailDomain } from './organizations';
-import { firebaseAuth, firebaseFirestore } from '../database/firebase';
+import { firebaseAuth, firebaseFirestore } from '../../lib/firebase';
 import {
   getStoredLanguagePreference,
   getStoredThemePreference,
@@ -151,19 +151,7 @@ export const onAuthStateChanged = (listener: AuthStateListener): (() => void) =>
     persistFirebaseAuthCookie(user);
 
     const profile = await fetchUserProfile(user.uid);
-    const organizationId = await addUserToOrganizationByEmailDomain({
-      uid: user.uid,
-      email: user.email ?? '',
-      displayName: user.displayName ?? user.email ?? '',
-      photoURL: null,
-    });
-
-    listener(
-      mapToAuthUser(user, {
-        ...profile,
-        organizationId: organizationId ?? profile.organizationId ?? null,
-      }),
-    );
+    listener(mapToAuthUser(user, profile));
   });
 
 const normalizeBrowserstackCredentials = (

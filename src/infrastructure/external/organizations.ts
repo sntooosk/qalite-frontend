@@ -19,7 +19,7 @@ import {
 import type { BrowserstackCredentials } from '../../domain/entities/browserstack';
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
 import { getNormalizedEmailDomain, normalizeEmailDomain } from '../../shared/utils/email';
-import { firebaseFirestore } from '../database/firebase';
+import { firebaseFirestore } from '../../lib/firebase';
 import { logActivity } from './logs';
 
 const ORGANIZATIONS_COLLECTION = 'organizations';

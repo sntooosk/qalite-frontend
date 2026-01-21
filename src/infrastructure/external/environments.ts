@@ -5,7 +5,9 @@ import {
   deleteDoc,
   doc,
   getDoc,
-  onSnapshot,
+  getDocs,
+  limit,
+  orderBy,
   query,
   runTransaction,
   serverTimestamp,
@@ -31,7 +33,7 @@ import type {
   UpdateEnvironmentInput,
 } from '../../domain/entities/environment';
 import type { UserSummary } from '../../domain/entities/user';
-import { firebaseFirestore } from '../database/firebase';
+import { firebaseFirestore } from '../../lib/firebase';
 import { EnvironmentStatusError } from '../../shared/errors/firebaseErrors';
 import { BUG_STATUS_LABEL, ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
 import { logActivity } from './logs';
@@ -48,6 +50,8 @@ import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
 const STORES_COLLECTION = 'stores';
+const ENVIRONMENTS_PAGE_SIZE = 50;
+const BUGS_PAGE_SIZE = 100;
 const environmentsCollection = collection(firebaseFirestore, ENVIRONMENTS_COLLECTION);
 
 const getStoreOrganizationContext = async (
@@ -302,40 +306,50 @@ export const observeEnvironment = (
   callback: (environment: Environment | null) => void,
 ): (() => void) => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  return onSnapshot(environmentRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      callback(null);
-      return;
-    }
+  void getDoc(environmentRef)
+    .then((snapshot) => {
+      if (!snapshot.exists()) {
+        callback(null);
+        return;
+      }
 
-    callback(normalizeEnvironment(snapshot.id, snapshot.data() ?? {}));
-  });
+      callback(normalizeEnvironment(snapshot.id, snapshot.data() ?? {}));
+    })
+    .catch((error) => {
+      console.error(error);
+      callback(null);
+    });
+  return () => {};
 };
 
 export const observeEnvironments = (
   filters: EnvironmentRealtimeFilters,
   callback: (environments: Environment[]) => void,
 ): (() => void) => {
-  const constraints: QueryConstraint[] = [];
+  const constraints: QueryConstraint[] = [
+    orderBy('createdAt', 'desc'),
+    limit(ENVIRONMENTS_PAGE_SIZE),
+  ];
 
   if (filters.storeId) {
     constraints.push(where('loja', '==', filters.storeId));
   }
 
-  const environmentsQuery =
-    constraints.length > 0 ? query(environmentsCollection, ...constraints) : environmentsCollection;
+  const environmentsQuery = query(environmentsCollection, ...constraints);
 
-  return onSnapshot(environmentsQuery, (snapshot) => {
-    const list = snapshot.docs
-      .map((docSnapshot) => normalizeEnvironment(docSnapshot.id, docSnapshot.data() ?? {}))
-      .sort((a, b) => {
-        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return bDate - aDate;
-      });
+  void getDocs(environmentsQuery)
+    .then((snapshot) => {
+      const list = snapshot.docs.map((docSnapshot) =>
+        normalizeEnvironment(docSnapshot.id, docSnapshot.data() ?? {}),
+      );
 
-    callback(list);
-  });
+      callback(list);
+    })
+    .catch((error) => {
+      console.error(error);
+      callback([]);
+    });
+  return () => {};
 };
 
 export const addEnvironmentUser = async (environmentId: string, userId: string): Promise<void> => {
@@ -551,19 +565,21 @@ export const observeEnvironmentBugs = (
   callback: (bugs: EnvironmentBug[]) => void,
 ): (() => void) => {
   const bugsCollectionRef = getBugCollection(environmentId);
-  return onSnapshot(bugsCollectionRef, (snapshot) => {
-    const bugs = snapshot.docs
-      .map((docSnapshot) =>
-        normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
-      )
-      .sort((first, second) => {
-        const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
-        const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
-        return secondDate - firstDate;
-      });
+  const bugsQuery = query(bugsCollectionRef, orderBy('createdAt', 'desc'), limit(BUGS_PAGE_SIZE));
 
-    callback(bugs);
-  });
+  void getDocs(bugsQuery)
+    .then((snapshot) => {
+      const bugs = snapshot.docs.map((docSnapshot) =>
+        normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
+      );
+
+      callback(bugs);
+    })
+    .catch((error) => {
+      console.error(error);
+      callback([]);
+    });
+  return () => {};
 };
 
 export const createEnvironmentBug = async (

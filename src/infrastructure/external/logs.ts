@@ -16,7 +16,7 @@ import {
 import type { ActivityLog, ActivityLogInput } from '../../domain/entities/activityLog';
 import type { ActivityLogCursor, ActivityLogPage } from '../../domain/repositories/LogRepository';
 import { getCurrentUser } from './auth';
-import { firebaseFirestore } from '../database/firebase';
+import { firebaseFirestore } from '../../lib/firebase';
 
 const LOGS_COLLECTION = 'logs';
 const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;

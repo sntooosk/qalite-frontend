@@ -31,7 +31,7 @@ import {
   normalizeAutomationEnum,
   normalizeCriticalityEnum,
 } from '../../shared/utils/scenarioEnums';
-import { firebaseFirestore } from '../database/firebase';
+import { firebaseFirestore } from '../../lib/firebase';
 import { logActivity } from './logs';
 
 const STORES_COLLECTION = 'stores';
