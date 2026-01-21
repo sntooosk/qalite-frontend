@@ -266,6 +266,7 @@ export const StoreSummaryPage = () => {
   );
   const environmentInProgressCount = environmentStatusCounts.in_progress;
   const environmentTotalCount = environmentStatusCounts.total;
+  const environmentSectionRef = useRef<HTMLDivElement | null>(null);
   const storeHighlights = useMemo<StoreHighlight[]>(() => {
     const scenarioDescription = `${automatedScenarioCount} ${t('storeSummary.automatedCount')}${
       automatedScenarioCount === 1 ? '' : 's'
@@ -273,9 +274,6 @@ export const StoreSummaryPage = () => {
     const suitesDescription = `${suitesWithScenariosCount} ${t('storeSummary.suitesWithScenariosCount')}${
       suitesWithScenariosCount === 1 ? '' : 's'
     }`;
-    const environmentDescription = isLoadingEnvironments
-      ? t('storeSummary.syncingEnvironments')
-      : `${environmentInProgressCount} ${t('storeSummary.environmentsInProgress')}`;
 
     return [
       {
@@ -297,18 +295,9 @@ export const StoreSummaryPage = () => {
         isActive: viewMode === 'suites',
         onClick: () => setViewMode('suites'),
       },
-      {
-        id: 'environments',
-        label: t('storeSummary.environments'),
-        value: isLoadingEnvironments ? '...' : environmentTotalCount.toString(),
-        description: environmentDescription,
-      },
     ];
   }, [
     automatedScenarioCount,
-    environmentInProgressCount,
-    environmentTotalCount,
-    isLoadingEnvironments,
     scenarios.length,
     suites.length,
     suitesWithScenariosCount,
@@ -317,6 +306,16 @@ export const StoreSummaryPage = () => {
     setIsViewingSuitesOnly,
     t,
   ]);
+  const environmentHighlight = useMemo(() => {
+    const description = isLoadingEnvironments
+      ? t('storeSummary.syncingEnvironments')
+      : `${environmentInProgressCount} ${t('storeSummary.environmentsInProgress')}`;
+    return {
+      label: t('storeSummary.environments'),
+      value: isLoadingEnvironments ? '...' : environmentTotalCount.toString(),
+      description,
+    };
+  }, [environmentInProgressCount, environmentTotalCount, isLoadingEnvironments, t]);
 
   const scenarioMap = useMemo(() => {
     const map = new Map<string, StoreScenario>();
@@ -2001,6 +2000,32 @@ export const StoreSummaryPage = () => {
                                             <EyeIcon aria-hidden className="action-button__icon" />
                                             {t('storeSummary.viewDetails')}
                                           </button>
+                                          {canManageScenarios && (
+                                            <>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleEditScenario(scenario)}
+                                                className="action-button"
+                                              >
+                                                <PencilIcon
+                                                  aria-hidden
+                                                  className="action-button__icon"
+                                                />
+                                                {t('edit')}
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => openDeleteScenarioModal(scenario)}
+                                                className="action-button action-button--danger"
+                                              >
+                                                <TrashIcon
+                                                  aria-hidden
+                                                  className="action-button__icon"
+                                                />
+                                                {t('storeSummary.deleteScenario')}
+                                              </button>
+                                            </>
+                                          )}
                                         </td>
                                       </tr>
                                     );
@@ -2437,8 +2462,30 @@ export const StoreSummaryPage = () => {
             )}
           </div>
         </section>
-        {storeId && (
+        {store && (
           <section className="page-container">
+            <div className="store-summary-environment">
+              <button
+                type="button"
+                className="store-summary-highlight store-summary-highlight--environment"
+                onClick={() =>
+                  environmentSectionRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                  })
+                }
+              >
+                <span className="store-summary-highlight__value">{environmentHighlight.value}</span>
+                <span className="store-summary-highlight__label">{environmentHighlight.label}</span>
+                <span className="store-summary-highlight__description">
+                  {environmentHighlight.description}
+                </span>
+              </button>
+            </div>
+          </section>
+        )}
+        {storeId && (
+          <section className="page-container" ref={environmentSectionRef}>
             <div className="card">
               <EnvironmentKanban
                 storeId={storeId}
@@ -2478,9 +2525,6 @@ export const StoreSummaryPage = () => {
           const detailBdd = localizedBdd || t('storeSummary.emptyValue');
           const canCopyBdd = scenarioDetails?.source === 'scenario-table';
           const hasDetailBdd = Boolean(detailBddValue);
-          const canManageDetailScenario =
-            scenarioDetails?.source === 'scenario-table' && canManageScenarios && detailScenario;
-
           return (
             <div className="scenario-details">
               <p className="scenario-details-title">{detailTitle}</p>
@@ -2535,34 +2579,6 @@ export const StoreSummaryPage = () => {
                 </div>
                 <LinkifiedText text={detailBdd} className="scenario-details-text" as="p" />
               </div>
-              {canManageDetailScenario && (
-                <div className="scenario-details-actions">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleCloseScenarioDetails();
-                      handleEditScenario(detailScenario);
-                    }}
-                    disabled={isSavingScenario}
-                    className="action-button"
-                  >
-                    <PencilIcon aria-hidden className="action-button__icon" />
-                    {t('edit')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleCloseScenarioDetails();
-                      openDeleteScenarioModal(detailScenario);
-                    }}
-                    disabled={isSavingScenario}
-                    className="action-button action-button--danger"
-                  >
-                    <TrashIcon aria-hidden className="action-button__icon" />
-                    {t('storeSummary.deleteScenario')}
-                  </button>
-                </div>
-              )}
             </div>
           );
         })()}
