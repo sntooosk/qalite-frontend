@@ -20,6 +20,7 @@ import {
 } from '../../constants/environmentOptions';
 import { useTranslation } from 'react-i18next';
 import { LogoutIcon } from '../icons';
+import { useToast } from '../../context/ToastContext';
 
 interface EditEnvironmentModalProps {
   isOpen: boolean;
@@ -85,10 +86,10 @@ export const EditEnvironmentModal = ({
   const [momento, setMomento] = useState('');
   const [release, setRelease] = useState('');
   const [suiteId, setSuiteId] = useState('');
-  const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingUpdate, setPendingUpdate] = useState<UpdateEnvironmentInput | null>(null);
   const [isSuiteConfirmOpen, setIsSuiteConfirmOpen] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!environment) {
@@ -160,7 +161,6 @@ export const EditEnvironmentModal = ({
       return;
     }
 
-    setFormError(null);
     setIsSubmitting(true);
 
     try {
@@ -168,7 +168,10 @@ export const EditEnvironmentModal = ({
       onClose();
     } catch (error) {
       console.error(error);
-      setFormError(translation('editEnvironmentModal.updateEnvironmentError'));
+      showToast({
+        type: 'error',
+        message: translation('editEnvironmentModal.updateEnvironmentError'),
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -182,17 +185,26 @@ export const EditEnvironmentModal = ({
     }
 
     if (!suiteId) {
-      setFormError(translation('editEnvironmentModal.suiteRequired'));
+      showToast({
+        type: 'error',
+        message: translation('editEnvironmentModal.suiteRequired'),
+      });
       return;
     }
 
     if (momentoOptions.length > 0 && !momento) {
-      setFormError(translation('editEnvironmentModal.selectMomentError'));
+      showToast({
+        type: 'error',
+        message: translation('editEnvironmentModal.selectMomentError'),
+      });
       return;
     }
 
     if (shouldDisplayReleaseField && !release.trim()) {
-      setFormError(translation('editEnvironmentModal.missingReleaseError'));
+      showToast({
+        type: 'error',
+        message: translation('editEnvironmentModal.missingReleaseError'),
+      });
       return;
     }
 
@@ -252,7 +264,6 @@ export const EditEnvironmentModal = ({
         description={translation('editEnvironmentModal.updateInfo')}
       >
         <form className="environment-form" onSubmit={handleSubmit}>
-          {formError && <p className="form-message form-message--error">{formError}</p>}
           <TextInput
             id="identificadorEditar"
             label={translation('editEnvironmentModal.identifier')}
