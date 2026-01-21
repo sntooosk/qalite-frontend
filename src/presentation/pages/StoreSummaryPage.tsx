@@ -200,7 +200,7 @@ export const StoreSummaryPage = () => {
   const [suiteFormError, setSuiteFormError] = useState<string | null>(null);
   const [editingSuiteId, setEditingSuiteId] = useState<string | null>(null);
   const [isSavingSuite, setIsSavingSuite] = useState(false);
-  const [viewMode, setViewMode] = useState<'scenarios' | 'suites'>('scenarios');
+  const [viewMode, setViewMode] = useState<'scenarios' | 'suites' | 'environments'>('scenarios');
   const [scenarioFilters, setScenarioFilters] = useState<ScenarioFilters>(emptyScenarioFilters);
   const [suiteScenarioFilters, setSuiteScenarioFilters] =
     useState<ScenarioFilters>(emptyScenarioFilters);
@@ -273,9 +273,6 @@ export const StoreSummaryPage = () => {
     const suitesDescription = `${suitesWithScenariosCount} ${t('storeSummary.suitesWithScenariosCount')}${
       suitesWithScenariosCount === 1 ? '' : 's'
     }`;
-    const environmentDescription = isLoadingEnvironments
-      ? t('storeSummary.syncingEnvironments')
-      : `${environmentInProgressCount} ${t('storeSummary.environmentsInProgress')}`;
 
     return [
       {
@@ -301,7 +298,14 @@ export const StoreSummaryPage = () => {
         id: 'environments',
         label: t('storeSummary.environments'),
         value: isLoadingEnvironments ? '...' : environmentTotalCount.toString(),
-        description: environmentDescription,
+        description: isLoadingEnvironments
+          ? t('storeSummary.syncingEnvironments')
+          : `${environmentInProgressCount} ${t('storeSummary.environmentsInProgress')}`,
+        isActive: viewMode === 'environments',
+        onClick: () => {
+          setViewMode('environments');
+          setIsViewingSuitesOnly(false);
+        },
       },
     ];
   }, [
@@ -1851,40 +1855,42 @@ export const StoreSummaryPage = () => {
                   </form>
                 )}
 
-                <div className="scenario-table-header">
-                  <div>
-                    <h3 className="section-subtitle">{t('storeSummary.testData')}</h3>
+                {viewMode !== 'environments' && (
+                  <div className="scenario-table-header">
+                    <div>
+                      <h3 className="section-subtitle">{t('storeSummary.testData')}</h3>
+                    </div>
+                    <div className="scenario-table-actions">
+                      {viewMode === 'scenarios' ? (
+                        <>
+                          <div className="scenario-action-group">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => void handleScenarioExport('pdf')}
+                              isLoading={exportingScenarioFormat === 'pdf'}
+                              loadingText={t('exporting')}
+                            >
+                              <FileTextIcon aria-hidden className="icon" />
+                              {t('storeSummary.exportPdf')}
+                            </Button>
+                          </div>
+                          {scenarios.length > 0 && (
+                            <button
+                              type="button"
+                              className="scenario-table-toggle"
+                              onClick={() => setIsScenarioTableCollapsed((previous) => !previous)}
+                            >
+                              {isScenarioTableCollapsed
+                                ? t('storeSummary.maxTable')
+                                : t('storeSummary.minTable')}
+                            </button>
+                          )}
+                        </>
+                      ) : null}
+                    </div>
                   </div>
-                  <div className="scenario-table-actions">
-                    {viewMode === 'scenarios' ? (
-                      <>
-                        <div className="scenario-action-group">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => void handleScenarioExport('pdf')}
-                            isLoading={exportingScenarioFormat === 'pdf'}
-                            loadingText={t('exporting')}
-                          >
-                            <FileTextIcon aria-hidden className="icon" />
-                            {t('storeSummary.exportPdf')}
-                          </Button>
-                        </div>
-                        {scenarios.length > 0 && (
-                          <button
-                            type="button"
-                            className="scenario-table-toggle"
-                            onClick={() => setIsScenarioTableCollapsed((previous) => !previous)}
-                          >
-                            {isScenarioTableCollapsed
-                              ? t('storeSummary.maxTable')
-                              : t('storeSummary.minTable')}
-                          </button>
-                        )}
-                      </>
-                    ) : null}
-                  </div>
-                </div>
+                )}
                 <div className="scenario-table-wrapper">
                   {viewMode === 'scenarios' ? (
                     isScenarioTableCollapsed ? (
@@ -2001,6 +2007,34 @@ export const StoreSummaryPage = () => {
                                             <EyeIcon aria-hidden className="action-button__icon" />
                                             {t('storeSummary.viewDetails')}
                                           </button>
+                                          {canManageScenarios && (
+                                            <>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleEditScenario(scenario)}
+                                                className="action-button"
+                                                aria-label={t('edit')}
+                                                title={t('edit')}
+                                              >
+                                                <PencilIcon
+                                                  aria-hidden
+                                                  className="action-button__icon"
+                                                />
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => openDeleteScenarioModal(scenario)}
+                                                className="action-button action-button--danger"
+                                                aria-label={t('storeSummary.deleteScenario')}
+                                                title={t('storeSummary.deleteScenario')}
+                                              >
+                                                <TrashIcon
+                                                  aria-hidden
+                                                  className="action-button__icon"
+                                                />
+                                              </button>
+                                            </>
+                                          )}
                                         </td>
                                       </tr>
                                     );
@@ -2023,7 +2057,7 @@ export const StoreSummaryPage = () => {
                         )}
                       </>
                     )
-                  ) : (
+                  ) : viewMode === 'suites' ? (
                     <div
                       ref={suiteListRef}
                       className={`suite-manager ${isViewingSuitesOnly ? 'suite-manager--suites-only' : ''}`}
@@ -2225,6 +2259,16 @@ export const StoreSummaryPage = () => {
                                       ? t('storeSummary.updateSuite')
                                       : t('storeSummary.saveSuite')}
                                   </Button>
+                                  {!editingSuiteId && (
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      onClick={handleShowSuitesOnly}
+                                      className="suite-go-registered"
+                                    >
+                                      {t('storeSummary.goToRegistered')}
+                                    </Button>
+                                  )}
                                   {editingSuiteId && (
                                     <Button
                                       type="button"
@@ -2327,16 +2371,6 @@ export const StoreSummaryPage = () => {
                                             {t('storeSummary.clearFilters')}
                                           </button>
                                         )}
-                                        {!editingSuiteId && (
-                                          <Button
-                                            type="button"
-                                            variant="secondary"
-                                            onClick={handleShowSuitesOnly}
-                                            className="suite-go-registered"
-                                          >
-                                            {t('storeSummary.goToRegistered')}
-                                          </Button>
-                                        )}
                                       </div>
                                     </div>
                                     {filteredSuiteScenarios.length === 0 ? (
@@ -2431,25 +2465,20 @@ export const StoreSummaryPage = () => {
                         </>
                       )}
                     </div>
+                  ) : (
+                    <EnvironmentKanban
+                      storeId={storeId ?? ''}
+                      suites={suites}
+                      scenarios={scenarios}
+                      environments={environments}
+                      isLoading={isLoadingEnvironments}
+                    />
                   )}
                 </div>
               </div>
             )}
           </div>
         </section>
-        {storeId && (
-          <section className="page-container">
-            <div className="card">
-              <EnvironmentKanban
-                storeId={storeId}
-                suites={suites}
-                scenarios={scenarios}
-                environments={environments}
-                isLoading={isLoadingEnvironments}
-              />
-            </div>
-          </section>
-        )}
       </Layout>
 
       <Modal
@@ -2478,9 +2507,6 @@ export const StoreSummaryPage = () => {
           const detailBdd = localizedBdd || t('storeSummary.emptyValue');
           const canCopyBdd = scenarioDetails?.source === 'scenario-table';
           const hasDetailBdd = Boolean(detailBddValue);
-          const canManageDetailScenario =
-            scenarioDetails?.source === 'scenario-table' && canManageScenarios && detailScenario;
-
           return (
             <div className="scenario-details">
               <p className="scenario-details-title">{detailTitle}</p>
@@ -2535,34 +2561,6 @@ export const StoreSummaryPage = () => {
                 </div>
                 <LinkifiedText text={detailBdd} className="scenario-details-text" as="p" />
               </div>
-              {canManageDetailScenario && (
-                <div className="scenario-details-actions">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleCloseScenarioDetails();
-                      handleEditScenario(detailScenario);
-                    }}
-                    disabled={isSavingScenario}
-                    className="action-button"
-                  >
-                    <PencilIcon aria-hidden className="action-button__icon" />
-                    {t('edit')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleCloseScenarioDetails();
-                      openDeleteScenarioModal(detailScenario);
-                    }}
-                    disabled={isSavingScenario}
-                    className="action-button action-button--danger"
-                  >
-                    <TrashIcon aria-hidden className="action-button__icon" />
-                    {t('storeSummary.deleteScenario')}
-                  </button>
-                </div>
-              )}
             </div>
           );
         })()}
