@@ -300,7 +300,7 @@ export const EnvironmentEvidenceTable = ({
         return next;
       });
     } catch (error) {
-      console.error(error);
+      void error;
       showToast({
         type: 'error',
         message: translation('environmentEvidenceTable.toast_exec_error'),

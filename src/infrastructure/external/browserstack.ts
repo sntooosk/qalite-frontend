@@ -30,6 +30,7 @@ export const listBrowserstackBuilds = async (
       body: JSON.stringify({ username, accessKey }),
     });
   } catch (error) {
+    void error;
     const hint =
       `Não foi possível conectar ao serviço QaLite em ${baseUrl}. ` +
       'Verifique se a API está em execução ou ajuste a variável VITE_QALITE_SERVICE_URL.';
@@ -95,7 +96,7 @@ const extractErrorMessage = async (response: Response): Promise<string | null> =
       return data.error;
     }
   } catch (error) {
-    console.warn('Não foi possível interpretar a resposta JSON do BrowserStack:', error);
+    void error;
   }
 
   try {
@@ -104,7 +105,7 @@ const extractErrorMessage = async (response: Response): Promise<string | null> =
       return text;
     }
   } catch (error) {
-    console.warn('Não foi possível interpretar a resposta em texto do BrowserStack:', error);
+    void error;
   }
 
   return null;

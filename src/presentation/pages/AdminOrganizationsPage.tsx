@@ -55,7 +55,7 @@ export const AdminOrganizationsPage = () => {
         const data = await organizationService.list();
         setOrganizations(data);
       } catch (error) {
-        console.error(error);
+        void error;
         showToast({
           type: 'error',
           message: translation('adminOrganizationsPage.errors.loadOrganizations'),
@@ -89,7 +89,7 @@ export const AdminOrganizationsPage = () => {
           setStoreCounts(Object.fromEntries(counts));
         }
       } catch (error) {
-        console.error(error);
+        void error;
       }
     };
 
@@ -188,7 +188,7 @@ export const AdminOrganizationsPage = () => {
       });
       closeModal();
     } catch (error) {
-      console.error(error);
+      void error;
       const message =
         error instanceof Error
           ? error.message
@@ -243,39 +243,39 @@ export const AdminOrganizationsPage = () => {
                   : translation('adminOrganizationsPage.members.other');
 
               return (
-              <div
-                key={organization.id}
-                className="card card-clickable"
-                data-testid={`organization-card-${organization.id}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate(`/admin/organizations?organizationId=${organization.id}`)}
-                onKeyDown={(event) =>
-                  handleCardKeyDown(event, () =>
-                    navigate(`/admin/organizations?organizationId=${organization.id}`),
-                  )
-                }
-              >
-                <div className="organization-card-header">
-                  <h2 className="card-title">{organization.name}</h2>
-                </div>
+                <div
+                  key={organization.id}
+                  className="card card-clickable"
+                  data-testid={`organization-card-${organization.id}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/admin/organizations?organizationId=${organization.id}`)}
+                  onKeyDown={(event) =>
+                    handleCardKeyDown(event, () =>
+                      navigate(`/admin/organizations?organizationId=${organization.id}`),
+                    )
+                  }
+                >
+                  <div className="organization-card-header">
+                    <h2 className="card-title">{organization.name}</h2>
+                  </div>
 
-                <div className="organization-card-footer">
-                  <span className="badge">
-                    {translation('adminOrganizationsPage.storeCount', {
-                      count: storeCounts[organization.id] ?? 0,
-                    })}
-                  </span>
-                  <span className="badge">
-                    {membersCount} {membersLabel}
-                  </span>
+                  <div className="organization-card-footer">
+                    <span className="badge">
+                      {translation('adminOrganizationsPage.storeCount', {
+                        count: storeCounts[organization.id] ?? 0,
+                      })}
+                    </span>
+                    <span className="badge">
+                      {membersCount} {membersLabel}
+                    </span>
 
-                  <div className="card-link-hint">
-                    <span>{translation('adminOrganizationsPage.viewStores')}</span>
-                    <span aria-hidden>&rarr;</span>
+                    <div className="card-link-hint">
+                      <span>{translation('adminOrganizationsPage.viewStores')}</span>
+                      <span aria-hidden>&rarr;</span>
+                    </div>
                   </div>
                 </div>
-              </div>
               );
             })}
           </div>

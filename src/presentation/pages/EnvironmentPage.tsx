@@ -330,7 +330,7 @@ export const EnvironmentPage = () => {
     try {
       await handleEvidenceUpload(scenarioDetailsId, link);
     } catch (error) {
-      console.error(error);
+      void error;
     }
   }, [handleEvidenceUpload, modalEvidenceLink, scenarioDetailsId]);
 
@@ -372,7 +372,7 @@ export const EnvironmentPage = () => {
           setScenarios(scenariosData);
         }
       } catch (error) {
-        console.error(error);
+        void error;
         if (isMounted) {
           setSuites([]);
           setScenarios([]);
@@ -420,7 +420,7 @@ export const EnvironmentPage = () => {
 
       await slackService.sendTaskSummary(payload);
     } catch (error) {
-      console.error(error);
+      void error;
     } finally {
       setIsSendingSlackSummary(false);
     }
@@ -467,6 +467,7 @@ export const EnvironmentPage = () => {
               : translation('environment.statusUpdated'),
         });
       } catch (error) {
+        void error;
         if (error instanceof EnvironmentStatusError && error.code === 'PENDING_SCENARIOS') {
           showToast({
             type: 'error',
@@ -475,7 +476,6 @@ export const EnvironmentPage = () => {
           return;
         }
 
-        console.error(error);
         showToast({ type: 'error', message: translation('environment.statusUpdateError') });
       }
     },
@@ -493,7 +493,7 @@ export const EnvironmentPage = () => {
         await copyToClipboard(url);
         showToast({ type: 'success', message: translation('environment.copySuccess') });
       } catch (error) {
-        console.error(error);
+        void error;
         showToast({ type: 'error', message: translation('environment.copyError') });
       }
     },
@@ -514,7 +514,7 @@ export const EnvironmentPage = () => {
         });
         await refetchEnvironment();
       } catch (error) {
-        console.error(error);
+        void error;
       }
     }
 
@@ -539,7 +539,7 @@ export const EnvironmentPage = () => {
       await environmentService.copyAsMarkdown(environment, bugs, participantProfiles);
       showToast({ type: 'success', message: translation('environment.copyMarkdownSuccess') });
     } catch (error) {
-      console.error(error);
+      void error;
       showToast({ type: 'error', message: translation('environment.copyMarkdownError') });
     } finally {
       setIsCopyingMarkdown(false);
@@ -577,7 +577,7 @@ export const EnvironmentPage = () => {
       await enterEnvironment();
       return true;
     } catch (error) {
-      console.error(error);
+      void error;
       showToast({ type: 'error', message: translation('environment.enterError') });
       return false;
     }
@@ -589,7 +589,7 @@ export const EnvironmentPage = () => {
       await leaveEnvironment();
       showToast({ type: 'success', message: translation('environment.leaveSuccess') });
     } catch (error) {
-      console.error(error);
+      void error;
       showToast({ type: 'error', message: translation('environment.leaveError') });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

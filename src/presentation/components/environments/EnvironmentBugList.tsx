@@ -50,7 +50,7 @@ export const EnvironmentBugList = ({
       });
       await onUpdated?.();
     } catch (error) {
-      console.error(error);
+      void error;
       showToast({
         type: 'error',
         message: translation('environmentBugList.bugRemovedError'),

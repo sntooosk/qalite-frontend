@@ -47,7 +47,7 @@ export const useStoreEnvironments = (
         setEnvironments(list);
       }
     } catch (error) {
-      console.error('Failed to fetch environments', error);
+      void error;
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);

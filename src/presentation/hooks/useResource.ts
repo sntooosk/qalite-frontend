@@ -33,7 +33,7 @@ export const useResource = <T>({
         setValue(nextValue);
         return nextValue;
       } catch (error) {
-        console.error('Failed to fetch resource', error);
+        void error;
         setError(error instanceof Error ? error.message : 'Falha ao carregar dados.');
         return initialValueRef.current!;
       } finally {

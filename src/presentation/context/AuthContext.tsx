@@ -65,6 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         return result;
       } catch (err) {
+        void err;
         const message = mapFirebaseError(err);
         setError(message);
         showToast({ type: 'error', message });
@@ -95,7 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await authService.logout();
     } catch (logoutError) {
-      console.error(logoutError);
+      void logoutError;
     }
   }, []);
 

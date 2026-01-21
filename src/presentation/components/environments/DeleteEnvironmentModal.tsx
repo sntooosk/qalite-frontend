@@ -36,7 +36,7 @@ export const DeleteEnvironmentModal = ({
       onDeleted?.();
       onClose();
     } catch (err) {
-      console.error(err);
+      void err;
       setError(translation('deleteEnvironmentModal.deleteEnvironmentError'));
     } finally {
       setIsDeleting(false);

@@ -1,4 +1,4 @@
-import { ChangeEvent } from 'react';
+import { ChangeEvent, InputHTMLAttributes } from 'react';
 
 interface TextInputProps {
   id: string;
@@ -11,6 +11,10 @@ interface TextInputProps {
   disabled?: boolean;
   readOnly?: boolean;
   autoComplete?: string;
+  inputMode?: InputHTMLAttributes<HTMLInputElement>['inputMode'];
+  autoCapitalize?: InputHTMLAttributes<HTMLInputElement>['autoCapitalize'];
+  autoCorrect?: InputHTMLAttributes<HTMLInputElement>['autoCorrect'];
+  spellCheck?: boolean;
   min?: number;
   max?: number;
   step?: number;
@@ -28,6 +32,10 @@ export const TextInput = ({
   disabled = false,
   readOnly = false,
   autoComplete,
+  inputMode,
+  autoCapitalize,
+  autoCorrect,
+  spellCheck,
   min,
   max,
   step,
@@ -46,6 +54,10 @@ export const TextInput = ({
       disabled={disabled}
       readOnly={readOnly}
       autoComplete={autoComplete}
+      inputMode={inputMode}
+      autoCapitalize={autoCapitalize}
+      autoCorrect={autoCorrect}
+      spellCheck={spellCheck}
       min={min}
       max={max}
       step={step}

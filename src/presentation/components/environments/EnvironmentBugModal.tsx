@@ -89,7 +89,7 @@ export const EnvironmentBugModal = ({
       await onUpdated?.();
       onClose();
     } catch (error) {
-      console.error(error);
+      void error;
       showToast({ type: 'error', message: t('environmentBugModal.bugUnsaved') });
     } finally {
       setIsSubmitting(false);

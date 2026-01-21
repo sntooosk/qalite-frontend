@@ -15,6 +15,7 @@ export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const isSubmitDisabled = isLoading || !email.trim() || !password;
 
   useEffect(() => {
     void import('./UserDashboardPage');
@@ -26,7 +27,7 @@ export const LoginPage = () => {
     event.preventDefault();
     setFormError(null);
 
-    const normalizedEmail = email.trim();
+    const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail || !password) {
       setFormError(translation('loginPage.fieldRequired'));
@@ -48,7 +49,7 @@ export const LoginPage = () => {
 
       navigate('/no-organization', { replace: true });
     } catch (err) {
-      console.error(err);
+      void err;
       const message = err instanceof Error ? err.message : translation('loginPage.genericError');
       setFormError(message);
     }
@@ -75,8 +76,18 @@ export const LoginPage = () => {
           label={translation('loginPage.emailLabel')}
           type="email"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            if (formError) {
+              setFormError(null);
+            }
+          }}
           required
+          autoComplete="email"
+          inputMode="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           dataTestId="login-email"
         />
 
@@ -86,7 +97,12 @@ export const LoginPage = () => {
           id="password"
           label={translation('loginPage.passwordLabel')}
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            if (formError) {
+              setFormError(null);
+            }
+          }}
           required
           autoComplete="current-password"
           dataTestId="login-password"
@@ -95,6 +111,7 @@ export const LoginPage = () => {
         <Button
           type="submit"
           isLoading={isLoading}
+          disabled={isSubmitDisabled}
           loadingText={translation('loginPage.loading')}
           data-testid="login-submit"
         >
