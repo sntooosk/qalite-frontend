@@ -15,6 +15,17 @@ const isThemePreference = (value: unknown): value is ThemePreference =>
 const isLanguagePreference = (value: unknown): value is LanguagePreference =>
   value === 'pt' || value === 'en';
 
+const normalizeLanguagePreference = (value?: string | null): LanguagePreference | null => {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.toLowerCase();
+  const base = normalized.split('-')[0];
+
+  return isLanguagePreference(base) ? base : null;
+};
+
 export const normalizeUserPreferences = (
   value: unknown,
   fallback: UserPreferences = DEFAULT_USER_PREFERENCES,
@@ -45,6 +56,23 @@ export const getStoredThemePreference = (): ThemePreference | null => {
   const legacy = window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
   if (legacy === 'light' || legacy === 'dark') {
     return legacy;
+  }
+
+  return null;
+};
+
+export const getDeviceLanguagePreference = (): LanguagePreference | null => {
+  if (typeof navigator === 'undefined') {
+    return null;
+  }
+
+  const languages = navigator.languages?.length ? navigator.languages : [navigator.language];
+
+  for (const language of languages) {
+    const resolved = normalizeLanguagePreference(language);
+    if (resolved) {
+      return resolved;
+    }
   }
 
   return null;

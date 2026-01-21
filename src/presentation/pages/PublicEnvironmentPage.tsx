@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 import { Layout } from '../components/Layout';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
@@ -17,7 +17,6 @@ import { useTranslation } from 'react-i18next';
 export const PublicEnvironmentPage = () => {
   const { environmentId } = useParams<{ environmentId: string }>();
   const { environment, isLoading } = useEnvironmentRealtime(environmentId);
-  const [searchParams] = useSearchParams();
   const participants = useUserProfiles(environment?.participants ?? []);
   const { organization: environmentOrganization } = useStoreOrganizationBranding(
     environment?.storeId ?? null,
@@ -32,7 +31,6 @@ export const PublicEnvironmentPage = () => {
     useEnvironmentDetails(environment, bugs);
 
   const { t, i18n } = useTranslation();
-  const shareLanguageParam = searchParams.get('lang');
 
   useEffect(() => {
     setActiveOrganization(environmentOrganization ?? null);
@@ -43,11 +41,10 @@ export const PublicEnvironmentPage = () => {
   }, [environmentOrganization, setActiveOrganization]);
 
   useEffect(() => {
-    const resolvedLanguage = shareLanguageParam ?? environment?.publicShareLanguage;
-    if (resolvedLanguage && i18n.language !== resolvedLanguage) {
-      void i18n.changeLanguage(resolvedLanguage);
+    if (environment?.publicShareLanguage && i18n.language !== environment.publicShareLanguage) {
+      void i18n.changeLanguage(environment.publicShareLanguage);
     }
-  }, [environment?.publicShareLanguage, i18n, shareLanguageParam]);
+  }, [environment?.publicShareLanguage, i18n]);
 
   if (isLoading) {
     return (

@@ -10,6 +10,7 @@ import {
 
 import type { ThemePreference } from '../../domain/entities/auth';
 import {
+  getDeviceLanguagePreference,
   getStoredLanguagePreference,
   getStoredThemePreference,
   persistPreferencesLocally,
@@ -52,7 +53,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
     persistPreferencesLocally({
       theme: preference,
-      language: getStoredLanguagePreference() ?? 'en',
+      language: getStoredLanguagePreference() ?? getDeviceLanguagePreference() ?? 'en',
     });
 
     if (typeof window === 'undefined' || preference !== 'system') {

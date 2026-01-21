@@ -4,11 +4,13 @@ import { initReactI18next } from 'react-i18next';
 import enTranslation from '../locales/en.json';
 import ptTranslation from '../locales/pt.json';
 import {
+  getDeviceLanguagePreference,
   LANGUAGE_STORAGE_KEY,
   getStoredLanguagePreference,
 } from '../shared/config/userPreferences';
 
 const storedLanguage = getStoredLanguagePreference();
+const deviceLanguage = getDeviceLanguagePreference();
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -19,7 +21,7 @@ i18n.use(initReactI18next).init({
       ...ptTranslation,
     },
   },
-  lng: storedLanguage ?? 'en',
+  lng: storedLanguage ?? deviceLanguage ?? 'en',
   fallbackLng: 'en',
   supportedLngs: ['en', 'pt'],
   interpolation: {
