@@ -2616,15 +2616,9 @@ button.store-summary-highlight:focus-visible {
 
 .scenario-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-@media (min-width: 640px) {
-  .scenario-actions {
-    flex-direction: row;
-  }
+  flex-wrap: nowrap;
 }
 
 .action-button {
@@ -3542,7 +3536,7 @@ button.store-summary-highlight:focus-visible {
 .environment-kanban-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 1rem;
 }
