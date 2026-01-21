@@ -27,7 +27,6 @@ import {
   StorefrontIcon,
   UsersGroupIcon,
 } from '../components/icons';
-import { OrganizationLogPanel } from '../components/OrganizationLogPanel';
 import { isAutomatedScenario } from '../../shared/utils/automation';
 import { useTranslation } from 'react-i18next';
 
@@ -741,12 +740,6 @@ export const AdminStoresPage = () => {
           </div>
         ) : (
           <>
-            {selectedOrganization && (
-              <div className="page-section">
-                <OrganizationLogPanel organizationId={selectedOrganization.id} />
-              </div>
-            )}
-
             <div className="dashboard-grid">
               {stores.map((store) => (
                 <div
