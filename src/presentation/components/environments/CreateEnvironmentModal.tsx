@@ -120,6 +120,11 @@ export const CreateEnvironmentModal = ({
       return;
     }
 
+    if (!suiteId) {
+      setFormError(t('createEnvironment.suiteRequired'));
+      return;
+    }
+
     if (momentoOptions.length > 0 && !momento) {
       setFormError(t('createEnvironment.moment'));
       return;

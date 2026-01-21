@@ -11,6 +11,7 @@ import type {
 import type { UserSummary } from '../../domain/entities/user';
 import type { SlackTaskSummaryPayload } from '../../infrastructure/external/slack';
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
+import { storeService } from '../../application/use-cases/StoreUseCase';
 import { slackService } from '../../application/use-cases/SlackUseCase';
 import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
@@ -33,6 +34,7 @@ import { useUserProfiles } from '../hooks/useUserProfiles';
 import { useEnvironmentBugs } from '../hooks/useEnvironmentBugs';
 import { EnvironmentBugModal } from '../components/environments/EnvironmentBugModal';
 import type { EnvironmentBug } from '../../domain/entities/environment';
+import type { StoreScenario, StoreSuite } from '../../domain/entities/store';
 import { useEnvironmentDetails } from '../hooks/useEnvironmentDetails';
 import { useEnvironmentEngagement } from '../hooks/useEnvironmentEngagement';
 import { EnvironmentSummaryCard } from '../components/environments/EnvironmentSummaryCard';
@@ -200,6 +202,8 @@ export const EnvironmentPage = () => {
   const [modalEvidenceLink, setModalEvidenceLink] = useState('');
   const [isCopyingMarkdown, setIsCopyingMarkdown] = useState(false);
   const [isSendingSlackSummary, setIsSendingSlackSummary] = useState(false);
+  const [suites, setSuites] = useState<StoreSuite[]>([]);
+  const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
   const { bugs, isLoading: isLoadingBugs } = useEnvironmentBugs(environment?.id ?? null);
@@ -312,6 +316,42 @@ export const EnvironmentPage = () => {
       setActiveOrganization(null);
     };
   }, [environmentOrganization, setActiveOrganization]);
+
+  useEffect(() => {
+    if (!environment?.storeId) {
+      setSuites([]);
+      setScenarios([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchStoreData = async () => {
+      try {
+        const [suitesData, scenariosData] = await Promise.all([
+          storeService.listSuites(environment.storeId),
+          storeService.listScenarios(environment.storeId),
+        ]);
+
+        if (isMounted) {
+          setSuites(suitesData);
+          setScenarios(scenariosData);
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setSuites([]);
+          setScenarios([]);
+        }
+      }
+    };
+
+    void fetchStoreData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [environment?.storeId]);
 
   const { formattedTime, totalMs, formattedStart, formattedEnd } = useTimeTracking(
     environment?.timeTracking ?? null,
@@ -751,18 +791,20 @@ export const EnvironmentPage = () => {
         />
       </section>
 
-        <EditEnvironmentModal
-          isOpen={isEditOpen}
-          onClose={() => setIsEditOpen(false)}
-          environment={environment ?? null}
-          onDeleteRequest={() => {
-            setIsEditOpen(false);
-            setIsDeleteOpen(true);
-          }}
-          onLeave={handleLeaveEnvironment}
-          canLeave={hasEnteredEnvironment && environment.status !== 'done'}
-          isLeaving={isLeavingEnvironment}
-        />
+      <EditEnvironmentModal
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        environment={environment ?? null}
+        suites={suites}
+        scenarios={scenarios}
+        onDeleteRequest={() => {
+          setIsEditOpen(false);
+          setIsDeleteOpen(true);
+        }}
+        onLeave={handleLeaveEnvironment}
+        canLeave={hasEnteredEnvironment && environment.status !== 'done'}
+        isLeaving={isLeavingEnvironment}
+      />
 
       <DeleteEnvironmentModal
         isOpen={isDeleteOpen}
