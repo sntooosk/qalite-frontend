@@ -7,6 +7,7 @@ import type {
   Environment,
   EnvironmentScenarioStatus,
   EnvironmentStatus,
+  UpdateEnvironmentInput,
 } from '../../domain/entities/environment';
 import type { UserSummary } from '../../domain/entities/user';
 import type { SlackTaskSummaryPayload } from '../../infrastructure/external/slack';
@@ -18,7 +19,7 @@ import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { useToast } from '../context/ToastContext';
 import { useEnvironmentRealtime } from '../hooks/useEnvironmentRealtime';
-import { useTimeTracking } from '../hooks/useTimeTracking';
+import { useDeployTimeTracking } from '../hooks/useDeployTimeTracking';
 import { useAuth } from '../hooks/useAuth';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
 import { EnvironmentBugList } from '../components/environments/EnvironmentBugList';
@@ -46,6 +47,12 @@ import {
   getCriticalityClassName,
   getCriticalityLabelKey,
 } from '../constants/scenarioOptions';
+import {
+  finalizeTimeTracking,
+  normalizeMomentTimeTracking,
+  resolveEnvironmentMomentKey,
+  startTimeTracking,
+} from '../../shared/utils/time';
 import {
   CopyIcon,
   FileTextIcon,
@@ -378,10 +385,17 @@ export const EnvironmentPage = () => {
     };
   }, [environment?.storeId]);
 
-  const { formattedTime, totalMs, formattedStart, formattedEnd } = useTimeTracking(
-    environment?.timeTracking ?? null,
-    environment?.status === 'in_progress',
-  );
+  const {
+    pre: preTimeTracking,
+    post: postTimeTracking,
+    total: totalTimeTracking,
+    formattedStart,
+    formattedEnd,
+    momentKey,
+  } = useDeployTimeTracking(environment);
+  const formattedTime = totalTimeTracking.formattedTime;
+  const totalMs = totalTimeTracking.totalMs;
+  const isTmEnvironment = environment?.tipoAmbiente?.toUpperCase() === 'TM';
 
   const sendSlackSummary = useCallback(async () => {
     if (!environment || !slackWebhookUrl || isSendingSlackSummary) {
@@ -430,6 +444,45 @@ export const EnvironmentPage = () => {
     translation,
     urls,
   ]);
+
+  const handleMoveToPost = useCallback(async () => {
+    if (!environment) {
+      return;
+    }
+
+    const currentMomentKey = resolveEnvironmentMomentKey(environment.momento);
+    if (currentMomentKey !== 'pre' || environment.status !== 'in_progress') {
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const nowTimestamp = Date.now();
+    const momentTimeTracking = normalizeMomentTimeTracking(environment.momentTimeTracking ?? null);
+
+    if (!environment.momentTimeTracking) {
+      momentTimeTracking[currentMomentKey] = environment.timeTracking;
+    }
+
+    const nextPreTracking = finalizeTimeTracking(momentTimeTracking.pre, nowIso, nowTimestamp);
+    const nextPostTracking = startTimeTracking(momentTimeTracking.post, nowIso);
+
+    const payload: UpdateEnvironmentInput = {
+      momento: 'environmentOptions.post',
+      momentTimeTracking: {
+        pre: nextPreTracking,
+        post: nextPostTracking,
+      },
+      timeTracking: nextPostTracking,
+    };
+
+    try {
+      await environmentService.update(environment.id, payload);
+      showToast({ type: 'success', message: translation('environment.moveToPostSuccess') });
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: translation('environment.statusUpdateError') });
+    }
+  }, [environment, showToast, translation]);
 
   const handleStatusTransition = useCallback(
     async (target: EnvironmentStatus) => {
@@ -534,6 +587,18 @@ export const EnvironmentPage = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bugs, environment, participantProfiles, showToast]);
+
+  const startExecutionLabel = isTmEnvironment
+    ? momentKey === 'pre'
+      ? translation('environment.startPreDeploy')
+      : momentKey === 'post'
+        ? translation('environment.startPostDeploy')
+        : translation('environment.startExecution')
+    : translation('environment.startExecution');
+  const finishExecutionLabel =
+    isTmEnvironment && momentKey === 'post'
+      ? translation('environment.finishPostDeploy')
+      : translation('environment.finishEnvironment');
 
   const openCreateBugModal = useCallback((scenarioId: string) => {
     setEditingBug(null);
@@ -668,17 +733,39 @@ export const EnvironmentPage = () => {
                     onClick={() => handleStatusTransition('in_progress')}
                     data-testid="start-environment-button"
                   >
-                    {translation('environment.startExecution')}
+                    {startExecutionLabel}
                   </Button>
                 )}
                 {environment.status === 'in_progress' && (
-                  <Button
-                    type="button"
-                    onClick={() => handleStatusTransition('done')}
-                    data-testid="finish-environment-button"
-                  >
-                    {translation('environment.finishEnvironment')}
-                  </Button>
+                  <>
+                    {isTmEnvironment && momentKey === 'pre' ? (
+                      <>
+                        <Button
+                          type="button"
+                          onClick={handleMoveToPost}
+                          data-testid="move-to-post-button"
+                        >
+                          {translation('environment.moveToPost')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => handleStatusTransition('done')}
+                          data-testid="finish-environment-button"
+                        >
+                          {translation('environment.finishEnvironment')}
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={() => handleStatusTransition('done')}
+                        data-testid="finish-environment-button"
+                      >
+                        {finishExecutionLabel}
+                      </Button>
+                    )}
+                  </>
                 )}
                 {hasEnteredEnvironment && environment.status !== 'done' && (
                   <Button
@@ -705,6 +792,8 @@ export const EnvironmentPage = () => {
             formattedTime={formattedTime}
             formattedStart={formattedStart}
             formattedEnd={formattedEnd}
+            formattedPreTime={isTmEnvironment ? preTimeTracking.formattedTime : undefined}
+            formattedPostTime={isTmEnvironment ? postTimeTracking.formattedTime : undefined}
             urls={urls}
             participants={participantProfiles}
             bugsCount={bugs.length}

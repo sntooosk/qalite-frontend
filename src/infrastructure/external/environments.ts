@@ -26,6 +26,7 @@ import type {
   EnvironmentScenarioPlatform,
   EnvironmentScenarioStatus,
   EnvironmentStatus,
+  EnvironmentMomentTimeTracking,
   EnvironmentTimeTracking,
   UpdateEnvironmentBugInput,
   UpdateEnvironmentInput,
@@ -40,6 +41,11 @@ import {
   formatDurationFromMs,
   formatEndDateTime,
   getElapsedMilliseconds,
+  buildEmptyTimeTracking,
+  finalizeTimeTracking,
+  normalizeMomentTimeTracking,
+  resolveEnvironmentMomentKey,
+  startTimeTracking,
 } from '../../shared/utils/time';
 import { translateEnvironmentOption } from '../../shared/utils/environmentOptions';
 import i18n from '../../lib/i18n';
@@ -120,6 +126,26 @@ const parseTimestamp = (value: Timestamp | string | null | undefined): string | 
 
   return typeof value === 'string' ? value : null;
 };
+const normalizeTimeTracking = (data?: Record<string, unknown>): EnvironmentTimeTracking => {
+  if (!data) {
+    return buildEmptyTimeTracking();
+  }
+
+  return {
+    start: parseTimestamp(data.start as Timestamp | string | null | undefined),
+    end: parseTimestamp(data.end as Timestamp | string | null | undefined),
+    totalMs: Number(
+      typeof data.totalMs === 'number' ? data.totalMs : ((data.totalMs as number | undefined) ?? 0),
+    ),
+  };
+};
+const normalizeMomentTimeTrackingFromRaw = (
+  data?: Record<string, unknown>,
+): EnvironmentMomentTimeTracking =>
+  normalizeMomentTimeTracking({
+    pre: normalizeTimeTracking(data?.pre as Record<string, unknown> | undefined),
+    post: normalizeTimeTracking(data?.post as Record<string, unknown> | undefined),
+  });
 const parseScenarioMap = (
   data: Record<string, unknown> | undefined,
 ): Record<string, EnvironmentScenario> => {
@@ -192,27 +218,18 @@ const normalizeEnvironment = (id: string, data: Record<string, unknown>): Enviro
   status: (data.status ?? 'backlog') as EnvironmentStatus,
   createdAt: parseTimestamp(data.createdAt as Timestamp | string | null | undefined) ?? null,
   updatedAt: parseTimestamp(data.updatedAt as Timestamp | string | null | undefined) ?? null,
-  timeTracking: {
-    start: parseTimestamp(
-      (data.timeTracking as Record<string, unknown> | undefined)?.start as
-        | Timestamp
-        | string
-        | null
-        | undefined,
-    ),
-    end: parseTimestamp(
-      (data.timeTracking as Record<string, unknown> | undefined)?.end as
-        | Timestamp
-        | string
-        | null
-        | undefined,
-    ),
-    totalMs: Number(
-      typeof (data.timeTracking as Record<string, unknown> | undefined)?.totalMs === 'number'
-        ? (data.timeTracking as Record<string, unknown>).totalMs
-        : ((data.timeTracking as Record<string, unknown> | undefined)?.totalMs ?? 0),
-    ),
-  },
+  timeTracking: normalizeTimeTracking(data.timeTracking as Record<string, unknown> | undefined),
+  momentTimeTracking: (() => {
+    const rawMomentTracking = data.momentTimeTracking as Record<string, unknown> | undefined;
+    const momentTimeTracking = normalizeMomentTimeTrackingFromRaw(rawMomentTracking);
+    const momentKey = resolveEnvironmentMomentKey(getStringOrNull(data.momento));
+    if (!rawMomentTracking && momentKey) {
+      momentTimeTracking[momentKey] = normalizeTimeTracking(
+        data.timeTracking as Record<string, unknown> | undefined,
+      );
+    }
+    return momentTimeTracking;
+  })(),
   presentUsersIds: getStringArray(data.presentUsersIds),
   concludedBy: getStringOrNull(data.concludedBy),
   scenarios: parseScenarioMap(data.scenarios as Record<string, unknown> | undefined),
@@ -702,11 +719,29 @@ export const transitionEnvironmentStatus = async ({
     }
   }
 
-  const nextTimeTracking = computeNextTimeTracking(environment.timeTracking, targetStatus);
+  const momentKey = resolveEnvironmentMomentKey(environment.momento);
+  const momentTimeTracking = normalizeMomentTimeTracking(environment.momentTimeTracking);
+  if (momentKey && !environment.momentTimeTracking) {
+    momentTimeTracking[momentKey] = environment.timeTracking;
+  }
+
+  const nextMomentTimeTracking = momentKey
+    ? {
+        ...momentTimeTracking,
+        [momentKey]: computeNextTimeTracking(momentTimeTracking[momentKey], targetStatus),
+      }
+    : momentTimeTracking;
+  const nextTimeTracking = momentKey
+    ? nextMomentTimeTracking[momentKey]
+    : computeNextTimeTracking(environment.timeTracking, targetStatus);
   const payload: UpdateEnvironmentInput = {
     status: targetStatus,
     timeTracking: nextTimeTracking,
   };
+
+  if (momentKey || environment.momentTimeTracking) {
+    payload.momentTimeTracking = nextMomentTimeTracking;
+  }
 
   if (targetStatus === 'in_progress') {
     const scenariosEntries = Object.entries(environment.scenarios ?? {});
@@ -751,20 +786,16 @@ const computeNextTimeTracking = (
   current: EnvironmentTimeTracking,
   targetStatus: EnvironmentStatus,
 ): EnvironmentTimeTracking => {
-  const now = new Date().toISOString();
-
   if (targetStatus === 'backlog') {
-    return { start: null, end: null, totalMs: 0 };
+    return buildEmptyTimeTracking();
   }
 
   if (targetStatus === 'in_progress') {
-    return { start: current.start ?? now, end: null, totalMs: current.totalMs };
+    return startTimeTracking(current);
   }
 
   if (targetStatus === 'done') {
-    const startTimestamp = current.start ? new Date(current.start).getTime() : Date.now();
-    const totalMs = current.totalMs + Math.max(0, Date.now() - startTimestamp);
-    return { start: current.start ?? now, end: now, totalMs };
+    return finalizeTimeTracking(current);
   }
 
   return current;
@@ -802,14 +833,85 @@ const normalizeParticipants = (
   });
 };
 
+const getMomentTimeTrackingSnapshot = (environment: Environment) => {
+  const momentKey = resolveEnvironmentMomentKey(environment.momento);
+  const momentTimeTracking = normalizeMomentTimeTracking(environment.momentTimeTracking);
+
+  if (momentKey && !environment.momentTimeTracking) {
+    momentTimeTracking[momentKey] = environment.timeTracking;
+  }
+
+  return { momentKey, momentTimeTracking };
+};
+
+const getEarliestStart = (momentTimeTracking: EnvironmentMomentTimeTracking): string | null => {
+  const timestamps = [momentTimeTracking.pre.start, momentTimeTracking.post.start].filter(
+    (value): value is string => Boolean(value),
+  );
+
+  if (timestamps.length === 0) {
+    return null;
+  }
+
+  return timestamps.sort(
+    (first, second) => new Date(first).getTime() - new Date(second).getTime(),
+  )[0];
+};
+
+const getLatestEnd = (momentTimeTracking: EnvironmentMomentTimeTracking): string | null => {
+  const timestamps = [momentTimeTracking.pre.end, momentTimeTracking.post.end].filter(
+    (value): value is string => Boolean(value),
+  );
+
+  if (timestamps.length === 0) {
+    return null;
+  }
+
+  return timestamps.sort(
+    (first, second) => new Date(second).getTime() - new Date(first).getTime(),
+  )[0];
+};
+
 const buildTimeTrackingSummary = (environment: Environment) => {
   const isRunning = environment.status === 'in_progress';
-  const totalMs = getElapsedMilliseconds(environment.timeTracking, isRunning, Date.now());
+  const { momentKey, momentTimeTracking } = getMomentTimeTrackingSnapshot(environment);
+
+  if (!momentKey) {
+    const totalMs = getElapsedMilliseconds(environment.timeTracking, isRunning, Date.now());
+    return {
+      start: formatDateTime(environment.timeTracking?.start ?? null),
+      end: formatEndDateTime(environment.timeTracking ?? null, isRunning),
+      total: formatDurationFromMs(totalMs),
+      pre: formatDurationFromMs(0),
+      post: formatDurationFromMs(0),
+      totalMs,
+    };
+  }
+
+  const preMs = getElapsedMilliseconds(
+    momentTimeTracking.pre,
+    isRunning && momentKey === 'pre',
+    Date.now(),
+  );
+  const postMs = getElapsedMilliseconds(
+    momentTimeTracking.post,
+    isRunning && momentKey === 'post',
+    Date.now(),
+  );
+  const totalMs = preMs + postMs;
+  const combinedTimeTracking: EnvironmentTimeTracking = {
+    start: getEarliestStart(momentTimeTracking),
+    end: isRunning ? null : getLatestEnd(momentTimeTracking),
+    totalMs,
+  };
 
   return {
-    start: formatDateTime(environment.timeTracking?.start ?? null),
-    end: formatEndDateTime(environment.timeTracking ?? null, isRunning),
+    start: formatDateTime(combinedTimeTracking.start ?? null),
+    end: formatEndDateTime(combinedTimeTracking ?? null, isRunning),
     total: formatDurationFromMs(totalMs),
+    pre: formatDurationFromMs(preMs),
+    post: formatDurationFromMs(postMs),
+    totalMs,
   };
 };
 
@@ -901,6 +1003,7 @@ export const exportEnvironmentAsPDF = (
   const t = i18n.t.bind(i18n);
   const normalizedParticipants = normalizeParticipants(environment, participantProfiles, t);
   const timeSummary = buildTimeTrackingSummary(environment);
+  const shouldShowDeployMoments = environment.tipoAmbiente?.toUpperCase() === 'TM';
   const scenarioCount = Object.values(environment.scenarios ?? {}).length * 2;
   const statusLabel = t(ENVIRONMENT_STATUS_LABEL[environment.status]);
   const testTypeLabel = translateEnvironmentOption(environment.tipoTeste, t);
@@ -1039,6 +1142,20 @@ export const exportEnvironmentAsPDF = (
             <span>${t('environmentExport.endLabel')}</span>
             <strong>${escapeHtml(timeSummary.end)}</strong>
           </div>
+          ${
+            shouldShowDeployMoments
+              ? `
+          <div>
+            <span>${t('environmentExport.preDeployLabel')}</span>
+            <strong>${escapeHtml(timeSummary.pre)}</strong>
+          </div>
+          <div>
+            <span>${t('environmentExport.postDeployLabel')}</span>
+            <strong>${escapeHtml(timeSummary.post)}</strong>
+          </div>
+          `
+              : ''
+          }
           <div>
             <span>${t('environmentExport.totalLabel')}</span>
             <strong>${escapeHtml(timeSummary.total)}</strong>
@@ -1126,6 +1243,7 @@ export const copyEnvironmentAsMarkdown = async (
   const t = i18n.t.bind(i18n);
   const normalizedParticipants = normalizeParticipants(environment, participantProfiles, t);
   const timeSummary = buildTimeTrackingSummary(environment);
+  const shouldShowDeployMoments = environment.tipoAmbiente?.toUpperCase() === 'TM';
   const scenarioCount = Object.values(environment.scenarios ?? {}).length * 2;
   const statusLabel = t(ENVIRONMENT_STATUS_LABEL[environment.status]);
   const testTypeLabel = translateEnvironmentOption(environment.tipoTeste, t);
@@ -1175,7 +1293,11 @@ ${environment.momento ? `- ${t('environmentExport.momentLabel')}: ${momentLabel}
   }- ${t('environmentExport.jiraLabel')}: ${environment.jiraTask || t('dynamic.identifierFallback')}
 - ${t('environmentExport.startLabel')}: ${timeSummary.start}
 - ${t('environmentExport.endLabel')}: ${timeSummary.end}
-- ${t('environmentExport.totalLabel')}: ${timeSummary.total}
+${shouldShowDeployMoments ? `- ${t('environmentExport.preDeployLabel')}: ${timeSummary.pre}\n` : ''}${
+    shouldShowDeployMoments
+      ? `- ${t('environmentExport.postDeployLabel')}: ${timeSummary.post}\n`
+      : ''
+  }- ${t('environmentExport.totalLabel')}: ${timeSummary.total}
 - ${t('environmentExport.suiteLabel')}: ${environment.suiteName ?? t('dynamic.suiteNameFallback')}
 - ${t('environmentExport.totalScenariosLabel')}: ${scenarioCount}
 - ${t('environmentExport.bugsLabel')}: ${bugs.length}

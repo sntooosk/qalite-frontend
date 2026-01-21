@@ -6,7 +6,7 @@ import { EnvironmentEvidenceTable } from '../components/environments/Environment
 import { EnvironmentBugList } from '../components/environments/EnvironmentBugList';
 import { EnvironmentSummaryCard } from '../components/environments/EnvironmentSummaryCard';
 import { useEnvironmentRealtime } from '../hooks/useEnvironmentRealtime';
-import { useTimeTracking } from '../hooks/useTimeTracking';
+import { useDeployTimeTracking } from '../hooks/useDeployTimeTracking';
 import { useUserProfiles } from '../hooks/useUserProfiles';
 import { useStoreOrganizationBranding } from '../hooks/useStoreOrganizationBranding';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
@@ -23,10 +23,15 @@ export const PublicEnvironmentPage = () => {
     environment?.storeId ?? null,
   );
   const { setActiveOrganization } = useOrganizationBranding();
-  const { formattedTime, formattedStart, formattedEnd } = useTimeTracking(
-    environment?.timeTracking ?? null,
-    Boolean(environment?.status === 'in_progress'),
-  );
+  const {
+    pre: preTimeTracking,
+    post: postTimeTracking,
+    total: totalTimeTracking,
+    formattedStart,
+    formattedEnd,
+  } = useDeployTimeTracking(environment);
+  const formattedTime = totalTimeTracking.formattedTime;
+  const isTmEnvironment = environment?.tipoAmbiente?.toUpperCase() === 'TM';
   const { bugs, isLoading: isLoadingBugs } = useEnvironmentBugs(environment?.id ?? null);
   const { progressPercentage, progressLabel, scenarioCount, headerMeta, urls } =
     useEnvironmentDetails(environment, bugs);
@@ -92,6 +97,8 @@ export const PublicEnvironmentPage = () => {
             formattedTime={formattedTime}
             formattedStart={formattedStart}
             formattedEnd={formattedEnd}
+            formattedPreTime={isTmEnvironment ? preTimeTracking.formattedTime : undefined}
+            formattedPostTime={isTmEnvironment ? postTimeTracking.formattedTime : undefined}
             urls={urls}
             participants={participants}
             bugsCount={bugs.length}

@@ -15,6 +15,7 @@ import {
   requiresReleaseField,
 } from '../../constants/environmentOptions';
 import { useToast } from '../../context/ToastContext';
+import { buildEmptyTimeTracking, normalizeMomentTimeTracking } from '../../../shared/utils/time';
 
 interface CreateEnvironmentModalProps {
   isOpen: boolean;
@@ -143,7 +144,8 @@ export const CreateEnvironmentModal = ({
         .map((entry) => entry.trim())
         .filter((entry) => entry.length > 0);
 
-      const timeTracking = { start: null, end: null, totalMs: 0 };
+      const timeTracking = buildEmptyTimeTracking();
+      const momentTimeTracking = normalizeMomentTimeTracking();
 
       await environmentService.create({
         identificador: identificador.trim(),
@@ -158,6 +160,7 @@ export const CreateEnvironmentModal = ({
         release: shouldDisplayReleaseField ? release.trim() : null,
         status: 'backlog',
         timeTracking,
+        momentTimeTracking,
         presentUsersIds: [],
         concludedBy: null,
         scenarios: scenarioMap,

@@ -35,6 +35,8 @@ interface EnvironmentSummaryCardProps {
   formattedTime: string;
   formattedStart: string;
   formattedEnd: string;
+  formattedPreTime?: string;
+  formattedPostTime?: string;
   urls: string[];
   participants: UserSummary[];
   bugsCount: number;
@@ -48,6 +50,8 @@ export const EnvironmentSummaryCard = ({
   formattedTime,
   formattedStart,
   formattedEnd,
+  formattedPreTime,
+  formattedPostTime,
   urls,
   participants,
   bugsCount,
@@ -100,6 +104,24 @@ export const EnvironmentSummaryCard = ({
           </span>
           <strong>{formattedTime}</strong>
         </div>
+
+        {formattedPreTime && (
+          <div className="summary-card__meta-item">
+            <span className="summary-card__meta-label">
+              {translation('environmentSummary.preTime')}
+            </span>
+            <strong>{formattedPreTime}</strong>
+          </div>
+        )}
+
+        {formattedPostTime && (
+          <div className="summary-card__meta-item">
+            <span className="summary-card__meta-label">
+              {translation('environmentSummary.postTime')}
+            </span>
+            <strong>{formattedPostTime}</strong>
+          </div>
+        )}
 
         <div className="summary-card__meta-item">
           <span className="summary-card__meta-label">

@@ -28,6 +28,13 @@ export interface EnvironmentTimeTracking {
   totalMs: number;
 }
 
+export type EnvironmentMomentKey = 'pre' | 'post';
+
+export interface EnvironmentMomentTimeTracking {
+  pre: EnvironmentTimeTracking;
+  post: EnvironmentTimeTracking;
+}
+
 export interface Environment {
   id: string;
   identificador: string;
@@ -44,6 +51,7 @@ export interface Environment {
   createdAt: string | null;
   updatedAt: string | null;
   timeTracking: EnvironmentTimeTracking;
+  momentTimeTracking?: EnvironmentMomentTimeTracking;
   presentUsersIds: string[];
   concludedBy: string | null;
   scenarios: Record<string, EnvironmentScenario>;
@@ -66,6 +74,7 @@ export interface CreateEnvironmentInput {
   release: string | null;
   status: EnvironmentStatus;
   timeTracking: EnvironmentTimeTracking;
+  momentTimeTracking?: EnvironmentMomentTimeTracking;
   presentUsersIds: string[];
   concludedBy: string | null;
   scenarios: Record<string, EnvironmentScenario>;
