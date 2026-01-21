@@ -212,11 +212,6 @@ export const EnvironmentKanban = ({
   return (
     <section className="environment-kanban">
       <header className="environment-kanban-header">
-        <div>
-          <span className="badge">{t('environmentKanban.environmentStatus')}</span>
-          <h3 className="section-title">{t('environmentKanban.environments')}</h3>
-          <p className="environment-kanban-description">{t('environmentKanban.description')}</p>
-        </div>
         <Button type="button" onClick={() => setIsCreateOpen(true)}>
           {t('environmentKanban.create')}
         </Button>

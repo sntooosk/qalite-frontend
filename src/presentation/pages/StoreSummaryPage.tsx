@@ -2013,23 +2013,25 @@ export const StoreSummaryPage = () => {
                                                 type="button"
                                                 onClick={() => handleEditScenario(scenario)}
                                                 className="action-button"
+                                                aria-label={t('edit')}
+                                                title={t('edit')}
                                               >
                                                 <PencilIcon
                                                   aria-hidden
                                                   className="action-button__icon"
                                                 />
-                                                {t('edit')}
                                               </button>
                                               <button
                                                 type="button"
                                                 onClick={() => openDeleteScenarioModal(scenario)}
                                                 className="action-button action-button--danger"
+                                                aria-label={t('storeSummary.deleteScenario')}
+                                                title={t('storeSummary.deleteScenario')}
                                               >
                                                 <TrashIcon
                                                   aria-hidden
                                                   className="action-button__icon"
                                                 />
-                                                {t('storeSummary.deleteScenario')}
                                               </button>
                                             </>
                                           )}
@@ -2257,6 +2259,16 @@ export const StoreSummaryPage = () => {
                                       ? t('storeSummary.updateSuite')
                                       : t('storeSummary.saveSuite')}
                                   </Button>
+                                  {!editingSuiteId && (
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      onClick={handleShowSuitesOnly}
+                                      className="suite-go-registered"
+                                    >
+                                      {t('storeSummary.goToRegistered')}
+                                    </Button>
+                                  )}
                                   {editingSuiteId && (
                                     <Button
                                       type="button"
@@ -2358,16 +2370,6 @@ export const StoreSummaryPage = () => {
                                           >
                                             {t('storeSummary.clearFilters')}
                                           </button>
-                                        )}
-                                        {!editingSuiteId && (
-                                          <Button
-                                            type="button"
-                                            variant="secondary"
-                                            onClick={handleShowSuitesOnly}
-                                            className="suite-go-registered"
-                                          >
-                                            {t('storeSummary.goToRegistered')}
-                                          </Button>
                                         )}
                                       </div>
                                     </div>
