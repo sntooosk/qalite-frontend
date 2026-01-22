@@ -1,21 +1,39 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { EnvironmentBug } from '../../domain/entities/environment';
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
-import { useRealtimeResource } from './useRealtimeResource';
 
 export const useEnvironmentBugs = (environmentId: string | null | undefined) => {
-  const subscribeToBugs = useCallback(
-    (id: string, handler: (bugs: EnvironmentBug[]) => void) =>
-      environmentService.observeBugs(id, handler),
-    [],
-  );
+  const [bugs, setBugs] = useState<EnvironmentBug[]>([]);
+  const [isLoading, setIsLoading] = useState(Boolean(environmentId));
+  const [error, setError] = useState<string | null>(null);
 
-  const { value, isLoading } = useRealtimeResource<EnvironmentBug[]>({
-    resourceId: environmentId,
-    getInitialValue: () => [],
-    subscribe: subscribeToBugs,
-  });
+  const fetchBugs = useCallback(async () => {
+    if (!environmentId) {
+      setBugs([]);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
 
-  return { bugs: value, isLoading };
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const list = await environmentService.listBugs(environmentId);
+      setBugs(list);
+    } catch (fetchError) {
+      console.error(fetchError);
+      setBugs([]);
+      setError('Não foi possível carregar os bugs.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [environmentId]);
+
+  useEffect(() => {
+    void fetchBugs();
+  }, [fetchBugs]);
+
+  return { bugs, isLoading, error, refetch: fetchBugs };
 };

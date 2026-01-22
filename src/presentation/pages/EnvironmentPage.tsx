@@ -232,7 +232,11 @@ export const EnvironmentPage = () => {
   const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
-  const { bugs, isLoading: isLoadingBugs } = useEnvironmentBugs(environment?.id ?? null);
+  const {
+    bugs,
+    isLoading: isLoadingBugs,
+    refetch: refetchBugs,
+  } = useEnvironmentBugs(environment?.id ?? null);
   const {
     hasEnteredEnvironment,
     isLocked,
@@ -343,9 +347,7 @@ export const EnvironmentPage = () => {
   }, [environmentOrganization, setActiveOrganization]);
 
   useEffect(() => {
-    if (!environment?.storeId) {
-      setSuites([]);
-      setScenarios([]);
+    if (!environment?.storeId || !isEditOpen) {
       return;
     }
 
@@ -376,7 +378,7 @@ export const EnvironmentPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [environment?.storeId]);
+  }, [environment?.storeId, isEditOpen]);
 
   const { formattedTime, totalMs, formattedStart, formattedEnd } = useTimeTracking(
     environment?.timeTracking ?? null,
@@ -778,6 +780,7 @@ export const EnvironmentPage = () => {
           isLocked={Boolean(isInteractionLocked)}
           isLoading={isLoadingBugs}
           onEdit={handleEditBug}
+          onRefresh={refetchBugs}
         />
       </section>
 
@@ -809,6 +812,7 @@ export const EnvironmentPage = () => {
           bug={editingBug}
           onClose={closeBugModal}
           initialScenarioId={editingBug ? (editingBug.scenarioId ?? null) : defaultBugScenarioId}
+          onSaved={refetchBugs}
         />
       )}
 
