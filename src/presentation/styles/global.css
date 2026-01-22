@@ -2617,10 +2617,12 @@ button.store-summary-highlight:focus-visible {
   gap: 0.5rem;
   flex-wrap: nowrap;
   white-space: nowrap;
+  min-width: 140px;
 }
 
 .scenario-actions-header {
   white-space: nowrap;
+  min-width: 140px;
 }
 
 .action-button {

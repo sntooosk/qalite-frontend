@@ -268,7 +268,7 @@ export const EnvironmentPage = () => {
   const shouldAutoJoinFromInvite = inviteParam === 'true' || inviteParam === '1';
   const detailScenario = scenarioDetailsId ? environment?.scenarios?.[scenarioDetailsId] : null;
   const detailScenarioStatus = detailScenario ? getScenarioPlatformStatuses(detailScenario) : null;
-  const canManageEvidence = !isScenarioLocked;
+  const canManageEvidence = !isInteractionLocked;
   const formatAutomationLabel = (value?: string | null) => {
     const labelKey = getAutomationLabelKey(value);
     if (labelKey) {
