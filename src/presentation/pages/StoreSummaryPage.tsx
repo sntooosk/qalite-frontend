@@ -53,7 +53,7 @@ import {
   type ScenarioSortConfig,
 } from '../components/ScenarioColumnSortControl';
 import { useStoreEnvironments } from '../hooks/useStoreEnvironments';
-import { openScenarioPdf } from '../../shared/utils/storeImportExport';
+import { downloadScenarioWorkbook, openScenarioPdf } from '../../shared/utils/storeImportExport';
 import { isAutomatedScenario } from '../../shared/utils/automation';
 import { useTranslation } from 'react-i18next';
 import { buildExternalLink } from '../utils/externalLink';
@@ -88,7 +88,7 @@ interface StoreHighlight {
   onClick?: () => void;
 }
 
-type ExportFormat = 'pdf';
+type ExportFormat = 'pdf' | 'xlsx';
 
 const emptyScenarioFilters: ScenarioFilters = {
   search: '',
@@ -1158,6 +1158,10 @@ export const StoreSummaryPage = () => {
       if (format === 'pdf') {
         openScenarioPdf(data, `${store.name} - ${t('scenarios')}`, pdfWindow);
       }
+      if (format === 'xlsx') {
+        const baseFileName = `${store.name.replace(/\s+/g, '_')}_${t('storeSummary.exportFileSuffix')}`;
+        downloadScenarioWorkbook(data, `${baseFileName}.xlsx`);
+      }
 
       showToast({ type: 'success', message: t('storeSummary.scenarioExportSuccess') });
     } catch (error) {
@@ -1784,6 +1788,16 @@ export const StoreSummaryPage = () => {
                             >
                               <FileTextIcon aria-hidden className="icon" />
                               {t('storeSummary.exportPdf')}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => void handleScenarioExport('xlsx')}
+                              isLoading={exportingScenarioFormat === 'xlsx'}
+                              loadingText={t('exporting')}
+                            >
+                              <FileTextIcon aria-hidden className="icon" />
+                              {t('storeSummary.exportExcel')}
                             </Button>
                           </div>
                         </>

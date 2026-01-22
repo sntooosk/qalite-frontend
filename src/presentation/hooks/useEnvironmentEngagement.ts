@@ -49,7 +49,7 @@ export const useEnvironmentEngagement = (
 
     const hasPersistedEntry = environment?.participants?.includes(userId) ?? false;
 
-    if (hasPersistedEntry && !hasEnteredEnvironment) {
+    if ((hasPersistedEntry || isCurrentUserPresent) && !hasEnteredEnvironment) {
       setHasEnteredEnvironment(true);
       return;
     }

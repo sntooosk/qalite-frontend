@@ -35,6 +35,7 @@ export const EnvironmentCard = ({
       ? t('environmentCard.bugStoryfix')
       : t('environmentCard.bugBugs');
   const totalScenariosWithPlatforms = environment.totalCenarios * 2;
+  const bugCount = environment.bugs ?? 0;
   const momentLabel = translateEnvironmentOption(environment.momento, t);
 
   const handleOpen = () => onOpen(environment);
@@ -86,7 +87,7 @@ export const EnvironmentCard = ({
         </div>
         <div className="environment-card-stat">
           <span className="environment-card-stat-label">{bugLabel}</span>
-          <strong className="environment-card-stat-value">{environment.bugs}</strong>
+          <strong className="environment-card-stat-value">{bugCount}</strong>
         </div>
       </div>
 
