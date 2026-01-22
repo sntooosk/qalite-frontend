@@ -2553,10 +2553,11 @@ button.store-summary-highlight:focus-visible {
   border-spacing: 0;
   border: 1px solid var(--table-border-stronger);
   border-radius: 1.5rem;
-  overflow: hidden;
+  overflow: visible;
   background: var(--table-surface);
   color: var(--table-text);
   box-shadow: var(--table-shadow);
+  position: relative;
 }
 
 .data-table th,
@@ -2573,6 +2574,18 @@ button.store-summary-highlight:focus-visible {
   font-size: 0.78rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.data-table thead tr {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
 }
 
 .data-table td {
@@ -4203,8 +4216,23 @@ button.store-summary-highlight:focus-visible {
 }
 
 .environment-bugs__actions {
+  vertical-align: middle;
+}
+
+.environment-bugs__actions-content {
   display: flex;
+  align-items: center;
   gap: 0.75rem;
+}
+
+.scenario-actions {
+  vertical-align: middle;
+}
+
+.scenario-actions__content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .bug-status {

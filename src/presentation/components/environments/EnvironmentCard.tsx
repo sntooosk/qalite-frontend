@@ -11,6 +11,7 @@ interface EnvironmentCardProps {
   environment: Environment;
   participants: UserSummary[];
   suiteName?: string | null;
+  bugCount?: number;
   onOpen: (environment: Environment) => void;
   draggable?: boolean;
   onDragStart?: (event: DragEvent<HTMLDivElement>, environmentId: string) => void;
@@ -20,6 +21,7 @@ export const EnvironmentCard = ({
   environment,
   participants,
   suiteName,
+  bugCount,
   onOpen,
   draggable = false,
   onDragStart,
@@ -36,6 +38,7 @@ export const EnvironmentCard = ({
       : t('environmentCard.bugBugs');
   const totalScenariosWithPlatforms = environment.totalCenarios * 2;
   const momentLabel = translateEnvironmentOption(environment.momento, t);
+  const displayBugCount = bugCount ?? environment.bugs ?? 0;
 
   const handleOpen = () => onOpen(environment);
 
@@ -86,7 +89,7 @@ export const EnvironmentCard = ({
         </div>
         <div className="environment-card-stat">
           <span className="environment-card-stat-label">{bugLabel}</span>
-          <strong className="environment-card-stat-value">{environment.bugs ?? 0}</strong>
+          <strong className="environment-card-stat-value">{displayBugCount}</strong>
         </div>
       </div>
 

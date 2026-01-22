@@ -17,6 +17,10 @@
     "deleteLoading": "Removing...",
     "delete": "Remove",
     "exporting": "Exporting...",
+    "exportExcel": {
+      "field": "Field",
+      "value": "Value"
+    },
     "importing": "Importing...",
     "select": "Select",
     "scenarios": "Scenarios",
@@ -583,6 +587,9 @@
       "exportExcel": "Export Excel",
       "exportExcelFileName": "environment-report",
       "exportExcelSheetName": "Scenarios",
+      "exportExcelEnvironmentSheetName": "Environment",
+      "exportExcelBugsSheetName": "Bugs",
+      "exportExcelStatusLabel": "Status",
       "enterError": "Unable to join environment.",
       "leaveSuccess": "You left the environment.",
       "leaveError": "Unable to leave the environment."
@@ -1004,6 +1011,10 @@
       "testData": "Scenario and test suite dataset",
       "exportJson": "Export JSON",
       "exportPdf": "Export PDF",
+      "exportExcel": "Export Excel",
+      "exportExcelSheetName": "Scenarios",
+      "exportExcelInfoSheetName": "Store",
+      "exportFileSuffix": "scenarios",
       "importJson": "Import JSON",
       "maxTable": "Maximize table",
       "minTable": "Minimize table",

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -50,10 +50,12 @@ import {
   CopyIcon,
   FileTextIcon,
   LinkIcon,
+  LogoutIcon,
   SettingsIcon,
   UsersGroupIcon,
 } from '../components/icons';
-import { downloadEnvironmentWorkbook } from '../../shared/utils/storeImportExport';
+import { exportEnvironmentExcel } from '../../utils/exportExcel';
+import { BUG_STATUS_LABEL, ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
 
 interface SlackSummaryBuilderOptions {
   formattedTime: string;
@@ -233,6 +235,7 @@ export const EnvironmentPage = () => {
   const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
+  const activeOrganizationIdRef = useRef<string | null>(null);
   const {
     bugs,
     isLoading: isLoadingBugs,
@@ -298,6 +301,16 @@ export const EnvironmentPage = () => {
     },
     [translation],
   );
+  const translateOptionValue = useCallback(
+    (value?: string | null) => {
+      if (!value) {
+        return translation('storeSummary.emptyValue');
+      }
+      const translated = translation(value);
+      return translated === value ? value : translated;
+    },
+    [translation],
+  );
 
   const clearInviteParam = useCallback(() => {
     if (!inviteParam) {
@@ -343,11 +356,12 @@ export const EnvironmentPage = () => {
   }, [detailScenario]);
 
   useEffect(() => {
+    const nextOrganizationId = environmentOrganization?.id ?? null;
+    if (activeOrganizationIdRef.current === nextOrganizationId) {
+      return;
+    }
+    activeOrganizationIdRef.current = nextOrganizationId;
     setActiveOrganization(environmentOrganization ?? null);
-
-    return () => {
-      setActiveOrganization(null);
-    };
   }, [environmentOrganization, setActiveOrganization]);
 
   useEffect(() => {
@@ -427,6 +441,7 @@ export const EnvironmentPage = () => {
     }
   }, [
     bugs.length,
+    bugs,
     environment,
     executedScenariosCount,
     formattedTime,
@@ -530,16 +545,6 @@ export const EnvironmentPage = () => {
       return;
     }
 
-    const headers = [
-      translation('environmentEvidenceTable.table_titulo'),
-      translation('environmentEvidenceTable.table_categoria'),
-      translation('environmentEvidenceTable.table_criticidade'),
-      translation('environmentEvidenceTable.table_observacao'),
-      translation('environmentEvidenceTable.table_status_mobile'),
-      translation('environmentEvidenceTable.table_status_desktop'),
-      translation('environmentEvidenceTable.table_evidencia'),
-    ];
-
     const rows = Object.values(environment.scenarios ?? {}).map((scenario) => {
       const statuses = getScenarioPlatformStatuses(scenario);
       const statusMobile = formatScenarioStatusLabel(statuses.mobile);
@@ -550,25 +555,142 @@ export const EnvironmentPage = () => {
         ? scenario.evidenciaArquivoUrl
         : translation('environmentEvidenceTable.evidencia_sem');
 
-      return [
-        scenario.titulo || translation('storeSummary.emptyValue'),
-        scenario.categoria || translation('storeSummary.emptyValue'),
-        formatCriticalityLabel(scenario.criticidade),
-        observation,
+      return {
+        titulo: scenario.titulo || translation('storeSummary.emptyValue'),
+        categoria: scenario.categoria || translation('storeSummary.emptyValue'),
+        criticidade: formatCriticalityLabel(scenario.criticidade),
+        observacao: observation,
         statusMobile,
         statusDesktop,
-        evidence,
-      ];
+        evidencia: evidence,
+      };
     });
 
     const fileName = `${translation('environment.exportExcelFileName')}-${environment.identificador}-${new Date().toISOString().slice(0, 10)}.xlsx`;
-    downloadEnvironmentWorkbook({
-      headers,
-      rows,
-      fileName,
-      sheetName: translation('environment.exportExcelSheetName'),
+    const infoRows = [
+      {
+        label: translation('editEnvironmentModal.identifier'),
+        value: environment.identificador || translation('storeSummary.emptyValue'),
+      },
+      {
+        label: translation('environment.exportExcelStatusLabel'),
+        value: translation(ENVIRONMENT_STATUS_LABEL[environment.status]),
+      },
+      {
+        label: translation('createEnvironment.suiteId'),
+        value: environment.suiteName?.trim() || translation('storeSummary.emptyValue'),
+      },
+      {
+        label: translation('editEnvironmentModal.environmentType'),
+        value: environment.tipoAmbiente || translation('storeSummary.emptyValue'),
+      },
+      {
+        label: translation('editEnvironmentModal.testType'),
+        value: translateOptionValue(environment.tipoTeste),
+      },
+      {
+        label: translation('editEnvironmentModal.moment'),
+        value: environment.momento
+          ? translateOptionValue(environment.momento)
+          : translation('environmentSummary.notRecorded'),
+      },
+      {
+        label: translation('editEnvironmentModal.release'),
+        value: environment.release?.trim() || translation('environmentSummary.notRecorded'),
+      },
+      {
+        label: translation('editEnvironmentModal.jiraTask'),
+        value: environment.jiraTask?.trim() || translation('environmentSummary.notInformed'),
+      },
+      {
+        label: translation('editEnvironmentModal.urls'),
+        value: urls.length > 0 ? urls.join('\n') : translation('environmentSummary.noUrls'),
+      },
+      {
+        label: translation('environmentSummary.participants'),
+        value:
+          participantProfiles.length > 0
+            ? participantProfiles
+                .map((profile) => profile.displayName?.trim() || profile.email)
+                .filter(Boolean)
+                .join(', ')
+            : translation('environmentSummary.noParticipants'),
+      },
+      {
+        label: translation('environmentSummary.scenarios'),
+        value: `${executedScenariosCount}/${scenarioCount}`,
+      },
+      {
+        label: translation('environmentSummary.bugs'),
+        value: String(bugs.length),
+      },
+      {
+        label: translation('environmentSummary.start'),
+        value: formattedStart,
+      },
+      {
+        label: translation('environmentSummary.end'),
+        value: formattedEnd,
+      },
+      {
+        label: translation('environmentSummary.totalTime'),
+        value: formattedTime || '00:00:00',
+      },
+    ];
+    const bugRows = bugs.map((bug) => {
+      const scenarioName = bug.scenarioId
+        ? environment.scenarios?.[bug.scenarioId]?.titulo ||
+          translation('environmentBugList.scenarioRemoved')
+        : translation('environmentBugList.notLinked');
+
+      return {
+        cenario: scenarioName,
+        titulo: bug.title?.trim() || translation('storeSummary.emptyValue'),
+        status: translation(BUG_STATUS_LABEL[bug.status]),
+        descricao: bug.description?.trim() || translation('environmentBugList.noDescription'),
+      };
     });
-  }, [environment, formatCriticalityLabel, formatScenarioStatusLabel, translation]);
+
+    exportEnvironmentExcel({
+      fileName,
+      scenarioSheetName: translation('environment.exportExcelSheetName'),
+      environmentSheetName: translation('environment.exportExcelEnvironmentSheetName'),
+      bugSheetName: translation('environment.exportExcelBugsSheetName'),
+      infoHeaderLabels: [translation('exportExcel.field'), translation('exportExcel.value')],
+      infoRows,
+      scenarioRows: rows,
+      scenarioHeaderLabels: [
+        translation('environmentEvidenceTable.table_titulo'),
+        translation('environmentEvidenceTable.table_categoria'),
+        translation('environmentEvidenceTable.table_criticidade'),
+        translation('environmentEvidenceTable.table_observacao'),
+        translation('environmentEvidenceTable.table_status_mobile'),
+        translation('environmentEvidenceTable.table_status_desktop'),
+        translation('environmentEvidenceTable.table_evidencia'),
+      ],
+      bugRows,
+      bugHeaderLabels: [
+        translation('environmentBugList.scenario'),
+        translation('environmentBugList.title'),
+        translation('environmentBugList.status'),
+        translation('environmentBugList.description'),
+      ],
+    });
+  }, [
+    bugs.length,
+    environment,
+    executedScenariosCount,
+    formatCriticalityLabel,
+    formatScenarioStatusLabel,
+    formattedEnd,
+    formattedStart,
+    formattedTime,
+    participantProfiles,
+    scenarioCount,
+    translateOptionValue,
+    translation,
+    urls,
+  ]);
 
   const handleCopyMarkdown = useCallback(async () => {
     if (!environment) {
@@ -630,12 +752,13 @@ export const EnvironmentPage = () => {
     try {
       await leaveEnvironment();
       showToast({ type: 'success', message: translation('environment.leaveSuccess') });
+      navigate(-1);
     } catch (error) {
       console.error(error);
       showToast({ type: 'error', message: translation('environment.leaveError') });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leaveEnvironment, showToast]);
+  }, [leaveEnvironment, navigate, showToast, translation]);
 
   useEffect(() => {
     if (!shouldAutoJoinFromInvite) {
@@ -732,6 +855,18 @@ export const EnvironmentPage = () => {
                     data-testid="finish-environment-button"
                   >
                     {translation('environment.finishEnvironment')}
+                  </Button>
+                )}
+                {hasEnteredEnvironment && environment.status !== 'done' && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleLeaveEnvironment}
+                    isLoading={isLeavingEnvironment}
+                    loadingText={translation('environment.leaving')}
+                  >
+                    <LogoutIcon aria-hidden className="icon" />
+                    {translation('environment.leave')}
                   </Button>
                 )}
                 {hasEnteredEnvironment && environment.status !== 'done' && (
@@ -855,9 +990,6 @@ export const EnvironmentPage = () => {
           setIsEditOpen(false);
           setIsDeleteOpen(true);
         }}
-        onLeave={handleLeaveEnvironment}
-        canLeave={hasEnteredEnvironment && environment.status !== 'done'}
-        isLeaving={isLeavingEnvironment}
       />
 
       <DeleteEnvironmentModal

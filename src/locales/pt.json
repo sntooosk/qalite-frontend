@@ -18,6 +18,10 @@
     "deleteLoading": "Removendo...",
     "delete": "Remover",
     "exporting": "Exportando...",
+    "exportExcel": {
+      "field": "Campo",
+      "value": "Valor"
+    },
     "importing": "Importando...",
     "select": "Selecionar",
     "scenarios": "Cenários",
@@ -584,6 +588,9 @@
       "exportExcel": "Exportar Excel",
       "exportExcelFileName": "relatorio-ambiente",
       "exportExcelSheetName": "Cenários",
+      "exportExcelEnvironmentSheetName": "Ambiente",
+      "exportExcelBugsSheetName": "Bugs",
+      "exportExcelStatusLabel": "Status",
       "enterError": "Não foi possível entrar no ambiente.",
       "leaveSuccess": "Você saiu do ambiente.",
       "leaveError": "Não foi possível sair do ambiente."
@@ -1006,6 +1013,10 @@
       "testData": "Massa de cenários e suítes de testes",
       "exportJson": "Exportar JSON",
       "exportPdf": "Exportar PDF",
+      "exportExcel": "Exportar Excel",
+      "exportExcelSheetName": "Cenários",
+      "exportExcelInfoSheetName": "Loja",
+      "exportFileSuffix": "cenarios",
       "importJson": "Importar JSON",
       "maxTable": "Maximizar tabela",
       "minTable": "Minimizar tabela",

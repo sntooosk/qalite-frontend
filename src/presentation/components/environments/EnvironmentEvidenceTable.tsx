@@ -13,8 +13,8 @@ import {
   createScenarioSortComparator,
   type ScenarioSortConfig,
 } from '../ScenarioColumnSortControl';
-import { ENVIRONMENT_PLATFORM_LABEL } from '../../../shared/config/environmentLabels';
 import { isAutomatedScenario } from '../../../shared/utils/automation';
+import { ENVIRONMENT_PLATFORM_LABEL } from '../../../shared/config/environmentLabels';
 import { getCriticalityClassName, getCriticalityLabelKey } from '../../constants/scenarioOptions';
 import { normalizeCriticalityEnum } from '../../../shared/utils/scenarioEnums';
 import { useToast } from '../../context/ToastContext';
@@ -277,7 +277,6 @@ export const EnvironmentEvidenceTable = ({
                   return (
                     <td key={selectId} className="scenario-status-column">
                       <div className="scenario-status-cell">
-                        <label htmlFor={selectId}>{ENVIRONMENT_PLATFORM_LABEL[platform]}</label>
                         <select
                           id={selectId}
                           className={`scenario-status-select scenario-status-select--${currentStatus}`}
@@ -304,14 +303,16 @@ export const EnvironmentEvidenceTable = ({
                 })}
                 {canViewDetails && (
                   <td className="scenario-actions">
-                    <button
-                      type="button"
-                      onClick={() => onViewDetails?.(scenarioId)}
-                      className="action-button action-button--primary"
-                    >
-                      <EyeIcon aria-hidden className="action-button__icon" />
-                      {translation('storeSummary.viewDetails')}
-                    </button>
+                    <div className="scenario-actions__content">
+                      <button
+                        type="button"
+                        onClick={() => onViewDetails?.(scenarioId)}
+                        className="action-button action-button--primary"
+                      >
+                        <EyeIcon aria-hidden className="action-button__icon" />
+                        {translation('storeSummary.viewDetails')}
+                      </button>
+                    </div>
                   </td>
                 )}
               </tr>
