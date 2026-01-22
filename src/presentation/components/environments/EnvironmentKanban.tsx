@@ -11,10 +11,9 @@ import { environmentService } from '../../../application/use-cases/EnvironmentUs
 import { userService } from '../../../application/use-cases/UserUseCase';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../hooks/useAuth';
-import { Button } from '../Button';
 import { PaginationControls } from '../PaginationControls';
 import { EnvironmentCard } from './EnvironmentCard';
-import { CreateEnvironmentModal } from './CreateEnvironmentModal';
+import { CreateEnvironmentCard } from './CreateEnvironmentCard';
 import { ArchiveIcon } from '../icons';
 
 interface EnvironmentKanbanProps {
@@ -40,7 +39,6 @@ export const EnvironmentKanban = ({
 }: EnvironmentKanbanProps) => {
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [userProfilesMap, setUserProfilesMap] = useState<Record<string, UserSummary>>({});
   const [isArchiveMinimized, setIsArchiveMinimized] = useState(true);
   const [archivedVisibleCount, setArchivedVisibleCount] = useState(5);
@@ -212,14 +210,14 @@ export const EnvironmentKanban = ({
   return (
     <section className="environment-kanban">
       <header className="environment-kanban-header">
-        <div>
-          <span className="badge">{t('environmentKanban.environmentStatus')}</span>
-          <h3 className="section-title">{t('environmentKanban.environments')}</h3>
-          <p className="environment-kanban-description">{t('environmentKanban.description')}</p>
-        </div>
-        <Button type="button" onClick={() => setIsCreateOpen(true)}>
-          {t('environmentKanban.create')}
-        </Button>
+        <CreateEnvironmentCard
+          storeId={storeId}
+          suites={suites}
+          scenarios={scenarios}
+          onCreated={() =>
+            showToast({ type: 'success', message: t('environmentKanban.environmentCreated') })
+          }
+        />
       </header>
 
       {hasArchivedEnvironments && (
@@ -347,17 +345,6 @@ export const EnvironmentKanban = ({
           )}
         </div>
       )}
-
-      <CreateEnvironmentModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        storeId={storeId}
-        suites={suites}
-        scenarios={scenarios}
-        onCreated={() =>
-          showToast({ type: 'success', message: t('environmentKanban.environmentCreated') })
-        }
-      />
     </section>
   );
 };

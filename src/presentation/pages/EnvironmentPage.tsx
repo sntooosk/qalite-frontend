@@ -11,6 +11,7 @@ import type {
 import type { UserSummary } from '../../domain/entities/user';
 import type { SlackTaskSummaryPayload } from '../../infrastructure/external/slack';
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
+import { storeService } from '../../application/use-cases/StoreUseCase';
 import { slackService } from '../../application/use-cases/SlackUseCase';
 import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
@@ -33,6 +34,7 @@ import { useUserProfiles } from '../hooks/useUserProfiles';
 import { useEnvironmentBugs } from '../hooks/useEnvironmentBugs';
 import { EnvironmentBugModal } from '../components/environments/EnvironmentBugModal';
 import type { EnvironmentBug } from '../../domain/entities/environment';
+import type { StoreScenario, StoreSuite } from '../../domain/entities/store';
 import { useEnvironmentDetails } from '../hooks/useEnvironmentDetails';
 import { useEnvironmentEngagement } from '../hooks/useEnvironmentEngagement';
 import { EnvironmentSummaryCard } from '../components/environments/EnvironmentSummaryCard';
@@ -136,12 +138,6 @@ const buildSlackTaskSummaryPayload = (
   translation: (key: string, opts?: TOptions) => string,
 ): SlackTaskSummaryPayload => {
   const suiteName = environment.suiteName?.trim() || translation('dynamic.suiteNameFallback');
-  const summaryMessage = translation('environment.slack.summaryMessage', {
-    suiteName,
-    scenarioCount: options.scenarioCount,
-    status: options.progressLabel,
-    link: options.publicLink,
-  });
   const attendees = buildAttendeesList(environment, options.participantProfiles, translation);
   const attendeeList = attendees ?? [];
   const uniqueParticipantsCount = new Set(environment.participants ?? []).size;
@@ -157,6 +153,38 @@ const buildSlackTaskSummaryPayload = (
     type: isWorkspaceEnvironment ? 'storyfixes' : 'bug',
     value: options.bugsCount,
   } as const;
+  const monitoredUrlsList =
+    monitoredUrls.length > 0
+      ? monitoredUrls.map((url) => `  - ${url}`)
+      : [`  - ${translation('environment.slack.emptyList')}`];
+  const attendeesList =
+    attendeeList.length > 0
+      ? attendeeList.map((attendee) => `• ${attendee.name} (${attendee.email})`)
+      : [`• ${translation('environment.slack.emptyParticipants')}`];
+  const summaryMessage = [
+    translation('environment.slack.summaryHeader'),
+    `• ${translation('environment.slack.fields.environment')}: ${taskIdentifier}`,
+    `• ${translation('environment.slack.fields.totalTime')}: ${options.formattedTime || '00:00:00'}`,
+    `• ${translation('environment.slack.fields.scenarios')}: ${options.scenarioCount}`,
+    `• ${translation('environment.slack.fields.execution')}: ${formatExecutedScenariosMessage(
+      options.executedScenariosCount,
+      translation,
+    )}`,
+    `• ${translation('environment.slack.fields.bugs')}: ${fix.value}`,
+    `• ${translation('environment.slack.fields.jira')}: ${
+      environment.jiraTask?.trim() || translation('dynamic.identifierFallback')
+    }`,
+    `• ${translation('environment.slack.fields.suite')}: ${suiteName} — ${buildSuiteDetails(
+      options.scenarioCount,
+      translation,
+    )}`,
+    `• ${translation('environment.slack.fields.participants')}: ${participantsCount}`,
+    `${translation('environment.slack.fields.monitoredUrls')}:`,
+    ...monitoredUrlsList,
+    '',
+    translation('environment.slack.participantsTitle'),
+    ...attendeesList,
+  ].join('\n');
 
   return {
     environmentSummary: {
@@ -200,9 +228,15 @@ export const EnvironmentPage = () => {
   const [modalEvidenceLink, setModalEvidenceLink] = useState('');
   const [isCopyingMarkdown, setIsCopyingMarkdown] = useState(false);
   const [isSendingSlackSummary, setIsSendingSlackSummary] = useState(false);
+  const [suites, setSuites] = useState<StoreSuite[]>([]);
+  const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
-  const { bugs, isLoading: isLoadingBugs } = useEnvironmentBugs(environment?.id ?? null);
+  const {
+    bugs,
+    isLoading: isLoadingBugs,
+    refetch: refetchBugs,
+  } = useEnvironmentBugs(environment?.id ?? null);
   const {
     hasEnteredEnvironment,
     isLocked,
@@ -228,17 +262,13 @@ export const EnvironmentPage = () => {
     headerMeta,
     urls,
     shareLinks,
-  } = useEnvironmentDetails(environment, bugs, i18n.language);
+  } = useEnvironmentDetails(environment, bugs);
   const slackWebhookUrl = environmentOrganization?.slackWebhookUrl?.trim() || null;
-  const canSendSlackSummary = Boolean(slackWebhookUrl);
   const inviteParam = searchParams.get('invite');
   const shouldAutoJoinFromInvite = inviteParam === 'true' || inviteParam === '1';
   const detailScenario = scenarioDetailsId ? environment?.scenarios?.[scenarioDetailsId] : null;
   const detailScenarioStatus = detailScenario ? getScenarioPlatformStatuses(detailScenario) : null;
-  const isDetailScenarioRunning = Boolean(
-    detailScenarioStatus &&
-      Object.values(detailScenarioStatus).some((status) => status === 'em_andamento'),
-  );
+  const canManageEvidence = !isInteractionLocked;
   const formatAutomationLabel = (value?: string | null) => {
     const labelKey = getAutomationLabelKey(value);
     if (labelKey) {
@@ -313,10 +343,92 @@ export const EnvironmentPage = () => {
     };
   }, [environmentOrganization, setActiveOrganization]);
 
+  useEffect(() => {
+    if (!environment?.storeId || !isEditOpen) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchStoreData = async () => {
+      try {
+        const [suitesData, scenariosData] = await Promise.all([
+          storeService.listSuites(environment.storeId),
+          storeService.listScenarios(environment.storeId),
+        ]);
+
+        if (isMounted) {
+          setSuites(suitesData);
+          setScenarios(scenariosData);
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setSuites([]);
+          setScenarios([]);
+        }
+      }
+    };
+
+    void fetchStoreData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [environment?.storeId, isEditOpen]);
+
   const { formattedTime, totalMs, formattedStart, formattedEnd } = useTimeTracking(
     environment?.timeTracking ?? null,
     environment?.status === 'in_progress',
   );
+
+  const sendSlackSummary = useCallback(async () => {
+    if (!environment || !slackWebhookUrl || isSendingSlackSummary) {
+      return;
+    }
+
+    setIsSendingSlackSummary(true);
+
+    try {
+      const payload = buildSlackTaskSummaryPayload(
+        environment,
+        {
+          formattedTime,
+          totalTimeMs: totalMs,
+          scenarioCount,
+          executedScenariosCount,
+          progressLabel,
+          publicLink: shareLinks.public,
+          urls,
+          bugsCount: bugs.length,
+          participantProfiles,
+        },
+        translation,
+      );
+
+      payload.webhookUrl = slackWebhookUrl;
+
+      await slackService.sendTaskSummary(payload);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSendingSlackSummary(false);
+    }
+  }, [
+    bugs.length,
+    environment,
+    executedScenariosCount,
+    formattedTime,
+    isSendingSlackSummary,
+    participantProfiles,
+    progressLabel,
+    scenarioCount,
+    shareLinks.public,
+    slackWebhookUrl,
+    totalMs,
+    translation,
+    urls,
+  ]);
 
   const handleStatusTransition = useCallback(
     async (target: EnvironmentStatus) => {
@@ -330,6 +442,10 @@ export const EnvironmentPage = () => {
           targetStatus: target,
           currentUserId: user?.uid ?? null,
         });
+
+        if (target === 'done') {
+          await sendSlackSummary();
+        }
 
         showToast({
           type: 'success',
@@ -417,74 +533,6 @@ export const EnvironmentPage = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bugs, environment, participantProfiles, showToast]);
-
-  const handleSendSlackSummary = useCallback(
-    async () => {
-      if (!environment) {
-        return;
-      }
-
-      if (!slackWebhookUrl) {
-        showToast({
-          type: 'error',
-          message: translation('environment.slack.noWebhook'),
-        });
-        return;
-      }
-
-      setIsSendingSlackSummary(true);
-
-      try {
-        const payload = buildSlackTaskSummaryPayload(
-          environment,
-          {
-            formattedTime,
-            totalTimeMs: totalMs,
-            scenarioCount,
-            executedScenariosCount,
-            progressLabel,
-            publicLink: shareLinks.public,
-            urls,
-            bugsCount: bugs.length,
-            participantProfiles,
-          },
-          translation,
-        );
-
-        payload.webhookUrl = slackWebhookUrl;
-
-        await slackService.sendTaskSummary(payload);
-
-        showToast({
-          type: 'success',
-          message: translation('environment.slack.success'),
-        });
-      } catch (error) {
-        console.error(error);
-        const errorMessage =
-          error instanceof Error ? error.message : translation('environment.slack.error');
-        showToast({
-          type: 'error',
-          message: errorMessage,
-        });
-      } finally {
-        setIsSendingSlackSummary(false);
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      bugs.length,
-      environment,
-      executedScenariosCount,
-      formattedTime,
-      participantProfiles,
-      scenarioCount,
-      showToast,
-      slackWebhookUrl,
-      totalMs,
-      urls,
-    ],
-  );
 
   const openCreateBugModal = useCallback((scenarioId: string) => {
     setEditingBug(null);
@@ -707,25 +755,6 @@ export const EnvironmentPage = () => {
                 <CopyIcon aria-hidden className="icon" />
                 {translation('environment.copyMarkdown')}
               </Button>
-              {canSendSlackSummary && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleSendSlackSummary}
-                  disabled={isSendingSlackSummary}
-                  isLoading={isSendingSlackSummary}
-                  loadingText={translation('environment.slack.sending')}
-                  data-testid="send-slack-summary"
-                >
-                  <img
-                    className="button__icon"
-                    src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/48/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
-                    alt=""
-                    aria-hidden
-                  />
-                  {translation('environment.slack.sendSummary')}
-                </Button>
-              )}
             </div>
           </div>
         </div>
@@ -738,7 +767,6 @@ export const EnvironmentPage = () => {
             environment={environment}
             isLocked={Boolean(isScenarioLocked)}
             onViewDetails={handleOpenScenarioDetails}
-            organizationId={environmentOrganization?.id ?? null}
           />
         </div>
 
@@ -748,6 +776,7 @@ export const EnvironmentPage = () => {
           isLocked={Boolean(isInteractionLocked)}
           isLoading={isLoadingBugs}
           onEdit={handleEditBug}
+          onRefresh={refetchBugs}
         />
       </section>
 
@@ -755,6 +784,8 @@ export const EnvironmentPage = () => {
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         environment={environment ?? null}
+        suites={suites}
+        scenarios={scenarios}
         onDeleteRequest={() => {
           setIsEditOpen(false);
           setIsDeleteOpen(true);
@@ -777,6 +808,7 @@ export const EnvironmentPage = () => {
           bug={editingBug}
           onClose={closeBugModal}
           initialScenarioId={editingBug ? (editingBug.scenarioId ?? null) : defaultBugScenarioId}
+          onSaved={refetchBugs}
         />
       )}
 
@@ -870,7 +902,7 @@ export const EnvironmentPage = () => {
                 >
                   {translation('environmentEvidenceTable.evidencia_abrir')}
                 </a>
-              ) : isDetailScenarioRunning && !isScenarioLocked ? (
+              ) : canManageEvidence ? (
                 <div className="scenario-evidence-actions">
                   <input
                     type="url"

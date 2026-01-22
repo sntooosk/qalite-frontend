@@ -7,7 +7,6 @@ import {
   EnvironmentScenarioPlatform,
   EnvironmentScenarioStatus,
 } from '../../../domain/entities/environment';
-import { getScenarioPlatformStatuses } from '../../../infrastructure/external/environments';
 import { useScenarioEvidence } from '../../hooks/useScenarioEvidence';
 import {
   ScenarioColumnSortControl,
@@ -19,8 +18,6 @@ import { isAutomatedScenario } from '../../../shared/utils/automation';
 import { getCriticalityClassName, getCriticalityLabelKey } from '../../constants/scenarioOptions';
 import { normalizeCriticalityEnum } from '../../../shared/utils/scenarioEnums';
 import { useToast } from '../../context/ToastContext';
-import { scenarioExecutionService } from '../../../application/use-cases/ScenarioExecutionUseCase';
-import { useAuth } from '../../hooks/useAuth';
 import { PaginationControls } from '../PaginationControls';
 import { EyeIcon } from '../icons';
 
@@ -29,7 +26,6 @@ interface EnvironmentEvidenceTableProps {
   isLocked?: boolean;
   readOnly?: boolean;
   onViewDetails?: (scenarioId: string) => void;
-  organizationId?: string | null;
 }
 
 export const EnvironmentEvidenceTable = ({
@@ -37,16 +33,13 @@ export const EnvironmentEvidenceTable = ({
   isLocked,
   readOnly,
   onViewDetails,
-  organizationId,
 }: EnvironmentEvidenceTableProps) => {
   const { t: translation } = useTranslation();
   const { isUpdating, changeScenarioStatus } = useScenarioEvidence(environment.id);
   const { showToast } = useToast();
-  const { user } = useAuth();
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [criticalityFilter, setCriticalityFilter] = useState('');
-  const [scenarioStartTimes, setScenarioStartTimes] = useState<Record<string, number>>({});
   const [visibleCount, setVisibleCount] = useState(20);
   const canViewDetails = Boolean(onViewDetails);
 
@@ -71,68 +64,6 @@ export const EnvironmentEvidenceTable = ({
           ...BASE_STATUS_OPTIONS.slice(3),
         ]
       : BASE_STATUS_OPTIONS;
-
-  const environmentStartTimestamp = useMemo(() => {
-    if (!environment?.timeTracking?.start) {
-      return null;
-    }
-
-    return new Date(environment.timeTracking.start).getTime();
-  }, [environment?.timeTracking?.start]);
-  useEffect(() => {
-    if (!environment?.scenarios || Object.keys(environment.scenarios).length === 0) {
-      setScenarioStartTimes((previous) => {
-        if (Object.keys(previous).length === 0) {
-          return previous;
-        }
-        return {};
-      });
-      return;
-    }
-
-    setScenarioStartTimes((previous) => {
-      let next = previous;
-      let hasChanges = false;
-      const activeScenarioIds = new Set<string>();
-
-      Object.entries(environment.scenarios ?? {}).forEach(([scenarioId, data]) => {
-        activeScenarioIds.add(scenarioId);
-        const platformStatuses = getScenarioPlatformStatuses(data);
-        const isRunning = Object.values(platformStatuses).some(
-          (status) => status === 'em_andamento',
-        );
-        const hasStartTime = Boolean(previous[scenarioId]);
-
-        if (isRunning && !hasStartTime) {
-          if (!hasChanges) {
-            next = { ...previous };
-            hasChanges = true;
-          }
-          next[scenarioId] = environmentStartTimestamp ?? Date.now();
-        }
-
-        if (!isRunning && hasStartTime) {
-          if (!hasChanges) {
-            next = { ...previous };
-            hasChanges = true;
-          }
-          delete next[scenarioId];
-        }
-      });
-
-      Object.keys(previous).forEach((scenarioId) => {
-        if (!activeScenarioIds.has(scenarioId)) {
-          if (!hasChanges) {
-            next = { ...previous };
-            hasChanges = true;
-          }
-          delete next[scenarioId];
-        }
-      });
-
-      return hasChanges ? next : previous;
-    });
-  }, [environment?.scenarios, environmentStartTimestamp]);
 
   const scenarioEntries = useMemo(() => {
     const entries = Object.entries(environment.scenarios ?? {});
@@ -241,67 +172,6 @@ export const EnvironmentEvidenceTable = ({
     }
 
     await changeScenarioStatus(scenarioId, status, platform);
-
-    if (status === 'em_andamento') {
-      setScenarioStartTimes((previous) => {
-        if (previous[scenarioId]) {
-          return previous;
-        }
-        return { ...previous, [scenarioId]: Date.now() };
-      });
-      return;
-    }
-
-    if (status === 'bloqueado' || status === 'nao_se_aplica' || status === 'pendente') {
-      setScenarioStartTimes((previous) => {
-        if (!previous[scenarioId]) {
-          return previous;
-        }
-        const next = { ...previous };
-        delete next[scenarioId];
-        return next;
-      });
-      return;
-    }
-
-    if (status !== 'concluido' && status !== 'concluido_automatizado') {
-      return;
-    }
-
-    const startedAt = scenarioStartTimes[scenarioId] ?? environmentStartTimestamp ?? Date.now();
-
-    if (!organizationId) {
-      showToast({ type: 'error', message: translation('environmentEvidenceTable.toast_sem_org') });
-      return;
-    }
-
-    const scenarioCount = Math.max(scenarioEntries.length, 1);
-    const payload = {
-      organizationId,
-      storeId: environment.storeId,
-      environmentId: environment.id,
-      scenarioId,
-      scenarioTitle: scenario.titulo,
-      qaId: user?.uid ?? null,
-      qaName: user?.displayName || user?.email || null,
-      totalMs: (Date.now() - startedAt) / scenarioCount,
-      executedAt: new Date().toISOString(),
-    };
-
-    try {
-      await scenarioExecutionService.logExecution(payload);
-      setScenarioStartTimes((previous) => {
-        const next = { ...previous };
-        delete next[scenarioId];
-        return next;
-      });
-    } catch (error) {
-      console.error(error);
-      showToast({
-        type: 'error',
-        message: translation('environmentEvidenceTable.toast_exec_error'),
-      });
-    }
   };
 
   if (scenarioEntries.length === 0) {
@@ -378,7 +248,9 @@ export const EnvironmentEvidenceTable = ({
             </th>
             <th>{translation('environmentEvidenceTable.table_status_mobile')}</th>
             <th>{translation('environmentEvidenceTable.table_status_desktop')}</th>
-            {canViewDetails && <th>{translation('storeSummary.viewDetails')}</th>}
+            {canViewDetails && (
+              <th className="scenario-actions-header">{translation('storeSummary.viewDetails')}</th>
+            )}
           </tr>
         </thead>
         <tbody>

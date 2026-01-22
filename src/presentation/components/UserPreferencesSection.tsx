@@ -45,10 +45,7 @@ export const UserPreferencesSection = ({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (
-      resolvedDraft.theme === preferences.theme &&
-      resolvedDraft.language === preferences.language
-    ) {
+    if (resolvedDraft.theme === preferences.theme && resolvedDraft.language === preferences.language) {
       return;
     }
 
@@ -115,9 +112,7 @@ export const UserPreferencesSection = ({
             >
               {t('preferences.save')}
             </Button>
-            {!hasChanges && (
-              <span className="settings-form__hint">{t('preferences.upToDate')}</span>
-            )}
+            {!hasChanges && <span className="settings-form__hint">{t('preferences.upToDate')}</span>}
           </div>
         )}
       </form>

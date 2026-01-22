@@ -60,17 +60,14 @@ const formatProgressLabel = (
   return t('environmentDetails.progress', { concluded, total });
 };
 
-const buildShareLinks = (environment: Environment | null | undefined, language?: string | null) => {
+const buildShareLinks = (environment: Environment | null | undefined) => {
   if (!environment) {
     return { private: '', invite: '', public: '' };
   }
 
   const origin = typeof window === 'undefined' ? '' : window.location.origin;
   const baseUrl = `${origin}/environments/${environment.id}`;
-  const shareLanguage = language?.trim();
-  const publicLink = shareLanguage
-    ? `${baseUrl}/public?lang=${encodeURIComponent(shareLanguage)}`
-    : `${baseUrl}/public`;
+  const publicLink = `${baseUrl}/public`;
 
   return {
     private: baseUrl,
@@ -82,7 +79,6 @@ const buildShareLinks = (environment: Environment | null | undefined, language?:
 export const useEnvironmentDetails = (
   environment: Environment | null | undefined,
   bugs: EnvironmentBug[],
-  shareLanguage?: string | null,
 ): UseEnvironmentDetailsResult => {
   const { t } = useTranslation();
 
@@ -161,10 +157,7 @@ export const useEnvironmentDetails = (
           : []),
       ],
       urls: environment?.urls ?? [],
-      shareLinks: buildShareLinks(
-        environment,
-        environment?.publicShareLanguage ?? shareLanguage ?? null,
-      ),
+      shareLinks: buildShareLinks(environment),
     };
-  }, [bugs, environment, shareLanguage, t]);
+  }, [bugs, environment, t]);
 };

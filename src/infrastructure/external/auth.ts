@@ -1,7 +1,8 @@
 import {
   User as FirebaseUser,
   createUserWithEmailAndPassword,
-  onAuthStateChanged as firebaseOnAuthStateChanged,
+  onAuthStateChanged,
+  onIdTokenChanged,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
@@ -11,7 +12,6 @@ import {
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 import type {
-  AuthStateListener,
   AuthUser,
   LoginPayload,
   RegisterPayload,
@@ -31,7 +31,6 @@ import {
 
 const USERS_COLLECTION = 'users';
 const AUTH_COOKIE_NAME = 'firebase:authUser';
-
 const persistFirebaseAuthCookie = (firebaseUser: FirebaseUser | null): void => {
   if (typeof document === 'undefined') {
     return;
@@ -88,7 +87,6 @@ export const registerUser = async ({ role, ...payload }: RegisterPayload): Promi
 
   persistFirebaseAuthCookie(user);
 
-  const profile = await fetchUserProfile(user.uid);
   const organizationId = await addUserToOrganizationByEmailDomain({
     uid: user.uid,
     email: user.email ?? '',
@@ -96,10 +94,17 @@ export const registerUser = async ({ role, ...payload }: RegisterPayload): Promi
     photoURL: null,
   });
 
-  return mapToAuthUser(user, {
-    ...profile,
-    organizationId: organizationId ?? profile.organizationId ?? null,
-  });
+  const resolvedProfile: StoredProfile = {
+    role: resolvedRole,
+    displayName: normalizedDisplayName,
+    firstName,
+    lastName,
+    photoURL: null,
+    organizationId: organizationId ?? null,
+    browserstackCredentials: null,
+    preferences: getInitialPreferences(),
+  };
+  return mapToAuthUser(user, resolvedProfile);
 };
 
 export const loginUser = async ({ email, password }: LoginPayload): Promise<AuthUser> => {
@@ -119,13 +124,17 @@ export const loginUser = async ({ email, password }: LoginPayload): Promise<Auth
     photoURL: null,
   });
 
-  return mapToAuthUser(credential.user, {
+  const resolvedProfile = {
     ...profile,
     organizationId: organizationId ?? profile.organizationId ?? null,
-  });
+  };
+  return mapToAuthUser(credential.user, resolvedProfile);
 };
 
-export const logoutUser = (): Promise<void> => signOut(firebaseAuth);
+export const logoutUser = async (): Promise<void> => {
+  persistFirebaseAuthCookie(null);
+  await signOut(firebaseAuth);
+};
 
 export const sendPasswordReset = (email: string): Promise<void> =>
   sendPasswordResetEmail(firebaseAuth, email);
@@ -140,31 +149,32 @@ export const getCurrentUser = async (): Promise<AuthUser | null> => {
   return mapToAuthUser(user, profile);
 };
 
-export const onAuthStateChanged = (listener: AuthStateListener): (() => void) =>
-  firebaseOnAuthStateChanged(firebaseAuth, async (user) => {
+export const subscribeToAuthChanges = (onChange: (user: AuthUser | null) => void): (() => void) => {
+  const unsubscribeAuth = onAuthStateChanged(firebaseAuth, async (user) => {
     if (!user) {
       persistFirebaseAuthCookie(null);
-      listener(null);
+      onChange(null);
       return;
     }
 
-    persistFirebaseAuthCookie(user);
-
-    const profile = await fetchUserProfile(user.uid);
-    const organizationId = await addUserToOrganizationByEmailDomain({
-      uid: user.uid,
-      email: user.email ?? '',
-      displayName: user.displayName ?? user.email ?? '',
-      photoURL: null,
-    });
-
-    listener(
-      mapToAuthUser(user, {
-        ...profile,
-        organizationId: organizationId ?? profile.organizationId ?? null,
-      }),
-    );
+    try {
+      const profile = await fetchUserProfile(user.uid);
+      onChange(mapToAuthUser(user, profile));
+    } catch (error) {
+      console.error(error);
+      onChange(null);
+    }
   });
+
+  const unsubscribeToken = onIdTokenChanged(firebaseAuth, (user) => {
+    persistFirebaseAuthCookie(user);
+  });
+
+  return () => {
+    unsubscribeAuth();
+    unsubscribeToken();
+  };
+};
 
 const normalizeBrowserstackCredentials = (
   credentials: BrowserstackCredentials | null | undefined,
@@ -244,8 +254,18 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
     browserstackCredentials,
   );
 
-  const refreshedProfile = await fetchUserProfile(user.uid);
-  return mapToAuthUser(firebaseAuth.currentUser ?? user, refreshedProfile);
+  const updatedProfile: StoredProfile = {
+    role: currentProfile.role,
+    displayName,
+    firstName: trimmedFirstName,
+    lastName: trimmedLastName,
+    photoURL,
+    organizationId: currentProfile.organizationId ?? null,
+    browserstackCredentials,
+    preferences,
+  };
+
+  return mapToAuthUser(firebaseAuth.currentUser ?? user, updatedProfile);
 };
 
 interface StoredProfile {
@@ -330,7 +350,7 @@ const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
 
   if (snapshot.exists()) {
     const data = snapshot.data();
-    return {
+    const profile = {
       role: (data.role as Role) ?? DEFAULT_ROLE,
       displayName: (data.displayName as string) ?? '',
       firstName: (data.firstName as string) ?? '',
@@ -340,6 +360,7 @@ const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
       browserstackCredentials: parseBrowserstackCredentials(data?.browserstackCredentials),
       preferences: normalizeUserPreferences(data?.preferences, getInitialPreferences()),
     };
+    return profile;
   }
 
   return {
