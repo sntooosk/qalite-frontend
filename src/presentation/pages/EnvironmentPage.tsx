@@ -347,13 +347,12 @@ export const EnvironmentPage = () => {
   }, [handleEvidenceUpload, modalEvidenceLink, scenarioDetailsId]);
 
   useEffect(() => {
-    if (!detailScenario) {
-      setModalEvidenceLink('');
+    const nextLink = detailScenario?.evidenciaArquivoUrl ?? '';
+    if (modalEvidenceLink === nextLink) {
       return;
     }
-
-    setModalEvidenceLink(detailScenario.evidenciaArquivoUrl ?? '');
-  }, [detailScenario]);
+    setModalEvidenceLink(nextLink);
+  }, [detailScenario, modalEvidenceLink]);
 
   useEffect(() => {
     const nextOrganizationId = environmentOrganization?.id ?? null;
@@ -440,7 +439,6 @@ export const EnvironmentPage = () => {
       setIsSendingSlackSummary(false);
     }
   }, [
-    bugs.length,
     bugs,
     environment,
     executedScenariosCount,
@@ -677,7 +675,7 @@ export const EnvironmentPage = () => {
       ],
     });
   }, [
-    bugs.length,
+    bugs,
     environment,
     executedScenariosCount,
     formatCriticalityLabel,
