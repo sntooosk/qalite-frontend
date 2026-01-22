@@ -74,8 +74,8 @@ export class EnvironmentUseCases {
     );
   }
 
-  observeBugs(environmentId: string, onChange: (bugs: EnvironmentBug[]) => void): () => void {
-    return this.environmentRepository.observeBugs(environmentId, onChange);
+  listBugs(environmentId: string): Promise<EnvironmentBug[]> {
+    return this.environmentRepository.listBugs(environmentId);
   }
 
   createBug(environmentId: string, bug: CreateEnvironmentBugInput): Promise<EnvironmentBug> {

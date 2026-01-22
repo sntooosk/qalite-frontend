@@ -6,11 +6,15 @@ import {
   doc,
   getDoc,
   getDocs,
+  getDocsFromCache,
+  getDocsFromServer,
+  onSnapshot,
   orderBy,
   query,
   runTransaction,
   serverTimestamp,
   updateDoc,
+  type Unsubscribe,
   where,
   writeBatch,
 } from 'firebase/firestore';
@@ -32,37 +36,11 @@ import {
   normalizeCriticalityEnum,
 } from '../../shared/utils/scenarioEnums';
 import { firebaseFirestore } from '../database/firebase';
-import { logActivity } from './logs';
 
 const STORES_COLLECTION = 'stores';
 const SCENARIOS_SUBCOLLECTION = 'scenarios';
 const SUITES_SUBCOLLECTION = 'suites';
 const CATEGORIES_SUBCOLLECTION = 'categories';
-
-const getStoreContext = async (
-  storeId: string,
-  snapshotData?: Record<string, unknown> | null,
-): Promise<{ organizationId: string | null; storeName: string }> => {
-  if (snapshotData) {
-    return {
-      organizationId: (snapshotData.organizationId as string | undefined | null) ?? null,
-      storeName: (snapshotData.name as string | undefined) ?? '',
-    };
-  }
-
-  const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-  const snapshot = await getDoc(storeRef);
-
-  if (!snapshot.exists()) {
-    return { organizationId: null, storeName: '' };
-  }
-
-  const data = snapshot.data();
-  return {
-    organizationId: (data.organizationId as string | undefined | null) ?? null,
-    storeName: (data.name as string | undefined) ?? '',
-  };
-};
 
 const timestampToDate = (value: unknown): Date | null => {
   if (value instanceof Timestamp) {
@@ -152,9 +130,34 @@ const normalizeCategoryInput = (input: StoreCategoryInput): StoreCategoryInput =
 export const listStores = async (organizationId: string): Promise<Store[]> => {
   const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
   const storesQuery = query(storesCollection, where('organizationId', '==', organizationId));
-  const snapshot = await getDocs(storesQuery);
+  // Primeiro tentamos o cache local para reduzir leituras repetidas e aproveitar o IndexedDB.
+  // Caso não exista cache (primeiro acesso/dispositivo novo), buscamos do servidor como fallback.
+  const snapshot = await getDocsFromCache(storesQuery).catch(() => getDocsFromServer(storesQuery));
   const stores = snapshot.docs.map((docSnapshot) => mapStore(docSnapshot.id, docSnapshot.data()));
   return stores.sort((a, b) => a.name.localeCompare(b.name));
+};
+
+export const listenToStores = (
+  organizationId: string,
+  onChange: (stores: Store[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe => {
+  const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
+  const storesQuery = query(storesCollection, where('organizationId', '==', organizationId));
+
+  return onSnapshot(
+    storesQuery,
+    (snapshot) => {
+      // O listener sempre recalcula o array completo para manter a lista consistente no cliente.
+      const stores = snapshot.docs.map((docSnapshot) =>
+        mapStore(docSnapshot.id, docSnapshot.data()),
+      );
+      onChange(stores.sort((a, b) => a.name.localeCompare(b.name)));
+    },
+    (error) => {
+      onError?.(error);
+    },
+  );
 };
 
 export const getStore = async (storeId: string): Promise<Store | null> => {
@@ -178,14 +181,6 @@ export const createStore = async (payload: CreateStorePayload): Promise<Store> =
   const snapshot = await getDoc(docRef);
   const createdStore = mapStore(snapshot.id, snapshot.data() ?? {});
 
-  await logActivity({
-    organizationId: payload.organizationId,
-    entityId: createdStore.id,
-    entityType: 'store',
-    action: 'create',
-    message: `Loja criada: ${createdStore.name}`,
-  });
-
   return createdStore;
 };
 
@@ -200,14 +195,6 @@ export const updateStore = async (storeId: string, payload: UpdateStorePayload):
 
   const snapshot = await getDoc(storeRef);
   const updated = mapStore(snapshot.id, snapshot.data() ?? {});
-
-  await logActivity({
-    organizationId: updated.organizationId,
-    entityId: updated.id,
-    entityType: 'store',
-    action: 'update',
-    message: `Loja atualizada: ${updated.name}`,
-  });
 
   return updated;
 };
@@ -235,17 +222,6 @@ export const deleteStore = async (storeId: string): Promise<void> => {
 
   batch.delete(storeRef);
   await batch.commit();
-
-  const context = await getStoreContext(storeId, snapshot.data() ?? {});
-  if (context.organizationId) {
-    await logActivity({
-      organizationId: context.organizationId,
-      entityId: storeId,
-      entityType: 'store',
-      action: 'delete',
-      message: `Loja removida: ${context.storeName || storeId}`,
-    });
-  }
 };
 
 export const listScenarios = async (storeId: string): Promise<StoreScenario[]> => {
@@ -264,16 +240,12 @@ export const createScenario = async (
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, payload.storeId);
   const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
 
-  let storeData: Record<string, unknown> | null = null;
-
   const scenarioRef = await runTransaction(firebaseFirestore, async (transaction) => {
     const storeSnapshot = await transaction.get(storeRef);
 
     if (!storeSnapshot.exists()) {
       throw new Error('Loja não encontrada.');
     }
-
-    storeData = storeSnapshot.data();
 
     const newScenarioRef = doc(scenariosCollection);
     transaction.set(newScenarioRef, {
@@ -298,17 +270,6 @@ export const createScenario = async (
     scenarioSnapshot.data() ?? {},
   );
 
-  const context = await getStoreContext(payload.storeId, storeData);
-  if (context.organizationId) {
-    await logActivity({
-      organizationId: context.organizationId,
-      entityId: createdScenario.id,
-      entityType: 'scenario',
-      action: 'create',
-      message: `Cenário criado: ${createdScenario.title} (${context.storeName || 'Loja'})`,
-    });
-  }
-
   return createdScenario;
 };
 
@@ -330,17 +291,6 @@ export const updateScenario = async (
   const scenarioSnapshot = await getDoc(scenarioRef);
   const updatedScenario = mapScenario(storeId, scenarioSnapshot.id, scenarioSnapshot.data() ?? {});
 
-  const context = await getStoreContext(storeId);
-  if (context.organizationId) {
-    await logActivity({
-      organizationId: context.organizationId,
-      entityId: updatedScenario.id,
-      entityType: 'scenario',
-      action: 'update',
-      message: `Cenário atualizado: ${updatedScenario.title} (${context.storeName || 'Loja'})`,
-    });
-  }
-
   return updatedScenario;
 };
 
@@ -348,19 +298,11 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const scenarioRef = doc(storeRef, SCENARIOS_SUBCOLLECTION, scenarioId);
 
-  let storeData: Record<string, unknown> | null = null;
-  let scenarioTitle: string | null = null;
-
   await runTransaction(firebaseFirestore, async (transaction) => {
     const storeSnapshot = await transaction.get(storeRef);
     if (!storeSnapshot.exists()) {
       throw new Error('Loja não encontrada.');
     }
-
-    storeData = storeSnapshot.data();
-
-    const scenarioSnapshot = await transaction.get(scenarioRef);
-    scenarioTitle = (scenarioSnapshot.data()?.title as string | undefined) ?? null;
 
     transaction.delete(scenarioRef);
 
@@ -370,17 +312,6 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
       updatedAt: serverTimestamp(),
     });
   });
-
-  const context = await getStoreContext(storeId, storeData);
-  if (context.organizationId) {
-    await logActivity({
-      organizationId: context.organizationId,
-      entityId: scenarioId,
-      entityType: 'scenario',
-      action: 'delete',
-      message: `Cenário removido: ${scenarioTitle || scenarioId} (${context.storeName || 'Loja'})`,
-    });
-  }
 };
 
 export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {
@@ -412,17 +343,6 @@ export const createSuite = async (
   const snapshot = await getDoc(suiteRef);
   const createdSuite = mapSuite(payload.storeId, snapshot.id, snapshot.data() ?? {});
 
-  const context = await getStoreContext(payload.storeId, storeSnapshot.data());
-  if (context.organizationId) {
-    await logActivity({
-      organizationId: context.organizationId,
-      entityId: createdSuite.id,
-      entityType: 'suite',
-      action: 'create',
-      message: `Suíte criada: ${createdSuite.name} (${context.storeName || 'Loja'})`,
-    });
-  }
-
   return createdSuite;
 };
 
@@ -447,17 +367,6 @@ export const updateSuite = async (
   const updatedSnapshot = await getDoc(suiteRef);
   const updatedSuite = mapSuite(storeId, updatedSnapshot.id, updatedSnapshot.data() ?? {});
 
-  const context = await getStoreContext(storeId, suiteSnapshot.data() ?? {});
-  if (context.organizationId) {
-    await logActivity({
-      organizationId: context.organizationId,
-      entityId: updatedSuite.id,
-      entityType: 'suite',
-      action: 'update',
-      message: `Suíte atualizada: ${updatedSuite.name} (${context.storeName || 'Loja'})`,
-    });
-  }
-
   return updatedSuite;
 };
 
@@ -471,17 +380,6 @@ export const deleteSuite = async (storeId: string, suiteId: string): Promise<voi
   }
 
   await deleteDoc(suiteRef);
-
-  const context = await getStoreContext(storeId);
-  if (context.organizationId) {
-    await logActivity({
-      organizationId: context.organizationId,
-      entityId: suiteId,
-      entityType: 'suite',
-      action: 'delete',
-      message: `Suíte removida: ${(snapshot.data()?.name as string | undefined) ?? suiteId} (${context.storeName || 'Loja'})`,
-    });
-  }
 };
 
 export const listCategories = async (storeId: string): Promise<StoreCategory[]> => {

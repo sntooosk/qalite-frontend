@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { UserSummary } from '../../domain/entities/user';
 import { userService } from '../../application/use-cases/UserUseCase';
 
 export const useUserProfiles = (userIds: string[]) => {
   const [profiles, setProfiles] = useState<UserSummary[]>([]);
+  const idsKey = useMemo(() => Array.from(new Set(userIds)).sort().join('|'), [userIds]);
 
   useEffect(() => {
     let isMounted = true;
-    const uniqueIds = Array.from(new Set(userIds));
+    const uniqueIds = idsKey ? idsKey.split('|') : [];
 
     if (uniqueIds.length === 0) {
       setProfiles([]);
@@ -32,7 +33,7 @@ export const useUserProfiles = (userIds: string[]) => {
     return () => {
       isMounted = false;
     };
-  }, [userIds]);
+  }, [idsKey]);
 
   return profiles;
 };

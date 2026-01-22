@@ -5,7 +5,6 @@ import type { EnvironmentScenario } from '../../../domain/entities/environment';
 import type { StoreScenario, StoreSuite } from '../../../domain/entities/store';
 import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
 import { Button } from '../Button';
-import { Modal } from '../Modal';
 import { SelectInput } from '../SelectInput';
 import { TextArea } from '../TextArea';
 import { TextInput } from '../TextInput';
@@ -14,10 +13,9 @@ import {
   TEST_TYPES_BY_ENVIRONMENT,
   requiresReleaseField,
 } from '../../constants/environmentOptions';
+import { useToast } from '../../context/ToastContext';
 
-interface CreateEnvironmentModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface CreateEnvironmentCardProps {
   storeId: string;
   suites: StoreSuite[];
   scenarios: StoreScenario[];
@@ -55,14 +53,12 @@ const buildScenarioMap = (
   return scenarioMap;
 };
 
-export const CreateEnvironmentModal = ({
-  isOpen,
-  onClose,
+export const CreateEnvironmentCard = ({
   storeId,
   suites,
   scenarios,
   onCreated,
-}: CreateEnvironmentModalProps) => {
+}: CreateEnvironmentCardProps) => {
   const [identificador, setIdentificador] = useState('');
   const [urls, setUrls] = useState('');
   const [jiraTask, setJiraTask] = useState('');
@@ -71,8 +67,8 @@ export const CreateEnvironmentModal = ({
   const [momento, setMomento] = useState('');
   const [release, setRelease] = useState('');
   const [suiteId, setSuiteId] = useState('');
-  const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToast();
   const { t } = useTranslation();
 
   const selectedSuite = useMemo(
@@ -112,25 +108,40 @@ export const CreateEnvironmentModal = ({
     }
   }, [shouldDisplayReleaseField, release]);
 
+  const resetForm = () => {
+    setIdentificador('');
+    setUrls('');
+    setJiraTask('');
+    setTipoAmbiente('WS');
+    setTipoTeste('Smoke-test');
+    setMomento('');
+    setRelease('');
+    setSuiteId('');
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!identificador.trim()) {
-      setFormError(t('createEnvironment.identifier'));
+      showToast({ type: 'error', message: t('createEnvironment.identifier') });
+      return;
+    }
+
+    if (!suiteId) {
+      showToast({ type: 'error', message: t('createEnvironment.suiteRequired') });
       return;
     }
 
     if (momentoOptions.length > 0 && !momento) {
-      setFormError(t('createEnvironment.moment'));
+      showToast({ type: 'error', message: t('createEnvironment.moment') });
       return;
     }
 
     if (shouldDisplayReleaseField && !release.trim()) {
-      setFormError(t('createEnvironment.release'));
+      showToast({ type: 'error', message: t('createEnvironment.release') });
       return;
     }
 
-    setFormError(null);
     setIsSubmitting(true);
     try {
       const urlsList = urls
@@ -163,24 +174,22 @@ export const CreateEnvironmentModal = ({
       });
 
       onCreated?.();
-      onClose();
+      resetForm();
     } catch (error) {
       console.error(error);
-      setFormError(t('createEnvironment.createError'));
+      showToast({ type: 'error', message: t('createEnvironment.createError') });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={t('createEnvironment.create')}
-      description={t('createEnvironment.description')}
-    >
+    <div className="create-card">
+      <div className="create-card__header">
+        <h3 className="form-title">{t('createEnvironment.create')}</h3>
+        <p className="create-card__description">{t('createEnvironment.description')}</p>
+      </div>
       <form className="environment-form" onSubmit={handleSubmit}>
-        {formError && <p className="form-message form-message--error">{formError}</p>}
         <TextInput
           id="identificador"
           label={t('createEnvironment.id')}
@@ -255,10 +264,12 @@ export const CreateEnvironmentModal = ({
           </div>
         )}
 
-        <Button type="submit" isLoading={isSubmitting} loadingText={t('saving')}>
-          {t('createEnvironment.create')}
-        </Button>
+        <div className="environment-form-actions">
+          <Button type="submit" isLoading={isSubmitting} loadingText={t('saving')}>
+            {t('createEnvironment.create')}
+          </Button>
+        </div>
       </form>
-    </Modal>
+    </div>
   );
 };

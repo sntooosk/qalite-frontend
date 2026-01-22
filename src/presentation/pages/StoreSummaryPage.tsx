@@ -11,7 +11,6 @@ import type {
   StoreSuiteInput,
 } from '../../domain/entities/store';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
-import { scenarioExecutionService } from '../../application/use-cases/ScenarioExecutionUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../context/ToastContext';
@@ -56,10 +55,10 @@ import {
 import { useStoreEnvironments } from '../hooks/useStoreEnvironments';
 import { openScenarioPdf } from '../../shared/utils/storeImportExport';
 import { isAutomatedScenario } from '../../shared/utils/automation';
-import { formatDurationFromMs } from '../../shared/utils/time';
-import type { ScenarioAverageMap } from '../../infrastructure/external/scenarioExecutions';
 import { useTranslation } from 'react-i18next';
 import { buildExternalLink } from '../utils/externalLink';
+import { exportScenarioExcel } from '../../utils/exportExcel';
+import { formatDateTime } from '../../shared/utils/time';
 
 const emptyScenarioForm: StoreScenarioInput = {
   title: '',
@@ -91,7 +90,7 @@ interface StoreHighlight {
   onClick?: () => void;
 }
 
-type ExportFormat = 'pdf';
+type ExportFormat = 'pdf' | 'xlsx';
 
 const emptyScenarioFilters: ScenarioFilters = {
   search: '',
@@ -168,9 +167,6 @@ export const StoreSummaryPage = () => {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
   const [suites, setSuites] = useState<StoreSuite[]>([]);
-  const [scenarioTimingById, setScenarioTimingById] = useState<ScenarioAverageMap>({});
-  const [isLoadingScenarioTimings, setIsLoadingScenarioTimings] = useState(false);
-  const [scenarioTimingError, setScenarioTimingError] = useState<string | null>(null);
   const [isLoadingStore, setIsLoadingStore] = useState(true);
   const [isLoadingScenarios, setIsLoadingScenarios] = useState(true);
   const [isLoadingSuites, setIsLoadingSuites] = useState(true);
@@ -194,13 +190,12 @@ export const StoreSummaryPage = () => {
   const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
   const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
-  const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const [suiteForm, setSuiteForm] = useState<StoreSuiteInput>(emptySuiteForm);
   const [suiteFormError, setSuiteFormError] = useState<string | null>(null);
   const [editingSuiteId, setEditingSuiteId] = useState<string | null>(null);
   const [isSavingSuite, setIsSavingSuite] = useState(false);
-  const [viewMode, setViewMode] = useState<'scenarios' | 'suites'>('scenarios');
+  const [viewMode, setViewMode] = useState<'scenarios' | 'suites' | 'environments'>('scenarios');
   const [scenarioFilters, setScenarioFilters] = useState<ScenarioFilters>(emptyScenarioFilters);
   const [suiteScenarioFilters, setSuiteScenarioFilters] =
     useState<ScenarioFilters>(emptyScenarioFilters);
@@ -273,9 +268,6 @@ export const StoreSummaryPage = () => {
     const suitesDescription = `${suitesWithScenariosCount} ${t('storeSummary.suitesWithScenariosCount')}${
       suitesWithScenariosCount === 1 ? '' : 's'
     }`;
-    const environmentDescription = isLoadingEnvironments
-      ? t('storeSummary.syncingEnvironments')
-      : `${environmentInProgressCount} ${t('storeSummary.environmentsInProgress')}`;
 
     return [
       {
@@ -301,7 +293,14 @@ export const StoreSummaryPage = () => {
         id: 'environments',
         label: t('storeSummary.environments'),
         value: isLoadingEnvironments ? '...' : environmentTotalCount.toString(),
-        description: environmentDescription,
+        description: isLoadingEnvironments
+          ? t('storeSummary.syncingEnvironments')
+          : `${environmentInProgressCount} ${t('storeSummary.environmentsInProgress')}`,
+        isActive: viewMode === 'environments',
+        onClick: () => {
+          setViewMode('environments');
+          setIsViewingSuitesOnly(false);
+        },
       },
     ];
   }, [
@@ -518,44 +517,6 @@ export const StoreSummaryPage = () => {
     setSuitePreviewVisibleCount(PAGE_SIZE);
   }, [selectedSuitePreviewId, suitePreviewSort]);
 
-  const getScenarioTimingInfo = (scenarioId?: string | null) => {
-    if (!scenarioId) {
-      return {
-        label: '—',
-        title: t('storeSummary.scenarioNotIdentified'),
-      };
-    }
-
-    const entry = scenarioTimingById[scenarioId];
-
-    if (entry) {
-      const executionsLabel = `${entry.executions} ${t('storeSummary.execution')}${entry.executions === 1 ? '' : t('storeSummary.executions')}`;
-      return {
-        label: formatDurationFromMs(entry.averageMs),
-        title: `${executionsLabel} ${t('storeSummary.executionInfo')} ${formatDurationFromMs(entry.bestMs)}.`,
-      };
-    }
-
-    if (isLoadingScenarioTimings) {
-      return {
-        label: t('storeSummary.loading'),
-        title: t('storeSummary.loadingAverageTime'),
-      };
-    }
-
-    if (scenarioTimingError) {
-      return {
-        label: '—',
-        title: scenarioTimingError,
-      };
-    }
-
-    return {
-      label: '—',
-      title: t('storeSummary.noExecutions'),
-    };
-  };
-
   useEffect(() => {
     if (isInitializing) {
       return;
@@ -612,49 +573,6 @@ export const StoreSummaryPage = () => {
 
     void fetchData();
   }, [isInitializing, navigate, showToast, storeId, user, t]);
-
-  useEffect(() => {
-    if (!storeId) {
-      setScenarioTimingById({});
-      setScenarioTimingError(null);
-      return;
-    }
-
-    let isMounted = true;
-    setIsLoadingScenarioTimings(true);
-    setScenarioTimingError(null);
-
-    const fetchScenarioTimings = async () => {
-      try {
-        const data = await scenarioExecutionService.getStoreScenarioAverages(storeId);
-        if (isMounted) {
-          setScenarioTimingById(data);
-        }
-      } catch (error) {
-        console.error(error);
-        if (isMounted) {
-          setScenarioTimingById({});
-          setScenarioTimingError(t('storeSummary.scenarioTimingLoadError'));
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingScenarioTimings(false);
-        }
-      }
-    };
-
-    void fetchScenarioTimings();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [storeId, t]);
-
-  useEffect(() => {
-    if (scenarios.length === 0) {
-      setIsScenarioTableCollapsed(false);
-    }
-  }, [scenarios.length]);
 
   useEffect(() => {
     setIsCategoryListCollapsed(true);
@@ -731,9 +649,7 @@ export const StoreSummaryPage = () => {
       closeStoreSettings();
       showToast({ type: 'success', message: t('storeSummary.storeRemoveSuccess') });
       const redirectTo =
-        user?.role === 'admin'
-          ? `/admin/organizations?organizationId=${store.organizationId}`
-          : '/dashboard';
+        user?.role === 'admin' ? `/admin/organizations?Id=${store.organizationId}` : '/dashboard';
       navigate(redirectTo, { replace: true });
     } catch (error) {
       console.error(error);
@@ -1241,6 +1157,57 @@ export const StoreSummaryPage = () => {
       setExportingScenarioFormat(format);
       const data = await storeService.exportStore(store.id);
 
+      if (format === 'xlsx') {
+        const scenarioRows = data.scenarios.map((scenario) => ({
+          titulo: scenario.title?.trim() || t('storeSummary.emptyValue'),
+          categoria: scenario.category?.trim() || t('storeSummary.emptyValue'),
+          automacao: formatAutomationLabel(scenario.automation),
+          criticidade: formatCriticalityLabel(scenario.criticality),
+          observacao: scenario.observation?.trim() || t('storeSummary.emptyValue'),
+          bdd: scenario.bdd?.trim() || t('storeSummary.emptyValue'),
+        }));
+        const infoRows = [
+          { label: t('storeSummary.store'), value: data.store.name },
+          {
+            label: t('storeSummary.siteLabel'),
+            value: data.store.site?.trim() || t('storeSummary.notProvided'),
+          },
+          {
+            label: t('storeSummary.environmentLabel'),
+            value: data.store.stage?.trim() || t('storeSummary.notInformed'),
+          },
+          {
+            label: t('storeSummary.scenarioCountLabel'),
+            value: String(data.store.scenarioCount),
+          },
+          {
+            label: t('storeSummary.exportedAtLabel'),
+            value: formatDateTime(data.exportedAt, {
+              locale: i18n.language,
+              emptyLabel: t('storeSummary.notInformed'),
+            }),
+          },
+        ];
+        const baseFileName = `${store.name.replace(/\s+/g, '_')}_${t('storeSummary.exportFileSuffix')}`;
+
+        exportScenarioExcel({
+          fileName: `${baseFileName}.xlsx`,
+          scenarioSheetName: t('storeSummary.exportExcelSheetName'),
+          infoSheetName: t('storeSummary.exportExcelInfoSheetName'),
+          infoHeaderLabels: [t('exportExcel.field'), t('exportExcel.value')],
+          infoRows,
+          scenarioRows,
+          scenarioHeaderLabels: [
+            t('storeSummary.title'),
+            t('storeSummary.category'),
+            t('storeSummary.automation'),
+            t('storeSummary.criticality'),
+            t('storeSummary.observation'),
+            t('storeSummary.bdd'),
+          ],
+        });
+      }
+
       if (format === 'pdf') {
         openScenarioPdf(data, `${store.name} - ${t('scenarios')}`, pdfWindow);
       }
@@ -1495,11 +1462,7 @@ export const StoreSummaryPage = () => {
     if (user?.role === 'admin') {
       const targetOrganizationId = organization?.id ?? store?.organizationId;
 
-      navigate(
-        targetOrganizationId
-          ? `/admin/organizations?organizationId=${targetOrganizationId}`
-          : '/admin',
-      );
+      navigate(targetOrganizationId ? `/admin/organizations?Id=${targetOrganizationId}` : '/admin');
       return;
     }
 
@@ -1626,15 +1589,20 @@ export const StoreSummaryPage = () => {
                 {store && canManageScenarios && viewMode === 'scenarios' && (
                   <form
                     ref={scenarioFormRef}
-                    className="scenario-form"
+                    className="scenario-form create-card"
                     onSubmit={handleScenarioSubmit}
                     data-testid="scenario-form"
                   >
-                    <h3 className="form-title">
-                      {editingScenarioId
-                        ? t('storeSummary.editScenario')
-                        : t('storeSummary.newScenario')}
-                    </h3>
+                    <div className="create-card__header">
+                      <h3 className="form-title">
+                        {editingScenarioId
+                          ? t('storeSummary.editScenario')
+                          : t('storeSummary.createScenarioTitle')}
+                      </h3>
+                      <p className="create-card__description">
+                        {t('storeSummary.createScenarioDescription')}
+                      </p>
+                    </div>
                     {scenarioFormError && (
                       <p className="form-message form-message--error">{scenarioFormError}</p>
                     )}
@@ -1851,45 +1819,44 @@ export const StoreSummaryPage = () => {
                   </form>
                 )}
 
-                <div className="scenario-table-header">
-                  <div>
-                    <h3 className="section-subtitle">{t('storeSummary.testData')}</h3>
+                {viewMode !== 'environments' && (
+                  <div className="scenario-table-header">
+                    <div>
+                      <h3 className="section-subtitle">{t('storeSummary.testData')}</h3>
+                    </div>
+                    <div className="scenario-table-actions">
+                      {viewMode === 'scenarios' ? (
+                        <>
+                          <div className="scenario-action-group">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => void handleScenarioExport('xlsx')}
+                              isLoading={exportingScenarioFormat === 'xlsx'}
+                              loadingText={t('exporting')}
+                            >
+                              <FileTextIcon aria-hidden className="icon" />
+                              {t('storeSummary.exportExcel')}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => void handleScenarioExport('pdf')}
+                              isLoading={exportingScenarioFormat === 'pdf'}
+                              loadingText={t('exporting')}
+                            >
+                              <FileTextIcon aria-hidden className="icon" />
+                              {t('storeSummary.exportPdf')}
+                            </Button>
+                          </div>
+                        </>
+                      ) : null}
+                    </div>
                   </div>
-                  <div className="scenario-table-actions">
-                    {viewMode === 'scenarios' ? (
-                      <>
-                        <div className="scenario-action-group">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => void handleScenarioExport('pdf')}
-                            isLoading={exportingScenarioFormat === 'pdf'}
-                            loadingText={t('exporting')}
-                          >
-                            <FileTextIcon aria-hidden className="icon" />
-                            {t('storeSummary.exportPdf')}
-                          </Button>
-                        </div>
-                        {scenarios.length > 0 && (
-                          <button
-                            type="button"
-                            className="scenario-table-toggle"
-                            onClick={() => setIsScenarioTableCollapsed((previous) => !previous)}
-                          >
-                            {isScenarioTableCollapsed
-                              ? t('storeSummary.maxTable')
-                              : t('storeSummary.minTable')}
-                          </button>
-                        )}
-                      </>
-                    ) : null}
-                  </div>
-                </div>
+                )}
                 <div className="scenario-table-wrapper">
                   {viewMode === 'scenarios' ? (
-                    isScenarioTableCollapsed ? (
-                      <p className="section-subtitle">{t('storeSummary.tableCollapsed')}</p>
-                    ) : isLoadingScenarios ? (
+                    isLoadingScenarios ? (
                       <p className="section-subtitle">{t('storeSummary.scenariosLoading')}</p>
                     ) : scenarios.length === 0 ? (
                       <p className="section-subtitle">
@@ -1944,11 +1911,6 @@ export const StoreSummaryPage = () => {
                             </button>
                           )}
                         </div>
-                        {scenarioTimingError && (
-                          <p className="form-message form-message--error" role="alert">
-                            {scenarioTimingError}
-                          </p>
-                        )}
                         {filteredScenarios.length === 0 ? (
                           <p className="section-subtitle">
                             {t('storeSummary.noScenariosFiltered')}
@@ -2001,6 +1963,34 @@ export const StoreSummaryPage = () => {
                                             <EyeIcon aria-hidden className="action-button__icon" />
                                             {t('storeSummary.viewDetails')}
                                           </button>
+                                          {canManageScenarios && (
+                                            <>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleEditScenario(scenario)}
+                                                className="action-button"
+                                                aria-label={t('edit')}
+                                                title={t('edit')}
+                                              >
+                                                <PencilIcon
+                                                  aria-hidden
+                                                  className="action-button__icon"
+                                                />
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => openDeleteScenarioModal(scenario)}
+                                                className="action-button action-button--danger"
+                                                aria-label={t('storeSummary.deleteScenario')}
+                                                title={t('storeSummary.deleteScenario')}
+                                              >
+                                                <TrashIcon
+                                                  aria-hidden
+                                                  className="action-button__icon"
+                                                />
+                                              </button>
+                                            </>
+                                          )}
                                         </td>
                                       </tr>
                                     );
@@ -2023,7 +2013,7 @@ export const StoreSummaryPage = () => {
                         )}
                       </>
                     )
-                  ) : (
+                  ) : viewMode === 'suites' ? (
                     <div
                       ref={suiteListRef}
                       className={`suite-manager ${isViewingSuitesOnly ? 'suite-manager--suites-only' : ''}`}
@@ -2189,7 +2179,7 @@ export const StoreSummaryPage = () => {
                         <>
                           <div className="suite-form">
                             <form
-                              className="suite-card suite-editor-card"
+                              className="suite-card suite-editor-card create-card"
                               onSubmit={handleSuiteSubmit}
                               data-testid="suite-form"
                             >
@@ -2198,8 +2188,11 @@ export const StoreSummaryPage = () => {
                                   <h3 className="form-title">
                                     {editingSuiteId
                                       ? t('storeSummary.editTestSuite')
-                                      : t('storeSummary.newTestSuite')}
+                                      : t('storeSummary.createSuiteTitle')}
                                   </h3>
+                                  <p className="create-card__description">
+                                    {t('storeSummary.createSuiteDescription')}
+                                  </p>
                                 </div>
                               </div>
                               {suiteFormError && (
@@ -2225,6 +2218,16 @@ export const StoreSummaryPage = () => {
                                       ? t('storeSummary.updateSuite')
                                       : t('storeSummary.saveSuite')}
                                   </Button>
+                                  {!editingSuiteId && (
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      onClick={handleShowSuitesOnly}
+                                      className="suite-go-registered"
+                                    >
+                                      {t('storeSummary.goToRegistered')}
+                                    </Button>
+                                  )}
                                   {editingSuiteId && (
                                     <Button
                                       type="button"
@@ -2327,16 +2330,6 @@ export const StoreSummaryPage = () => {
                                             {t('storeSummary.clearFilters')}
                                           </button>
                                         )}
-                                        {!editingSuiteId && (
-                                          <Button
-                                            type="button"
-                                            variant="secondary"
-                                            onClick={handleShowSuitesOnly}
-                                            className="suite-go-registered"
-                                          >
-                                            {t('storeSummary.goToRegistered')}
-                                          </Button>
-                                        )}
                                       </div>
                                     </div>
                                     {filteredSuiteScenarios.length === 0 ? (
@@ -2431,25 +2424,20 @@ export const StoreSummaryPage = () => {
                         </>
                       )}
                     </div>
+                  ) : (
+                    <EnvironmentKanban
+                      storeId={storeId ?? ''}
+                      suites={suites}
+                      scenarios={scenarios}
+                      environments={environments}
+                      isLoading={isLoadingEnvironments}
+                    />
                   )}
                 </div>
               </div>
             )}
           </div>
         </section>
-        {storeId && (
-          <section className="page-container">
-            <div className="card">
-              <EnvironmentKanban
-                storeId={storeId}
-                suites={suites}
-                scenarios={scenarios}
-                environments={environments}
-                isLoading={isLoadingEnvironments}
-              />
-            </div>
-          </section>
-        )}
       </Layout>
 
       <Modal
@@ -2459,8 +2447,6 @@ export const StoreSummaryPage = () => {
       >
         {(() => {
           const detailScenario = scenarioDetails?.scenario ?? null;
-          const detailScenarioId = detailScenario?.id ?? scenarioDetails?.scenarioId ?? null;
-          const timingInfo = getScenarioTimingInfo(detailScenarioId);
           const detailTitle = detailScenario?.title ?? t('storeSummary.deletedScenario');
           const detailCategory = detailScenario?.category ?? t('storeSummary.emptyValue');
           const detailCriticality = detailScenario
@@ -2478,19 +2464,10 @@ export const StoreSummaryPage = () => {
           const detailBdd = localizedBdd || t('storeSummary.emptyValue');
           const canCopyBdd = scenarioDetails?.source === 'scenario-table';
           const hasDetailBdd = Boolean(detailBddValue);
-          const canManageDetailScenario =
-            scenarioDetails?.source === 'scenario-table' && canManageScenarios && detailScenario;
-
           return (
             <div className="scenario-details">
               <p className="scenario-details-title">{detailTitle}</p>
               <div className="scenario-details-grid">
-                <div className="scenario-details-item">
-                  <span className="scenario-details-label">{t('storeSummary.testTime')}</span>
-                  <span className="scenario-details-value" title={timingInfo.title}>
-                    {timingInfo.label}
-                  </span>
-                </div>
                 <div className="scenario-details-item">
                   <span className="scenario-details-label">{t('storeSummary.category')}</span>
                   <span className="scenario-details-value">{detailCategory}</span>
@@ -2535,34 +2512,6 @@ export const StoreSummaryPage = () => {
                 </div>
                 <LinkifiedText text={detailBdd} className="scenario-details-text" as="p" />
               </div>
-              {canManageDetailScenario && (
-                <div className="scenario-details-actions">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleCloseScenarioDetails();
-                      handleEditScenario(detailScenario);
-                    }}
-                    disabled={isSavingScenario}
-                    className="action-button"
-                  >
-                    <PencilIcon aria-hidden className="action-button__icon" />
-                    {t('edit')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleCloseScenarioDetails();
-                      openDeleteScenarioModal(detailScenario);
-                    }}
-                    disabled={isSavingScenario}
-                    className="action-button action-button--danger"
-                  >
-                    <TrashIcon aria-hidden className="action-button__icon" />
-                    {t('storeSummary.deleteScenario')}
-                  </button>
-                </div>
-              )}
             </div>
           );
         })()}

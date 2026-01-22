@@ -13,6 +13,7 @@ interface EnvironmentBugModalProps {
   isOpen: boolean;
   bug: EnvironmentBug | null;
   onClose: () => void;
+  onSaved?: () => void;
   initialScenarioId?: string | null;
 }
 
@@ -27,6 +28,7 @@ export const EnvironmentBugModal = ({
   isOpen,
   bug,
   onClose,
+  onSaved,
   initialScenarioId,
 }: EnvironmentBugModalProps) => {
   const { t } = useTranslation();
@@ -84,6 +86,7 @@ export const EnvironmentBugModal = ({
         showToast({ type: 'success', message: t('environmentBugModal.bugRegister') });
       }
 
+      onSaved?.();
       onClose();
     } catch (error) {
       console.error(error);

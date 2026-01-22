@@ -7,6 +7,7 @@ import { useToast } from '../../context/ToastContext';
 import { BUG_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 import { ConfirmDeleteModal } from '../ConfirmDeleteModal';
 import { useTranslation } from 'react-i18next';
+import { PencilIcon, TrashIcon } from '../icons';
 
 interface EnvironmentBugListProps {
   environment: Environment;
@@ -14,6 +15,7 @@ interface EnvironmentBugListProps {
   isLocked?: boolean;
   isLoading?: boolean;
   onEdit: (bug: EnvironmentBug) => void;
+  onRefresh?: () => void;
   showActions?: boolean;
   showHeader?: boolean;
 }
@@ -24,6 +26,7 @@ export const EnvironmentBugList = ({
   isLocked,
   isLoading,
   onEdit,
+  onRefresh,
   showActions = true,
   showHeader = true,
 }: EnvironmentBugListProps) => {
@@ -46,6 +49,7 @@ export const EnvironmentBugList = ({
         type: 'success',
         message: translation('environmentBugList.bugRemovedSuccess'),
       });
+      onRefresh?.();
     } catch (error) {
       console.error(error);
       showToast({
@@ -125,22 +129,28 @@ export const EnvironmentBugList = ({
                 <td>{bug.description || translation('environmentBugList.noDescription')}</td>
                 {showActions && (
                   <td className="environment-bugs__actions">
-                    <button
-                      type="button"
-                      className="link-button"
-                      onClick={() => onEdit(bug)}
-                      disabled={isReadOnly}
-                    >
-                      {translation('environmentBugList.edit')}
-                    </button>
-                    <button
-                      type="button"
-                      className="link-button link-button--danger"
-                      onClick={() => setBugToDelete(bug)}
-                      disabled={isReadOnly}
-                    >
-                      {translation('environmentBugList.remove')}
-                    </button>
+                    <div className="environment-bugs__actions-content">
+                      <button
+                        type="button"
+                        className="action-button"
+                        onClick={() => onEdit(bug)}
+                        disabled={isReadOnly}
+                        aria-label={translation('environmentBugList.edit')}
+                        title={translation('environmentBugList.edit')}
+                      >
+                        <PencilIcon aria-hidden className="action-button__icon" />
+                      </button>
+                      <button
+                        type="button"
+                        className="action-button action-button--danger"
+                        onClick={() => setBugToDelete(bug)}
+                        disabled={isReadOnly}
+                        aria-label={translation('environmentBugList.remove')}
+                        title={translation('environmentBugList.remove')}
+                      >
+                        <TrashIcon aria-hidden className="action-button__icon" />
+                      </button>
+                    </div>
                   </td>
                 )}
               </tr>
