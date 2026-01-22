@@ -1,6 +1,7 @@
 import {
   User as FirebaseUser,
   createUserWithEmailAndPassword,
+  onAuthStateChanged as firebaseOnAuthStateChanged,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
@@ -10,6 +11,7 @@ import {
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 import type {
+  AuthStateListener,
   AuthUser,
   LoginPayload,
   RegisterPayload,
@@ -137,6 +139,32 @@ export const getCurrentUser = async (): Promise<AuthUser | null> => {
   const profile = await fetchUserProfile(user.uid);
   return mapToAuthUser(user, profile);
 };
+
+export const onAuthStateChanged = (listener: AuthStateListener): (() => void) =>
+  firebaseOnAuthStateChanged(firebaseAuth, async (user) => {
+    if (!user) {
+      persistFirebaseAuthCookie(null);
+      listener(null);
+      return;
+    }
+
+    persistFirebaseAuthCookie(user);
+
+    const profile = await fetchUserProfile(user.uid);
+    const organizationId = await addUserToOrganizationByEmailDomain({
+      uid: user.uid,
+      email: user.email ?? '',
+      displayName: user.displayName ?? user.email ?? '',
+      photoURL: null,
+    });
+
+    listener(
+      mapToAuthUser(user, {
+        ...profile,
+        organizationId: organizationId ?? profile.organizationId ?? null,
+      }),
+    );
+  });
 
 const normalizeBrowserstackCredentials = (
   credentials: BrowserstackCredentials | null | undefined,

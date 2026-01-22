@@ -1,12 +1,4 @@
-import {
-  type ChangeEvent,
-  type FormEvent,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import type { Organization } from '../../domain/entities/organization';
@@ -32,8 +24,8 @@ import { TextInput } from '../components/TextInput';
 import { TextArea } from '../components/TextArea';
 import { SelectInput } from '../components/SelectInput';
 import { Modal } from '../components/Modal';
+import { PageLoader } from '../components/PageLoader';
 import { LinkifiedText } from '../components/LinkifiedText';
-import { EmptyState } from '../components/EmptyState';
 import {
   AUTOMATION_OPTIONS,
   CRITICALITY_OPTIONS,
@@ -68,17 +60,27 @@ import { formatDurationFromMs } from '../../shared/utils/time';
 import type { ScenarioAverageMap } from '../../infrastructure/external/scenarioExecutions';
 import { useTranslation } from 'react-i18next';
 import { buildExternalLink } from '../utils/externalLink';
-import { ErrorState } from '../components/ErrorState';
-import { StoreSummarySkeleton } from '../components/skeletons/StoreSummarySkeleton';
-import {
-  PAGE_SIZE,
-  emptyScenarioFilters,
-  emptyScenarioForm,
-  emptySuiteForm,
-  filterScenarios,
-  type ScenarioFilters,
-  translateBddKeywords,
-} from './storeSummaryUtils';
+
+const emptyScenarioForm: StoreScenarioInput = {
+  title: '',
+  category: '',
+  automation: '',
+  criticality: '',
+  observation: '',
+  bdd: '',
+};
+
+const emptySuiteForm: StoreSuiteInput = {
+  name: '',
+  description: '',
+  scenarioIds: [],
+};
+
+interface ScenarioFilters {
+  search: string;
+  category: string;
+  criticality: string;
+}
 
 interface StoreHighlight {
   id: string;
@@ -90,6 +92,70 @@ interface StoreHighlight {
 }
 
 type ExportFormat = 'pdf';
+
+const emptyScenarioFilters: ScenarioFilters = {
+  search: '',
+  category: '',
+  criticality: '',
+};
+
+const PAGE_SIZE = 20;
+
+const translateBddKeywords = (bdd: string, locale: string) => {
+  const normalizedLocale = locale.toLowerCase();
+  const target = normalizedLocale.startsWith('pt') ? 'pt' : 'en';
+
+  const keywordMap =
+    target === 'pt'
+      ? {
+          given: 'Dado',
+          when: 'Quando',
+          then: 'Então',
+          and: 'E',
+          but: 'Mas',
+        }
+      : {
+          dado: 'Given',
+          quando: 'When',
+          então: 'Then',
+          entao: 'Then',
+          e: 'And',
+          mas: 'But',
+        };
+
+  const sourcePattern =
+    target === 'pt'
+      ? /^(?<indent>\s*)(?<keyword>Given|When|Then|And|But)\b/i
+      : /^(?<indent>\s*)(?<keyword>Dado|Quando|Então|Entao|E|Mas)\b/i;
+
+  return bdd
+    .split('\n')
+    .map((line) => {
+      const match = line.match(sourcePattern);
+      if (!match || !match.groups?.keyword) {
+        return line;
+      }
+      const keyword = match.groups.keyword.toLowerCase();
+      const translated = keywordMap[keyword as keyof typeof keywordMap];
+      if (!translated) {
+        return line;
+      }
+      return `${match.groups.indent}${translated}${line.slice(match[0].length)}`;
+    })
+    .join('\n');
+};
+
+const filterScenarios = (list: StoreScenario[], filters: ScenarioFilters) => {
+  const searchValue = filters.search.trim().toLowerCase();
+  const filtered = list.filter((scenario) => {
+    const matchesSearch = !searchValue || scenario.title.toLowerCase().includes(searchValue);
+    const matchesCategory = !filters.category || scenario.category === filters.category;
+    const matchesCriticality = !filters.criticality || scenario.criticality === filters.criticality;
+    return matchesSearch && matchesCategory && matchesCriticality;
+  });
+
+  return filtered;
+};
 
 export const StoreSummaryPage = () => {
   const navigate = useNavigate();
@@ -149,8 +215,6 @@ export const StoreSummaryPage = () => {
   const scenarioFormRef = useRef<HTMLFormElement | null>(null);
   const [exportingScenarioFormat, setExportingScenarioFormat] = useState<ExportFormat | null>(null);
   const { t, i18n } = useTranslation();
-  const deferredScenarioFilters = useDeferredValue(scenarioFilters);
-  const deferredSuiteScenarioFilters = useDeferredValue(suiteScenarioFilters);
   const storeSiteInfo = useMemo(() => {
     const link = buildExternalLink(store?.site);
     return {
@@ -173,9 +237,7 @@ export const StoreSummaryPage = () => {
   const {
     environments,
     isLoading: isLoadingEnvironments,
-    error: environmentsError,
     statusCounts: environmentStatusCounts,
-    refetch: refetchEnvironments,
   } = useStoreEnvironments(storeId);
   const selectedSuiteScenarioCount = suiteForm.scenarioIds.length;
   const suiteSelectionSummary =
@@ -360,8 +422,8 @@ export const StoreSummaryPage = () => {
   };
 
   const filteredScenarios = useMemo(
-    () => filterScenarios(scenarios, deferredScenarioFilters),
-    [deferredScenarioFilters, scenarios],
+    () => filterScenarios(scenarios, scenarioFilters),
+    [scenarioFilters, scenarios],
   );
   const orderedFilteredScenarios = useMemo(
     () => sortScenarioList(filteredScenarios, scenarioSort),
@@ -373,8 +435,8 @@ export const StoreSummaryPage = () => {
   );
 
   const filteredSuiteScenarios = useMemo(
-    () => filterScenarios(scenarios, deferredSuiteScenarioFilters),
-    [deferredSuiteScenarioFilters, scenarios],
+    () => filterScenarios(scenarios, suiteScenarioFilters),
+    [scenarios, suiteScenarioFilters],
   );
   const orderedSuiteScenarios = useMemo(() => {
     const ordered = sortScenarioList(filteredSuiteScenarios, suiteScenarioSort);
@@ -544,7 +606,7 @@ export const StoreSummaryPage = () => {
         }
         setScenarios(scenariosData);
       } catch (error) {
-        void error;
+        console.error(error);
         showToast({ type: 'error', message: t('storeSummary.storeLoadError') });
       } finally {
         setIsLoadingStore(false);
@@ -573,7 +635,7 @@ export const StoreSummaryPage = () => {
           setScenarioTimingById(data);
         }
       } catch (error) {
-        void error;
+        console.error(error);
         if (isMounted) {
           setScenarioTimingById({});
           setScenarioTimingError(t('storeSummary.scenarioTimingLoadError'));
@@ -653,7 +715,7 @@ export const StoreSummaryPage = () => {
       closeStoreSettings();
       showToast({ type: 'success', message: t('storeSummary.storeUpdateSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       const message = error instanceof Error ? error.message : t('storeSummary.storeUpdateError');
       setStoreSettingsError(message);
       showToast({ type: 'error', message });
@@ -678,7 +740,7 @@ export const StoreSummaryPage = () => {
           : '/dashboard';
       navigate(redirectTo, { replace: true });
     } catch (error) {
-      void error;
+      console.error(error);
       const message = error instanceof Error ? error.message : t('storeSummary.storeRemoveError');
       showToast({ type: 'error', message });
     } finally {
@@ -713,7 +775,7 @@ export const StoreSummaryPage = () => {
           setSuites(suitesData);
         }
       } catch (error) {
-        void error;
+        console.error(error);
         if (isMounted) {
           showToast({ type: 'error', message: t('storeSummary.suitesLoadError') });
         }
@@ -747,7 +809,7 @@ export const StoreSummaryPage = () => {
           setCategories(data);
         }
       } catch (error) {
-        void error;
+        console.error(error);
         if (isMounted) {
           showToast({ type: 'error', message: t('storeSummary.categoriesLoadError') });
         }
@@ -812,10 +874,10 @@ export const StoreSummaryPage = () => {
             });
             createdCategories.push(created);
           } catch (error) {
-            void error;
             if (error instanceof Error && error.message.includes('Já existe')) {
               continue;
             }
+            console.error(error);
           }
         }
 
@@ -901,7 +963,7 @@ export const StoreSummaryPage = () => {
       setCategoryError(null);
       showToast({ type: 'success', message: t('storeSummary.categoryCreateSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error ? error.message : t('storeSummary.categoryCreateError');
       setCategoryError(message);
@@ -963,7 +1025,7 @@ export const StoreSummaryPage = () => {
       setCategoryError(null);
       showToast({ type: 'success', message: t('storeSummary.categoryUpdateSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error ? error.message : t('storeSummary.categoryUpdateError');
       setCategoryError(message);
@@ -987,7 +1049,7 @@ export const StoreSummaryPage = () => {
       }
       showToast({ type: 'success', message: t('storeSummary.categoryRemoveSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error ? error.message : t('storeSummary.categoryRemoveError');
       setCategoryError(message);
@@ -1017,7 +1079,7 @@ export const StoreSummaryPage = () => {
       await navigator.clipboard.writeText(bdd);
       showToast({ type: 'success', message: t('storeSummary.bddCopied') });
     } catch (error) {
-      void error;
+      console.error(error);
       showToast({ type: 'error', message: t('storeSummary.bddCopyError') });
     }
   };
@@ -1077,7 +1139,7 @@ export const StoreSummaryPage = () => {
 
       handleCancelScenarioEdit();
     } catch (error) {
-      void error;
+      console.error(error);
       const message = error instanceof Error ? error.message : t('storeSummary.scenarioSaveError');
       setScenarioFormError(message);
       showToast({ type: 'error', message });
@@ -1130,7 +1192,7 @@ export const StoreSummaryPage = () => {
 
       showToast({ type: 'success', message: t('storeSummary.scenarioRemoveSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error ? error.message : t('storeSummary.scenarioRemoveError');
       showToast({ type: 'error', message });
@@ -1189,7 +1251,7 @@ export const StoreSummaryPage = () => {
 
       showToast({ type: 'success', message: t('storeSummary.scenarioExportSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error ? error.message : t('storeSummary.scenarioExportError');
       showToast({ type: 'error', message });
@@ -1315,7 +1377,7 @@ export const StoreSummaryPage = () => {
 
       handleCancelSuiteEdit();
     } catch (error) {
-      void error;
+      console.error(error);
       const message = error instanceof Error ? error.message : t('storeSummary.suiteSaveError');
       setSuiteFormError(message);
       showToast({ type: 'error', message });
@@ -1357,7 +1419,7 @@ export const StoreSummaryPage = () => {
 
       showToast({ type: 'success', message: t('storeSummary.suiteRemoveSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       const message = error instanceof Error ? error.message : t('storeSummary.suiteRemoveError');
       showToast({ type: 'error', message });
     } finally {
@@ -1451,7 +1513,9 @@ export const StoreSummaryPage = () => {
   if (isPreparingStoreView) {
     return (
       <Layout>
-        <StoreSummarySkeleton />
+        <section className="page-container">
+          <PageLoader message={t('storeSummary.loadingStore')} />
+        </section>
       </Layout>
     );
   }
@@ -2410,35 +2474,13 @@ export const StoreSummaryPage = () => {
                       )}
                     </div>
                   ) : (
-                    <>
-                      {environmentsError ? (
-                        <ErrorState
-                          title={t('storeSummary.environmentsLoadError')}
-                          description={environmentsError}
-                          actionLabel={t('retry')}
-                          onRetry={refetchEnvironments}
-                        />
-                      ) : !isLoadingEnvironments && environments.length === 0 ? (
-                        <EmptyState
-                          title={t('storeSummary.environmentsEmptyTitle')}
-                          description={t('storeSummary.environmentsEmptyDescription')}
-                          action={
-                            <Button type="button" variant="secondary" onClick={refetchEnvironments}>
-                              {t('retry')}
-                            </Button>
-                          }
-                        />
-                      ) : (
-                        <EnvironmentKanban
-                          storeId={storeId ?? ''}
-                          suites={suites}
-                          scenarios={scenarios}
-                          environments={environments}
-                          isLoading={isLoadingEnvironments}
-                          onRefresh={refetchEnvironments}
-                        />
-                      )}
-                    </>
+                    <EnvironmentKanban
+                      storeId={storeId ?? ''}
+                      suites={suites}
+                      scenarios={scenarios}
+                      environments={environments}
+                      isLoading={isLoadingEnvironments}
+                    />
                   )}
                 </div>
               </div>

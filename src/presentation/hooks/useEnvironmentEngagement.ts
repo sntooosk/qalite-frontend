@@ -17,15 +17,9 @@ interface UseEnvironmentEngagementResult {
   leaveEnvironment: () => Promise<void>;
 }
 
-interface UseEnvironmentEngagementOptions {
-  onEnvironmentUpdated?: () => void | Promise<void>;
-}
-
 export const useEnvironmentEngagement = (
   environment: Environment | null | undefined,
-  options: UseEnvironmentEngagementOptions = {},
 ): UseEnvironmentEngagementResult => {
-  const { onEnvironmentUpdated } = options;
   const { user } = useAuth();
   const [hasEnteredEnvironment, setHasEnteredEnvironment] = useState(false);
   const [isJoiningEnvironment, setIsJoiningEnvironment] = useState(false);
@@ -79,8 +73,7 @@ export const useEnvironmentEngagement = (
 
     await environmentService.addUser(environmentId, userId);
     hasJoinedRef.current = true;
-    await onEnvironmentUpdated?.();
-  }, [environmentId, isLocked, onEnvironmentUpdated, userId]);
+  }, [environmentId, isLocked, userId]);
 
   const enterEnvironment = useCallback(async () => {
     if (hasEnteredEnvironment || isLocked || isJoiningEnvironment) {
@@ -106,11 +99,10 @@ export const useEnvironmentEngagement = (
       await environmentService.removeUser(environmentId, userId);
       hasJoinedRef.current = false;
       setHasEnteredEnvironment(false);
-      await onEnvironmentUpdated?.();
     } finally {
       setIsLeavingEnvironment(false);
     }
-  }, [environmentId, isLocked, isLeavingEnvironment, onEnvironmentUpdated, userId]);
+  }, [environmentId, isLocked, isLeavingEnvironment, userId]);
 
   const shouldAutoJoin = hasEnteredEnvironment && !isLocked;
 

@@ -65,7 +65,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         return result;
       } catch (err) {
-        void err;
         const message = mapFirebaseError(err);
         setError(message);
         showToast({ type: 'error', message });
@@ -78,52 +77,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadCurrentUser = async () => {
-      setIsInitializing(true);
-      setError(null);
-
-      try {
-        const currentUser = await authService.getCurrent();
-        if (!isMounted) {
-          return;
-        }
-
-        if (currentUser && !currentUser.isEmailVerified) {
-          setUser(null);
-          setIsInitializing(false);
-          return;
-        }
-
-        setUser(currentUser);
-      } catch (err) {
-        if (!isMounted) {
-          return;
-        }
-        const message = mapFirebaseError(err);
-        setError(message);
-        showToast({ type: 'error', message });
+    const unsubscribe = authService.onAuthStateChanged((currentUser) => {
+      if (currentUser && !currentUser.isEmailVerified) {
         setUser(null);
-      } finally {
-        if (isMounted) {
-          setIsInitializing(false);
-        }
+        setIsInitializing(false);
+        return;
       }
-    };
 
-    void loadCurrentUser();
+      setUser(currentUser);
+      setIsInitializing(false);
+    });
 
-    return () => {
-      isMounted = false;
-    };
-  }, [showToast]);
+    return () => unsubscribe();
+  }, []);
 
   const signOutSilently = useCallback(async () => {
     try {
       await authService.logout();
     } catch (logoutError) {
-      void logoutError;
+      console.error(logoutError);
     }
   }, []);
 

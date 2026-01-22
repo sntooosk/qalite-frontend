@@ -16,8 +16,14 @@ export interface EnvironmentRepository {
   create: (input: CreateEnvironmentInput) => Promise<Environment>;
   update: (id: string, input: UpdateEnvironmentInput) => Promise<void>;
   delete: (id: string) => Promise<void>;
-  getEnvironment: (id: string) => Promise<Environment | null>;
-  getAll: (filters: EnvironmentRealtimeFilters) => Promise<Environment[]>;
+  observeEnvironment: (
+    id: string,
+    onChange: (environment: Environment | null) => void,
+  ) => () => void;
+  observeAll: (
+    filters: EnvironmentRealtimeFilters,
+    onChange: (environments: Environment[]) => void,
+  ) => () => void;
   addUser: (id: string, userId: string) => Promise<void>;
   removeUser: (id: string, userId: string) => Promise<void>;
   updateScenarioStatus: (
@@ -31,7 +37,7 @@ export interface EnvironmentRepository {
     scenarioId: string,
     evidenceLink: string,
   ) => Promise<string>;
-  getBugs: (environmentId: string) => Promise<EnvironmentBug[]>;
+  observeBugs: (environmentId: string, onChange: (bugs: EnvironmentBug[]) => void) => () => void;
   createBug: (environmentId: string, bug: CreateEnvironmentBugInput) => Promise<EnvironmentBug>;
   updateBug: (
     environmentId: string,

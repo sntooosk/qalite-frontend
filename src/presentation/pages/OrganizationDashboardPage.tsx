@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -10,11 +10,7 @@ import { useOrganizationBranding } from '../context/OrganizationBrandingContext'
 import { Layout } from '../components/Layout';
 import { UserAvatar } from '../components/UserAvatar';
 import { StoreManagementPanel } from '../components/StoreManagementPanel';
-import { ErrorState } from '../components/ErrorState';
-import {
-  OrganizationHeaderSkeleton,
-  OrganizationMembersSkeleton,
-} from '../components/skeletons/OrganizationDashboardSkeleton';
+import { OrganizationLogPanel } from '../components/OrganizationLogPanel';
 
 export const OrganizationDashboardPage = () => {
   const navigate = useNavigate();
@@ -23,39 +19,9 @@ export const OrganizationDashboardPage = () => {
   const { setActiveOrganization } = useOrganizationBranding();
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const isAdmin = user?.role?.toLowerCase() === 'admin';
 
   const { t } = useTranslation();
-
-  const fetchOrganization = useCallback(async () => {
-    if (!user?.organizationId) {
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await organizationService.getById(user.organizationId as string);
-
-      if (!data) {
-        const message = t('organizationPage.notFound');
-        setError(message);
-        showToast({ type: 'error', message });
-        navigate('/no-organization', { replace: true });
-        return;
-      }
-
-      setOrganization(data);
-    } catch (error) {
-      void error;
-      const message = t('organizationPage.loadingError');
-      setError(message);
-      showToast({ type: 'error', message });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [navigate, showToast, t, user?.organizationId]);
 
   useEffect(() => {
     if (isInitializing) {
@@ -72,8 +38,28 @@ export const OrganizationDashboardPage = () => {
       return;
     }
 
+    const fetchOrganization = async () => {
+      try {
+        setIsLoading(true);
+        const data = await organizationService.getById(user.organizationId as string);
+
+        if (!data) {
+          showToast({ type: 'error', message: t('organizationPage.notFound') });
+          navigate('/no-organization', { replace: true });
+          return;
+        }
+
+        setOrganization(data);
+      } catch (error) {
+        console.error(error);
+        showToast({ type: 'error', message: t('organizationPage.loadingError') });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     void fetchOrganization();
-  }, [fetchOrganization, isInitializing, navigate, user]);
+  }, [isInitializing, navigate, showToast, user, t]);
 
   useEffect(() => {
     setActiveOrganization(organization ?? null);
@@ -89,14 +75,7 @@ export const OrganizationDashboardPage = () => {
         <div className="card">
           <span className="badge">{t('organizationPage.badge')}</span>
           {isLoading ? (
-            <OrganizationHeaderSkeleton />
-          ) : error ? (
-            <ErrorState
-              title={t('organizationPage.loadingError')}
-              description={error}
-              actionLabel={t('retry')}
-              onRetry={fetchOrganization}
-            />
+            <p className="section-subtitle">{t('organizationPage.loading')}</p>
           ) : (
             <>
               <h1 className="section-title">{organization?.name ?? t('organizationPage.title')}</h1>
@@ -110,7 +89,7 @@ export const OrganizationDashboardPage = () => {
         <div className="card">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <h2 className="text-xl font-semibold text-primary">{t('organizationPage.members')}</h2>
-            {!isLoading && !error && (
+            {!isLoading && (
               <span className="badge">
                 {organization?.members.length ?? 0} {t('organizationPage.member')}
                 {(organization?.members.length ?? 0) === 1 ? '' : 's'}
@@ -118,13 +97,13 @@ export const OrganizationDashboardPage = () => {
             )}
           </div>
 
-          {isLoading && <OrganizationMembersSkeleton />}
+          {isLoading && <p className="section-subtitle">{t('organizationPage.syncing')}</p>}
 
-          {!isLoading && !error && (organization?.members.length ?? 0) === 0 && (
+          {!isLoading && (organization?.members.length ?? 0) === 0 && (
             <p className="section-subtitle">{t('organizationPage.empty')}</p>
           )}
 
-          {!isLoading && !error && (organization?.members.length ?? 0) > 0 && (
+          {!isLoading && (organization?.members.length ?? 0) > 0 && (
             <ul className="member-list member-list--compact">
               {organization?.members.map((member) => (
                 <li key={member.uid} className="member-list-item">
@@ -140,7 +119,11 @@ export const OrganizationDashboardPage = () => {
         </div>
       </section>
 
-      {!isLoading && !error && organization && (
+      {!isLoading && organization && isAdmin && (
+        <OrganizationLogPanel organizationId={organization.id} />
+      )}
+
+      {!isLoading && organization && (
         <StoreManagementPanel
           organizationId={organization.id}
           organizationName={organization.name}

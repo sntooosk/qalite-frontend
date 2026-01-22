@@ -5,8 +5,6 @@ import { getReadableUserName, getUserInitials } from '../../utils/userDisplay';
 import { translateEnvironmentOption } from '../../constants/environmentOptions';
 import { useTranslation } from 'react-i18next';
 import { buildExternalLink } from '../../utils/externalLink';
-import { SkeletonBlock } from '../SkeletonBlock';
-import { Button } from '../Button';
 
 const buildJiraLink = (value: string | null | undefined): string | null => {
   if (!value) {
@@ -39,9 +37,6 @@ interface EnvironmentSummaryCardProps {
   formattedEnd: string;
   urls: string[];
   participants: UserSummary[];
-  isParticipantsLoading?: boolean;
-  participantsError?: string | null;
-  onRetryParticipants?: () => void;
   bugsCount: number;
 }
 
@@ -55,9 +50,6 @@ export const EnvironmentSummaryCard = ({
   formattedEnd,
   urls,
   participants,
-  isParticipantsLoading = false,
-  participantsError,
-  onRetryParticipants,
   bugsCount,
 }: EnvironmentSummaryCardProps) => {
   const { t: translation } = useTranslation();
@@ -226,29 +218,7 @@ export const EnvironmentSummaryCard = ({
           {translation('environmentSummary.whoIsParticipating')}
         </span>
 
-        {isParticipantsLoading ? (
-          <div className="summary-card__participants-loading" aria-live="polite">
-            <div className="summary-card__avatar-list">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <SkeletonBlock
-                  key={`participant-skeleton-${index}`}
-                  className="skeleton--circle"
-                  style={{ width: '2rem', height: '2rem' }}
-                />
-              ))}
-            </div>
-            <SkeletonBlock style={{ width: '60%', height: '0.9rem' }} />
-          </div>
-        ) : participantsError ? (
-          <div className="summary-card__empty">
-            <p>{translation('environmentSummary.participantsError')}</p>
-            {onRetryParticipants && (
-              <Button type="button" variant="secondary" onClick={onRetryParticipants}>
-                {translation('retry')}
-              </Button>
-            )}
-          </div>
-        ) : visibleParticipants.length === 0 ? (
+        {visibleParticipants.length === 0 ? (
           <p className="summary-card__empty">{translation('environmentSummary.noParticipants')}</p>
         ) : (
           <ul className="summary-card__avatar-list">

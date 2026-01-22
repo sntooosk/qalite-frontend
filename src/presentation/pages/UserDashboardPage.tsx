@@ -17,22 +17,13 @@ import { browserstackService } from '../../application/use-cases/BrowserstackUse
 import type { BrowserstackBuild } from '../../domain/entities/browserstack';
 import { isAutomatedScenario } from '../../shared/utils/automation';
 import { useTranslation } from 'react-i18next';
-import { ErrorState } from '../components/ErrorState';
-import { UserDashboardSkeleton } from '../components/skeletons/UserDashboardSkeleton';
 
 export const UserDashboardPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { user, isInitializing } = useAuth();
   const organizationId = user?.organizationId ?? null;
-  const {
-    organization,
-    stores,
-    isLoading,
-    error,
-    isEmpty,
-    refetch: refetchStores,
-  } = useOrganizationStores(organizationId);
+  const { organization, stores, isLoading, status } = useOrganizationStores(organizationId);
   const { setActiveOrganization } = useOrganizationBranding();
   const [storeAutomationCounts, setStoreAutomationCounts] = useState<Record<string, number>>({});
   const [isLoadingAutomationStats, setIsLoadingAutomationStats] = useState(false);
@@ -96,7 +87,7 @@ export const UserDashboardPage = () => {
           setStoreAutomationCounts(Object.fromEntries(stats));
         }
       } catch (error) {
-        void error;
+        console.error(error);
         if (isMounted) {
           setStoreAutomationCounts({});
         }
@@ -123,14 +114,14 @@ export const UserDashboardPage = () => {
       return (t('userPage.organizationName', { org: organization.name }), t('selectStore'));
     }
 
-    if (error) {
+    if (status === 'error') {
       return t('userPage.loadingError');
     }
 
     return t('userPage.chooseStore');
-  }, [organization?.name, error, t]);
+  }, [organization?.name, status, t]);
 
-  const isError = Boolean(error);
+  const isError = status === 'error';
   const emptyStateTitle = isError ? t('userPage.loadingStores') : t('userPage.unavailableStores');
   const emptyStateDescription = isError ? t('userPage.updatePage') : t('userPage.addStores');
 
@@ -169,7 +160,7 @@ export const UserDashboardPage = () => {
       const builds = await browserstackService.listBuilds(organizationCredentials);
       setBrowserstackBuilds(builds);
     } catch (error) {
-      void error;
+      console.error(error);
       const message = error instanceof Error ? error.message : t('userPage.errorBrowserstack');
       showToast({ type: 'error', message });
     } finally {
@@ -193,21 +184,14 @@ export const UserDashboardPage = () => {
         </div>
 
         {isLoading ? (
-          <UserDashboardSkeleton />
-        ) : error ? (
-          <ErrorState
-            title={t('userPage.loadingStores')}
-            description={error}
-            actionLabel={t('retry')}
-            onRetry={refetchStores}
-          />
-        ) : isEmpty ? (
+          <p className="section-subtitle">{t('userPage.loadingTitle')}</p>
+        ) : stores.length === 0 ? (
           <EmptyState
             title={emptyStateTitle}
             description={emptyStateDescription}
             action={
               isError ? (
-                <Button type="button" variant="secondary" onClick={refetchStores}>
+                <Button type="button" variant="secondary" onClick={() => window.location.reload()}>
                   {t('userPage.reload')}
                 </Button>
               ) : (

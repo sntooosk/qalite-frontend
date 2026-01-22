@@ -1,8 +1,7 @@
-import { useCallback, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { Environment, EnvironmentStatus } from '../../domain/entities/environment';
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
-import { useResource } from './useResource';
 
 interface StatusCounts extends Record<EnvironmentStatus, number> {
   total: number;
@@ -11,13 +10,7 @@ interface StatusCounts extends Record<EnvironmentStatus, number> {
 interface UseStoreEnvironmentsResult {
   environments: Environment[];
   isLoading: boolean;
-  isFetching: boolean;
-  error: string | null;
   statusCounts: StatusCounts;
-  refetch: () => Promise<void>;
-  updatedAt: number | null;
-  setEnvironments: (value: Environment[] | ((previous: Environment[]) => Environment[])) => void;
-  patchEnvironments: (updater: (previous: Environment[]) => Environment[]) => void;
 }
 
 const buildEmptyCounts = (): StatusCounts => ({
@@ -30,25 +23,24 @@ const buildEmptyCounts = (): StatusCounts => ({
 export const useStoreEnvironments = (
   storeId: string | null | undefined,
 ): UseStoreEnvironmentsResult => {
-  const fetchEnvironments = useCallback(
-    async (id: string) => environmentService.getAll({ storeId: id }),
-    [],
-  );
+  const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [isLoading, setIsLoading] = useState(Boolean(storeId));
 
-  const {
-    value: environments,
-    isLoading,
-    isFetching,
-    error,
-    refetch,
-    updatedAt,
-    setValue,
-    patchValue,
-  } = useResource<Environment[]>({
-    resourceId: storeId,
-    getInitialValue: () => [],
-    fetch: fetchEnvironments,
-  });
+  useEffect(() => {
+    if (!storeId) {
+      setEnvironments([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    const unsubscribe = environmentService.observeAll({ storeId }, (list) => {
+      setEnvironments(list);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [storeId]);
 
   const statusCounts = useMemo(() => {
     if (environments.length === 0) {
@@ -65,15 +57,8 @@ export const useStoreEnvironments = (
   }, [environments]);
 
   return {
-    data: environments,
     environments,
     isLoading,
-    isFetching,
-    error,
     statusCounts,
-    refetch,
-    updatedAt,
-    setEnvironments: setValue,
-    patchEnvironments: patchValue,
   };
 };

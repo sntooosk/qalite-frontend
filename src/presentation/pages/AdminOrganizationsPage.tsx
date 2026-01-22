@@ -55,7 +55,7 @@ export const AdminOrganizationsPage = () => {
         const data = await organizationService.list();
         setOrganizations(data);
       } catch (error) {
-        void error;
+        console.error(error);
         showToast({
           type: 'error',
           message: translation('adminOrganizationsPage.errors.loadOrganizations'),
@@ -89,7 +89,7 @@ export const AdminOrganizationsPage = () => {
           setStoreCounts(Object.fromEntries(counts));
         }
       } catch (error) {
-        void error;
+        console.error(error);
       }
     };
 
@@ -188,7 +188,7 @@ export const AdminOrganizationsPage = () => {
       });
       closeModal();
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error
           ? error.message

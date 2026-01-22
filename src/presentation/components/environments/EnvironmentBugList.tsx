@@ -7,22 +7,15 @@ import { useToast } from '../../context/ToastContext';
 import { BUG_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 import { ConfirmDeleteModal } from '../ConfirmDeleteModal';
 import { useTranslation } from 'react-i18next';
-import { EmptyState } from '../EmptyState';
-import { ErrorState } from '../ErrorState';
-import { SkeletonBlock } from '../SkeletonBlock';
-import { Button } from '../Button';
 
 interface EnvironmentBugListProps {
   environment: Environment;
   bugs: EnvironmentBug[];
   isLocked?: boolean;
   isLoading?: boolean;
-  error?: string | null;
   onEdit: (bug: EnvironmentBug) => void;
   showActions?: boolean;
   showHeader?: boolean;
-  onUpdated?: () => void | Promise<void>;
-  onRetry?: () => void;
 }
 
 export const EnvironmentBugList = ({
@@ -30,12 +23,9 @@ export const EnvironmentBugList = ({
   bugs,
   isLocked,
   isLoading,
-  error,
   onEdit,
   showActions = true,
   showHeader = true,
-  onUpdated,
-  onRetry,
 }: EnvironmentBugListProps) => {
   const { showToast } = useToast();
   const { t: translation } = useTranslation();
@@ -56,9 +46,8 @@ export const EnvironmentBugList = ({
         type: 'success',
         message: translation('environmentBugList.bugRemovedSuccess'),
       });
-      await onUpdated?.();
     } catch (error) {
-      void error;
+      console.error(error);
       showToast({
         type: 'error',
         message: translation('environmentBugList.bugRemovedError'),
@@ -96,6 +85,10 @@ export const EnvironmentBugList = ({
     );
   };
 
+  if (!isLoading && bugs.length === 0) {
+    return <p className="section-subtitle">{translation('environmentBugList.noBugs')}</p>;
+  }
+
   return (
     <div className="environment-bugs">
       {showHeader && (
@@ -105,59 +98,9 @@ export const EnvironmentBugList = ({
       )}
 
       {isLoading ? (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>{translation('environmentBugList.title')}</th>
-              <th>{translation('environmentBugList.status')}</th>
-              <th>{translation('environmentBugList.scenario')}</th>
-              <th>{translation('environmentBugList.description')}</th>
-              {showActions && <th>{translation('environmentBugList.actions')}</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: 3 }).map((_, index) => (
-              <tr key={`bug-skeleton-${index}`}>
-                <td>
-                  <SkeletonBlock style={{ width: '70%', height: '1rem' }} />
-                </td>
-                <td>
-                  <SkeletonBlock style={{ width: '50%', height: '1rem' }} />
-                </td>
-                <td>
-                  <SkeletonBlock style={{ width: '60%', height: '1rem' }} />
-                </td>
-                <td>
-                  <SkeletonBlock style={{ width: '90%', height: '1rem' }} />
-                </td>
-                {showActions && (
-                  <td>
-                    <SkeletonBlock style={{ width: '60%', height: '1rem' }} />
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : error ? (
-        <ErrorState
-          title={translation('environmentBugList.loadError')}
-          description={translation('environmentBugList.loadErrorDescription')}
-          actionLabel={translation('retry')}
-          onRetry={onRetry}
-        />
+        <p className="section-subtitle">{translation('environmentBugList.loadingBugs')}</p>
       ) : bugs.length === 0 ? (
-        <EmptyState
-          title={translation('environmentBugList.noBugs')}
-          description={translation('environmentBugList.noBugsDescription')}
-          action={
-            onRetry ? (
-              <Button type="button" variant="secondary" onClick={onRetry}>
-                {translation('retry')}
-              </Button>
-            ) : undefined
-          }
-        />
+        <p className="section-subtitle">{translation('environmentBugList.noBugs')}</p>
       ) : (
         <table className="data-table">
           <thead>

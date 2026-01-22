@@ -2,27 +2,20 @@ import { useCallback } from 'react';
 
 import type { EnvironmentBug } from '../../domain/entities/environment';
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
-import { useResource } from './useResource';
+import { useRealtimeResource } from './useRealtimeResource';
 
 export const useEnvironmentBugs = (environmentId: string | null | undefined) => {
-  const fetchBugs = useCallback((id: string) => environmentService.getBugs(id), []);
+  const subscribeToBugs = useCallback(
+    (id: string, handler: (bugs: EnvironmentBug[]) => void) =>
+      environmentService.observeBugs(id, handler),
+    [],
+  );
 
-  const { value, isLoading, isFetching, error, refetch, updatedAt, setValue, patchValue } =
-    useResource<EnvironmentBug[]>({
-      resourceId: environmentId,
-      getInitialValue: () => [],
-      fetch: fetchBugs,
-    });
+  const { value, isLoading } = useRealtimeResource<EnvironmentBug[]>({
+    resourceId: environmentId,
+    getInitialValue: () => [],
+    subscribe: subscribeToBugs,
+  });
 
-  return {
-    data: value,
-    bugs: value,
-    isLoading,
-    isFetching,
-    error,
-    refetch,
-    updatedAt,
-    setBugs: setValue,
-    patchBugs: patchValue,
-  };
+  return { bugs: value, isLoading };
 };

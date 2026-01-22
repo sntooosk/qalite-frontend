@@ -14,7 +14,6 @@ interface EnvironmentBugModalProps {
   bug: EnvironmentBug | null;
   onClose: () => void;
   initialScenarioId?: string | null;
-  onUpdated?: () => void | Promise<void>;
 }
 
 const STATUS_OPTIONS: { value: EnvironmentBugStatus; label: string }[] = [
@@ -29,7 +28,6 @@ export const EnvironmentBugModal = ({
   bug,
   onClose,
   initialScenarioId,
-  onUpdated,
 }: EnvironmentBugModalProps) => {
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -86,10 +84,9 @@ export const EnvironmentBugModal = ({
         showToast({ type: 'success', message: t('environmentBugModal.bugRegister') });
       }
 
-      await onUpdated?.();
       onClose();
     } catch (error) {
-      void error;
+      console.error(error);
       showToast({ type: 'error', message: t('environmentBugModal.bugUnsaved') });
     } finally {
       setIsSubmitting(false);

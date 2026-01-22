@@ -176,7 +176,7 @@ export const CreateEnvironmentCard = ({
       onCreated?.();
       resetForm();
     } catch (error) {
-      void error;
+      console.error(error);
       showToast({ type: 'error', message: t('createEnvironment.createError') });
     } finally {
       setIsSubmitting(false);

@@ -57,7 +57,7 @@ export const ProfilePage = () => {
         await updatePreferences(draftPreferences);
       }
     } catch (err) {
-      void err;
+      console.error(err);
     }
   };
 

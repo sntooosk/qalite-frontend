@@ -20,7 +20,7 @@ import {
   normalizeUserPreferences,
   persistPreferencesLocally,
 } from '../../shared/config/userPreferences';
-import { PageShellSkeleton } from '../components/skeletons/PageShellSkeleton';
+import { PageLoader } from '../components/PageLoader';
 
 interface UserPreferencesContextValue {
   preferences: UserPreferences;
@@ -86,7 +86,6 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
       try {
         await updateProfile({ preferences: next });
       } catch (error) {
-        void error;
         setPreferences(previous);
         await applyPreferences(previous);
         throw error;
@@ -105,7 +104,7 @@ export const UserPreferencesProvider = ({ children }: { children: ReactNode }) =
   );
 
   if (!isReady) {
-    return <PageShellSkeleton />;
+    return <PageLoader message={t('preferences.loading')} />;
   }
 
   return (

@@ -5,7 +5,7 @@ import { Layout } from '../components/Layout';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
 import { EnvironmentBugList } from '../components/environments/EnvironmentBugList';
 import { EnvironmentSummaryCard } from '../components/environments/EnvironmentSummaryCard';
-import { useEnvironmentResource } from '../hooks/useEnvironmentResource';
+import { useEnvironmentRealtime } from '../hooks/useEnvironmentRealtime';
 import { useTimeTracking } from '../hooks/useTimeTracking';
 import { useUserProfiles } from '../hooks/useUserProfiles';
 import { useStoreOrganizationBranding } from '../hooks/useStoreOrganizationBranding';
@@ -13,18 +13,11 @@ import { useOrganizationBranding } from '../context/OrganizationBrandingContext'
 import { useEnvironmentBugs } from '../hooks/useEnvironmentBugs';
 import { useEnvironmentDetails } from '../hooks/useEnvironmentDetails';
 import { useTranslation } from 'react-i18next';
-import { ErrorState } from '../components/ErrorState';
-import { EnvironmentPageSkeleton } from '../components/skeletons/EnvironmentPageSkeleton';
 
 export const PublicEnvironmentPage = () => {
   const { environmentId } = useParams<{ environmentId: string }>();
-  const { environment, isLoading, error, refetch } = useEnvironmentResource(environmentId);
-  const {
-    profiles: participants,
-    isLoading: isLoadingParticipants,
-    error: participantsError,
-    refetch: refetchParticipants,
-  } = useUserProfiles(environment?.participants ?? []);
+  const { environment, isLoading } = useEnvironmentRealtime(environmentId);
+  const participants = useUserProfiles(environment?.participants ?? []);
   const { organization: environmentOrganization } = useStoreOrganizationBranding(
     environment?.storeId ?? null,
   );
@@ -33,12 +26,7 @@ export const PublicEnvironmentPage = () => {
     environment?.timeTracking ?? null,
     Boolean(environment?.status === 'in_progress'),
   );
-  const {
-    bugs,
-    isLoading: isLoadingBugs,
-    error: bugsError,
-    refetch: refetchBugs,
-  } = useEnvironmentBugs(environment?.id ?? null);
+  const { bugs, isLoading: isLoadingBugs } = useEnvironmentBugs(environment?.id ?? null);
   const { progressPercentage, progressLabel, scenarioCount, headerMeta, urls } =
     useEnvironmentDetails(environment, bugs);
 
@@ -61,21 +49,8 @@ export const PublicEnvironmentPage = () => {
   if (isLoading) {
     return (
       <Layout>
-        <EnvironmentPageSkeleton isPublic />
-      </Layout>
-    );
-  }
-
-  if (error) {
-    return (
-      <Layout>
         <section className="page-container">
-          <ErrorState
-            title={t('publicEnvironment.loadError')}
-            description={error}
-            actionLabel={t('retry')}
-            onRetry={refetch}
-          />
+          <p className="section-subtitle">{t('publicEnvironment.loading')}</p>
         </section>
       </Layout>
     );
@@ -116,9 +91,6 @@ export const PublicEnvironmentPage = () => {
             formattedEnd={formattedEnd}
             urls={urls}
             participants={participants}
-            isParticipantsLoading={isLoadingParticipants}
-            participantsError={participantsError}
-            onRetryParticipants={refetchParticipants}
             bugsCount={bugs.length}
           />
         </div>
@@ -136,11 +108,9 @@ export const PublicEnvironmentPage = () => {
           bugs={bugs}
           isLocked
           isLoading={isLoadingBugs}
-          error={bugsError}
           onEdit={() => {}}
           showActions={false}
           showHeader={false}
-          onRetry={refetchBugs}
         />
       </section>
     </Layout>

@@ -45,6 +45,8 @@ export interface LoginPayload {
   password: string;
 }
 
+export type AuthStateListener = (user: AuthUser | null) => void;
+
 export interface UpdateProfilePayload {
   firstName?: string;
   lastName?: string;
