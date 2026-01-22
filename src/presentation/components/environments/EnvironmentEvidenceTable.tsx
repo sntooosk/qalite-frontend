@@ -14,6 +14,7 @@ import {
   type ScenarioSortConfig,
 } from '../ScenarioColumnSortControl';
 import { isAutomatedScenario } from '../../../shared/utils/automation';
+import { ENVIRONMENT_PLATFORM_LABEL } from '../../../shared/config/environmentLabels';
 import { getCriticalityClassName, getCriticalityLabelKey } from '../../constants/scenarioOptions';
 import { normalizeCriticalityEnum } from '../../../shared/utils/scenarioEnums';
 import { useToast } from '../../context/ToastContext';

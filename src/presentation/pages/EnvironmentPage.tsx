@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -235,6 +235,7 @@ export const EnvironmentPage = () => {
   const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
+  const activeOrganizationIdRef = useRef<string | null>(null);
   const {
     bugs,
     isLoading: isLoadingBugs,
@@ -355,11 +356,12 @@ export const EnvironmentPage = () => {
   }, [detailScenario]);
 
   useEffect(() => {
+    const nextOrganizationId = environmentOrganization?.id ?? null;
+    if (activeOrganizationIdRef.current === nextOrganizationId) {
+      return;
+    }
+    activeOrganizationIdRef.current = nextOrganizationId;
     setActiveOrganization(environmentOrganization ?? null);
-
-    return () => {
-      setActiveOrganization(null);
-    };
   }, [environmentOrganization, setActiveOrganization]);
 
   useEffect(() => {
