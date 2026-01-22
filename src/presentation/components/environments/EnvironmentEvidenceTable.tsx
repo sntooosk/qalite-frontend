@@ -248,7 +248,9 @@ export const EnvironmentEvidenceTable = ({
             </th>
             <th>{translation('environmentEvidenceTable.table_status_mobile')}</th>
             <th>{translation('environmentEvidenceTable.table_status_desktop')}</th>
-            {canViewDetails && <th>{translation('storeSummary.viewDetails')}</th>}
+            {canViewDetails && (
+              <th className="scenario-actions-header">{translation('storeSummary.viewDetails')}</th>
+            )}
           </tr>
         </thead>
         <tbody>
