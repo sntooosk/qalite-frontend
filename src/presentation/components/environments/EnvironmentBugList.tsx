@@ -129,26 +129,28 @@ export const EnvironmentBugList = ({
                 <td>{bug.description || translation('environmentBugList.noDescription')}</td>
                 {showActions && (
                   <td className="environment-bugs__actions">
-                    <button
-                      type="button"
-                      className="action-button"
-                      onClick={() => onEdit(bug)}
-                      disabled={isReadOnly}
-                      aria-label={translation('environmentBugList.edit')}
-                      title={translation('environmentBugList.edit')}
-                    >
-                      <PencilIcon aria-hidden className="action-button__icon" />
-                    </button>
-                    <button
-                      type="button"
-                      className="action-button action-button--danger"
-                      onClick={() => setBugToDelete(bug)}
-                      disabled={isReadOnly}
-                      aria-label={translation('environmentBugList.remove')}
-                      title={translation('environmentBugList.remove')}
-                    >
-                      <TrashIcon aria-hidden className="action-button__icon" />
-                    </button>
+                    <div className="environment-bugs__actions-content">
+                      <button
+                        type="button"
+                        className="action-button"
+                        onClick={() => onEdit(bug)}
+                        disabled={isReadOnly}
+                        aria-label={translation('environmentBugList.edit')}
+                        title={translation('environmentBugList.edit')}
+                      >
+                        <PencilIcon aria-hidden className="action-button__icon" />
+                      </button>
+                      <button
+                        type="button"
+                        className="action-button action-button--danger"
+                        onClick={() => setBugToDelete(bug)}
+                        disabled={isReadOnly}
+                        aria-label={translation('environmentBugList.remove')}
+                        title={translation('environmentBugList.remove')}
+                      >
+                        <TrashIcon aria-hidden className="action-button__icon" />
+                      </button>
+                    </div>
                   </td>
                 )}
               </tr>

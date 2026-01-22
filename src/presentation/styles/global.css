@@ -4203,17 +4203,23 @@ button.store-summary-highlight:focus-visible {
 }
 
 .environment-bugs__actions {
+  vertical-align: middle;
+}
+
+.environment-bugs__actions-content {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  height: 100%;
 }
 
 .scenario-actions {
+  vertical-align: middle;
+}
+
+.scenario-actions__content {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
 }
 
 .bug-status {

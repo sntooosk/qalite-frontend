@@ -304,14 +304,16 @@ export const EnvironmentEvidenceTable = ({
                 })}
                 {canViewDetails && (
                   <td className="scenario-actions">
-                    <button
-                      type="button"
-                      onClick={() => onViewDetails?.(scenarioId)}
-                      className="action-button action-button--primary"
-                    >
-                      <EyeIcon aria-hidden className="action-button__icon" />
-                      {translation('storeSummary.viewDetails')}
-                    </button>
+                    <div className="scenario-actions__content">
+                      <button
+                        type="button"
+                        onClick={() => onViewDetails?.(scenarioId)}
+                        className="action-button action-button--primary"
+                      >
+                        <EyeIcon aria-hidden className="action-button__icon" />
+                        {translation('storeSummary.viewDetails')}
+                      </button>
+                    </div>
                   </td>
                 )}
               </tr>
