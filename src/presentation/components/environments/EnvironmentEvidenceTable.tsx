@@ -142,6 +142,8 @@ export const EnvironmentEvidenceTable = ({
     [orderedScenarioEntries, visibleCount],
   );
   const isReadOnly = Boolean(isLocked || readOnly);
+  const columnCount = canViewDetails ? 6 : 5;
+  const columnWidth = `${100 / columnCount}%`;
   useEffect(() => {
     setVisibleCount(20);
   }, [categoryFilter, criticalityFilter, scenarioSort, scenarioEntries.length]);
@@ -227,6 +229,11 @@ export const EnvironmentEvidenceTable = ({
         </label>
       </div>
       <table className="data-table">
+        <colgroup>
+          {Array.from({ length: columnCount }).map((_, index) => (
+            <col key={`col-${index}`} style={{ width: columnWidth }} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
             <th>{translation('environmentEvidenceTable.table_titulo')}</th>

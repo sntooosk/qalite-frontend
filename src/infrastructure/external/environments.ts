@@ -928,7 +928,6 @@ export const copyEnvironmentAsMarkdown = async (
   const momentLabel = translateEnvironmentOption(environment.momento, t);
   const normalizeMarkdownCell = (value: string) =>
     value.replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
-  const normalizeMarkdownText = (value: string) => value.replace(/\r?\n/g, ' ');
   const scenarioTableRows = Object.values(environment.scenarios ?? {})
     .map((scenario) => {
       const statuses = getScenarioPlatformStatuses(scenario);
@@ -955,19 +954,18 @@ export const copyEnvironmentAsMarkdown = async (
     ? `| ${t('environmentEvidenceTable.table_titulo')} | ${t('environmentEvidenceTable.table_categoria')} | ${t('environmentEvidenceTable.table_criticidade')} | ${t('environmentEvidenceTable.table_observacao')} | ${t('environmentEvidenceTable.table_status_mobile')} | ${t('environmentEvidenceTable.table_status_desktop')} | ${t('environmentEvidenceTable.table_evidencia')} |\n| --- | --- | --- | --- | --- | --- | --- |\n${scenarioTableRows}`
     : `- ${t('environmentExport.noScenarios')}`;
 
-  const bugLines = bugs
+  const bugTableRows = bugs
     .map((bug) => {
       const scenarioLabel = getScenarioLabel(environment, bug.scenarioId);
-      const description = bug.description
-        ? ` — ${normalizeMarkdownText(bug.description)}`
-        : '';
-      return `- **${normalizeMarkdownText(bug.title)}** (${t(
-        BUG_STATUS_LABEL[bug.status],
-      )}) · ${t('environmentExport.bugScenario')}: ${normalizeMarkdownText(
-        scenarioLabel,
-      )}${description}`;
+      const description = bug.description?.trim() || t('environmentBugList.noDescription');
+      return `| ${normalizeMarkdownCell(bug.title)} | ${normalizeMarkdownCell(
+        t(BUG_STATUS_LABEL[bug.status]),
+      )} | ${normalizeMarkdownCell(scenarioLabel)} | ${normalizeMarkdownCell(description)} |`;
     })
     .join('\n');
+  const bugTable = bugTableRows
+    ? `| ${t('environmentExport.bugTitle')} | ${t('environmentExport.bugStatus')} | ${t('environmentExport.bugScenario')} | ${t('environmentExport.bugDescription')} |\n| --- | --- | --- | --- |\n${bugTableRows}`
+    : `- ${t('environmentExport.noBugs')}`;
 
   const urls = (environment.urls ?? []).map((url) => `  - ${url}`).join('\n');
   const participants = normalizedParticipants
@@ -997,7 +995,7 @@ ${environment.momento ? `- ${t('environmentExport.momentLabel')}: ${momentLabel}
 ${scenarioTable}
 
 ## ${t('environmentExport.bugsTitle')}
-${bugLines || `- ${t('environmentExport.noBugs')}`}
+${bugTable}
 
 ## ${t('environmentExport.participantsTitle')}
 ${participants || `- ${t('environmentExport.noParticipants')}`}
