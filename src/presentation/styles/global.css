@@ -4204,7 +4204,16 @@ button.store-summary-highlight:focus-visible {
 
 .environment-bugs__actions {
   display: flex;
+  align-items: center;
   gap: 0.75rem;
+  height: 100%;
+}
+
+.scenario-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
 }
 
 .bug-status {

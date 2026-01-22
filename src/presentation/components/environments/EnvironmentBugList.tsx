@@ -36,8 +36,6 @@ export const EnvironmentBugList = ({
   const isReadOnly = Boolean(isLocked);
   const [bugToDelete, setBugToDelete] = useState<EnvironmentBug | null>(null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  const columnCount = showActions ? 5 : 4;
-  const columnWidth = `${100 / columnCount}%`;
 
   const handleDelete = async (bug: EnvironmentBug) => {
     if (isReadOnly) {
@@ -109,11 +107,6 @@ export const EnvironmentBugList = ({
         <p className="section-subtitle">{translation('environmentBugList.noBugs')}</p>
       ) : (
         <table className="data-table">
-          <colgroup>
-            {Array.from({ length: columnCount }).map((_, index) => (
-              <col key={`bug-col-${index}`} style={{ width: columnWidth }} />
-            ))}
-          </colgroup>
           <thead>
             <tr>
               <th>{translation('environmentBugList.title')}</th>
