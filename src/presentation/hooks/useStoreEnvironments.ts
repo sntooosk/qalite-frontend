@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import type { Environment, EnvironmentStatus } from '../../domain/entities/environment';
-import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
+import { useEnvironmentRealtimeContext } from '../context/EnvironmentRealtimeContext';
 
 interface StatusCounts extends Record<EnvironmentStatus, number> {
   total: number;
@@ -23,24 +23,19 @@ const buildEmptyCounts = (): StatusCounts => ({
 export const useStoreEnvironments = (
   storeId: string | null | undefined,
 ): UseStoreEnvironmentsResult => {
-  const [environments, setEnvironments] = useState<Environment[]>([]);
-  const [isLoading, setIsLoading] = useState(Boolean(storeId));
+  const { getStoreState, subscribeStoreEnvironments } = useEnvironmentRealtimeContext();
 
   useEffect(() => {
     if (!storeId) {
-      setEnvironments([]);
-      setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
-    const unsubscribe = environmentService.observeAll({ storeId }, (list) => {
-      setEnvironments(list);
-      setIsLoading(false);
-    });
+    return subscribeStoreEnvironments(storeId);
+  }, [storeId, subscribeStoreEnvironments]);
 
-    return () => unsubscribe();
-  }, [storeId]);
+  const state = storeId ? getStoreState(storeId) : undefined;
+  const environments = useMemo(() => state?.value ?? [], [state?.value]);
+  const isLoading = storeId ? (state?.isLoading ?? true) : false;
 
   const statusCounts = useMemo(() => {
     if (environments.length === 0) {

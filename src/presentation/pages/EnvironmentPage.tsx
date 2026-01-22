@@ -770,7 +770,6 @@ export const EnvironmentPage = () => {
             environment={environment}
             isLocked={Boolean(isScenarioLocked)}
             onViewDetails={handleOpenScenarioDetails}
-            organizationId={environmentOrganization?.id ?? null}
           />
         </div>
 

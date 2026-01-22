@@ -2616,6 +2616,7 @@ button.store-summary-highlight:focus-visible {
   flex-direction: row;
   gap: 0.5rem;
   flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .action-button {
@@ -2631,6 +2632,7 @@ button.store-summary-highlight:focus-visible {
   font-size: 0.82rem;
   color: var(--color-text-secondary);
   cursor: pointer;
+  white-space: nowrap;
   transition:
     border-color var(--transition-base),
     color var(--transition-base),

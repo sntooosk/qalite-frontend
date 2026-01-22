@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { AuthProvider } from '../context/AuthContext';
+import { EnvironmentRealtimeProvider } from '../context/EnvironmentRealtimeContext';
 import { OrganizationBrandingProvider } from '../context/OrganizationBrandingContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import { ToastProvider } from '../context/ToastContext';
@@ -11,7 +12,9 @@ export const AppProviders = ({ children }: { children: ReactNode }) => (
     <ToastProvider>
       <AuthProvider>
         <UserPreferencesProvider>
-          <OrganizationBrandingProvider>{children}</OrganizationBrandingProvider>
+          <OrganizationBrandingProvider>
+            <EnvironmentRealtimeProvider>{children}</EnvironmentRealtimeProvider>
+          </OrganizationBrandingProvider>
         </UserPreferencesProvider>
       </AuthProvider>
     </ToastProvider>

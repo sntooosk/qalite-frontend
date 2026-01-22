@@ -32,6 +32,7 @@ import {
   normalizeCriticalityEnum,
 } from '../../shared/utils/scenarioEnums';
 import { firebaseFirestore } from '../database/firebase';
+import { getDocsCacheFirst } from '../database/firestoreCache';
 
 const STORES_COLLECTION = 'stores';
 const SCENARIOS_SUBCOLLECTION = 'scenarios';
@@ -126,7 +127,7 @@ const normalizeCategoryInput = (input: StoreCategoryInput): StoreCategoryInput =
 export const listStores = async (organizationId: string): Promise<Store[]> => {
   const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
   const storesQuery = query(storesCollection, where('organizationId', '==', organizationId));
-  const snapshot = await getDocs(storesQuery);
+  const snapshot = await getDocsCacheFirst(storesQuery);
   const stores = snapshot.docs.map((docSnapshot) => mapStore(docSnapshot.id, docSnapshot.data()));
   return stores.sort((a, b) => a.name.localeCompare(b.name));
 };
@@ -199,7 +200,7 @@ export const listScenarios = async (storeId: string): Promise<StoreScenario[]> =
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
   const scenariosQuery = query(scenariosCollection, orderBy('title'));
-  const snapshot = await getDocs(scenariosQuery);
+  const snapshot = await getDocsCacheFirst(scenariosQuery);
   return snapshot.docs.map((docSnapshot) =>
     mapScenario(storeId, docSnapshot.id, docSnapshot.data()),
   );
@@ -289,7 +290,7 @@ export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
   const suitesQuery = query(suitesCollection, orderBy('name'));
-  const snapshot = await getDocs(suitesQuery);
+  const snapshot = await getDocsCacheFirst(suitesQuery);
   return snapshot.docs.map((docSnapshot) => mapSuite(storeId, docSnapshot.id, docSnapshot.data()));
 };
 
@@ -357,7 +358,7 @@ export const listCategories = async (storeId: string): Promise<StoreCategory[]> 
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const categoriesCollection = collection(storeRef, CATEGORIES_SUBCOLLECTION);
   const categoriesQuery = query(categoriesCollection, orderBy('searchName'));
-  const snapshot = await getDocs(categoriesQuery);
+  const snapshot = await getDocsCacheFirst(categoriesQuery);
   return snapshot.docs.map((docSnapshot) =>
     mapCategory(storeId, docSnapshot.id, docSnapshot.data()),
   );

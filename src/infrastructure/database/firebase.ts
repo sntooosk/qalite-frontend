@@ -1,6 +1,6 @@
 import { FirebaseOptions, getApp, getApps, initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { enableIndexedDbPersistence, getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig: FirebaseOptions = {
@@ -17,4 +17,7 @@ const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConf
 
 export const firebaseAuth = getAuth(firebaseApp);
 export const firebaseFirestore = getFirestore(firebaseApp);
+enableIndexedDbPersistence(firebaseFirestore).catch((error) => {
+  console.warn('Firestore persistence could not be enabled.', error);
+});
 export const firebaseStorage = getStorage(firebaseApp);

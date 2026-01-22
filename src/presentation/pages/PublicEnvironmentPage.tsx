@@ -96,12 +96,7 @@ export const PublicEnvironmentPage = () => {
         </div>
 
         <div className="environment-evidence">
-          <EnvironmentEvidenceTable
-            environment={environment}
-            isLocked
-            readOnly
-            organizationId={environmentOrganization?.id ?? null}
-          />
+          <EnvironmentEvidenceTable environment={environment} isLocked readOnly />
         </div>
         <EnvironmentBugList
           environment={environment}

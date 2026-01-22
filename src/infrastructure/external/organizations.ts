@@ -20,6 +20,7 @@ import type { BrowserstackCredentials } from '../../domain/entities/browserstack
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
 import { getNormalizedEmailDomain, normalizeEmailDomain } from '../../shared/utils/email';
 import { firebaseFirestore } from '../database/firebase';
+import { getDocsCacheFirst } from '../database/firestoreCache';
 
 const ORGANIZATIONS_COLLECTION = 'organizations';
 const USERS_COLLECTION = 'users';
@@ -66,7 +67,7 @@ const normalizeBrowserstackCredentials = (
 };
 
 export const listOrganizations = async (): Promise<Organization[]> => {
-  const snapshot = await getDocs(organizationsCollection);
+  const snapshot = await getDocsCacheFirst(organizationsCollection);
   const organizations = await Promise.all(
     snapshot.docs.map((docSnapshot) => mapOrganization(docSnapshot.id, docSnapshot.data())),
   );

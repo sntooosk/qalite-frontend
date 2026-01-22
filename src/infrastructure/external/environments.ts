@@ -5,7 +5,6 @@ import {
   deleteDoc,
   doc,
   getDoc,
-  getDocs,
   onSnapshot,
   query,
   runTransaction,
@@ -32,6 +31,7 @@ import type {
 } from '../../domain/entities/environment';
 import type { UserSummary } from '../../domain/entities/user';
 import { firebaseFirestore } from '../database/firebase';
+import { getDocsCacheFirst } from '../database/firestoreCache';
 import { EnvironmentStatusError } from '../../shared/errors/firebaseErrors';
 import { BUG_STATUS_LABEL, ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
 import {
@@ -381,7 +381,7 @@ export const uploadScenarioEvidence = async (
 
 export const listEnvironmentBugs = async (environmentId: string): Promise<EnvironmentBug[]> => {
   const bugsCollectionRef = getBugCollection(environmentId);
-  const snapshot = await getDocs(bugsCollectionRef);
+  const snapshot = await getDocsCacheFirst(bugsCollectionRef);
   return snapshot.docs
     .map((docSnapshot) =>
       normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),

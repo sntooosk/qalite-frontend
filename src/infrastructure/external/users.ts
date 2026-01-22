@@ -1,7 +1,8 @@
-import { collection, doc, getDoc, getDocs, limit } from 'firebase/firestore';
+import { collection, doc, getDoc, limit } from 'firebase/firestore';
 
 import type { UserSummary } from '../../domain/entities/user';
 import { firebaseFirestore } from '../database/firebase';
+import { getDocsCacheFirst } from '../database/firestoreCache';
 
 const USERS_COLLECTION = 'users';
 const DEFAULT_DISPLAY_NAME = 'Usuário';
@@ -24,7 +25,7 @@ export const searchUsersByTerm = async (term: string): Promise<UserSummary[]> =>
   }
 
   const usersRef = collection(firebaseFirestore, USERS_COLLECTION);
-  const snapshot = await getDocs(limit(usersRef, 100));
+  const snapshot = await getDocsCacheFirst(limit(usersRef, 100));
 
   const matches: UserSummary[] = [];
 

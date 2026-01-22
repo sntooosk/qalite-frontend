@@ -1,5 +1,13 @@
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import type { Organization } from '../../domain/entities/organization';
 import type {
@@ -11,7 +19,6 @@ import type {
   StoreSuiteInput,
 } from '../../domain/entities/store';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
-import { scenarioExecutionService } from '../../application/use-cases/ScenarioExecutionUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../context/ToastContext';
@@ -56,8 +63,6 @@ import {
 import { useStoreEnvironments } from '../hooks/useStoreEnvironments';
 import { openScenarioPdf } from '../../shared/utils/storeImportExport';
 import { isAutomatedScenario } from '../../shared/utils/automation';
-import { formatDurationFromMs } from '../../shared/utils/time';
-import type { ScenarioAverageMap } from '../../infrastructure/external/scenarioExecutions';
 import { useTranslation } from 'react-i18next';
 import { buildExternalLink } from '../utils/externalLink';
 
@@ -160,6 +165,7 @@ const filterScenarios = (list: StoreScenario[], filters: ScenarioFilters) => {
 export const StoreSummaryPage = () => {
   const navigate = useNavigate();
   const { storeId } = useParams<{ storeId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, isInitializing } = useAuth();
   const { showToast } = useToast();
   const { setActiveOrganization } = useOrganizationBranding();
@@ -168,9 +174,6 @@ export const StoreSummaryPage = () => {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
   const [suites, setSuites] = useState<StoreSuite[]>([]);
-  const [scenarioTimingById, setScenarioTimingById] = useState<ScenarioAverageMap>({});
-  const [isLoadingScenarioTimings, setIsLoadingScenarioTimings] = useState(false);
-  const [scenarioTimingError, setScenarioTimingError] = useState<string | null>(null);
   const [isLoadingStore, setIsLoadingStore] = useState(true);
   const [isLoadingScenarios, setIsLoadingScenarios] = useState(true);
   const [isLoadingSuites, setIsLoadingSuites] = useState(true);
@@ -199,7 +202,41 @@ export const StoreSummaryPage = () => {
   const [suiteFormError, setSuiteFormError] = useState<string | null>(null);
   const [editingSuiteId, setEditingSuiteId] = useState<string | null>(null);
   const [isSavingSuite, setIsSavingSuite] = useState(false);
-  const [viewMode, setViewMode] = useState<'scenarios' | 'suites' | 'environments'>('scenarios');
+  const resolveViewMode = (value: string | null) => {
+    if (value === 'suites' || value === 'environments') {
+      return value;
+    }
+    return 'scenarios';
+  };
+  const [viewMode, setViewMode] = useState<'scenarios' | 'suites' | 'environments'>(() =>
+    resolveViewMode(searchParams.get('view')),
+  );
+  const handleViewModeChange = useCallback(
+    (nextView: 'scenarios' | 'suites' | 'environments') => {
+      setViewMode(nextView);
+      setSearchParams(
+        (previous) => {
+          const nextParams = new URLSearchParams(previous);
+          nextParams.set('view', nextView);
+          return nextParams;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+  useEffect(() => {
+    const normalizedView = resolveViewMode(searchParams.get('view'));
+    if (normalizedView !== viewMode) {
+      setViewMode(normalizedView);
+    }
+
+    if (!searchParams.get('view')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('view', normalizedView);
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, viewMode]);
   const [scenarioFilters, setScenarioFilters] = useState<ScenarioFilters>(emptyScenarioFilters);
   const [suiteScenarioFilters, setSuiteScenarioFilters] =
     useState<ScenarioFilters>(emptyScenarioFilters);
@@ -281,7 +318,7 @@ export const StoreSummaryPage = () => {
         description: scenarioDescription,
         isActive: viewMode === 'scenarios',
         onClick: () => {
-          setViewMode('scenarios');
+          handleViewModeChange('scenarios');
           setIsViewingSuitesOnly(false);
         },
       },
@@ -291,7 +328,7 @@ export const StoreSummaryPage = () => {
         value: suites.length.toString(),
         description: suitesDescription,
         isActive: viewMode === 'suites',
-        onClick: () => setViewMode('suites'),
+        onClick: () => handleViewModeChange('suites'),
       },
       {
         id: 'environments',
@@ -302,7 +339,7 @@ export const StoreSummaryPage = () => {
           : `${environmentInProgressCount} ${t('storeSummary.environmentsInProgress')}`,
         isActive: viewMode === 'environments',
         onClick: () => {
-          setViewMode('environments');
+          handleViewModeChange('environments');
           setIsViewingSuitesOnly(false);
         },
       },
@@ -316,7 +353,7 @@ export const StoreSummaryPage = () => {
     suites.length,
     suitesWithScenariosCount,
     viewMode,
-    setViewMode,
+    handleViewModeChange,
     setIsViewingSuitesOnly,
     t,
   ]);
@@ -521,44 +558,6 @@ export const StoreSummaryPage = () => {
     setSuitePreviewVisibleCount(PAGE_SIZE);
   }, [selectedSuitePreviewId, suitePreviewSort]);
 
-  const getScenarioTimingInfo = (scenarioId?: string | null) => {
-    if (!scenarioId) {
-      return {
-        label: '—',
-        title: t('storeSummary.scenarioNotIdentified'),
-      };
-    }
-
-    const entry = scenarioTimingById[scenarioId];
-
-    if (entry) {
-      const executionsLabel = `${entry.executions} ${t('storeSummary.execution')}${entry.executions === 1 ? '' : t('storeSummary.executions')}`;
-      return {
-        label: formatDurationFromMs(entry.averageMs),
-        title: `${executionsLabel} ${t('storeSummary.executionInfo')} ${formatDurationFromMs(entry.bestMs)}.`,
-      };
-    }
-
-    if (isLoadingScenarioTimings) {
-      return {
-        label: t('storeSummary.loading'),
-        title: t('storeSummary.loadingAverageTime'),
-      };
-    }
-
-    if (scenarioTimingError) {
-      return {
-        label: '—',
-        title: scenarioTimingError,
-      };
-    }
-
-    return {
-      label: '—',
-      title: t('storeSummary.noExecutions'),
-    };
-  };
-
   useEffect(() => {
     if (isInitializing) {
       return;
@@ -617,48 +616,11 @@ export const StoreSummaryPage = () => {
   }, [isInitializing, navigate, showToast, storeId, user, t]);
 
   useEffect(() => {
-    if (!storeId) {
-      setScenarioTimingById({});
-      setScenarioTimingError(null);
-      return;
-    }
-
-    let isMounted = true;
-    setIsLoadingScenarioTimings(true);
-    setScenarioTimingError(null);
-
-    const fetchScenarioTimings = async () => {
-      try {
-        const data = await scenarioExecutionService.getStoreScenarioAverages(storeId);
-        if (isMounted) {
-          setScenarioTimingById(data);
-        }
-      } catch (error) {
-        console.error(error);
-        if (isMounted) {
-          setScenarioTimingById({});
-          setScenarioTimingError(t('storeSummary.scenarioTimingLoadError'));
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingScenarioTimings(false);
-        }
-      }
-    };
-
-    void fetchScenarioTimings();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [storeId, t]);
-
-  useEffect(() => {
     setIsCategoryListCollapsed(true);
     setScenarioSort(null);
     setSuiteScenarioSort(null);
     setSuitePreviewSort(null);
-  }, [storeId]);
+  }, [storeId, handleViewModeChange]);
 
   const openStoreSettings = () => {
     if (!store || !canManageStoreSettings) {
@@ -743,11 +705,11 @@ export const StoreSummaryPage = () => {
     setSuiteForm(emptySuiteForm);
     setSuiteFormError(null);
     setEditingSuiteId(null);
-    setViewMode('scenarios');
+    handleViewModeChange('scenarios');
     setScenarioFilters(emptyScenarioFilters);
     setSuiteScenarioFilters(emptyScenarioFilters);
     setSelectedSuitePreviewId(null);
-  }, [storeId]);
+  }, [storeId, handleViewModeChange]);
 
   useEffect(() => {
     if (!storeId || !user) {
@@ -1389,7 +1351,7 @@ export const StoreSummaryPage = () => {
     });
     setEditingSuiteId(suite.id);
     setSuiteFormError(null);
-    setViewMode('suites');
+    handleViewModeChange('suites');
     setSelectedSuitePreviewId(suite.id);
     setIsViewingSuitesOnly(false);
   };
@@ -1929,11 +1891,6 @@ export const StoreSummaryPage = () => {
                             </button>
                           )}
                         </div>
-                        {scenarioTimingError && (
-                          <p className="form-message form-message--error" role="alert">
-                            {scenarioTimingError}
-                          </p>
-                        )}
                         {filteredScenarios.length === 0 ? (
                           <p className="section-subtitle">
                             {t('storeSummary.noScenariosFiltered')}
@@ -2470,8 +2427,6 @@ export const StoreSummaryPage = () => {
       >
         {(() => {
           const detailScenario = scenarioDetails?.scenario ?? null;
-          const detailScenarioId = detailScenario?.id ?? scenarioDetails?.scenarioId ?? null;
-          const timingInfo = getScenarioTimingInfo(detailScenarioId);
           const detailTitle = detailScenario?.title ?? t('storeSummary.deletedScenario');
           const detailCategory = detailScenario?.category ?? t('storeSummary.emptyValue');
           const detailCriticality = detailScenario
@@ -2493,12 +2448,6 @@ export const StoreSummaryPage = () => {
             <div className="scenario-details">
               <p className="scenario-details-title">{detailTitle}</p>
               <div className="scenario-details-grid">
-                <div className="scenario-details-item">
-                  <span className="scenario-details-label">{t('storeSummary.testTime')}</span>
-                  <span className="scenario-details-value" title={timingInfo.title}>
-                    {timingInfo.label}
-                  </span>
-                </div>
                 <div className="scenario-details-item">
                   <span className="scenario-details-label">{t('storeSummary.category')}</span>
                   <span className="scenario-details-value">{detailCategory}</span>
