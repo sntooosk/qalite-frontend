@@ -77,18 +77,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   useEffect(() => {
-    const unsubscribe = authService.onAuthStateChanged((currentUser) => {
-      if (currentUser && !currentUser.isEmailVerified) {
-        setUser(null);
-        setIsInitializing(false);
-        return;
-      }
+    let isMounted = true;
 
-      setUser(currentUser);
-      setIsInitializing(false);
+    const initializeSession = async () => {
+      await authService.ensurePersistence();
+
+      const unsubscribe = authService.onAuthStateChanged((currentUser) => {
+        if (!isMounted) {
+          return;
+        }
+
+        if (currentUser && !currentUser.isEmailVerified) {
+          setUser(null);
+        } else {
+          setUser(currentUser);
+        }
+
+        setIsInitializing(false);
+      });
+
+      return unsubscribe;
+    };
+
+    let cleanup: (() => void) | undefined;
+
+    void initializeSession().then((unsubscribe) => {
+      cleanup = unsubscribe;
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      cleanup?.();
+    };
   }, []);
 
   const signOutSilently = useCallback(async () => {

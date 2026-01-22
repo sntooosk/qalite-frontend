@@ -14,6 +14,7 @@ interface EnvironmentBugListProps {
   isLocked?: boolean;
   isLoading?: boolean;
   onEdit: (bug: EnvironmentBug) => void;
+  onRefresh?: () => void;
   showActions?: boolean;
   showHeader?: boolean;
 }
@@ -24,6 +25,7 @@ export const EnvironmentBugList = ({
   isLocked,
   isLoading,
   onEdit,
+  onRefresh,
   showActions = true,
   showHeader = true,
 }: EnvironmentBugListProps) => {
@@ -46,6 +48,7 @@ export const EnvironmentBugList = ({
         type: 'success',
         message: translation('environmentBugList.bugRemovedSuccess'),
       });
+      onRefresh?.();
     } catch (error) {
       console.error(error);
       showToast({

@@ -1,7 +1,7 @@
 import type { AuthRepository } from '../../domain/repositories/AuthRepository';
 import type {
-  AuthStateListener,
   AuthUser,
+  AuthStateListener,
   LoginPayload,
   RegisterPayload,
   UpdateProfilePayload,
@@ -29,6 +29,10 @@ export class AuthUseCases {
 
   getCurrent(): Promise<AuthUser | null> {
     return this.authRepository.getCurrent();
+  }
+
+  ensurePersistence(): Promise<void> {
+    return this.authRepository.ensurePersistence();
   }
 
   onAuthStateChanged(listener: AuthStateListener): () => void {

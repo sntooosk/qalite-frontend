@@ -5,6 +5,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   query,
   runTransaction,
@@ -378,24 +379,18 @@ export const uploadScenarioEvidence = async (
   return trimmedLink;
 };
 
-export const observeEnvironmentBugs = (
-  environmentId: string,
-  callback: (bugs: EnvironmentBug[]) => void,
-): (() => void) => {
+export const listEnvironmentBugs = async (environmentId: string): Promise<EnvironmentBug[]> => {
   const bugsCollectionRef = getBugCollection(environmentId);
-  return onSnapshot(bugsCollectionRef, (snapshot) => {
-    const bugs = snapshot.docs
-      .map((docSnapshot) =>
-        normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
-      )
-      .sort((first, second) => {
-        const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
-        const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
-        return secondDate - firstDate;
-      });
-
-    callback(bugs);
-  });
+  const snapshot = await getDocs(bugsCollectionRef);
+  return snapshot.docs
+    .map((docSnapshot) =>
+      normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
+    )
+    .sort((first, second) => {
+      const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
+      const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
+      return secondDate - firstDate;
+    });
 };
 
 export const createEnvironmentBug = async (

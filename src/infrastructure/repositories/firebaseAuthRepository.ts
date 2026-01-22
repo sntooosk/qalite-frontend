@@ -1,5 +1,6 @@
 import type { AuthRepository } from '../../domain/repositories/AuthRepository';
 import {
+  ensureAuthPersistence,
   getCurrentUser,
   hasRequiredRole,
   loginUser,
@@ -16,6 +17,7 @@ export const firebaseAuthRepository: AuthRepository = {
   logout: logoutUser,
   sendPasswordReset,
   getCurrent: getCurrentUser,
+  ensurePersistence: ensureAuthPersistence,
   onAuthStateChanged,
   hasRequiredRole,
   updateProfile: updateUserProfile,
