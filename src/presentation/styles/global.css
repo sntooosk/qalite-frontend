@@ -2553,10 +2553,11 @@ button.store-summary-highlight:focus-visible {
   border-spacing: 0;
   border: 1px solid var(--table-border-stronger);
   border-radius: 1.5rem;
-  overflow: hidden;
+  overflow: visible;
   background: var(--table-surface);
   color: var(--table-text);
   box-shadow: var(--table-shadow);
+  position: relative;
 }
 
 .data-table th,
@@ -2575,17 +2576,16 @@ button.store-summary-highlight:focus-visible {
   text-transform: uppercase;
 }
 
-.data-table thead {
+.data-table thead tr {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: var(--table-header-bg);
 }
 
 .data-table thead th {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 3;
 }
 
 .data-table td {
