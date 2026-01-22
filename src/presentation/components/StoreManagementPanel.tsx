@@ -363,12 +363,6 @@ export const StoreManagementPanel = ({
     setIsSyncingLegacyCategories(false);
   }, [selectedStore?.id]);
 
-  useEffect(() => {
-    if (scenarios.length === 0) {
-      setIsScenarioTableCollapsed(false);
-    }
-  }, [scenarios.length]);
-
   const resetStoreForm = () => {
     setStoreForm({ name: '', site: '' });
     setStoreFormMode('hidden');
