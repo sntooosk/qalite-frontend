@@ -20,7 +20,6 @@ import type { BrowserstackCredentials } from '../../domain/entities/browserstack
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
 import { getNormalizedEmailDomain, normalizeEmailDomain } from '../../shared/utils/email';
 import { firebaseFirestore } from '../database/firebase';
-import { logActivity } from './logs';
 
 const ORGANIZATIONS_COLLECTION = 'organizations';
 const USERS_COLLECTION = 'users';
@@ -107,14 +106,6 @@ export const createOrganization = async (
     updatedAt: serverTimestamp(),
   });
 
-  await logActivity({
-    organizationId: docRef.id,
-    entityId: docRef.id,
-    entityType: 'organization',
-    action: 'create',
-    message: `Organização criada: ${trimmedName}`,
-  });
-
   const snapshot = await getDoc(docRef);
   return mapOrganization(snapshot.id, snapshot.data() ?? {});
 };
@@ -139,14 +130,6 @@ export const updateOrganization = async (
   }
 
   await updateDoc(organizationRef, updatePayload);
-
-  await logActivity({
-    organizationId: id,
-    entityId: id,
-    entityType: 'organization',
-    action: 'update',
-    message: `Organização atualizada: ${updatePayload.name}`,
-  });
 
   const snapshot = await getDoc(organizationRef);
   return mapOrganization(snapshot.id, snapshot.data() ?? {});
@@ -177,14 +160,6 @@ export const deleteOrganization = async (id: string): Promise<void> => {
 
   batch.delete(organizationRef);
   await batch.commit();
-
-  await logActivity({
-    organizationId: id,
-    entityId: id,
-    entityType: 'organization',
-    action: 'delete',
-    message: `Organização removida: ${(snapshot.data()?.name as string | undefined) ?? id}`,
-  });
 };
 
 export const addUserToOrganization = async (
@@ -194,8 +169,6 @@ export const addUserToOrganization = async (
   if (!normalizedEmail) {
     throw new Error('Informe um e-mail válido.');
   }
-
-  let organizationName = '';
 
   const usersRef = collection(firebaseFirestore, USERS_COLLECTION);
   const userQuery = query(usersRef, where('email', '==', normalizedEmail), limit(1));
@@ -218,8 +191,6 @@ export const addUserToOrganization = async (
     if (!organizationSnapshot.exists()) {
       throw new Error('Organização não encontrada.');
     }
-
-    organizationName = (organizationSnapshot.data()?.name as string | undefined) ?? '';
 
     const currentMembers = (organizationSnapshot.data()?.members as string[] | undefined) ?? [];
 
@@ -263,14 +234,6 @@ export const addUserToOrganization = async (
     };
   });
 
-  await logActivity({
-    organizationId: payload.organizationId,
-    entityId: payload.organizationId,
-    entityType: 'organization',
-    action: 'participation',
-    message: `Membro adicionado: ${member.displayName || member.email} em ${organizationName || 'organização'}`,
-  });
-
   return member;
 };
 
@@ -280,17 +243,12 @@ export const removeUserFromOrganization = async (
   const organizationRef = doc(firebaseFirestore, ORGANIZATIONS_COLLECTION, payload.organizationId);
   const userRef = doc(firebaseFirestore, USERS_COLLECTION, payload.userId);
 
-  let organizationName = '';
-  let removedUserLabel: string | null = null;
-
   await runTransaction(firebaseFirestore, async (transaction) => {
     const organizationSnapshot = await transaction.get(organizationRef);
 
     if (!organizationSnapshot.exists()) {
       throw new Error('Organização não encontrada.');
     }
-
-    organizationName = (organizationSnapshot.data()?.name as string | undefined) ?? '';
 
     const userSnapshot = await transaction.get(userRef);
 
@@ -300,8 +258,6 @@ export const removeUserFromOrganization = async (
 
     const userData = userSnapshot.data();
     const currentOrganizationId = (userData.organizationId as string | null) ?? null;
-
-    removedUserLabel = (userData.displayName as string | undefined) ?? userData.email;
 
     transaction.update(organizationRef, {
       members: arrayRemove(payload.userId),
@@ -318,14 +274,6 @@ export const removeUserFromOrganization = async (
         { merge: true },
       );
     }
-  });
-
-  await logActivity({
-    organizationId: payload.organizationId,
-    entityId: payload.organizationId,
-    entityType: 'organization',
-    action: 'participation',
-    message: `Membro removido: ${removedUserLabel ?? payload.userId} de ${organizationName || 'organização'}`,
   });
 };
 
@@ -382,8 +330,6 @@ export const addUserToOrganizationByEmailDomain = async (
   const userRef = doc(firebaseFirestore, USERS_COLLECTION, user.uid);
 
   let assignedOrganizationId: string | null = null;
-  let addedToOrganization = false;
-
   await runTransaction(firebaseFirestore, async (transaction) => {
     const organizationSnapshot = await transaction.get(organizationRef);
 
@@ -409,7 +355,6 @@ export const addUserToOrganizationByEmailDomain = async (
         members: arrayUnion(user.uid),
         updatedAt: serverTimestamp(),
       });
-      addedToOrganization = true;
     }
 
     transaction.set(
@@ -426,16 +371,6 @@ export const addUserToOrganizationByEmailDomain = async (
 
     assignedOrganizationId = resolvedOrganizationId;
   });
-
-  if (addedToOrganization) {
-    await logActivity({
-      organizationId: organization.id,
-      entityId: organization.id,
-      entityType: 'organization',
-      action: 'participation',
-      message: `Membro adicionado automaticamente: ${user.displayName || user.email}`,
-    });
-  }
 
   return assignedOrganizationId;
 };
