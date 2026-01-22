@@ -64,11 +64,7 @@ export class StoreUseCases {
     return this.storeRepository.createSuite(suite);
   }
 
-  updateSuite(
-    storeId: string,
-    suiteId: string,
-    suite: StoreSuiteInput,
-  ): Promise<StoreSuite> {
+  updateSuite(storeId: string, suiteId: string, suite: StoreSuiteInput): Promise<StoreSuite> {
     return this.storeRepository.updateSuite(storeId, suiteId, suite);
   }
 
