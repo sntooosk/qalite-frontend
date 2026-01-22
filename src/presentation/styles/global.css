@@ -2573,9 +2573,19 @@ button.store-summary-highlight:focus-visible {
   font-size: 0.78rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.data-table thead {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 2;
+  background: var(--table-header-bg);
+}
+
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .data-table td {
