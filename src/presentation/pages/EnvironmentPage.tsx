@@ -268,10 +268,7 @@ export const EnvironmentPage = () => {
   const shouldAutoJoinFromInvite = inviteParam === 'true' || inviteParam === '1';
   const detailScenario = scenarioDetailsId ? environment?.scenarios?.[scenarioDetailsId] : null;
   const detailScenarioStatus = detailScenario ? getScenarioPlatformStatuses(detailScenario) : null;
-  const isDetailScenarioRunning = Boolean(
-    detailScenarioStatus &&
-      Object.values(detailScenarioStatus).some((status) => status === 'em_andamento'),
-  );
+  const canManageEvidence = !isScenarioLocked;
   const formatAutomationLabel = (value?: string | null) => {
     const labelKey = getAutomationLabelKey(value);
     if (labelKey) {
@@ -905,7 +902,7 @@ export const EnvironmentPage = () => {
                 >
                   {translation('environmentEvidenceTable.evidencia_abrir')}
                 </a>
-              ) : isDetailScenarioRunning && !isScenarioLocked ? (
+              ) : canManageEvidence ? (
                 <div className="scenario-evidence-actions">
                   <input
                     type="url"
