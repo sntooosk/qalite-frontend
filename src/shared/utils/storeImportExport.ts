@@ -290,24 +290,37 @@ const createWorkbookBlob = (sheets: WorksheetDefinition[], exportedAt: string) =
 };
 
 const buildScenarioSheets = (payload: StoreExportPayload): WorksheetDefinition[] => {
+  const t = i18n.t.bind(i18n);
+  const locale = i18n.language;
   const summaryRows: string[][] = [
-    ['Loja', payload.store.name],
-    ['Site', payload.store.site],
-    ['Ambiente', payload.store.stage || 'Não informado'],
-    ['Quantidade de cenários', `${payload.scenarios.length}`],
-    ['Exportado em', formatDateTime(payload.exportedAt)],
+    [t('storeSummary.store'), payload.store.name],
+    [t('storeSummary.siteLabel'), payload.store.site || t('storeSummary.notProvided')],
+    [t('storeSummary.environmentLabel'), payload.store.stage || t('storeSummary.notInformed')],
+    [t('storeSummary.scenarioCountLabel'), `${payload.scenarios.length}`],
+    [
+      t('storeSummary.exportedAtLabel'),
+      formatDateTime(payload.exportedAt, { locale, emptyLabel: t('storeSummary.notInformed') }),
+    ],
   ];
 
   const scenarioRows: string[][] = [
-    ['#', 'Título', 'Categoria', 'Automação', 'Criticidade', 'Observação', 'BDD'],
+    [
+      '#',
+      t('storeSummary.title'),
+      t('storeSummary.category'),
+      t('storeSummary.automation'),
+      t('storeSummary.criticality'),
+      t('storeSummary.observation'),
+      t('storeSummary.bdd'),
+    ],
     ...payload.scenarios.map((scenario: StoreScenario, index: number) => [
       `${index + 1}`,
-      scenario.title || '—',
-      scenario.category || '—',
-      scenario.automation || '—',
-      scenario.criticality || '—',
-      scenario.observation || '—',
-      scenario.bdd || '—',
+      scenario.title || t('storeSummary.emptyValue'),
+      scenario.category || t('storeSummary.emptyValue'),
+      formatAutomationLabel(scenario.automation, t),
+      formatCriticalityLabel(scenario.criticality, t),
+      scenario.observation || t('storeSummary.emptyValue'),
+      scenario.bdd || t('storeSummary.emptyValue'),
     ]),
   ];
 
@@ -477,7 +490,12 @@ export const openScenarioPdf = (
           </div>
           <div>
             <span>${escapeHtml(t('storeSummary.exportedAtLabel'))}</span>
-            <strong>${escapeHtml(formatDateTime(payload.exportedAt))}</strong>
+            <strong>${escapeHtml(
+              formatDateTime(payload.exportedAt, {
+                locale: i18n.language,
+                emptyLabel: t('storeSummary.notInformed'),
+              }),
+            )}</strong>
           </div>
         </div>
         <table>
@@ -514,6 +532,31 @@ export const downloadScenarioWorkbook = (payload: StoreExportPayload, fileName: 
   const workbookBlob = createWorkbookBlob(
     buildScenarioSheets(payload),
     new Date(payload.exportedAt).toISOString(),
+  );
+  downloadBlobFile(workbookBlob, fileName);
+};
+
+interface EnvironmentWorkbookOptions {
+  headers: string[];
+  rows: string[][];
+  fileName: string;
+  sheetName?: string;
+}
+
+export const downloadEnvironmentWorkbook = ({
+  headers,
+  rows,
+  fileName,
+  sheetName = 'Report',
+}: EnvironmentWorkbookOptions) => {
+  const workbookBlob = createWorkbookBlob(
+    [
+      {
+        name: sheetName,
+        rows: [headers, ...rows],
+      },
+    ],
+    new Date().toISOString(),
   );
   downloadBlobFile(workbookBlob, fileName);
 };

@@ -22,15 +22,18 @@ export const PublicEnvironmentPage = () => {
     environment?.storeId ?? null,
   );
   const { setActiveOrganization } = useOrganizationBranding();
+  const { t, i18n } = useTranslation();
   const { formattedTime, formattedStart, formattedEnd } = useTimeTracking(
     environment?.timeTracking ?? null,
     Boolean(environment?.status === 'in_progress'),
+    {
+      translation: t,
+      locale: i18n.language,
+    },
   );
   const { bugs, isLoading: isLoadingBugs } = useEnvironmentBugs(environment?.id ?? null);
   const { progressPercentage, progressLabel, scenarioCount, headerMeta, urls } =
     useEnvironmentDetails(environment, bugs);
-
-  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     setActiveOrganization(environmentOrganization ?? null);
