@@ -30,6 +30,10 @@ export class AuthUseCases {
     return this.authRepository.getCurrent();
   }
 
+  subscribeToAuthChanges(onChange: (user: AuthUser | null) => void): () => void {
+    return this.authRepository.subscribeToAuthChanges(onChange);
+  }
+
   hasRequiredRole(user: AuthUser | null, allowedRoles: AuthUser['role'][]): boolean {
     return this.authRepository.hasRequiredRole(user, allowedRoles);
   }

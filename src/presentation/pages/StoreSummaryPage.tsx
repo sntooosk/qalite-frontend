@@ -194,7 +194,6 @@ export const StoreSummaryPage = () => {
   const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
   const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
-  const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const [suiteForm, setSuiteForm] = useState<StoreSuiteInput>(emptySuiteForm);
   const [suiteFormError, setSuiteFormError] = useState<string | null>(null);
@@ -735,9 +734,7 @@ export const StoreSummaryPage = () => {
       closeStoreSettings();
       showToast({ type: 'success', message: t('storeSummary.storeRemoveSuccess') });
       const redirectTo =
-        user?.role === 'admin'
-          ? `/admin/organizations?organizationId=${store.organizationId}`
-          : '/dashboard';
+        user?.role === 'admin' ? `/admin/organizations?Id=${store.organizationId}` : '/dashboard';
       navigate(redirectTo, { replace: true });
     } catch (error) {
       console.error(error);
@@ -1499,11 +1496,7 @@ export const StoreSummaryPage = () => {
     if (user?.role === 'admin') {
       const targetOrganizationId = organization?.id ?? store?.organizationId;
 
-      navigate(
-        targetOrganizationId
-          ? `/admin/organizations?organizationId=${targetOrganizationId}`
-          : '/admin',
-      );
+      navigate(targetOrganizationId ? `/admin/organizations?Id=${targetOrganizationId}` : '/admin');
       return;
     }
 
@@ -1880,17 +1873,6 @@ export const StoreSummaryPage = () => {
                               {t('storeSummary.exportPdf')}
                             </Button>
                           </div>
-                          {scenarios.length > 0 && (
-                            <button
-                              type="button"
-                              className="scenario-table-toggle"
-                              onClick={() => setIsScenarioTableCollapsed((previous) => !previous)}
-                            >
-                              {isScenarioTableCollapsed
-                                ? t('storeSummary.maxTable')
-                                : t('storeSummary.minTable')}
-                            </button>
-                          )}
                         </>
                       ) : null}
                     </div>
@@ -1898,9 +1880,7 @@ export const StoreSummaryPage = () => {
                 )}
                 <div className="scenario-table-wrapper">
                   {viewMode === 'scenarios' ? (
-                    isScenarioTableCollapsed ? (
-                      <p className="section-subtitle">{t('storeSummary.tableCollapsed')}</p>
-                    ) : isLoadingScenarios ? (
+                    isLoadingScenarios ? (
                       <p className="section-subtitle">{t('storeSummary.scenariosLoading')}</p>
                     ) : scenarios.length === 0 ? (
                       <p className="section-subtitle">

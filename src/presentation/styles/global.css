@@ -3554,6 +3554,7 @@ button.store-summary-highlight:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-height: 420px;
 }
 
 .create-card__header {

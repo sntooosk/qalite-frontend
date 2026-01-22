@@ -98,7 +98,6 @@ export const StoreManagementPanel = ({
   const [updatingCategoryId, setUpdatingCategoryId] = useState<string | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
   const [isCategoryListCollapsed, setIsCategoryListCollapsed] = useState(true);
-  const [isScenarioTableCollapsed, setIsScenarioTableCollapsed] = useState(false);
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
   const scenarioFormRef = useRef<HTMLFormElement | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -1249,22 +1248,9 @@ export const StoreManagementPanel = ({
 
             <div className="scenario-table-header">
               <h3 className="section-subtitle">{t('storeManagement.scenarioTableTitle')}</h3>
-              {scenarios.length > 0 && (
-                <button
-                  type="button"
-                  className="scenario-table-toggle"
-                  onClick={() => setIsScenarioTableCollapsed((previous) => !previous)}
-                >
-                  {isScenarioTableCollapsed
-                    ? t('storeManagement.scenarioTableExpand')
-                    : t('storeManagement.scenarioTableCollapse')}
-                </button>
-              )}
             </div>
             <div className="scenario-table-wrapper">
-              {isScenarioTableCollapsed ? (
-                <p className="section-subtitle">{t('storeManagement.scenarioTableCollapsed')}</p>
-              ) : isLoadingScenarios ? (
+              {isLoadingScenarios ? (
                 <p className="section-subtitle">{t('storeManagement.loadingScenarios')}</p>
               ) : scenarios.length === 0 ? (
                 <p className="section-subtitle">
@@ -1373,7 +1359,7 @@ export const StoreManagementPanel = ({
                 </table>
               )}
             </div>
-            {!isScenarioTableCollapsed && scenarios.length > 0 && (
+            {scenarios.length > 0 && (
               <PaginationControls
                 total={displayedScenarios.length}
                 visible={paginatedScenarios.length}

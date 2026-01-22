@@ -99,7 +99,7 @@ export const AdminStoresPage = () => {
       try {
         const data = await organizationService.list();
         setOrganizations(data);
-        const organizationFromParam = searchParams.get('organizationId');
+        const organizationFromParam = searchParams.get('Id');
         const hasValidOrganizationParam = Boolean(
           organizationFromParam && data.some((item) => item.id === organizationFromParam),
         );
@@ -137,7 +137,7 @@ export const AdminStoresPage = () => {
         setIsLoadingStores(true);
         const data = await storeService.listByOrganization(selectedOrganizationId);
         setStores(data);
-        setSearchParams({ organizationId: selectedOrganizationId });
+        setSearchParams({ Id: selectedOrganizationId });
       } catch (error) {
         console.error(error);
         showToast({
