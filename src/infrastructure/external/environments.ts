@@ -926,6 +926,9 @@ export const copyEnvironmentAsMarkdown = async (
   const statusLabel = t(ENVIRONMENT_STATUS_LABEL[environment.status]);
   const testTypeLabel = translateEnvironmentOption(environment.tipoTeste, t);
   const momentLabel = translateEnvironmentOption(environment.momento, t);
+  const normalizeMarkdownCell = (value: string) =>
+    value.replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
+  const normalizeMarkdownText = (value: string) => value.replace(/\r?\n/g, ' ');
   const scenarioTableRows = Object.values(environment.scenarios ?? {})
     .map((scenario) => {
       const statuses = getScenarioPlatformStatuses(scenario);
@@ -939,7 +942,13 @@ export const copyEnvironmentAsMarkdown = async (
         : evidenceLabel;
       const observation =
         scenario.observacao?.trim() || t('environmentEvidenceTable.observacao_none');
-      return `| ${scenario.titulo} | ${scenario.categoria} | ${scenario.criticidade} | ${observation} | ${statusMobile} | ${statusDesktop} | ${evidenceLink} |`;
+      return `| ${normalizeMarkdownCell(scenario.titulo)} | ${normalizeMarkdownCell(
+        scenario.categoria,
+      )} | ${normalizeMarkdownCell(scenario.criticidade)} | ${normalizeMarkdownCell(
+        observation,
+      )} | ${normalizeMarkdownCell(statusMobile)} | ${normalizeMarkdownCell(
+        statusDesktop,
+      )} | ${evidenceLink} |`;
     })
     .join('\n');
   const scenarioTable = scenarioTableRows
@@ -949,8 +958,14 @@ export const copyEnvironmentAsMarkdown = async (
   const bugLines = bugs
     .map((bug) => {
       const scenarioLabel = getScenarioLabel(environment, bug.scenarioId);
-      const description = bug.description ? ` — ${bug.description}` : '';
-      return `- **${bug.title}** (${t(BUG_STATUS_LABEL[bug.status])}) · ${t('environmentExport.bugScenario')}: ${scenarioLabel}${description}`;
+      const description = bug.description
+        ? ` — ${normalizeMarkdownText(bug.description)}`
+        : '';
+      return `- **${normalizeMarkdownText(bug.title)}** (${t(
+        BUG_STATUS_LABEL[bug.status],
+      )}) · ${t('environmentExport.bugScenario')}: ${normalizeMarkdownText(
+        scenarioLabel,
+      )}${description}`;
     })
     .join('\n');
 
