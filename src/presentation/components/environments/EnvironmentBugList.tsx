@@ -7,6 +7,7 @@ import { useToast } from '../../context/ToastContext';
 import { BUG_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 import { ConfirmDeleteModal } from '../ConfirmDeleteModal';
 import { useTranslation } from 'react-i18next';
+import { PencilIcon, TrashIcon } from '../icons';
 
 interface EnvironmentBugListProps {
   environment: Environment;
@@ -130,18 +131,20 @@ export const EnvironmentBugList = ({
                   <td className="environment-bugs__actions">
                     <button
                       type="button"
-                      className="link-button"
+                      className="action-button"
                       onClick={() => onEdit(bug)}
                       disabled={isReadOnly}
                     >
+                      <PencilIcon aria-hidden className="action-button__icon" />
                       {translation('environmentBugList.edit')}
                     </button>
                     <button
                       type="button"
-                      className="link-button link-button--danger"
+                      className="action-button action-button--danger"
                       onClick={() => setBugToDelete(bug)}
                       disabled={isReadOnly}
                     >
+                      <TrashIcon aria-hidden className="action-button__icon" />
                       {translation('environmentBugList.remove')}
                     </button>
                   </td>

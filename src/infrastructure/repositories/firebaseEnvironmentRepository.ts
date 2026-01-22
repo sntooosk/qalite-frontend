@@ -16,6 +16,7 @@ import {
   updateScenarioStatus,
   uploadScenarioEvidence,
   exportEnvironmentAsPDF,
+  exportEnvironmentAsExcel,
 } from '../external/environments';
 
 export const firebaseEnvironmentRepository: EnvironmentRepository = {
@@ -34,5 +35,6 @@ export const firebaseEnvironmentRepository: EnvironmentRepository = {
   deleteBug: deleteEnvironmentBug,
   transitionStatus: transitionEnvironmentStatus,
   exportAsPDF: exportEnvironmentAsPDF,
+  exportAsExcel: exportEnvironmentAsExcel,
   copyAsMarkdown: copyEnvironmentAsMarkdown,
 };

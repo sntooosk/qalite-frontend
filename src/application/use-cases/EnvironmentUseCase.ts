@@ -102,6 +102,14 @@ export class EnvironmentUseCases {
     return this.environmentRepository.exportAsPDF(environment, bugs, participantProfiles);
   }
 
+  exportAsExcel(
+    environment: Environment,
+    bugs?: EnvironmentBug[],
+    participantProfiles?: UserSummary[],
+  ): void {
+    return this.environmentRepository.exportAsExcel(environment, bugs, participantProfiles);
+  }
+
   copyAsMarkdown(
     environment: Environment,
     bugs?: EnvironmentBug[],

@@ -552,6 +552,7 @@
       "copySuccess": "Link copied to clipboard.",
       "copyError": "Unable to copy the link.",
       "exportPDF": "Export PDF",
+      "exportExcel": "Export Excel (.xlsx)",
       "copyMarkdown": "Copy Markdown",
       "copying": "Copying...",
       "copyMarkdownSuccess": "Markdown copied to clipboard.",
@@ -575,6 +576,7 @@
       "slack.fields.suite": "Suite",
       "slack.fields.participants": "Participants",
       "slack.fields.monitoredUrls": "Monitored URLs",
+      "slack.fields.environmentLink": "Environment link",
       "share.invite": "Invite to environment",
       "share.publicLink": "Copy public link",
       "scenarios.title": "Scenarios and evidence",
@@ -712,6 +714,7 @@
       "startLabel": "Test start",
       "endLabel": "Test end",
       "totalLabel": "Total time",
+      "exportedAtLabel": "Exported at",
       "suiteLabel": "Suite",
       "totalScenariosLabel": "Total scenarios",
       "bugsLabel": "Reported bugs",
@@ -722,6 +725,12 @@
       "participantsTitle": "Participants",
       "scenariosTitle": "Scenarios",
       "bugsTitle": "Reported bugs",
+      "fileSuffix": "environment",
+      "summarySheet": "Summary",
+      "scenariosSheet": "Scenarios",
+      "bugsSheet": "Bugs",
+      "participantsSheet": "Participants",
+      "urlsSheet": "URLs",
       "participantName": "Name",
       "participantEmail": "Email",
       "bugTitle": "Title",
@@ -733,6 +742,11 @@
       "noScenarios": "No scenarios registered.",
       "noDescription": "No description",
       "printError": "Unable to open the print window."
+    },
+    "time": {
+      "notRecorded": "Not recorded",
+      "inProgress": "In progress",
+      "notFinished": "Not finished"
     },
 
     "summary": {

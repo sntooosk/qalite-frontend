@@ -8,13 +8,20 @@ import type { Environment, EnvironmentStatus } from '../../../domain/entities/en
 import type { StoreScenario, StoreSuite } from '../../../domain/entities/store';
 import type { UserSummary } from '../../../domain/entities/user';
 import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
+import { slackService } from '../../../application/use-cases/SlackUseCase';
 import { userService } from '../../../application/use-cases/UserUseCase';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../hooks/useAuth';
+import { useStoreOrganizationBranding } from '../../hooks/useStoreOrganizationBranding';
+import { getElapsedMilliseconds, formatDurationFromMs } from '../../../shared/utils/time';
 import { PaginationControls } from '../PaginationControls';
 import { EnvironmentCard } from './EnvironmentCard';
 import { CreateEnvironmentCard } from './CreateEnvironmentCard';
 import { ArchiveIcon } from '../icons';
+import {
+  buildSlackTaskSummaryPayload,
+  getEnvironmentScenarioProgress,
+} from '../../utils/environmentSlackSummary';
 
 interface EnvironmentKanbanProps {
   storeId: string;
@@ -42,8 +49,11 @@ export const EnvironmentKanban = ({
   const [userProfilesMap, setUserProfilesMap] = useState<Record<string, UserSummary>>({});
   const [isArchiveMinimized, setIsArchiveMinimized] = useState(true);
   const [archivedVisibleCount, setArchivedVisibleCount] = useState(5);
+  const [isSendingSlackSummary, setIsSendingSlackSummary] = useState(false);
   const { user } = useAuth();
+  const { organization } = useStoreOrganizationBranding(storeId);
   const { t } = useTranslation();
+  const slackWebhookUrl = organization?.slackWebhookUrl?.trim() || null;
 
   useEffect(() => {
     let isMounted = true;
@@ -161,6 +171,56 @@ export const EnvironmentKanban = ({
     event.preventDefault();
   };
 
+  const buildPublicLink = (environment: Environment) => {
+    if (typeof window === 'undefined') {
+      return '';
+    }
+
+    return `${window.location.origin}/environments/${environment.id}/public`;
+  };
+
+  const sendSlackSummary = async (environment: Environment) => {
+    if (!slackWebhookUrl || isSendingSlackSummary) {
+      return;
+    }
+
+    setIsSendingSlackSummary(true);
+
+    try {
+      const { total, executed } = getEnvironmentScenarioProgress(environment);
+      const totalTimeMs = getElapsedMilliseconds(
+        environment.timeTracking ?? null,
+        environment.status === 'in_progress',
+      );
+      const formattedTime = formatDurationFromMs(totalTimeMs);
+      const participantProfiles = (environment.participants ?? [])
+        .map((id) => userProfilesMap[id])
+        .filter((profile): profile is UserSummary => Boolean(profile));
+      const payload = buildSlackTaskSummaryPayload(
+        environment,
+        {
+          formattedTime,
+          totalTimeMs,
+          scenarioCount: total,
+          executedScenariosCount: executed,
+          progressLabel: '',
+          publicLink: buildPublicLink(environment),
+          urls: environment.urls ?? [],
+          bugsCount: environment.bugs ?? 0,
+          participantProfiles,
+        },
+        t,
+      );
+
+      payload.webhookUrl = slackWebhookUrl;
+      await slackService.sendTaskSummary(payload);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSendingSlackSummary(false);
+    }
+  };
+
   const moveEnvironment = async (environment: Environment, status: EnvironmentStatus) => {
     if (environment.status === status) {
       return;
@@ -177,6 +237,9 @@ export const EnvironmentKanban = ({
         targetStatus: status,
         currentUserId: user?.uid ?? null,
       });
+      if (status === 'done') {
+        await sendSlackSummary(environment);
+      }
       showToast({ type: 'success', message: t('environmentKanban.statusUpdate') });
     } catch (error) {
       if (error instanceof EnvironmentStatusError && error.code === 'PENDING_SCENARIOS') {

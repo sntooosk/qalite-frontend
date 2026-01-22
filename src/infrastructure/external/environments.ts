@@ -41,6 +41,7 @@ import {
   getElapsedMilliseconds,
 } from '../../shared/utils/time';
 import { translateEnvironmentOption } from '../../shared/utils/environmentOptions';
+import { downloadEnvironmentWorkbook } from '../../shared/utils/storeImportExport';
 import i18n from '../../lib/i18n';
 import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
 
@@ -308,7 +309,7 @@ export const removeEnvironmentUser = async (
 
     const presentUsers: string[] = data?.presentUsersIds ?? [];
     const participants: string[] = data?.participants ?? [];
-    if (!presentUsers.includes(userId)) {
+    if (!presentUsers.includes(userId) && !participants.includes(userId)) {
       return;
     }
 
@@ -398,13 +399,29 @@ export const createEnvironmentBug = async (
   payload: CreateEnvironmentBugInput,
 ): Promise<EnvironmentBug> => {
   const bugsCollectionRef = getBugCollection(environmentId);
-  const docRef = await addDoc(bugsCollectionRef, {
-    ...payload,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  const bugRef = doc(bugsCollectionRef);
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+
+  await runTransaction(firebaseFirestore, async (transaction) => {
+    const environmentSnapshot = await transaction.get(environmentRef);
+    if (!environmentSnapshot.exists()) {
+      throw new Error('Ambiente não encontrado.');
+    }
+
+    const currentBugs = Number(environmentSnapshot.data()?.bugs ?? 0);
+
+    transaction.set(bugRef, {
+      ...payload,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    transaction.update(environmentRef, {
+      bugs: Math.max(0, currentBugs + 1),
+      updatedAt: serverTimestamp(),
+    });
   });
 
-  const snapshot = await getDoc(docRef);
+  const snapshot = await getDoc(bugRef);
   const bug = normalizeBug(snapshot.id, (snapshot.data() ?? {}) as Record<string, unknown>);
 
   return bug;
@@ -429,6 +446,7 @@ export const updateEnvironmentBug = async (
 };
 
 export const deleteEnvironmentBug = async (environmentId: string, bugId: string): Promise<void> => {
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
   const bugRef = doc(
     firebaseFirestore,
     ENVIRONMENTS_COLLECTION,
@@ -436,7 +454,28 @@ export const deleteEnvironmentBug = async (environmentId: string, bugId: string)
     BUGS_SUBCOLLECTION,
     bugId,
   );
-  await deleteDoc(bugRef);
+
+  await runTransaction(firebaseFirestore, async (transaction) => {
+    const [environmentSnapshot, bugSnapshot] = await Promise.all([
+      transaction.get(environmentRef),
+      transaction.get(bugRef),
+    ]);
+
+    if (!bugSnapshot.exists()) {
+      return;
+    }
+
+    if (!environmentSnapshot.exists()) {
+      return;
+    }
+
+    const currentBugs = Number(environmentSnapshot.data()?.bugs ?? 0);
+    transaction.delete(bugRef);
+    transaction.update(environmentRef, {
+      bugs: Math.max(0, currentBugs - 1),
+      updatedAt: serverTimestamp(),
+    });
+  });
 };
 
 interface TransitionEnvironmentStatusParams {
@@ -589,6 +628,8 @@ const escapeHtml = (value: string) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+
+const escapeMarkdown = (value: string) => value.replace(/\r?\n/g, ' ').replace(/\|/g, '\\|').trim();
 
 const URL_PATTERN = /\b((https?:\/\/|www\.)[^\s]+|[a-z0-9.-]+\.[a-z]{2,}(?:\/[^\s]*)?)/gi;
 
@@ -877,6 +918,31 @@ export const exportEnvironmentAsPDF = (
   printWindow.print();
 };
 
+export const exportEnvironmentAsExcel = (
+  environment: Environment,
+  bugs: EnvironmentBug[] = [],
+  participantProfiles: UserSummary[] = [],
+): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const t = i18n.t.bind(i18n);
+  const identifier = environment.identificador?.trim() || t('dynamic.identifierFallback');
+  const normalizedFileName = identifier.replace(/\s+/g, '_');
+  const fileName = `${normalizedFileName}_${t('environmentExport.fileSuffix')}.xlsx`;
+
+  downloadEnvironmentWorkbook(
+    {
+      environment,
+      bugs,
+      participants: participantProfiles,
+      exportedAt: new Date().toISOString(),
+    },
+    fileName,
+  );
+};
+
 export const copyEnvironmentAsMarkdown = async (
   environment: Environment,
   bugs: EnvironmentBug[] = [],
@@ -901,12 +967,18 @@ export const copyEnvironmentAsMarkdown = async (
       const evidenceLabel = scenario.evidenciaArquivoUrl
         ? t('environmentEvidenceTable.evidencia_abrir')
         : t('environmentEvidenceTable.evidencia_sem');
-      const evidenceLink = scenario.evidenciaArquivoUrl
-        ? `[${evidenceLabel}](${scenario.evidenciaArquivoUrl})`
-        : evidenceLabel;
-      const observation =
-        scenario.observacao?.trim() || t('environmentEvidenceTable.observacao_none');
-      return `| ${scenario.titulo} | ${scenario.categoria} | ${scenario.criticidade} | ${observation} | ${statusMobile} | ${statusDesktop} | ${evidenceLink} |`;
+      const evidenceUrl = scenario.evidenciaArquivoUrl?.trim();
+      const evidenceLink = evidenceUrl
+        ? `[${escapeMarkdown(evidenceLabel)}](${encodeURI(evidenceUrl)})`
+        : escapeMarkdown(evidenceLabel);
+      const observation = escapeMarkdown(
+        scenario.observacao?.trim() || t('environmentEvidenceTable.observacao_none'),
+      );
+      return `| ${escapeMarkdown(scenario.titulo)} | ${escapeMarkdown(
+        scenario.categoria,
+      )} | ${escapeMarkdown(scenario.criticidade)} | ${observation} | ${escapeMarkdown(
+        statusMobile,
+      )} | ${escapeMarkdown(statusDesktop)} | ${evidenceLink} |`;
     })
     .join('\n');
   const scenarioTable = scenarioTableRows
@@ -915,17 +987,20 @@ export const copyEnvironmentAsMarkdown = async (
 
   const bugLines = bugs
     .map((bug) => {
-      const scenarioLabel = getScenarioLabel(environment, bug.scenarioId);
-      const description = bug.description ? ` — ${bug.description}` : '';
-      return `- **${bug.title}** (${t(BUG_STATUS_LABEL[bug.status])}) · ${t('environmentExport.bugScenario')}: ${scenarioLabel}${description}`;
+      const scenarioLabel = escapeMarkdown(getScenarioLabel(environment, bug.scenarioId));
+      const description = bug.description ? ` — ${escapeMarkdown(bug.description)}` : '';
+      return `- **${escapeMarkdown(bug.title)}** (${escapeMarkdown(
+        t(BUG_STATUS_LABEL[bug.status]),
+      )}) · ${escapeMarkdown(t('environmentExport.bugScenario'))}: ${scenarioLabel}${description}`;
     })
     .join('\n');
 
-  const urls = (environment.urls ?? []).map((url) => `  - ${url}`).join('\n');
+  const urls = (environment.urls ?? []).map((url) => `  - ${escapeMarkdown(url)}`).join('\n');
   const participants = normalizedParticipants
     .map((participant) => {
-      const email = participant.email !== t('dynamic.noEmail') ? ` (${participant.email})` : '';
-      return `- **${participant.name}**${email}`;
+      const email =
+        participant.email !== t('dynamic.noEmail') ? ` (${escapeMarkdown(participant.email)})` : '';
+      return `- **${escapeMarkdown(participant.name)}**${email}`;
     })
     .join('\n');
 

@@ -1,5 +1,14 @@
+import type { Environment, EnvironmentBug } from '../../domain/entities/environment';
 import type { StoreExportPayload, StoreScenario } from '../../domain/entities/store';
-import { formatDateTime } from './time';
+import type { UserSummary } from '../../domain/entities/user';
+import { BUG_STATUS_LABEL, ENVIRONMENT_STATUS_LABEL } from '../config/environmentLabels';
+import { translateEnvironmentOption } from './environmentOptions';
+import {
+  formatDateTime,
+  formatDurationFromMs,
+  formatEndDateTime,
+  getElapsedMilliseconds,
+} from './time';
 import i18n from '../../lib/i18n';
 import { normalizeAutomationEnum, normalizeCriticalityEnum } from './scenarioEnums';
 
@@ -317,6 +326,173 @@ const buildScenarioSheets = (payload: StoreExportPayload): WorksheetDefinition[]
   ];
 };
 
+interface EnvironmentExportPayload {
+  environment: Environment;
+  bugs: EnvironmentBug[];
+  participants: UserSummary[];
+  exportedAt: string;
+}
+
+const normalizeEnvironmentParticipants = (
+  environment: Environment,
+  participantProfiles: UserSummary[],
+  t: (key: string, options?: Record<string, string>) => string,
+) => {
+  const uniqueIds = Array.from(new Set(environment.participants ?? []));
+  const profileMap = new Map(participantProfiles.map((profile) => [profile.id, profile]));
+
+  return uniqueIds.map((id) => {
+    const profile = profileMap.get(id);
+    const displayName =
+      profile?.displayName?.trim() || profile?.email || t('dynamic.fallbackParticipant', { id });
+
+    return {
+      id,
+      name: displayName,
+      email: profile?.email ?? t('dynamic.noEmail'),
+    };
+  });
+};
+
+const translateScenarioStatus = (value: string, t: (key: string) => string) => {
+  const key = `environmentEvidenceTable.status_${value}`;
+  const translated = t(key);
+  return translated === key ? value : translated;
+};
+
+const getScenarioLabel = (
+  environment: Environment,
+  scenarioId: string | null,
+  t: (key: string) => string,
+) => {
+  if (!scenarioId) {
+    return t('environmentBugList.notLinked');
+  }
+
+  return environment.scenarios?.[scenarioId]?.titulo || t('environmentBugList.scenarioRemoved');
+};
+
+const buildEnvironmentSheets = (payload: EnvironmentExportPayload): WorksheetDefinition[] => {
+  const t = i18n.t.bind(i18n);
+  const { environment, bugs } = payload;
+  const normalizedParticipants = normalizeEnvironmentParticipants(
+    environment,
+    payload.participants,
+    t,
+  );
+  const scenarioEntries = Object.values(environment.scenarios ?? {});
+  const scenarioCount = scenarioEntries.length * 2;
+  const isRunning = environment.status === 'in_progress';
+  const totalMs = getElapsedMilliseconds(environment.timeTracking ?? null, isRunning);
+  const timeSummary = {
+    start: formatDateTime(environment.timeTracking?.start ?? null),
+    end: formatEndDateTime(environment.timeTracking ?? null, isRunning),
+    total: formatDurationFromMs(totalMs),
+  };
+  const testTypeLabel = translateEnvironmentOption(environment.tipoTeste, t);
+  const momentLabel = environment.momento
+    ? translateEnvironmentOption(environment.momento, t)
+    : t('storeSummary.emptyValue');
+  const releaseLabel = environment.release?.trim() || t('storeSummary.emptyValue');
+  const jiraLabel = environment.jiraTask?.trim() || t('dynamic.identifierFallback');
+  const suiteLabel = environment.suiteName ?? t('dynamic.suiteNameFallback');
+
+  const summaryRows: string[][] = [
+    [t('environmentExport.statusLabel'), t(ENVIRONMENT_STATUS_LABEL[environment.status])],
+    [t('environmentExport.typeLabel'), `${environment.tipoAmbiente} · ${testTypeLabel}`],
+    [t('environmentExport.momentLabel'), momentLabel],
+    [t('environmentExport.releaseLabel'), releaseLabel],
+    [t('environmentExport.jiraLabel'), jiraLabel],
+    [t('environmentExport.startLabel'), timeSummary.start],
+    [t('environmentExport.endLabel'), timeSummary.end],
+    [t('environmentExport.totalLabel'), timeSummary.total],
+    [t('environmentExport.suiteLabel'), suiteLabel],
+    [t('environmentExport.totalScenariosLabel'), `${scenarioCount}`],
+    [t('environmentExport.bugsLabel'), `${bugs.length}`],
+    [t('environmentExport.participantsLabel'), `${normalizedParticipants.length}`],
+    [t('environmentExport.exportedAtLabel'), formatDateTime(payload.exportedAt)],
+  ];
+
+  const scenarioRows: string[][] = [
+    [
+      t('environmentEvidenceTable.table_titulo'),
+      t('environmentEvidenceTable.table_categoria'),
+      t('environmentEvidenceTable.table_criticidade'),
+      t('environmentEvidenceTable.table_observacao'),
+      t('environmentEvidenceTable.table_status_mobile'),
+      t('environmentEvidenceTable.table_status_desktop'),
+      t('environmentEvidenceTable.table_evidencia'),
+    ],
+  ];
+
+  if (scenarioEntries.length > 0) {
+    scenarioEntries.forEach((scenario) => {
+      const statusMobile = translateScenarioStatus(scenario.statusMobile ?? scenario.status, t);
+      const statusDesktop = translateScenarioStatus(scenario.statusDesktop ?? scenario.status, t);
+      scenarioRows.push([
+        scenario.titulo || t('storeSummary.emptyValue'),
+        scenario.categoria || t('storeSummary.emptyValue'),
+        formatCriticalityLabel(scenario.criticidade, t),
+        scenario.observacao?.trim() || t('environmentEvidenceTable.observacao_none'),
+        statusMobile,
+        statusDesktop,
+        scenario.evidenciaArquivoUrl?.trim() || t('environmentEvidenceTable.evidencia_sem'),
+      ]);
+    });
+  } else {
+    scenarioRows.push([t('environmentExport.noScenarios')]);
+  }
+
+  const bugRows: string[][] = [
+    [
+      t('environmentExport.bugTitle'),
+      t('environmentExport.bugStatus'),
+      t('environmentExport.bugScenario'),
+      t('environmentExport.bugDescription'),
+    ],
+  ];
+
+  if (bugs.length > 0) {
+    bugs.forEach((bug) => {
+      bugRows.push([
+        bug.title || t('storeSummary.emptyValue'),
+        t(BUG_STATUS_LABEL[bug.status]),
+        getScenarioLabel(environment, bug.scenarioId, t),
+        bug.description?.trim() || t('environmentExport.noDescription'),
+      ]);
+    });
+  } else {
+    bugRows.push([t('environmentExport.noBugs')]);
+  }
+
+  const participantRows: string[][] = [
+    [t('environmentExport.participantName'), t('environmentExport.participantEmail')],
+  ];
+
+  if (normalizedParticipants.length > 0) {
+    normalizedParticipants.forEach((participant) => {
+      participantRows.push([participant.name, participant.email]);
+    });
+  } else {
+    participantRows.push([t('environmentExport.noParticipants')]);
+  }
+
+  const urlsRows: string[][] = [[t('environmentExport.urlsLabel')]];
+  if ((environment.urls ?? []).length > 0) {
+    (environment.urls ?? []).forEach((url) => urlsRows.push([url]));
+  } else {
+    urlsRows.push([t('environmentExport.noUrls')]);
+  }
+
+  return [
+    { name: t('environmentExport.summarySheet'), rows: summaryRows },
+    { name: t('environmentExport.scenariosSheet'), rows: scenarioRows },
+    { name: t('environmentExport.bugsSheet'), rows: bugRows },
+    { name: t('environmentExport.participantsSheet'), rows: participantRows },
+    { name: t('environmentExport.urlsSheet'), rows: urlsRows },
+  ];
+};
+
 const escapeHtml = (value: string) =>
   value
     .replace(/&/g, '&amp;')
@@ -513,6 +689,17 @@ export const openScenarioPdf = (
 export const downloadScenarioWorkbook = (payload: StoreExportPayload, fileName: string) => {
   const workbookBlob = createWorkbookBlob(
     buildScenarioSheets(payload),
+    new Date(payload.exportedAt).toISOString(),
+  );
+  downloadBlobFile(workbookBlob, fileName);
+};
+
+export const downloadEnvironmentWorkbook = (
+  payload: EnvironmentExportPayload,
+  fileName: string,
+) => {
+  const workbookBlob = createWorkbookBlob(
+    buildEnvironmentSheets(payload),
     new Date(payload.exportedAt).toISOString(),
   );
   downloadBlobFile(workbookBlob, fileName);

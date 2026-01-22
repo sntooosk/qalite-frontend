@@ -51,6 +51,11 @@ export interface EnvironmentRepository {
     bugs?: EnvironmentBug[],
     participantProfiles?: UserSummary[],
   ) => void;
+  exportAsExcel: (
+    environment: Environment,
+    bugs?: EnvironmentBug[],
+    participantProfiles?: UserSummary[],
+  ) => void;
   copyAsMarkdown: (
     environment: Environment,
     bugs?: EnvironmentBug[],
