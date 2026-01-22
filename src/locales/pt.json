@@ -589,6 +589,7 @@
       "exportExcelFileName": "relatorio-ambiente",
       "exportExcelSheetName": "Cenários",
       "exportExcelEnvironmentSheetName": "Ambiente",
+      "exportExcelBugsSheetName": "Bugs",
       "exportExcelStatusLabel": "Status",
       "enterError": "Não foi possível entrar no ambiente.",
       "leaveSuccess": "Você saiu do ambiente.",

@@ -11,6 +11,13 @@ export type EnvironmentExportRow = {
   evidencia?: string;
 };
 
+export type EnvironmentBugExportRow = {
+  cenario: string;
+  titulo: string;
+  status: string;
+  descricao: string;
+};
+
 export type ScenarioExportRow = {
   titulo: string;
   categoria: string;
@@ -194,18 +201,24 @@ export const exportEnvironmentExcel = async ({
   fileName,
   scenarioSheetName,
   environmentSheetName,
+  bugSheetName,
   infoHeaderLabels,
   infoRows,
   scenarioRows,
   scenarioHeaderLabels,
+  bugRows,
+  bugHeaderLabels,
 }: {
   fileName: string;
   scenarioSheetName: string;
   environmentSheetName: string;
+  bugSheetName: string;
   infoHeaderLabels: [string, string];
   infoRows: ExportInfoRow[];
   scenarioRows: EnvironmentExportRow[];
   scenarioHeaderLabels: [string, string, string, string, string, string, string];
+  bugRows: EnvironmentBugExportRow[];
+  bugHeaderLabels: [string, string, string, string];
 }) => {
   const workbook = new ExcelJS.Workbook();
 
@@ -259,6 +272,41 @@ export const exportEnvironmentExcel = async ({
   ];
   const columnWidths = applyColumnWidths(worksheet, columnValues);
   applyAutoRowHeights(worksheet, columnWidths);
+
+  const bugWorksheet = workbook.addWorksheet(bugSheetName, {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+
+  bugWorksheet.columns = [
+    { header: bugHeaderLabels[0], key: 'cenario' },
+    { header: bugHeaderLabels[1], key: 'titulo' },
+    { header: bugHeaderLabels[2], key: 'status' },
+    { header: bugHeaderLabels[3], key: 'descricao' },
+  ];
+
+  const bugHeaderRow = bugWorksheet.getRow(1);
+  bugHeaderRow.height = 22;
+  bugHeaderRow.eachCell((cell) => applyHeaderStyle(cell));
+
+  bugRows.forEach((row) => bugWorksheet.addRow(row));
+
+  for (let rowIndex = 2; rowIndex <= bugWorksheet.rowCount; rowIndex += 1) {
+    const row = bugWorksheet.getRow(rowIndex);
+    row.eachCell((cell) => applyBaseCellStyle(cell));
+
+    const statusCell = row.getCell(3);
+    const status = statusStyle(String(statusCell.value ?? ''));
+    stylePill(statusCell, status.bg, status.fg);
+  }
+
+  const bugColumnValues = [
+    [bugWorksheet.getColumn(1).header as string, ...bugRows.map((row) => row.cenario)],
+    [bugWorksheet.getColumn(2).header as string, ...bugRows.map((row) => row.titulo)],
+    [bugWorksheet.getColumn(3).header as string, ...bugRows.map((row) => row.status)],
+    [bugWorksheet.getColumn(4).header as string, ...bugRows.map((row) => row.descricao)],
+  ];
+  const bugColumnWidths = applyColumnWidths(bugWorksheet, bugColumnValues);
+  applyAutoRowHeights(bugWorksheet, bugColumnWidths);
 
   const buffer = await workbook.xlsx.writeBuffer();
   saveAs(new Blob([buffer]), fileName);

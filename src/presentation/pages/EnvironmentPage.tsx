@@ -55,7 +55,7 @@ import {
   UsersGroupIcon,
 } from '../components/icons';
 import { exportEnvironmentExcel } from '../../utils/exportExcel';
-import { ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
+import { BUG_STATUS_LABEL, ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
 
 interface SlackSummaryBuilderOptions {
   formattedTime: string;
@@ -439,6 +439,7 @@ export const EnvironmentPage = () => {
     }
   }, [
     bugs.length,
+    bugs,
     environment,
     executedScenariosCount,
     formattedTime,
@@ -634,11 +635,25 @@ export const EnvironmentPage = () => {
         value: formattedTime || '00:00:00',
       },
     ];
+    const bugRows = bugs.map((bug) => {
+      const scenarioName = bug.scenarioId
+        ? environment.scenarios?.[bug.scenarioId]?.titulo ||
+          translation('environmentBugList.scenarioRemoved')
+        : translation('environmentBugList.notLinked');
+
+      return {
+        cenario: scenarioName,
+        titulo: bug.title?.trim() || translation('storeSummary.emptyValue'),
+        status: translation(BUG_STATUS_LABEL[bug.status]),
+        descricao: bug.description?.trim() || translation('environmentBugList.noDescription'),
+      };
+    });
 
     exportEnvironmentExcel({
       fileName,
       scenarioSheetName: translation('environment.exportExcelSheetName'),
       environmentSheetName: translation('environment.exportExcelEnvironmentSheetName'),
+      bugSheetName: translation('environment.exportExcelBugsSheetName'),
       infoHeaderLabels: [translation('exportExcel.field'), translation('exportExcel.value')],
       infoRows,
       scenarioRows: rows,
@@ -650,6 +665,13 @@ export const EnvironmentPage = () => {
         translation('environmentEvidenceTable.table_status_mobile'),
         translation('environmentEvidenceTable.table_status_desktop'),
         translation('environmentEvidenceTable.table_evidencia'),
+      ],
+      bugRows,
+      bugHeaderLabels: [
+        translation('environmentBugList.scenario'),
+        translation('environmentBugList.title'),
+        translation('environmentBugList.status'),
+        translation('environmentBugList.description'),
       ],
     });
   }, [
@@ -728,12 +750,13 @@ export const EnvironmentPage = () => {
     try {
       await leaveEnvironment();
       showToast({ type: 'success', message: translation('environment.leaveSuccess') });
+      navigate(-1);
     } catch (error) {
       console.error(error);
       showToast({ type: 'error', message: translation('environment.leaveError') });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leaveEnvironment, showToast]);
+  }, [leaveEnvironment, navigate, showToast, translation]);
 
   useEffect(() => {
     if (!shouldAutoJoinFromInvite) {

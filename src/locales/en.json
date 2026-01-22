@@ -588,6 +588,7 @@
       "exportExcelFileName": "environment-report",
       "exportExcelSheetName": "Scenarios",
       "exportExcelEnvironmentSheetName": "Environment",
+      "exportExcelBugsSheetName": "Bugs",
       "exportExcelStatusLabel": "Status",
       "enterError": "Unable to join environment.",
       "leaveSuccess": "You left the environment.",
