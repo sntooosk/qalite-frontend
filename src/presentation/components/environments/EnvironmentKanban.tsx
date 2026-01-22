@@ -8,13 +8,16 @@ import type { Environment, EnvironmentStatus } from '../../../domain/entities/en
 import type { StoreScenario, StoreSuite } from '../../../domain/entities/store';
 import type { UserSummary } from '../../../domain/entities/user';
 import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
-import { userService } from '../../../application/use-cases/UserUseCase';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../hooks/useAuth';
 import { PaginationControls } from '../PaginationControls';
 import { EnvironmentCard } from './EnvironmentCard';
 import { CreateEnvironmentCard } from './CreateEnvironmentCard';
 import { ArchiveIcon } from '../icons';
+import { useUserProfiles } from '../../hooks/useUserProfiles';
+import { Alert } from '../Alert';
+import { Button } from '../Button';
+import { EnvironmentKanbanSkeleton } from '../skeletons/EnvironmentKanbanSkeleton';
 
 interface EnvironmentKanbanProps {
   storeId: string;
@@ -41,46 +44,33 @@ export const EnvironmentKanban = ({
 }: EnvironmentKanbanProps) => {
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const [userProfilesMap, setUserProfilesMap] = useState<Record<string, UserSummary>>({});
   const [isArchiveMinimized, setIsArchiveMinimized] = useState(true);
   const [archivedVisibleCount, setArchivedVisibleCount] = useState(5);
   const { user } = useAuth();
   const { t } = useTranslation();
 
-  useEffect(() => {
-    let isMounted = true;
-    const participantIds = new Set<string>();
+  const participantIds = useMemo(() => {
+    const ids = new Set<string>();
     environments.forEach((environment) => {
-      (environment.participants ?? [])
-        .filter((id) => Boolean(id))
-        .forEach((id) => participantIds.add(id));
+      (environment.participants ?? []).filter((id) => Boolean(id)).forEach((id) => ids.add(id));
     });
-
-    if (participantIds.size === 0) {
-      setUserProfilesMap({});
-      return;
-    }
-
-    const fetchProfiles = async () => {
-      try {
-        const profiles = await userService.getSummariesByIds(Array.from(participantIds));
-        if (isMounted) {
-          const nextMap: Record<string, UserSummary> = {};
-          profiles.forEach((profile) => {
-            nextMap[profile.id] = profile;
-          });
-          setUserProfilesMap(nextMap);
-        }
-      } catch (error) {
-        void error;
-      }
-    };
-
-    void fetchProfiles();
-    return () => {
-      isMounted = false;
-    };
+    return Array.from(ids);
   }, [environments]);
+
+  const {
+    profiles: userProfiles,
+    isLoading: isLoadingProfiles,
+    error: profilesError,
+    refetch: refetchProfiles,
+  } = useUserProfiles(participantIds);
+
+  const userProfilesMap = useMemo(() => {
+    const nextMap: Record<string, (typeof userProfiles)[number]> = {};
+    userProfiles.forEach((profile) => {
+      nextMap[profile.id] = profile;
+    });
+    return nextMap;
+  }, [userProfiles]);
 
   const grouped = useMemo(() => {
     const columns: Record<EnvironmentStatus, Environment[]> = {
@@ -224,6 +214,15 @@ export const EnvironmentKanban = ({
         />
       </header>
 
+      {profilesError && (
+        <div className="environment-kanban__profiles-error">
+          <Alert type="error" message={t('environmentKanban.participantsError')} />
+          <Button type="button" variant="secondary" onClick={refetchProfiles}>
+            {t('retry')}
+          </Button>
+        </div>
+      )}
+
       {hasArchivedEnvironments && (
         <p className="environment-kanban-archive-hint">
           {archivedEnvironments.length} {t('environmentKanban.environment')}
@@ -235,7 +234,7 @@ export const EnvironmentKanban = ({
       )}
 
       {isLoading ? (
-        <p className="section-subtitle">{t('environmentKanban.loading')}</p>
+        <EnvironmentKanbanSkeleton />
       ) : (
         <div className="environment-kanban-columns">
           {COLUMNS.map((column) => {
@@ -265,6 +264,7 @@ export const EnvironmentKanban = ({
                       participants={(environment.participants ?? [])
                         .map((id) => userProfilesMap[id])
                         .filter((user): user is UserSummary => Boolean(user))}
+                      isParticipantsLoading={isLoadingProfiles}
                       suiteName={suiteNameByEnvironment[environment.id]}
                       draggable
                       onDragStart={handleDragStart}
@@ -324,6 +324,7 @@ export const EnvironmentKanban = ({
                       participants={(environment.participants ?? [])
                         .map((id) => userProfilesMap[id])
                         .filter((user): user is UserSummary => Boolean(user))}
+                      isParticipantsLoading={isLoadingProfiles}
                       suiteName={suiteNameByEnvironment[environment.id]}
                       draggable
                       onDragStart={handleDragStart}

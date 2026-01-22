@@ -10,6 +10,7 @@ import { translateEnvironmentOption } from '../../constants/environmentOptions';
 interface EnvironmentCardProps {
   environment: Environment;
   participants: UserSummary[];
+  isParticipantsLoading?: boolean;
   suiteName?: string | null;
   onOpen: (environment: Environment) => void;
   draggable?: boolean;
@@ -19,6 +20,7 @@ interface EnvironmentCardProps {
 export const EnvironmentCard = ({
   environment,
   participants,
+  isParticipantsLoading = false,
   suiteName,
   onOpen,
   draggable = false,
@@ -94,7 +96,13 @@ export const EnvironmentCard = ({
         className="environment-card-participants"
         aria-label={t('environmentCard.participantsLabel')}
       >
-        {hasParticipants ? (
+        {isParticipantsLoading ? (
+          <div className="environment-card-participants-loading">
+            <span className="environment-card-avatar environment-card-avatar--loading" />
+            <span className="environment-card-avatar environment-card-avatar--loading" />
+            <span className="environment-card-avatar environment-card-avatar--loading" />
+          </div>
+        ) : hasParticipants ? (
           <>
             <ul
               className="environment-card-participant-list"

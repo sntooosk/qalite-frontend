@@ -1,86 +1,58 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import type { Organization } from '../../domain/entities/organization';
 import type { Store } from '../../domain/entities/store';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
 import { useToast } from '../context/ToastContext';
-
-export type OrganizationStoresStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
-
-interface OrganizationStoresState {
-  organization: Organization | null;
-  stores: Store[];
-  status: OrganizationStoresStatus;
-  error: string | null;
-}
-
-const buildInitialState = (): OrganizationStoresState => ({
-  organization: null,
-  stores: [],
-  status: 'idle',
-  error: null,
-});
+import { useResource } from './useResource';
 
 export const useOrganizationStores = (organizationId: string | null) => {
   const { showToast } = useToast();
-  const [state, setState] = useState<OrganizationStoresState>(buildInitialState);
+  const fetchOrganizationStores = useCallback(async (id: string) => {
+    const [organizationData, storesData] = await Promise.all([
+      organizationService.getById(id),
+      storeService.listByOrganization(id),
+    ]);
+
+    return {
+      organization: organizationData,
+      stores: storesData,
+    };
+  }, []);
+
+  const { value, isLoading, isFetching, error, refetch, updatedAt, setValue, patchValue } =
+    useResource<{ organization: Organization | null; stores: Store[] }>({
+      resourceId: organizationId,
+      getInitialValue: () => ({ organization: null, stores: [] }),
+      fetch: fetchOrganizationStores,
+    });
 
   useEffect(() => {
-    if (!organizationId) {
-      setState(buildInitialState());
+    if (!error) {
       return;
     }
+    showToast({ type: 'error', message: error });
+  }, [error, showToast]);
 
-    let isSubscribed = true;
+  const derivedState = useMemo(() => {
+    const stores = value.stores ?? [];
+    const isEmpty = !isLoading && !error && stores.length === 0;
 
-    const loadStores = async () => {
-      setState((previous) => ({ ...previous, status: 'loading', error: null }));
-
-      try {
-        const [organizationData, storesData] = await Promise.all([
-          organizationService.getById(organizationId),
-          storeService.listByOrganization(organizationId),
-        ]);
-
-        if (!isSubscribed) {
-          return;
-        }
-
-        setState({
-          organization: organizationData,
-          stores: storesData,
-          status: storesData.length === 0 ? 'empty' : 'ready',
-          error: null,
-        });
-      } catch (error) {
-        void error;
-        if (!isSubscribed) {
-          return;
-        }
-        const message = 'Não foi possível carregar suas lojas agora. Tente novamente mais tarde.';
-        setState((previous) => ({ ...previous, status: 'error', error: message }));
-        showToast({ type: 'error', message });
-      }
+    return {
+      data: value,
+      organization: value.organization,
+      stores,
+      isLoading,
+      isFetching,
+      error,
+      isEmpty,
+      refetch,
+      updatedAt,
+      setOrganizationStores: setValue,
+      patchOrganizationStores: patchValue,
     };
-
-    void loadStores();
-
-    return () => {
-      isSubscribed = false;
-    };
-  }, [organizationId, showToast]);
-
-  const derivedState = useMemo(
-    () => ({
-      ...state,
-      isLoading: state.status === 'loading',
-      isEmpty: state.status === 'empty',
-      hasError: state.status === 'error',
-      hasData: state.status === 'ready',
-    }),
-    [state],
-  );
+  }, [value, isLoading, isFetching, error, refetch, updatedAt, setValue, patchValue]);
 
   return derivedState;
 };

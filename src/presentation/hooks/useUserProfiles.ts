@@ -1,38 +1,44 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import type { UserSummary } from '../../domain/entities/user';
 import { userService } from '../../application/use-cases/UserUseCase';
+import { useResource } from './useResource';
 
 export const useUserProfiles = (userIds: string[]) => {
-  const [profiles, setProfiles] = useState<UserSummary[]>([]);
+  const uniqueIds = useMemo(() => Array.from(new Set(userIds)).sort(), [userIds]);
+  const resourceKey = uniqueIds.length > 0 ? uniqueIds.join('|') : null;
 
-  useEffect(() => {
-    let isMounted = true;
-    const uniqueIds = Array.from(new Set(userIds));
-
+  const fetchProfiles = useCallback(async () => {
     if (uniqueIds.length === 0) {
-      setProfiles([]);
-      return () => {
-        isMounted = false;
-      };
+      return [];
     }
+    return userService.getSummariesByIds(uniqueIds);
+  }, [uniqueIds]);
 
-    const fetchProfiles = async () => {
-      try {
-        const summaries = await userService.getSummariesByIds(uniqueIds);
-        if (isMounted) {
-          setProfiles(summaries);
-        }
-      } catch (error) {
-        void error;
-      }
-    };
+  const {
+    value: profiles,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+    updatedAt,
+    setValue,
+    patchValue,
+  } = useResource<UserSummary[]>({
+    resourceId: resourceKey,
+    getInitialValue: () => [],
+    fetch: async () => fetchProfiles(),
+  });
 
-    void fetchProfiles();
-    return () => {
-      isMounted = false;
-    };
-  }, [userIds]);
-
-  return profiles;
+  return {
+    data: profiles,
+    profiles,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+    updatedAt,
+    setProfiles: setValue,
+    patchProfiles: patchValue,
+  };
 };

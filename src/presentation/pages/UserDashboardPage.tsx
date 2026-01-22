@@ -17,13 +17,22 @@ import { browserstackService } from '../../application/use-cases/BrowserstackUse
 import type { BrowserstackBuild } from '../../domain/entities/browserstack';
 import { isAutomatedScenario } from '../../shared/utils/automation';
 import { useTranslation } from 'react-i18next';
+import { ErrorState } from '../components/ErrorState';
+import { UserDashboardSkeleton } from '../components/skeletons/UserDashboardSkeleton';
 
 export const UserDashboardPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { user, isInitializing } = useAuth();
   const organizationId = user?.organizationId ?? null;
-  const { organization, stores, isLoading, status } = useOrganizationStores(organizationId);
+  const {
+    organization,
+    stores,
+    isLoading,
+    error,
+    isEmpty,
+    refetch: refetchStores,
+  } = useOrganizationStores(organizationId);
   const { setActiveOrganization } = useOrganizationBranding();
   const [storeAutomationCounts, setStoreAutomationCounts] = useState<Record<string, number>>({});
   const [isLoadingAutomationStats, setIsLoadingAutomationStats] = useState(false);
@@ -114,14 +123,14 @@ export const UserDashboardPage = () => {
       return (t('userPage.organizationName', { org: organization.name }), t('selectStore'));
     }
 
-    if (status === 'error') {
+    if (error) {
       return t('userPage.loadingError');
     }
 
     return t('userPage.chooseStore');
-  }, [organization?.name, status, t]);
+  }, [organization?.name, error, t]);
 
-  const isError = status === 'error';
+  const isError = Boolean(error);
   const emptyStateTitle = isError ? t('userPage.loadingStores') : t('userPage.unavailableStores');
   const emptyStateDescription = isError ? t('userPage.updatePage') : t('userPage.addStores');
 
@@ -184,14 +193,21 @@ export const UserDashboardPage = () => {
         </div>
 
         {isLoading ? (
-          <p className="section-subtitle">{t('userPage.loadingTitle')}</p>
-        ) : stores.length === 0 ? (
+          <UserDashboardSkeleton />
+        ) : error ? (
+          <ErrorState
+            title={t('userPage.loadingStores')}
+            description={error}
+            actionLabel={t('retry')}
+            onRetry={refetchStores}
+          />
+        ) : isEmpty ? (
           <EmptyState
             title={emptyStateTitle}
             description={emptyStateDescription}
             action={
               isError ? (
-                <Button type="button" variant="secondary" onClick={() => window.location.reload()}>
+                <Button type="button" variant="secondary" onClick={refetchStores}>
                   {t('userPage.reload')}
                 </Button>
               ) : (

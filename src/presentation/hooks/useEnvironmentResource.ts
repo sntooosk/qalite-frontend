@@ -7,12 +7,22 @@ import { useResource } from './useResource';
 export const useEnvironmentResource = (environmentId: string | null | undefined) => {
   const fetchEnvironment = useCallback((id: string) => environmentService.getEnvironment(id), []);
 
-  const { value, isLoading, error, refetch } = useResource<Environment | null>({
-    resourceId: environmentId,
-    getInitialValue: () => null,
-    fetch: fetchEnvironment,
-    missingResourceMessage: 'Ambiente não encontrado.',
-  });
+  const { value, isLoading, isFetching, error, refetch, updatedAt, setValue, patchValue } =
+    useResource<Environment | null>({
+      resourceId: environmentId,
+      getInitialValue: () => null,
+      fetch: fetchEnvironment,
+    });
 
-  return { environment: value, isLoading, error, refetch };
+  return {
+    data: value,
+    environment: value,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+    updatedAt,
+    setEnvironment: setValue,
+    patchEnvironment: patchValue,
+  };
 };

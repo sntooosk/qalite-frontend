@@ -5,6 +5,7 @@ interface UseResourceOptions<T> {
   getInitialValue: () => T;
   fetch: (resourceId: string) => Promise<T>;
   missingResourceMessage?: string;
+  minimumLoadingMs?: number;
 }
 
 export const useResource = <T>({
@@ -12,8 +13,11 @@ export const useResource = <T>({
   getInitialValue,
   fetch,
   missingResourceMessage,
+  minimumLoadingMs = 200,
 }: UseResourceOptions<T>) => {
   const initialValueRef = useRef<T>();
+  const mountedRef = useRef(true);
+  const hasLoadedOnceRef = useRef(false);
 
   if (initialValueRef.current === undefined) {
     initialValueRef.current = getInitialValue();
@@ -21,33 +25,64 @@ export const useResource = <T>({
 
   const [value, setValue] = useState<T>(initialValueRef.current!);
   const [isLoading, setIsLoading] = useState<boolean>(Boolean(resourceId));
+  const [isFetching, setIsFetching] = useState<boolean>(Boolean(resourceId));
   const [error, setError] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
 
   const fetchResource = useCallback(
     async (id: string) => {
-      setIsLoading(true);
-      setError(null);
+      const startTime = Date.now();
+      if (mountedRef.current) {
+        setIsFetching(true);
+        if (!hasLoadedOnceRef.current) {
+          setIsLoading(true);
+        }
+        setError(null);
+      }
 
       try {
         const nextValue = await fetch(id);
-        setValue(nextValue);
+        if (mountedRef.current) {
+          setValue(nextValue);
+          setUpdatedAt(Date.now());
+        }
         return nextValue;
       } catch (error) {
         void error;
-        setError(error instanceof Error ? error.message : 'Falha ao carregar dados.');
+        if (mountedRef.current) {
+          setError(error instanceof Error ? error.message : 'Falha ao carregar dados.');
+        }
         return initialValueRef.current!;
       } finally {
-        setIsLoading(false);
+        const elapsed = Date.now() - startTime;
+        if (elapsed < minimumLoadingMs) {
+          await new Promise((resolve) => setTimeout(resolve, minimumLoadingMs - elapsed));
+        }
+        if (mountedRef.current) {
+          setIsFetching(false);
+          setIsLoading(false);
+        }
+        hasLoadedOnceRef.current = true;
       }
     },
-    [fetch],
+    [fetch, minimumLoadingMs],
   );
 
   useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!resourceId) {
-      setValue(initialValueRef.current!);
-      setIsLoading(false);
-      setError(missingResourceMessage ?? null);
+      if (mountedRef.current) {
+        setValue(initialValueRef.current!);
+        setIsLoading(false);
+        setIsFetching(false);
+        setError(missingResourceMessage ?? null);
+      }
       return;
     }
 
@@ -62,5 +97,12 @@ export const useResource = <T>({
     await fetchResource(resourceId);
   }, [fetchResource, resourceId]);
 
-  return { value, isLoading, error, refetch };
+  const patchValue = useCallback((updater: (previous: T) => T) => {
+    if (!mountedRef.current) {
+      return;
+    }
+    setValue((previous) => updater(previous));
+  }, []);
+
+  return { value, isLoading, isFetching, error, refetch, updatedAt, setValue, patchValue };
 };

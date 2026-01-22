@@ -78,19 +78,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   useEffect(() => {
-    const unsubscribe = authService.onAuthStateChanged((currentUser) => {
-      if (currentUser && !currentUser.isEmailVerified) {
+    let isMounted = true;
+
+    const loadCurrentUser = async () => {
+      setIsInitializing(true);
+      setError(null);
+
+      try {
+        const currentUser = await authService.getCurrent();
+        if (!isMounted) {
+          return;
+        }
+
+        if (currentUser && !currentUser.isEmailVerified) {
+          setUser(null);
+          setIsInitializing(false);
+          return;
+        }
+
+        setUser(currentUser);
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+        const message = mapFirebaseError(err);
+        setError(message);
+        showToast({ type: 'error', message });
         setUser(null);
-        setIsInitializing(false);
-        return;
+      } finally {
+        if (isMounted) {
+          setIsInitializing(false);
+        }
       }
+    };
 
-      setUser(currentUser);
-      setIsInitializing(false);
-    });
+    void loadCurrentUser();
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      isMounted = false;
+    };
+  }, [showToast]);
 
   const signOutSilently = useCallback(async () => {
     try {

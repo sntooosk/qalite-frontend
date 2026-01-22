@@ -11,7 +11,6 @@ export interface AuthRepository {
   logout: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   getCurrent: () => Promise<AuthUser | null>;
-  onAuthStateChanged: (listener: (user: AuthUser | null) => void) => () => void;
   hasRequiredRole: (user: AuthUser | null, allowedRoles: Role[]) => boolean;
   updateProfile: (payload: UpdateProfilePayload) => Promise<AuthUser>;
 }

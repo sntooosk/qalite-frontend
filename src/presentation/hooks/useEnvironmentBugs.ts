@@ -7,11 +7,22 @@ import { useResource } from './useResource';
 export const useEnvironmentBugs = (environmentId: string | null | undefined) => {
   const fetchBugs = useCallback((id: string) => environmentService.getBugs(id), []);
 
-  const { value, isLoading, refetch } = useResource<EnvironmentBug[]>({
-    resourceId: environmentId,
-    getInitialValue: () => [],
-    fetch: fetchBugs,
-  });
+  const { value, isLoading, isFetching, error, refetch, updatedAt, setValue, patchValue } =
+    useResource<EnvironmentBug[]>({
+      resourceId: environmentId,
+      getInitialValue: () => [],
+      fetch: fetchBugs,
+    });
 
-  return { bugs: value, isLoading, refetch };
+  return {
+    data: value,
+    bugs: value,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+    updatedAt,
+    setBugs: setValue,
+    patchBugs: patchValue,
+  };
 };

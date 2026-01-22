@@ -1,58 +1,45 @@
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
 import type { Organization } from '../../domain/entities/organization';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
+import { useResource } from './useResource';
 
 export const useStoreOrganizationBranding = (storeId: string | null | undefined) => {
-  const [organization, setOrganization] = useState<Organization | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const fetchOrganization = useCallback(async (id: string) => {
+    const store = await storeService.getById(id);
 
-  useEffect(() => {
-    let isMounted = true;
+    if (!store?.organizationId) {
+      return null;
+    }
 
-    const fetchOrganization = async () => {
-      if (!storeId) {
-        if (isMounted) {
-          setOrganization(null);
-          setIsLoading(false);
-        }
-        return;
-      }
+    return organizationService.getById(store.organizationId);
+  }, []);
 
-      setIsLoading(true);
-      try {
-        const store = await storeService.getById(storeId);
+  const {
+    value: organization,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+    updatedAt,
+    setValue,
+    patchValue,
+  } = useResource<Organization | null>({
+    resourceId: storeId,
+    getInitialValue: () => null,
+    fetch: fetchOrganization,
+  });
 
-        if (!store?.organizationId) {
-          if (isMounted) {
-            setOrganization(null);
-          }
-          return;
-        }
-
-        const org = await organizationService.getById(store.organizationId);
-        if (isMounted) {
-          setOrganization(org);
-        }
-      } catch (error) {
-        void error;
-        if (isMounted) {
-          setOrganization(null);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void fetchOrganization();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [storeId]);
-
-  return { organization, isLoading };
+  return {
+    data: organization,
+    organization,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+    updatedAt,
+    setOrganization: setValue,
+    patchOrganization: patchValue,
+  };
 };

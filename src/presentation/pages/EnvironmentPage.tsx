@@ -27,7 +27,6 @@ import { DeleteEnvironmentModal } from '../components/environments/DeleteEnviron
 import { copyToClipboard } from '../utils/clipboard';
 import { useStoreOrganizationBranding } from '../hooks/useStoreOrganizationBranding';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
-import { PageLoader } from '../components/PageLoader';
 import { Modal } from '../components/Modal';
 import { LinkifiedText } from '../components/LinkifiedText';
 import { useUserProfiles } from '../hooks/useUserProfiles';
@@ -53,6 +52,8 @@ import {
   SettingsIcon,
   UsersGroupIcon,
 } from '../components/icons';
+import { ErrorState } from '../components/ErrorState';
+import { EnvironmentPageSkeleton } from '../components/skeletons/EnvironmentPageSkeleton';
 
 interface SlackSummaryBuilderOptions {
   formattedTime: string;
@@ -217,6 +218,7 @@ export const EnvironmentPage = () => {
   const {
     environment,
     isLoading,
+    error: environmentError,
     refetch: refetchEnvironment,
   } = useEnvironmentResource(environmentId);
   const { organization: environmentOrganization } = useStoreOrganizationBranding(
@@ -235,10 +237,16 @@ export const EnvironmentPage = () => {
   const [suites, setSuites] = useState<StoreSuite[]>([]);
   const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
   const { setActiveOrganization } = useOrganizationBranding();
-  const participantProfiles = useUserProfiles(environment?.participants ?? []);
+  const {
+    profiles: participantProfiles,
+    isLoading: isLoadingParticipants,
+    error: participantsError,
+    refetch: refetchParticipants,
+  } = useUserProfiles(environment?.participants ?? []);
   const {
     bugs,
     isLoading: isLoadingBugs,
+    error: bugsError,
     refetch: refetchBugs,
   } = useEnvironmentBugs(environment?.id ?? null);
   const {
@@ -622,9 +630,22 @@ export const EnvironmentPage = () => {
   if (isLoading) {
     return (
       <Layout>
-        <div className="page-container">
-          <PageLoader message={translation('environment.loading')} />
-        </div>
+        <EnvironmentPageSkeleton />
+      </Layout>
+    );
+  }
+
+  if (environmentError) {
+    return (
+      <Layout>
+        <section className="page-container environment-page">
+          <ErrorState
+            title={translation('environment.loadError')}
+            description={environmentError}
+            actionLabel={translation('retry')}
+            onRetry={refetchEnvironment}
+          />
+        </section>
       </Layout>
     );
   }
@@ -719,6 +740,9 @@ export const EnvironmentPage = () => {
             formattedEnd={formattedEnd}
             urls={urls}
             participants={participantProfiles}
+            isParticipantsLoading={isLoadingParticipants}
+            participantsError={participantsError}
+            onRetryParticipants={refetchParticipants}
             bugsCount={bugs.length}
           />
           <div className="summary-card">
@@ -790,8 +814,10 @@ export const EnvironmentPage = () => {
           bugs={bugs}
           isLocked={Boolean(isInteractionLocked)}
           isLoading={isLoadingBugs}
+          error={bugsError}
           onEdit={handleEditBug}
           onUpdated={refetchBugs}
+          onRetry={refetchBugs}
         />
       </section>
 

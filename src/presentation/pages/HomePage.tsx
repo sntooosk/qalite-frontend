@@ -1,8 +1,8 @@
 import { Navigate } from 'react-router-dom';
 
 import { useAuth } from '../hooks/useAuth';
-import { PageLoader } from '../components/PageLoader';
 import { useTranslation } from 'react-i18next';
+import { PageShellSkeleton } from '../components/skeletons/PageShellSkeleton';
 
 export const HomePage = () => {
   const { user, hasRole, isInitializing } = useAuth();
@@ -10,7 +10,7 @@ export const HomePage = () => {
   const { t: translation } = useTranslation();
 
   if (isInitializing) {
-    return <PageLoader message={translation('loadingAccess')} />;
+    return <PageShellSkeleton />;
   }
 
   if (!user) {
