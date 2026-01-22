@@ -6,11 +6,15 @@ import {
   doc,
   getDoc,
   getDocs,
+  getDocsFromCache,
+  getDocsFromServer,
+  onSnapshot,
   orderBy,
   query,
   runTransaction,
   serverTimestamp,
   updateDoc,
+  type Unsubscribe,
   where,
   writeBatch,
 } from 'firebase/firestore';
@@ -126,9 +130,34 @@ const normalizeCategoryInput = (input: StoreCategoryInput): StoreCategoryInput =
 export const listStores = async (organizationId: string): Promise<Store[]> => {
   const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
   const storesQuery = query(storesCollection, where('organizationId', '==', organizationId));
-  const snapshot = await getDocs(storesQuery);
+  // Primeiro tentamos o cache local para reduzir leituras repetidas e aproveitar o IndexedDB.
+  // Caso não exista cache (primeiro acesso/dispositivo novo), buscamos do servidor como fallback.
+  const snapshot = await getDocsFromCache(storesQuery).catch(() => getDocsFromServer(storesQuery));
   const stores = snapshot.docs.map((docSnapshot) => mapStore(docSnapshot.id, docSnapshot.data()));
   return stores.sort((a, b) => a.name.localeCompare(b.name));
+};
+
+export const listenToStores = (
+  organizationId: string,
+  onChange: (stores: Store[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe => {
+  const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
+  const storesQuery = query(storesCollection, where('organizationId', '==', organizationId));
+
+  return onSnapshot(
+    storesQuery,
+    (snapshot) => {
+      // O listener sempre recalcula o array completo para manter a lista consistente no cliente.
+      const stores = snapshot.docs.map((docSnapshot) =>
+        mapStore(docSnapshot.id, docSnapshot.data()),
+      );
+      onChange(stores.sort((a, b) => a.name.localeCompare(b.name)));
+    },
+    (error) => {
+      onError?.(error);
+    },
+  );
 };
 
 export const getStore = async (storeId: string): Promise<Store | null> => {

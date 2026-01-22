@@ -8,6 +8,7 @@ import type {
   StoreScenarioInput,
 } from '../../domain/entities/store';
 import { storeService } from '../../application/use-cases/StoreUseCase';
+import { useStoresRealtime } from '../context/StoresRealtimeContext';
 import { useToast } from '../context/ToastContext';
 import { Button } from './Button';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
@@ -66,8 +67,14 @@ export const StoreManagementPanel = ({
 }: StoreManagementPanelProps) => {
   const { t } = useTranslation();
   const { showToast } = useToast();
-  const [stores, setStores] = useState<Store[]>([]);
-  const [isLoadingStores, setIsLoadingStores] = useState(true);
+  const { organizationId: activeOrganizationId, stores, isLoading, error } = useStoresRealtime();
+  const storesForOrganization = useMemo(
+    () => (activeOrganizationId && activeOrganizationId === organizationId ? stores : []),
+    [activeOrganizationId, organizationId, stores],
+  );
+  const isLoadingStores = Boolean(
+    activeOrganizationId && activeOrganizationId === organizationId && isLoading,
+  );
   const [storeFormMode, setStoreFormMode] = useState<'hidden' | 'create' | 'edit'>('hidden');
   const [storeForm, setStoreForm] = useState({ name: '', site: '' });
   const [storeFormError, setStoreFormError] = useState<string | null>(null);
@@ -190,34 +197,34 @@ export const StoreManagementPanel = ({
   };
 
   useEffect(() => {
-    const fetchStores = async () => {
-      try {
-        setIsLoadingStores(true);
-        const data = await storeService.listByOrganization(organizationId);
-        setStores(data);
-        if (data.length > 0) {
-          setSelectedStoreId((previous) => previous ?? data[0].id);
-        } else {
-          setSelectedStoreId(null);
-          setScenarios([]);
-        }
-      } catch (error) {
-        console.error(error);
-        showToast({
-          type: 'error',
-          message: t('storeManagement.storeListLoadError'),
-        });
-      } finally {
-        setIsLoadingStores(false);
-      }
-    };
+    if (!activeOrganizationId || activeOrganizationId !== organizationId) {
+      setSelectedStoreId(null);
+      setScenarios([]);
+      return;
+    }
 
-    void fetchStores();
-  }, [organizationId, showToast, t]);
+    if (storesForOrganization.length > 0) {
+      setSelectedStoreId((previous) => previous ?? storesForOrganization[0].id);
+    } else {
+      setSelectedStoreId(null);
+      setScenarios([]);
+    }
+  }, [activeOrganizationId, organizationId, storesForOrganization]);
+
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+
+    showToast({
+      type: 'error',
+      message: t('storeManagement.storeListLoadError'),
+    });
+  }, [error, showToast, t]);
 
   const selectedStore = useMemo(
-    () => stores.find((store) => store.id === selectedStoreId) ?? null,
-    [selectedStoreId, stores],
+    () => storesForOrganization.find((store) => store.id === selectedStoreId) ?? null,
+    [selectedStoreId, storesForOrganization],
   );
 
   useEffect(() => {
@@ -414,9 +421,6 @@ export const StoreManagementPanel = ({
           stage: '',
         });
 
-        setStores((previous) =>
-          [...previous, created].sort((a, b) => a.name.localeCompare(b.name)),
-        );
         setSelectedStoreId(created.id);
         resetStoreForm();
         showToast({ type: 'success', message: t('storeManagement.storeCreateSuccess') });
@@ -424,19 +428,12 @@ export const StoreManagementPanel = ({
       }
 
       if (storeFormMode === 'edit' && selectedStore) {
-        const updated = await storeService.update(selectedStore.id, {
+        await storeService.update(selectedStore.id, {
           name: trimmedName,
           site: trimmedSite,
           stage: stageValue,
         });
 
-        setStores((previous) =>
-          previous
-            .map((store) =>
-              store.id === updated.id ? { ...updated, scenarioCount: store.scenarioCount } : store,
-            )
-            .sort((a, b) => a.name.localeCompare(b.name)),
-        );
         showToast({ type: 'success', message: t('storeSummary.storeUpdateSuccess') });
         resetStoreForm();
       }
@@ -458,18 +455,6 @@ export const StoreManagementPanel = ({
     try {
       setIsSavingStore(true);
       await storeService.delete(store.id);
-      setStores((previous) => {
-        const remaining = previous.filter((item) => item.id !== store.id);
-        if (selectedStoreId === store.id) {
-          if (remaining.length > 0) {
-            setSelectedStoreId(remaining[0].id);
-          } else {
-            setSelectedStoreId(null);
-            setScenarios([]);
-          }
-        }
-        return remaining;
-      });
       showToast({ type: 'success', message: t('storeSummary.storeRemoveSuccess') });
     } catch (error) {
       console.error(error);
@@ -654,13 +639,6 @@ export const StoreManagementPanel = ({
           ...trimmedScenario,
         });
         setScenarios((previous) => [...previous, created]);
-        setStores((previous) =>
-          previous.map((store) =>
-            store.id === selectedStore.id
-              ? { ...store, scenarioCount: store.scenarioCount + 1 }
-              : store,
-          ),
-        );
         showToast({ type: 'success', message: t('storeSummary.scenarioCreateSuccess') });
       }
 
@@ -708,13 +686,6 @@ export const StoreManagementPanel = ({
       setIsSavingScenario(true);
       await storeService.deleteScenario(selectedStore.id, scenario.id);
       setScenarios((previous) => previous.filter((item) => item.id !== scenario.id));
-      setStores((previous) =>
-        previous.map((store) =>
-          store.id === selectedStore.id
-            ? { ...store, scenarioCount: Math.max(store.scenarioCount - 1, 0) }
-            : store,
-        ),
-      );
       showToast({ type: 'success', message: t('storeSummary.scenarioRemoveSuccess') });
     } catch (error) {
       console.error(error);
@@ -843,7 +814,7 @@ export const StoreManagementPanel = ({
             <p className="section-subtitle">
               {t('storeManagement.organizationStoreCount', {
                 organizationName,
-                count: stores.length,
+                count: storesForOrganization.length,
               })}
             </p>
           </div>
@@ -856,7 +827,7 @@ export const StoreManagementPanel = ({
 
         {isLoadingStores ? (
           <p className="section-subtitle">{t('storeManagement.loadingStores')}</p>
-        ) : stores.length === 0 ? (
+        ) : storesForOrganization.length === 0 ? (
           <p className="section-subtitle">
             {canManageStores
               ? t('storeManagement.emptyStoresManage')
@@ -864,7 +835,7 @@ export const StoreManagementPanel = ({
           </p>
         ) : (
           <ul className="store-list">
-            {stores.map((store) => {
+            {storesForOrganization.map((store) => {
               const isActive = store.id === selectedStoreId;
               const storeSite = buildExternalLink(store.site);
               const storeSiteLabel = storeSite.label || t('storeSummary.notProvided');

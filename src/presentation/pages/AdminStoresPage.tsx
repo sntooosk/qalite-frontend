@@ -2,13 +2,13 @@ import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useState } f
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
-import type { Store } from '../../domain/entities/store';
 import type { BrowserstackBuild } from '../../domain/entities/browserstack';
 import type { UserSummary } from '../../domain/entities/user';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
 import { browserstackService } from '../../application/use-cases/BrowserstackUseCase';
 import { userService } from '../../application/use-cases/UserUseCase';
+import { useStoresRealtime } from '../context/StoresRealtimeContext';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Layout } from '../components/Layout';
@@ -63,8 +63,14 @@ export const AdminStoresPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
-  const [stores, setStores] = useState<Store[]>([]);
-  const [isLoadingStores, setIsLoadingStores] = useState(false);
+  const { organizationId: activeOrganizationId, stores, isLoading, error } = useStoresRealtime();
+  const storesForOrganization = useMemo(
+    () => (activeOrganizationId && activeOrganizationId === selectedOrganizationId ? stores : []),
+    [activeOrganizationId, selectedOrganizationId, stores],
+  );
+  const isLoadingStores = Boolean(
+    activeOrganizationId && activeOrganizationId === selectedOrganizationId && isLoading,
+  );
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
   const [isOrganizationLocked, setIsOrganizationLocked] = useState(false);
   const [storeForm, setStoreForm] = useState<StoreForm>(initialStoreForm);
@@ -127,30 +133,23 @@ export const AdminStoresPage = () => {
 
   useEffect(() => {
     if (!selectedOrganizationId) {
-      setStores([]);
       setStoreAutomationCounts({});
       return;
     }
 
-    const fetchStores = async () => {
-      try {
-        setIsLoadingStores(true);
-        const data = await storeService.listByOrganization(selectedOrganizationId);
-        setStores(data);
-        setSearchParams({ Id: selectedOrganizationId });
-      } catch (error) {
-        console.error(error);
-        showToast({
-          type: 'error',
-          message: translation('AdminStoresPage.toast-error-load-stores'),
-        });
-      } finally {
-        setIsLoadingStores(false);
-      }
-    };
+    setSearchParams({ Id: selectedOrganizationId });
+  }, [selectedOrganizationId, setSearchParams]);
 
-    void fetchStores();
-  }, [selectedOrganizationId, setSearchParams, showToast, translation]);
+  useEffect(() => {
+    if (!error) {
+      return;
+    }
+
+    showToast({
+      type: 'error',
+      message: translation('AdminStoresPage.toast-error-load-stores'),
+    });
+  }, [error, showToast, translation]);
 
   const selectedOrganization = useMemo(
     () => organizations.find((organization) => organization.id === selectedOrganizationId) ?? null,
@@ -164,7 +163,7 @@ export const AdminStoresPage = () => {
   useEffect(() => () => setActiveOrganization(null), [setActiveOrganization]);
 
   useEffect(() => {
-    if (!selectedOrganizationId || stores.length === 0) {
+    if (!selectedOrganizationId || storesForOrganization.length === 0) {
       setStoreAutomationCounts({});
       return;
     }
@@ -175,7 +174,7 @@ export const AdminStoresPage = () => {
       setIsLoadingAutomationStats(true);
       try {
         const results = await Promise.all(
-          stores.map(async (store) => {
+          storesForOrganization.map(async (store) => {
             const scenarios = await storeService.listScenarios(store.id);
             const automatedCount = scenarios.filter((scenario) =>
               isAutomatedScenario(scenario.automation),
@@ -208,7 +207,7 @@ export const AdminStoresPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [selectedOrganizationId, stores, showToast, translation]);
+  }, [selectedOrganizationId, storesForOrganization, showToast, translation]);
 
   useEffect(() => {
     const searchTerm = newMemberEmail.trim();
@@ -283,20 +282,20 @@ export const AdminStoresPage = () => {
 
   const scenariosPerStoreData = useMemo(
     () =>
-      stores.map((store) => ({
+      storesForOrganization.map((store) => ({
         label: store.name,
         value: store.scenarioCount,
       })),
-    [stores],
+    [storesForOrganization],
   );
 
   const automatedScenariosPerStoreData = useMemo(
     () =>
-      stores.map((store) => ({
+      storesForOrganization.map((store) => ({
         label: store.name,
         value: storeAutomationCounts[store.id] ?? 0,
       })),
-    [stores, storeAutomationCounts],
+    [storesForOrganization, storeAutomationCounts],
   );
 
   const openCreateModal = () => {
@@ -399,14 +398,13 @@ export const AdminStoresPage = () => {
     try {
       setIsSavingStore(true);
 
-      const created = await storeService.create({
+      await storeService.create({
         organizationId: selectedOrganizationId,
         name: trimmedName,
         site: trimmedSite,
         stage: '',
       });
 
-      setStores((previous) => [...previous, created].sort((a, b) => a.name.localeCompare(b.name)));
       showToast({
         type: 'success',
         message: translation('AdminStoresPage.toast-success-store-created'),
@@ -493,7 +491,6 @@ export const AdminStoresPage = () => {
       await organizationService.delete(organization.id);
       const remainingOrganizations = organizations.filter((item) => item.id !== organization.id);
       setOrganizations(remainingOrganizations);
-      setStores([]);
       closeOrganizationModal();
       showToast({
         type: 'success',
@@ -728,7 +725,7 @@ export const AdminStoresPage = () => {
           <p className="section-subtitle">
             {translation('AdminStoresPage.loading-stores-message')}
           </p>
-        ) : stores.length === 0 ? (
+        ) : storesForOrganization.length === 0 ? (
           <div className="dashboard-empty">
             <h2 className="text-xl font-semibold text-primary">
               {translation('AdminStoresPage.no-stores-title')}
@@ -741,7 +738,7 @@ export const AdminStoresPage = () => {
         ) : (
           <>
             <div className="dashboard-grid">
-              {stores.map((store) => (
+              {storesForOrganization.map((store) => (
                 <div
                   key={store.id}
                   className="card card-clickable"
