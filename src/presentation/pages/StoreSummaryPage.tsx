@@ -654,12 +654,6 @@ export const StoreSummaryPage = () => {
   }, [storeId, t]);
 
   useEffect(() => {
-    if (scenarios.length === 0) {
-      setIsScenarioTableCollapsed(false);
-    }
-  }, [scenarios.length]);
-
-  useEffect(() => {
     setIsCategoryListCollapsed(true);
     setScenarioSort(null);
     setSuiteScenarioSort(null);
