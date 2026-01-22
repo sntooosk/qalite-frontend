@@ -1,6 +1,5 @@
 import type { AuthRepository } from '../../domain/repositories/AuthRepository';
 import type {
-  AuthStateListener,
   AuthUser,
   LoginPayload,
   RegisterPayload,
@@ -29,10 +28,6 @@ export class AuthUseCases {
 
   getCurrent(): Promise<AuthUser | null> {
     return this.authRepository.getCurrent();
-  }
-
-  onAuthStateChanged(listener: AuthStateListener): () => void {
-    return this.authRepository.onAuthStateChanged(listener);
   }
 
   hasRequiredRole(user: AuthUser | null, allowedRoles: AuthUser['role'][]): boolean {

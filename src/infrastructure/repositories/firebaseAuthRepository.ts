@@ -4,7 +4,6 @@ import {
   hasRequiredRole,
   loginUser,
   logoutUser,
-  onAuthStateChanged,
   registerUser,
   sendPasswordReset,
   updateUserProfile,
@@ -16,7 +15,6 @@ export const firebaseAuthRepository: AuthRepository = {
   logout: logoutUser,
   sendPasswordReset,
   getCurrent: getCurrentUser,
-  onAuthStateChanged,
   hasRequiredRole,
   updateProfile: updateUserProfile,
 };
