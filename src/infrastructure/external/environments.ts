@@ -5,8 +5,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
-  getDocs,
-  limit,
+  onSnapshot,
   query,
   runTransaction,
   serverTimestamp,
@@ -15,6 +14,7 @@ import {
   type QueryConstraint,
 } from 'firebase/firestore';
 
+import type { ActivityLog } from '../../domain/entities/activityLog';
 import type {
   CreateEnvironmentBugInput,
   CreateEnvironmentInput,
@@ -34,6 +34,7 @@ import type { UserSummary } from '../../domain/entities/user';
 import { firebaseFirestore } from '../database/firebase';
 import { EnvironmentStatusError } from '../../shared/errors/firebaseErrors';
 import { BUG_STATUS_LABEL, ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
+import { logActivity } from './logs';
 import {
   formatDateTime,
   formatDurationFromMs,
@@ -46,8 +47,46 @@ import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
+const STORES_COLLECTION = 'stores';
 const environmentsCollection = collection(firebaseFirestore, ENVIRONMENTS_COLLECTION);
-const ENVIRONMENTS_FETCH_LIMIT = 100;
+
+const getStoreOrganizationContext = async (
+  storeId: string,
+): Promise<{ organizationId: string | null; storeName: string }> => {
+  const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
+  const snapshot = await getDoc(storeRef);
+
+  if (!snapshot.exists()) {
+    return { organizationId: null, storeName: '' };
+  }
+
+  const data = snapshot.data();
+  return {
+    organizationId: (data.organizationId as string | undefined | null) ?? null,
+    storeName: (data.name as string | undefined) ?? '',
+  };
+};
+
+const logEnvironmentActivity = async (
+  storeId: string,
+  environmentId: string,
+  action: ActivityLog['action'],
+  message: string,
+  entityType: ActivityLog['entityType'] = 'environment',
+): Promise<void> => {
+  const context = await getStoreOrganizationContext(storeId);
+  if (!context.organizationId) {
+    return;
+  }
+
+  await logActivity({
+    organizationId: context.organizationId,
+    entityId: environmentId,
+    entityType,
+    action,
+    message: `${message} (${context.storeName || 'Loja'})`,
+  });
+};
 
 export const SCENARIO_COMPLETED_STATUSES: EnvironmentScenarioStatus[] = [
   'concluido',
@@ -197,6 +236,13 @@ export const createEnvironment = async (payload: CreateEnvironmentInput): Promis
     (snapshot.data() ?? {}) as Record<string, unknown>,
   );
 
+  await logEnvironmentActivity(
+    environment.storeId,
+    environment.id,
+    'create',
+    `Ambiente criado: ${environment.identificador || environment.id}`,
+  );
+
   return environment;
 };
 
@@ -215,50 +261,86 @@ export const updateEnvironment = async (
   }
 
   await updateDoc(environmentRef, data);
+
+  const snapshot = await getDoc(environmentRef);
+  if (snapshot.exists()) {
+    const environment = normalizeEnvironment(
+      environmentId,
+      (snapshot.data() ?? {}) as Record<string, unknown>,
+    );
+    await logEnvironmentActivity(
+      environment.storeId,
+      environmentId,
+      'update',
+      `Ambiente atualizado: ${environment.identificador || environmentId}`,
+    );
+  }
 };
 
 export const deleteEnvironment = async (environmentId: string): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-
-  await deleteDoc(environmentRef);
-};
-
-export const getEnvironment = async (environmentId: string): Promise<Environment | null> => {
-  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
   const snapshot = await getDoc(environmentRef);
 
-  if (!snapshot.exists()) {
-    return null;
-  }
+  await deleteDoc(environmentRef);
 
-  return normalizeEnvironment(snapshot.id, snapshot.data() ?? {});
+  if (snapshot.exists()) {
+    const environment = normalizeEnvironment(
+      environmentId,
+      (snapshot.data() ?? {}) as Record<string, unknown>,
+    );
+    await logEnvironmentActivity(
+      environment.storeId,
+      environmentId,
+      'delete',
+      `Ambiente removido: ${environment.identificador || environmentId}`,
+    );
+  }
 };
 
-export const getEnvironments = async (
+export const observeEnvironment = (
+  environmentId: string,
+  callback: (environment: Environment | null) => void,
+): (() => void) => {
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  return onSnapshot(environmentRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      callback(null);
+      return;
+    }
+
+    callback(normalizeEnvironment(snapshot.id, snapshot.data() ?? {}));
+  });
+};
+
+export const observeEnvironments = (
   filters: EnvironmentRealtimeFilters,
-): Promise<Environment[]> => {
+  callback: (environments: Environment[]) => void,
+): (() => void) => {
   const constraints: QueryConstraint[] = [];
 
   if (filters.storeId) {
     constraints.push(where('loja', '==', filters.storeId));
   }
 
-  constraints.push(limit(ENVIRONMENTS_FETCH_LIMIT));
+  const environmentsQuery =
+    constraints.length > 0 ? query(environmentsCollection, ...constraints) : environmentsCollection;
 
-  const environmentsQuery = query(environmentsCollection, ...constraints);
-  const snapshot = await getDocs(environmentsQuery);
+  return onSnapshot(environmentsQuery, (snapshot) => {
+    const list = snapshot.docs
+      .map((docSnapshot) => normalizeEnvironment(docSnapshot.id, docSnapshot.data() ?? {}))
+      .sort((a, b) => {
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bDate - aDate;
+      });
 
-  return snapshot.docs
-    .map((docSnapshot) => normalizeEnvironment(docSnapshot.id, docSnapshot.data() ?? {}))
-    .sort((a, b) => {
-      const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return bDate - aDate;
-    });
+    callback(list);
+  });
 };
 
 export const addEnvironmentUser = async (environmentId: string, userId: string): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  let environmentData: Record<string, unknown> | null = null;
   await runTransaction(firebaseFirestore, async (transaction) => {
     const snapshot = await transaction.get(environmentRef);
     if (!snapshot.exists()) {
@@ -266,6 +348,7 @@ export const addEnvironmentUser = async (environmentId: string, userId: string):
     }
 
     const data = snapshot.data();
+    environmentData = data;
     if (data.status === 'done') {
       throw new Error('Ambiente já concluído.');
     }
@@ -283,6 +366,26 @@ export const addEnvironmentUser = async (environmentId: string, userId: string):
       updatedAt: serverTimestamp(),
     });
   });
+
+  const environmentDetails = environmentData as Record<string, unknown> | null;
+  const storeId =
+    environmentDetails && typeof environmentDetails.storeId === 'string'
+      ? (environmentDetails.storeId as string)
+      : '';
+  const environmentIdentifier =
+    environmentDetails && typeof environmentDetails.identificador === 'string'
+      ? (environmentDetails.identificador as string)
+      : environmentId;
+
+  if (storeId) {
+    await logEnvironmentActivity(
+      storeId,
+      environmentId,
+      'participation',
+      `Participante adicionado ao ambiente (${environmentIdentifier})`,
+      'environment_participant',
+    );
+  }
 };
 
 export const removeEnvironmentUser = async (
@@ -290,6 +393,7 @@ export const removeEnvironmentUser = async (
   userId: string,
 ): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  let environmentData: Record<string, unknown> | null = null;
   await runTransaction(firebaseFirestore, async (transaction) => {
     const snapshot = await transaction.get(environmentRef);
     if (!snapshot.exists()) {
@@ -297,6 +401,7 @@ export const removeEnvironmentUser = async (
     }
 
     const data = snapshot.data();
+    environmentData = data;
     if (data?.status === 'done') {
       throw new Error('Não é possível sair de um ambiente concluído.');
     }
@@ -313,6 +418,26 @@ export const removeEnvironmentUser = async (
       updatedAt: serverTimestamp(),
     });
   });
+
+  const environmentDetails = environmentData as Record<string, unknown> | null;
+  const storeId =
+    environmentDetails && typeof environmentDetails.storeId === 'string'
+      ? (environmentDetails.storeId as string)
+      : '';
+  const environmentIdentifier =
+    environmentDetails && typeof environmentDetails.identificador === 'string'
+      ? (environmentDetails.identificador as string)
+      : environmentId;
+
+  if (storeId) {
+    await logEnvironmentActivity(
+      storeId,
+      environmentId,
+      'participation',
+      `Participante removido do ambiente (${environmentIdentifier})`,
+      'environment_participant',
+    );
+  }
 };
 
 const updateScenarioField = async (
@@ -336,17 +461,47 @@ export const updateScenarioStatus = async (
   status: EnvironmentScenarioStatus,
   platform?: EnvironmentScenarioPlatform,
 ): Promise<void> => {
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  const snapshot = await getDoc(environmentRef);
+  const environment = snapshot.exists()
+    ? normalizeEnvironment(environmentId, (snapshot.data() ?? {}) as Record<string, unknown>)
+    : null;
+
   if (platform === 'mobile') {
     await updateScenarioField(environmentId, scenarioId, { statusMobile: status });
+    if (environment) {
+      await logEnvironmentActivity(
+        environment.storeId,
+        environmentId,
+        'status_change',
+        `Status do cenário atualizado (mobile): ${status} - ${environment.identificador || environmentId}`,
+      );
+    }
     return;
   }
 
   if (platform === 'desktop') {
     await updateScenarioField(environmentId, scenarioId, { statusDesktop: status });
+    if (environment) {
+      await logEnvironmentActivity(
+        environment.storeId,
+        environmentId,
+        'status_change',
+        `Status do cenário atualizado (desktop): ${status} - ${environment.identificador || environmentId}`,
+      );
+    }
     return;
   }
 
   await updateScenarioField(environmentId, scenarioId, { status });
+  if (environment) {
+    await logEnvironmentActivity(
+      environment.storeId,
+      environmentId,
+      'status_change',
+      `Status do cenário atualizado: ${status} - ${environment.identificador || environmentId}`,
+    );
+  }
 };
 
 export const uploadScenarioEvidence = async (
@@ -365,33 +520,65 @@ export const uploadScenarioEvidence = async (
       throw new Error('Informe um link válido para a evidência.');
     }
   } catch (error) {
-    void error;
+    console.error(error);
     throw new Error('Informe um link válido para a evidência.');
   }
 
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  const environmentSnapshot = await getDoc(environmentRef);
+  const environment = environmentSnapshot.exists()
+    ? normalizeEnvironment(
+        environmentId,
+        (environmentSnapshot.data() ?? {}) as Record<string, unknown>,
+      )
+    : null;
+
   await updateScenarioField(environmentId, scenarioId, { evidenciaArquivoUrl: trimmedLink });
+
+  if (environment) {
+    await logEnvironmentActivity(
+      environment.storeId,
+      environmentId,
+      'attachment',
+      `Evidência vinculada ao cenário ${scenarioId} - ${environment.identificador || environmentId}`,
+    );
+  }
   return trimmedLink;
 };
 
-export const getEnvironmentBugs = async (environmentId: string): Promise<EnvironmentBug[]> => {
+export const observeEnvironmentBugs = (
+  environmentId: string,
+  callback: (bugs: EnvironmentBug[]) => void,
+): (() => void) => {
   const bugsCollectionRef = getBugCollection(environmentId);
-  const snapshot = await getDocs(bugsCollectionRef);
+  return onSnapshot(bugsCollectionRef, (snapshot) => {
+    const bugs = snapshot.docs
+      .map((docSnapshot) =>
+        normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
+      )
+      .sort((first, second) => {
+        const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
+        const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
+        return secondDate - firstDate;
+      });
 
-  return snapshot.docs
-    .map((docSnapshot) =>
-      normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
-    )
-    .sort((first, second) => {
-      const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
-      const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
-      return secondDate - firstDate;
-    });
+    callback(bugs);
+  });
 };
 
 export const createEnvironmentBug = async (
   environmentId: string,
   payload: CreateEnvironmentBugInput,
 ): Promise<EnvironmentBug> => {
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  const environmentSnapshot = await getDoc(environmentRef);
+  const environment = environmentSnapshot.exists()
+    ? normalizeEnvironment(
+        environmentId,
+        (environmentSnapshot.data() ?? {}) as Record<string, unknown>,
+      )
+    : null;
+
   const bugsCollectionRef = getBugCollection(environmentId);
   const docRef = await addDoc(bugsCollectionRef, {
     ...payload,
@@ -402,6 +589,16 @@ export const createEnvironmentBug = async (
   const snapshot = await getDoc(docRef);
   const bug = normalizeBug(snapshot.id, (snapshot.data() ?? {}) as Record<string, unknown>);
 
+  if (environment) {
+    await logEnvironmentActivity(
+      environment.storeId,
+      environmentId,
+      'create',
+      `Bug criado: ${bug.title}`,
+      'environment_bug',
+    );
+  }
+
   return bug;
 };
 
@@ -410,6 +607,15 @@ export const updateEnvironmentBug = async (
   bugId: string,
   payload: UpdateEnvironmentBugInput,
 ): Promise<void> => {
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  const environmentSnapshot = await getDoc(environmentRef);
+  const environment = environmentSnapshot.exists()
+    ? normalizeEnvironment(
+        environmentId,
+        (environmentSnapshot.data() ?? {}) as Record<string, unknown>,
+      )
+    : null;
+
   const bugRef = doc(
     firebaseFirestore,
     ENVIRONMENTS_COLLECTION,
@@ -421,9 +627,28 @@ export const updateEnvironmentBug = async (
     ...payload,
     updatedAt: serverTimestamp(),
   });
+
+  if (environment) {
+    await logEnvironmentActivity(
+      environment.storeId,
+      environmentId,
+      'update',
+      `Bug atualizado: ${payload.title ?? bugId}`,
+      'environment_bug',
+    );
+  }
 };
 
 export const deleteEnvironmentBug = async (environmentId: string, bugId: string): Promise<void> => {
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  const environmentSnapshot = await getDoc(environmentRef);
+  const environment = environmentSnapshot.exists()
+    ? normalizeEnvironment(
+        environmentId,
+        (environmentSnapshot.data() ?? {}) as Record<string, unknown>,
+      )
+    : null;
+
   const bugRef = doc(
     firebaseFirestore,
     ENVIRONMENTS_COLLECTION,
@@ -432,6 +657,16 @@ export const deleteEnvironmentBug = async (environmentId: string, bugId: string)
     bugId,
   );
   await deleteDoc(bugRef);
+
+  if (environment) {
+    await logEnvironmentActivity(
+      environment.storeId,
+      environmentId,
+      'delete',
+      `Bug removido (${bugId})`,
+      'environment_bug',
+    );
+  }
 };
 
 interface TransitionEnvironmentStatusParams {
@@ -503,6 +738,13 @@ export const transitionEnvironmentStatus = async ({
   }
 
   await updateEnvironment(environment.id, payload);
+
+  await logEnvironmentActivity(
+    environment.storeId,
+    environment.id,
+    'status_change',
+    `Status do ambiente atualizado para ${targetStatus} (${environment.identificador || environment.id})`,
+  );
 };
 
 const computeNextTimeTracking = (

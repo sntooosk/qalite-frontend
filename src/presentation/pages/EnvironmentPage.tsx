@@ -17,7 +17,7 @@ import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { useToast } from '../context/ToastContext';
-import { useEnvironmentResource } from '../hooks/useEnvironmentResource';
+import { useEnvironmentRealtime } from '../hooks/useEnvironmentRealtime';
 import { useTimeTracking } from '../hooks/useTimeTracking';
 import { useAuth } from '../hooks/useAuth';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
@@ -214,11 +214,7 @@ export const EnvironmentPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { user } = useAuth();
-  const {
-    environment,
-    isLoading,
-    refetch: refetchEnvironment,
-  } = useEnvironmentResource(environmentId);
+  const { environment, isLoading } = useEnvironmentRealtime(environmentId);
   const { organization: environmentOrganization } = useStoreOrganizationBranding(
     environment?.storeId ?? null,
   );
@@ -236,11 +232,7 @@ export const EnvironmentPage = () => {
   const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
-  const {
-    bugs,
-    isLoading: isLoadingBugs,
-    refetch: refetchBugs,
-  } = useEnvironmentBugs(environment?.id ?? null);
+  const { bugs, isLoading: isLoadingBugs } = useEnvironmentBugs(environment?.id ?? null);
   const {
     hasEnteredEnvironment,
     isLocked,
@@ -252,10 +244,9 @@ export const EnvironmentPage = () => {
     isLeavingEnvironment,
     enterEnvironment,
     leaveEnvironment,
-  } = useEnvironmentEngagement(environment, { onEnvironmentUpdated: refetchEnvironment });
+  } = useEnvironmentEngagement(environment);
   const { isUpdating: isUpdatingEvidence, handleEvidenceUpload } = useScenarioEvidence(
     environment?.id,
-    { onUpdated: refetchEnvironment },
   );
   const { t: translation, i18n } = useTranslation();
   const {
@@ -330,7 +321,7 @@ export const EnvironmentPage = () => {
     try {
       await handleEvidenceUpload(scenarioDetailsId, link);
     } catch (error) {
-      void error;
+      console.error(error);
     }
   }, [handleEvidenceUpload, modalEvidenceLink, scenarioDetailsId]);
 
@@ -372,7 +363,7 @@ export const EnvironmentPage = () => {
           setScenarios(scenariosData);
         }
       } catch (error) {
-        void error;
+        console.error(error);
         if (isMounted) {
           setSuites([]);
           setScenarios([]);
@@ -420,7 +411,7 @@ export const EnvironmentPage = () => {
 
       await slackService.sendTaskSummary(payload);
     } catch (error) {
-      void error;
+      console.error(error);
     } finally {
       setIsSendingSlackSummary(false);
     }
@@ -457,8 +448,6 @@ export const EnvironmentPage = () => {
           await sendSlackSummary();
         }
 
-        await refetchEnvironment();
-
         showToast({
           type: 'success',
           message:
@@ -467,7 +456,6 @@ export const EnvironmentPage = () => {
               : translation('environment.statusUpdated'),
         });
       } catch (error) {
-        void error;
         if (error instanceof EnvironmentStatusError && error.code === 'PENDING_SCENARIOS') {
           showToast({
             type: 'error',
@@ -476,11 +464,12 @@ export const EnvironmentPage = () => {
           return;
         }
 
+        console.error(error);
         showToast({ type: 'error', message: translation('environment.statusUpdateError') });
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [environment, refetchEnvironment, showToast, user?.uid],
+    [environment, showToast, user?.uid],
   );
 
   const handleCopyLink = useCallback(
@@ -493,7 +482,7 @@ export const EnvironmentPage = () => {
         await copyToClipboard(url);
         showToast({ type: 'success', message: translation('environment.copySuccess') });
       } catch (error) {
-        void error;
+        console.error(error);
         showToast({ type: 'error', message: translation('environment.copyError') });
       }
     },
@@ -512,14 +501,13 @@ export const EnvironmentPage = () => {
         await environmentService.update(environment.id, {
           publicShareLanguage: shareLanguage,
         });
-        await refetchEnvironment();
       } catch (error) {
-        void error;
+        console.error(error);
       }
     }
 
     await handleCopyLink(shareLinks.public);
-  }, [environment, handleCopyLink, i18n.language, refetchEnvironment, shareLinks.public]);
+  }, [environment, handleCopyLink, i18n.language, shareLinks.public]);
 
   const handleExportPDF = useCallback(() => {
     if (!environment) {
@@ -539,7 +527,7 @@ export const EnvironmentPage = () => {
       await environmentService.copyAsMarkdown(environment, bugs, participantProfiles);
       showToast({ type: 'success', message: translation('environment.copyMarkdownSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       showToast({ type: 'error', message: translation('environment.copyMarkdownError') });
     } finally {
       setIsCopyingMarkdown(false);
@@ -577,7 +565,7 @@ export const EnvironmentPage = () => {
       await enterEnvironment();
       return true;
     } catch (error) {
-      void error;
+      console.error(error);
       showToast({ type: 'error', message: translation('environment.enterError') });
       return false;
     }
@@ -589,7 +577,7 @@ export const EnvironmentPage = () => {
       await leaveEnvironment();
       showToast({ type: 'success', message: translation('environment.leaveSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       showToast({ type: 'error', message: translation('environment.leaveError') });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -781,7 +769,6 @@ export const EnvironmentPage = () => {
             isLocked={Boolean(isScenarioLocked)}
             onViewDetails={handleOpenScenarioDetails}
             organizationId={environmentOrganization?.id ?? null}
-            onScenarioUpdated={refetchEnvironment}
           />
         </div>
 
@@ -791,7 +778,6 @@ export const EnvironmentPage = () => {
           isLocked={Boolean(isInteractionLocked)}
           isLoading={isLoadingBugs}
           onEdit={handleEditBug}
-          onUpdated={refetchBugs}
         />
       </section>
 
@@ -808,7 +794,6 @@ export const EnvironmentPage = () => {
         onLeave={handleLeaveEnvironment}
         canLeave={hasEnteredEnvironment && environment.status !== 'done'}
         isLeaving={isLeavingEnvironment}
-        onUpdated={refetchEnvironment}
       />
 
       <DeleteEnvironmentModal
@@ -824,7 +809,6 @@ export const EnvironmentPage = () => {
           bug={editingBug}
           onClose={closeBugModal}
           initialScenarioId={editingBug ? (editingBug.scenarioId ?? null) : defaultBugScenarioId}
-          onUpdated={refetchBugs}
         />
       )}
 

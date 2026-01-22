@@ -10,6 +10,7 @@ import { useOrganizationBranding } from '../context/OrganizationBrandingContext'
 import { Layout } from '../components/Layout';
 import { UserAvatar } from '../components/UserAvatar';
 import { StoreManagementPanel } from '../components/StoreManagementPanel';
+import { OrganizationLogPanel } from '../components/OrganizationLogPanel';
 
 export const OrganizationDashboardPage = () => {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ export const OrganizationDashboardPage = () => {
 
         setOrganization(data);
       } catch (error) {
-        void error;
+        console.error(error);
         showToast({ type: 'error', message: t('organizationPage.loadingError') });
       } finally {
         setIsLoading(false);
@@ -117,6 +118,10 @@ export const OrganizationDashboardPage = () => {
           )}
         </div>
       </section>
+
+      {!isLoading && organization && isAdmin && (
+        <OrganizationLogPanel organizationId={organization.id} />
+      )}
 
       {!isLoading && organization && (
         <StoreManagementPanel

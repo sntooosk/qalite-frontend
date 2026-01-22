@@ -22,7 +22,6 @@ interface EnvironmentKanbanProps {
   scenarios: StoreScenario[];
   environments: Environment[];
   isLoading: boolean;
-  onRefresh?: () => void | Promise<void>;
 }
 
 const COLUMNS: { status: EnvironmentStatus; title: string }[] = [
@@ -37,7 +36,6 @@ export const EnvironmentKanban = ({
   scenarios,
   environments,
   isLoading,
-  onRefresh,
 }: EnvironmentKanbanProps) => {
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -72,7 +70,7 @@ export const EnvironmentKanban = ({
           setUserProfilesMap(nextMap);
         }
       } catch (error) {
-        void error;
+        console.error('Failed to fetch user summaries', error);
       }
     };
 
@@ -179,10 +177,8 @@ export const EnvironmentKanban = ({
         targetStatus: status,
         currentUserId: user?.uid ?? null,
       });
-      await onRefresh?.();
       showToast({ type: 'success', message: t('environmentKanban.statusUpdate') });
     } catch (error) {
-      void error;
       if (error instanceof EnvironmentStatusError && error.code === 'PENDING_SCENARIOS') {
         showToast({
           type: 'error',
@@ -191,6 +187,7 @@ export const EnvironmentKanban = ({
         return;
       }
 
+      console.error(error);
       showToast({ type: 'error', message: t('environmentKanban.updateError') });
     }
   };
@@ -217,10 +214,9 @@ export const EnvironmentKanban = ({
           storeId={storeId}
           suites={suites}
           scenarios={scenarios}
-          onCreated={async () => {
-            await onRefresh?.();
-            showToast({ type: 'success', message: t('environmentKanban.environmentCreated') });
-          }}
+          onCreated={() =>
+            showToast({ type: 'success', message: t('environmentKanban.environmentCreated') })
+          }
         />
       </header>
 

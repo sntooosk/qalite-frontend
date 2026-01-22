@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { Environment, EnvironmentStatus } from '../../domain/entities/environment';
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
@@ -11,7 +11,6 @@ interface UseStoreEnvironmentsResult {
   environments: Environment[];
   isLoading: boolean;
   statusCounts: StatusCounts;
-  refetch: () => Promise<void>;
 }
 
 const buildEmptyCounts = (): StatusCounts => ({
@@ -26,45 +25,22 @@ export const useStoreEnvironments = (
 ): UseStoreEnvironmentsResult => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(storeId));
-  const isMountedRef = useRef(true);
 
-  const refetch = useCallback(async () => {
+  useEffect(() => {
     if (!storeId) {
-      if (isMountedRef.current) {
-        setEnvironments([]);
-        setIsLoading(false);
-      }
+      setEnvironments([]);
+      setIsLoading(false);
       return;
     }
 
-    if (isMountedRef.current) {
-      setIsLoading(true);
-    }
+    setIsLoading(true);
+    const unsubscribe = environmentService.observeAll({ storeId }, (list) => {
+      setEnvironments(list);
+      setIsLoading(false);
+    });
 
-    try {
-      const list = await environmentService.getAll({ storeId });
-      if (isMountedRef.current) {
-        setEnvironments(list);
-      }
-    } catch (error) {
-      void error;
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
-    }
+    return () => unsubscribe();
   }, [storeId]);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    void refetch();
-  }, [refetch]);
 
   const statusCounts = useMemo(() => {
     if (environments.length === 0) {
@@ -84,6 +60,5 @@ export const useStoreEnvironments = (
     environments,
     isLoading,
     statusCounts,
-    refetch,
   };
 };

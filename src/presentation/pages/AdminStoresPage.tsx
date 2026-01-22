@@ -27,6 +27,7 @@ import {
   StorefrontIcon,
   UsersGroupIcon,
 } from '../components/icons';
+import { OrganizationLogPanel } from '../components/OrganizationLogPanel';
 import { isAutomatedScenario } from '../../shared/utils/automation';
 import { useTranslation } from 'react-i18next';
 
@@ -117,7 +118,7 @@ export const AdminStoresPage = () => {
           setSelectedOrganizationId('');
         }
       } catch (error) {
-        void error;
+        console.error(error);
         showToast({ type: 'error', message: translation('AdminStoresPage.toast-error-load-orgs') });
       }
     };
@@ -139,7 +140,7 @@ export const AdminStoresPage = () => {
         setStores(data);
         setSearchParams({ organizationId: selectedOrganizationId });
       } catch (error) {
-        void error;
+        console.error(error);
         showToast({
           type: 'error',
           message: translation('AdminStoresPage.toast-error-load-stores'),
@@ -189,7 +190,7 @@ export const AdminStoresPage = () => {
           setStoreAutomationCounts(Object.fromEntries(results));
         }
       } catch (error) {
-        void error;
+        console.error(error);
         if (isMounted) {
           showToast({
             type: 'error',
@@ -229,7 +230,7 @@ export const AdminStoresPage = () => {
 
           setUserSuggestions(filteredResults);
         } catch (error) {
-          void error;
+          console.error(error);
           setUserSuggestions([]);
         } finally {
           setIsSearchingUsers(false);
@@ -264,7 +265,7 @@ export const AdminStoresPage = () => {
       const builds = await browserstackService.listBuilds(selectedOrganizationCredentials);
       setBrowserstackBuilds(builds);
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error
           ? error.message
@@ -413,7 +414,7 @@ export const AdminStoresPage = () => {
       });
       closeStoreModal();
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error
           ? error.message
@@ -475,7 +476,7 @@ export const AdminStoresPage = () => {
       });
       closeOrganizationModal();
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error
           ? error.message
@@ -504,7 +505,7 @@ export const AdminStoresPage = () => {
       setSearchParams({});
       navigate('/admin');
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error
           ? error.message
@@ -564,7 +565,7 @@ export const AdminStoresPage = () => {
         message: translation('AdminStoresPage.toast-success-member-added'),
       });
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error
           ? error.message
@@ -605,7 +606,7 @@ export const AdminStoresPage = () => {
         message: translation('AdminStoresPage.toast-success-member-removed'),
       });
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error
           ? error.message
@@ -740,6 +741,12 @@ export const AdminStoresPage = () => {
           </div>
         ) : (
           <>
+            {selectedOrganization && (
+              <div className="page-section">
+                <OrganizationLogPanel organizationId={selectedOrganization.id} />
+              </div>
+            )}
+
             <div className="dashboard-grid">
               {stores.map((store) => (
                 <div

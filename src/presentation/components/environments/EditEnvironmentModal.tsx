@@ -32,7 +32,6 @@ interface EditEnvironmentModalProps {
   onLeave?: () => void;
   canLeave?: boolean;
   isLeaving?: boolean;
-  onUpdated?: () => void | Promise<void>;
 }
 
 const buildScenarioMap = (
@@ -76,7 +75,6 @@ export const EditEnvironmentModal = ({
   onLeave,
   canLeave,
   isLeaving,
-  onUpdated,
 }: EditEnvironmentModalProps) => {
   const { t: translation } = useTranslation();
 
@@ -167,10 +165,9 @@ export const EditEnvironmentModal = ({
 
     try {
       await environmentService.update(environment.id, payload);
-      await onUpdated?.();
       onClose();
     } catch (error) {
-      void error;
+      console.error(error);
       showToast({
         type: 'error',
         message: translation('editEnvironmentModal.updateEnvironmentError'),

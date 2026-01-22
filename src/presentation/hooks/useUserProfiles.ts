@@ -24,7 +24,7 @@ export const useUserProfiles = (userIds: string[]) => {
           setProfiles(summaries);
         }
       } catch (error) {
-        void error;
+        console.error('Failed to load user profiles', error);
       }
     };
 

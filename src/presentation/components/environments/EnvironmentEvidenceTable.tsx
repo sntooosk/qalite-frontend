@@ -30,7 +30,6 @@ interface EnvironmentEvidenceTableProps {
   readOnly?: boolean;
   onViewDetails?: (scenarioId: string) => void;
   organizationId?: string | null;
-  onScenarioUpdated?: () => void | Promise<void>;
 }
 
 export const EnvironmentEvidenceTable = ({
@@ -39,12 +38,9 @@ export const EnvironmentEvidenceTable = ({
   readOnly,
   onViewDetails,
   organizationId,
-  onScenarioUpdated,
 }: EnvironmentEvidenceTableProps) => {
   const { t: translation } = useTranslation();
-  const { isUpdating, changeScenarioStatus } = useScenarioEvidence(environment.id, {
-    onUpdated: onScenarioUpdated,
-  });
+  const { isUpdating, changeScenarioStatus } = useScenarioEvidence(environment.id);
   const { showToast } = useToast();
   const { user } = useAuth();
   const [scenarioSort, setScenarioSort] = useState<ScenarioSortConfig | null>(null);
@@ -300,7 +296,7 @@ export const EnvironmentEvidenceTable = ({
         return next;
       });
     } catch (error) {
-      void error;
+      console.error(error);
       showToast({
         type: 'error',
         message: translation('environmentEvidenceTable.toast_exec_error'),

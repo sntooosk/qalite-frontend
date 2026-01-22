@@ -203,7 +203,7 @@ export const StoreManagementPanel = ({
           setScenarios([]);
         }
       } catch (error) {
-        void error;
+        console.error(error);
         showToast({
           type: 'error',
           message: t('storeManagement.storeListLoadError'),
@@ -233,7 +233,7 @@ export const StoreManagementPanel = ({
         const data = await storeService.listScenarios(selectedStore.id);
         setScenarios(data);
       } catch (error) {
-        void error;
+        console.error(error);
         showToast({
           type: 'error',
           message: t('storeManagement.scenarioListLoadError'),
@@ -262,7 +262,7 @@ export const StoreManagementPanel = ({
           setCategories(data);
         }
       } catch (error) {
-        void error;
+        console.error(error);
         if (isMounted) {
           showToast({ type: 'error', message: t('storeSummary.categoriesLoadError') });
         }
@@ -321,10 +321,10 @@ export const StoreManagementPanel = ({
             });
             createdCategories.push(created);
           } catch (error) {
-            void error;
             if (error instanceof Error && error.message.includes('Já existe')) {
               continue;
             }
+            console.error(error);
           }
         }
 
@@ -448,7 +448,7 @@ export const StoreManagementPanel = ({
         resetStoreForm();
       }
     } catch (error) {
-      void error;
+      console.error(error);
       const message = error instanceof Error ? error.message : t('storeManagement.storeSaveError');
       setStoreFormError(message);
       showToast({ type: 'error', message });
@@ -479,7 +479,7 @@ export const StoreManagementPanel = ({
       });
       showToast({ type: 'success', message: t('storeSummary.storeRemoveSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       const message = error instanceof Error ? error.message : t('storeSummary.storeRemoveError');
       showToast({ type: 'error', message });
     } finally {
@@ -518,7 +518,7 @@ export const StoreManagementPanel = ({
       setCategoryError(null);
       showToast({ type: 'success', message: t('storeSummary.categoryCreateSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error ? error.message : t('storeSummary.categoryCreateError');
       setCategoryError(message);
@@ -580,7 +580,7 @@ export const StoreManagementPanel = ({
       setCategoryError(null);
       showToast({ type: 'success', message: t('storeSummary.categoryUpdateSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error ? error.message : t('storeSummary.categoryUpdateError');
       setCategoryError(message);
@@ -604,7 +604,7 @@ export const StoreManagementPanel = ({
       }
       showToast({ type: 'success', message: t('storeSummary.categoryRemoveSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error ? error.message : t('storeSummary.categoryRemoveError');
       setCategoryError(message);
@@ -674,7 +674,7 @@ export const StoreManagementPanel = ({
       setScenarioForm(emptyScenarioForm);
       setEditingScenarioId(null);
     } catch (error) {
-      void error;
+      console.error(error);
       const message = error instanceof Error ? error.message : t('storeSummary.scenarioSaveError');
       setScenarioFormError(message);
       showToast({ type: 'error', message });
@@ -724,7 +724,7 @@ export const StoreManagementPanel = ({
       );
       showToast({ type: 'success', message: t('storeSummary.scenarioRemoveSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error ? error.message : t('storeSummary.scenarioRemoveError');
       showToast({ type: 'error', message });
@@ -829,7 +829,7 @@ export const StoreManagementPanel = ({
 
       showToast({ type: 'success', message: t('storeSummary.scenarioExportSuccess') });
     } catch (error) {
-      void error;
+      console.error(error);
       const message =
         error instanceof Error ? error.message : t('storeSummary.scenarioExportError');
       showToast({ type: 'error', message });

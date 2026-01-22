@@ -26,7 +26,6 @@ export const sendEnvironmentSummaryToSlack = async (
       body: JSON.stringify(payload),
     });
   } catch (error) {
-    void error;
     const hint =
       `Não foi possível conectar ao serviço QaLite em ${baseUrl}. ` +
       'Verifique se a API está em execução ou ajuste a variável VITE_QALITE_SERVICE_URL.';
@@ -47,7 +46,7 @@ const extractErrorMessage = async (response: Response): Promise<string | null> =
       return data.message;
     }
   } catch (error) {
-    void error;
+    console.warn('Não foi possível interpretar a resposta do Slack:', error);
   }
 
   return null;

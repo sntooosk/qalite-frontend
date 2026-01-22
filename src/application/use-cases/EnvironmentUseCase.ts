@@ -29,12 +29,15 @@ export class EnvironmentUseCases {
     return this.environmentRepository.delete(id);
   }
 
-  getEnvironment(id: string): Promise<Environment | null> {
-    return this.environmentRepository.getEnvironment(id);
+  observeEnvironment(id: string, onChange: (environment: Environment | null) => void): () => void {
+    return this.environmentRepository.observeEnvironment(id, onChange);
   }
 
-  getAll(filters: EnvironmentRealtimeFilters): Promise<Environment[]> {
-    return this.environmentRepository.getAll(filters);
+  observeAll(
+    filters: EnvironmentRealtimeFilters,
+    onChange: (environments: Environment[]) => void,
+  ): () => void {
+    return this.environmentRepository.observeAll(filters, onChange);
   }
 
   addUser(id: string, userId: string): Promise<void> {
@@ -71,8 +74,8 @@ export class EnvironmentUseCases {
     );
   }
 
-  getBugs(environmentId: string): Promise<EnvironmentBug[]> {
-    return this.environmentRepository.getBugs(environmentId);
+  observeBugs(environmentId: string, onChange: (bugs: EnvironmentBug[]) => void): () => void {
+    return this.environmentRepository.observeBugs(environmentId, onChange);
   }
 
   createBug(environmentId: string, bug: CreateEnvironmentBugInput): Promise<EnvironmentBug> {

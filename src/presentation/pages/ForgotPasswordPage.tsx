@@ -37,7 +37,7 @@ export const ForgotPasswordPage = () => {
         isSuccess: true,
       });
     } catch (err) {
-      void err;
+      console.error(err);
       const message = err instanceof Error ? err.message : translation('forgotPassword.error');
 
       setFeedback({ message, isSuccess: false });
