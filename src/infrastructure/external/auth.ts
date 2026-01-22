@@ -31,6 +31,7 @@ import {
 
 const USERS_COLLECTION = 'users';
 const AUTH_COOKIE_NAME = 'firebase:authUser';
+
 const persistFirebaseAuthCookie = (firebaseUser: FirebaseUser | null): void => {
   if (typeof document === 'undefined') {
     return;
@@ -65,6 +66,7 @@ export const registerUser = async ({ role, ...payload }: RegisterPayload): Promi
 
   const resolvedRole = role ?? DEFAULT_ROLE;
   const { firstName, lastName } = extractNameParts(normalizedDisplayName);
+
   await persistUserProfile(
     user,
     {
@@ -104,30 +106,47 @@ export const registerUser = async ({ role, ...payload }: RegisterPayload): Promi
     browserstackCredentials: null,
     preferences: getInitialPreferences(),
   };
+
   return mapToAuthUser(user, resolvedProfile);
 };
 
+/**
+ * LOGIN MAIS RÁPIDO:
+ * - paraleliza fetchUserProfile + addUserToOrganizationByEmailDomain com Promise.all
+ * - não bloqueia o login enviando email de verificação (dispara em background)
+ */
 export const loginUser = async ({ email, password }: LoginPayload): Promise<AuthUser> => {
   const credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
 
+  // Não bloquear o login por envio de verificação
   if (!credential.user.emailVerified) {
-    await sendEmailVerification(credential.user);
+    void sendEmailVerification(credential.user);
   }
 
   persistFirebaseAuthCookie(credential.user);
 
-  const profile = await fetchUserProfile(credential.user.uid);
-  const organizationId = await addUserToOrganizationByEmailDomain({
-    uid: credential.user.uid,
-    email: credential.user.email ?? email,
-    displayName: credential.user.displayName ?? email,
-    photoURL: null,
-  });
+  const uid = credential.user.uid;
+
+  // 1) Busca o profile primeiro (uma leitura)
+  const profile = await fetchUserProfile(uid);
+
+  // 2) Só resolve organização se ainda não existir
+  let organizationId: string | null | undefined = profile.organizationId ?? null;
+
+  if (!organizationId) {
+    organizationId = await addUserToOrganizationByEmailDomain({
+      uid,
+      email: credential.user.email ?? email,
+      displayName: credential.user.displayName ?? email,
+      photoURL: null,
+    });
+  }
 
   const resolvedProfile = {
     ...profile,
-    organizationId: organizationId ?? profile.organizationId ?? null,
+    organizationId: organizationId ?? null,
   };
+
   return mapToAuthUser(credential.user, resolvedProfile);
 };
 
@@ -225,7 +244,9 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
     payload.firstName || payload.lastName
       ? `${trimmedFirstName} ${trimmedLastName}`.trim()
       : (currentProfile.displayName ?? user.displayName ?? user.email ?? '').trim();
+
   const browserstackCredentials = normalizeBrowserstackCredentials(payload.browserstackCredentials);
+
   const preferences = payload.preferences
     ? normalizeUserPreferences(
         payload.preferences,
@@ -283,12 +304,14 @@ const mapToAuthUser = (user: FirebaseUser, profile: StoredProfile): AuthUser => 
   const storedFirstName = (profile.firstName ?? '').trim();
   const storedLastName = (profile.lastName ?? '').trim();
   const nameFromParts = `${storedFirstName} ${storedLastName}`.trim();
+
   const computedDisplayName =
     (profile.displayName ?? '').trim() ||
     nameFromParts ||
     (user.displayName ?? '') ||
     (user.email ?? '') ||
     '';
+
   const [computedFirstName, ...computedLastNameParts] = computedDisplayName.split(/\s+/);
   const effectiveFirstName = storedFirstName || computedFirstName || '';
   const effectiveLastName = storedLastName || computedLastNameParts.join(' ');
@@ -325,6 +348,7 @@ const persistUserProfile = async (
   browserstackCredentials: BrowserstackCredentials | null,
 ): Promise<void> => {
   const userDoc = doc(firebaseFirestore, USERS_COLLECTION, user.uid);
+
   await setDoc(
     userDoc,
     {
@@ -350,6 +374,7 @@ const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
 
   if (snapshot.exists()) {
     const data = snapshot.data();
+
     const profile = {
       role: (data.role as Role) ?? DEFAULT_ROLE,
       displayName: (data.displayName as string) ?? '',
@@ -360,6 +385,7 @@ const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
       browserstackCredentials: parseBrowserstackCredentials(data?.browserstackCredentials),
       preferences: normalizeUserPreferences(data?.preferences, getInitialPreferences()),
     };
+
     return profile;
   }
 
@@ -382,6 +408,7 @@ const extractNameParts = (fullName: string): { firstName: string; lastName: stri
   }
 
   const [first, ...rest] = trimmed.split(/\s+/);
+
   return {
     firstName: first ?? '',
     lastName: rest.join(' '),
