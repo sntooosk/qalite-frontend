@@ -57,6 +57,8 @@ import { openScenarioPdf } from '../../shared/utils/storeImportExport';
 import { isAutomatedScenario } from '../../shared/utils/automation';
 import { useTranslation } from 'react-i18next';
 import { buildExternalLink } from '../utils/externalLink';
+import { exportScenarioExcel } from '../../utils/exportExcel';
+import { formatDateTime } from '../../shared/utils/time';
 
 const emptyScenarioForm: StoreScenarioInput = {
   title: '',
@@ -88,7 +90,7 @@ interface StoreHighlight {
   onClick?: () => void;
 }
 
-type ExportFormat = 'pdf';
+type ExportFormat = 'pdf' | 'xlsx';
 
 const emptyScenarioFilters: ScenarioFilters = {
   search: '',
@@ -1155,6 +1157,57 @@ export const StoreSummaryPage = () => {
       setExportingScenarioFormat(format);
       const data = await storeService.exportStore(store.id);
 
+      if (format === 'xlsx') {
+        const scenarioRows = data.scenarios.map((scenario) => ({
+          titulo: scenario.title?.trim() || t('storeSummary.emptyValue'),
+          categoria: scenario.category?.trim() || t('storeSummary.emptyValue'),
+          automacao: formatAutomationLabel(scenario.automation),
+          criticidade: formatCriticalityLabel(scenario.criticality),
+          observacao: scenario.observation?.trim() || t('storeSummary.emptyValue'),
+          bdd: scenario.bdd?.trim() || t('storeSummary.emptyValue'),
+        }));
+        const infoRows = [
+          { label: t('storeSummary.store'), value: data.store.name },
+          {
+            label: t('storeSummary.siteLabel'),
+            value: data.store.site?.trim() || t('storeSummary.notProvided'),
+          },
+          {
+            label: t('storeSummary.environmentLabel'),
+            value: data.store.stage?.trim() || t('storeSummary.notInformed'),
+          },
+          {
+            label: t('storeSummary.scenarioCountLabel'),
+            value: String(data.store.scenarioCount),
+          },
+          {
+            label: t('storeSummary.exportedAtLabel'),
+            value: formatDateTime(data.exportedAt, {
+              locale: i18n.language,
+              emptyLabel: t('storeSummary.notInformed'),
+            }),
+          },
+        ];
+        const baseFileName = `${store.name.replace(/\s+/g, '_')}_${t('storeSummary.exportFileSuffix')}`;
+
+        exportScenarioExcel({
+          fileName: `${baseFileName}.xlsx`,
+          scenarioSheetName: t('storeSummary.exportExcelSheetName'),
+          infoSheetName: t('storeSummary.exportExcelInfoSheetName'),
+          infoHeaderLabels: [t('exportExcel.field'), t('exportExcel.value')],
+          infoRows,
+          scenarioRows,
+          scenarioHeaderLabels: [
+            t('storeSummary.title'),
+            t('storeSummary.category'),
+            t('storeSummary.automation'),
+            t('storeSummary.criticality'),
+            t('storeSummary.observation'),
+            t('storeSummary.bdd'),
+          ],
+        });
+      }
+
       if (format === 'pdf') {
         openScenarioPdf(data, `${store.name} - ${t('scenarios')}`, pdfWindow);
       }
@@ -1775,6 +1828,16 @@ export const StoreSummaryPage = () => {
                       {viewMode === 'scenarios' ? (
                         <>
                           <div className="scenario-action-group">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => void handleScenarioExport('xlsx')}
+                              isLoading={exportingScenarioFormat === 'xlsx'}
+                              loadingText={t('exporting')}
+                            >
+                              <FileTextIcon aria-hidden className="icon" />
+                              {t('storeSummary.exportExcel')}
+                            </Button>
                             <Button
                               type="button"
                               variant="ghost"

@@ -50,10 +50,12 @@ import {
   CopyIcon,
   FileTextIcon,
   LinkIcon,
+  LogoutIcon,
   SettingsIcon,
   UsersGroupIcon,
 } from '../components/icons';
-import { downloadEnvironmentWorkbook } from '../../shared/utils/storeImportExport';
+import { exportEnvironmentExcel } from '../../utils/exportExcel';
+import { ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
 
 interface SlackSummaryBuilderOptions {
   formattedTime: string;
@@ -298,6 +300,16 @@ export const EnvironmentPage = () => {
     },
     [translation],
   );
+  const translateOptionValue = useCallback(
+    (value?: string | null) => {
+      if (!value) {
+        return translation('storeSummary.emptyValue');
+      }
+      const translated = translation(value);
+      return translated === value ? value : translated;
+    },
+    [translation],
+  );
 
   const clearInviteParam = useCallback(() => {
     if (!inviteParam) {
@@ -530,16 +542,6 @@ export const EnvironmentPage = () => {
       return;
     }
 
-    const headers = [
-      translation('environmentEvidenceTable.table_titulo'),
-      translation('environmentEvidenceTable.table_categoria'),
-      translation('environmentEvidenceTable.table_criticidade'),
-      translation('environmentEvidenceTable.table_observacao'),
-      translation('environmentEvidenceTable.table_status_mobile'),
-      translation('environmentEvidenceTable.table_status_desktop'),
-      translation('environmentEvidenceTable.table_evidencia'),
-    ];
-
     const rows = Object.values(environment.scenarios ?? {}).map((scenario) => {
       const statuses = getScenarioPlatformStatuses(scenario);
       const statusMobile = formatScenarioStatusLabel(statuses.mobile);
@@ -550,25 +552,121 @@ export const EnvironmentPage = () => {
         ? scenario.evidenciaArquivoUrl
         : translation('environmentEvidenceTable.evidencia_sem');
 
-      return [
-        scenario.titulo || translation('storeSummary.emptyValue'),
-        scenario.categoria || translation('storeSummary.emptyValue'),
-        formatCriticalityLabel(scenario.criticidade),
-        observation,
+      return {
+        titulo: scenario.titulo || translation('storeSummary.emptyValue'),
+        categoria: scenario.categoria || translation('storeSummary.emptyValue'),
+        criticidade: formatCriticalityLabel(scenario.criticidade),
+        observacao: observation,
         statusMobile,
         statusDesktop,
-        evidence,
-      ];
+        evidencia: evidence,
+      };
     });
 
     const fileName = `${translation('environment.exportExcelFileName')}-${environment.identificador}-${new Date().toISOString().slice(0, 10)}.xlsx`;
-    downloadEnvironmentWorkbook({
-      headers,
-      rows,
+    const infoRows = [
+      {
+        label: translation('editEnvironmentModal.identifier'),
+        value: environment.identificador || translation('storeSummary.emptyValue'),
+      },
+      {
+        label: translation('environment.exportExcelStatusLabel'),
+        value: translation(ENVIRONMENT_STATUS_LABEL[environment.status]),
+      },
+      {
+        label: translation('createEnvironment.suiteId'),
+        value: environment.suiteName?.trim() || translation('storeSummary.emptyValue'),
+      },
+      {
+        label: translation('editEnvironmentModal.environmentType'),
+        value: environment.tipoAmbiente || translation('storeSummary.emptyValue'),
+      },
+      {
+        label: translation('editEnvironmentModal.testType'),
+        value: translateOptionValue(environment.tipoTeste),
+      },
+      {
+        label: translation('editEnvironmentModal.moment'),
+        value: environment.momento
+          ? translateOptionValue(environment.momento)
+          : translation('environmentSummary.notRecorded'),
+      },
+      {
+        label: translation('editEnvironmentModal.release'),
+        value: environment.release?.trim() || translation('environmentSummary.notRecorded'),
+      },
+      {
+        label: translation('editEnvironmentModal.jiraTask'),
+        value: environment.jiraTask?.trim() || translation('environmentSummary.notInformed'),
+      },
+      {
+        label: translation('editEnvironmentModal.urls'),
+        value: urls.length > 0 ? urls.join('\n') : translation('environmentSummary.noUrls'),
+      },
+      {
+        label: translation('environmentSummary.participants'),
+        value:
+          participantProfiles.length > 0
+            ? participantProfiles
+                .map((profile) => profile.displayName?.trim() || profile.email)
+                .filter(Boolean)
+                .join(', ')
+            : translation('environmentSummary.noParticipants'),
+      },
+      {
+        label: translation('environmentSummary.scenarios'),
+        value: `${executedScenariosCount}/${scenarioCount}`,
+      },
+      {
+        label: translation('environmentSummary.bugs'),
+        value: String(bugs.length),
+      },
+      {
+        label: translation('environmentSummary.start'),
+        value: formattedStart,
+      },
+      {
+        label: translation('environmentSummary.end'),
+        value: formattedEnd,
+      },
+      {
+        label: translation('environmentSummary.totalTime'),
+        value: formattedTime || '00:00:00',
+      },
+    ];
+
+    exportEnvironmentExcel({
       fileName,
-      sheetName: translation('environment.exportExcelSheetName'),
+      scenarioSheetName: translation('environment.exportExcelSheetName'),
+      environmentSheetName: translation('environment.exportExcelEnvironmentSheetName'),
+      infoHeaderLabels: [translation('exportExcel.field'), translation('exportExcel.value')],
+      infoRows,
+      scenarioRows: rows,
+      scenarioHeaderLabels: [
+        translation('environmentEvidenceTable.table_titulo'),
+        translation('environmentEvidenceTable.table_categoria'),
+        translation('environmentEvidenceTable.table_criticidade'),
+        translation('environmentEvidenceTable.table_observacao'),
+        translation('environmentEvidenceTable.table_status_mobile'),
+        translation('environmentEvidenceTable.table_status_desktop'),
+        translation('environmentEvidenceTable.table_evidencia'),
+      ],
     });
-  }, [environment, formatCriticalityLabel, formatScenarioStatusLabel, translation]);
+  }, [
+    bugs.length,
+    environment,
+    executedScenariosCount,
+    formatCriticalityLabel,
+    formatScenarioStatusLabel,
+    formattedEnd,
+    formattedStart,
+    formattedTime,
+    participantProfiles,
+    scenarioCount,
+    translateOptionValue,
+    translation,
+    urls,
+  ]);
 
   const handleCopyMarkdown = useCallback(async () => {
     if (!environment) {
@@ -737,6 +835,18 @@ export const EnvironmentPage = () => {
                 {hasEnteredEnvironment && environment.status !== 'done' && (
                   <Button
                     type="button"
+                    variant="ghost"
+                    onClick={handleLeaveEnvironment}
+                    isLoading={isLeavingEnvironment}
+                    loadingText={translation('environment.leaving')}
+                  >
+                    <LogoutIcon aria-hidden className="icon" />
+                    {translation('environment.leave')}
+                  </Button>
+                )}
+                {hasEnteredEnvironment && environment.status !== 'done' && (
+                  <Button
+                    type="button"
                     variant="secondary"
                     onClick={() => setIsEditOpen(true)}
                     data-testid="edit-environment-button"
@@ -855,9 +965,6 @@ export const EnvironmentPage = () => {
           setIsEditOpen(false);
           setIsDeleteOpen(true);
         }}
-        onLeave={handleLeaveEnvironment}
-        canLeave={hasEnteredEnvironment && environment.status !== 'done'}
-        isLeaving={isLeavingEnvironment}
       />
 
       <DeleteEnvironmentModal

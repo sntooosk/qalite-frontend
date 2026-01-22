@@ -19,7 +19,6 @@ import {
   requiresReleaseField,
 } from '../../constants/environmentOptions';
 import { useTranslation } from 'react-i18next';
-import { LogoutIcon } from '../icons';
 import { useToast } from '../../context/ToastContext';
 
 interface EditEnvironmentModalProps {
@@ -29,9 +28,6 @@ interface EditEnvironmentModalProps {
   suites: StoreSuite[];
   scenarios: StoreScenario[];
   onDeleteRequest?: () => void;
-  onLeave?: () => void;
-  canLeave?: boolean;
-  isLeaving?: boolean;
 }
 
 const buildScenarioMap = (
@@ -72,9 +68,6 @@ export const EditEnvironmentModal = ({
   suites,
   scenarios,
   onDeleteRequest,
-  onLeave,
-  canLeave,
-  isLeaving,
 }: EditEnvironmentModalProps) => {
   const { t: translation } = useTranslation();
 
@@ -360,18 +353,6 @@ export const EditEnvironmentModal = ({
             >
               {translation('editEnvironmentModal.saveChanges')}
             </Button>
-            {canLeave && onLeave && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={onLeave}
-                isLoading={isLeaving}
-                loadingText={translation('environment.leaving')}
-              >
-                <LogoutIcon aria-hidden className="icon" />
-                {translation('environment.leave')}
-              </Button>
-            )}
           </div>
         </form>
         {canDelete && (
