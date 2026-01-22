@@ -32,8 +32,8 @@ import { TextInput } from '../components/TextInput';
 import { TextArea } from '../components/TextArea';
 import { SelectInput } from '../components/SelectInput';
 import { Modal } from '../components/Modal';
-import { PageLoader } from '../components/PageLoader';
 import { LinkifiedText } from '../components/LinkifiedText';
+import { EmptyState } from '../components/EmptyState';
 import {
   AUTOMATION_OPTIONS,
   CRITICALITY_OPTIONS,
@@ -68,6 +68,8 @@ import { formatDurationFromMs } from '../../shared/utils/time';
 import type { ScenarioAverageMap } from '../../infrastructure/external/scenarioExecutions';
 import { useTranslation } from 'react-i18next';
 import { buildExternalLink } from '../utils/externalLink';
+import { ErrorState } from '../components/ErrorState';
+import { StoreSummarySkeleton } from '../components/skeletons/StoreSummarySkeleton';
 import {
   PAGE_SIZE,
   emptyScenarioFilters,
@@ -171,6 +173,7 @@ export const StoreSummaryPage = () => {
   const {
     environments,
     isLoading: isLoadingEnvironments,
+    error: environmentsError,
     statusCounts: environmentStatusCounts,
     refetch: refetchEnvironments,
   } = useStoreEnvironments(storeId);
@@ -1448,9 +1451,7 @@ export const StoreSummaryPage = () => {
   if (isPreparingStoreView) {
     return (
       <Layout>
-        <section className="page-container">
-          <PageLoader message={t('storeSummary.loadingStore')} />
-        </section>
+        <StoreSummarySkeleton />
       </Layout>
     );
   }
@@ -2409,14 +2410,35 @@ export const StoreSummaryPage = () => {
                       )}
                     </div>
                   ) : (
-                    <EnvironmentKanban
-                      storeId={storeId ?? ''}
-                      suites={suites}
-                      scenarios={scenarios}
-                      environments={environments}
-                      isLoading={isLoadingEnvironments}
-                      onRefresh={refetchEnvironments}
-                    />
+                    <>
+                      {environmentsError ? (
+                        <ErrorState
+                          title={t('storeSummary.environmentsLoadError')}
+                          description={environmentsError}
+                          actionLabel={t('retry')}
+                          onRetry={refetchEnvironments}
+                        />
+                      ) : !isLoadingEnvironments && environments.length === 0 ? (
+                        <EmptyState
+                          title={t('storeSummary.environmentsEmptyTitle')}
+                          description={t('storeSummary.environmentsEmptyDescription')}
+                          action={
+                            <Button type="button" variant="secondary" onClick={refetchEnvironments}>
+                              {t('retry')}
+                            </Button>
+                          }
+                        />
+                      ) : (
+                        <EnvironmentKanban
+                          storeId={storeId ?? ''}
+                          suites={suites}
+                          scenarios={scenarios}
+                          environments={environments}
+                          isLoading={isLoadingEnvironments}
+                          onRefresh={refetchEnvironments}
+                        />
+                      )}
+                    </>
                   )}
                 </div>
               </div>

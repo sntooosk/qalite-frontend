@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import type { Environment, EnvironmentStatus } from '../../domain/entities/environment';
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
+import { useResource } from './useResource';
 
 interface StatusCounts extends Record<EnvironmentStatus, number> {
   total: number;
@@ -10,8 +11,13 @@ interface StatusCounts extends Record<EnvironmentStatus, number> {
 interface UseStoreEnvironmentsResult {
   environments: Environment[];
   isLoading: boolean;
+  isFetching: boolean;
+  error: string | null;
   statusCounts: StatusCounts;
   refetch: () => Promise<void>;
+  updatedAt: number | null;
+  setEnvironments: (value: Environment[] | ((previous: Environment[]) => Environment[])) => void;
+  patchEnvironments: (updater: (previous: Environment[]) => Environment[]) => void;
 }
 
 const buildEmptyCounts = (): StatusCounts => ({
@@ -24,47 +30,25 @@ const buildEmptyCounts = (): StatusCounts => ({
 export const useStoreEnvironments = (
   storeId: string | null | undefined,
 ): UseStoreEnvironmentsResult => {
-  const [environments, setEnvironments] = useState<Environment[]>([]);
-  const [isLoading, setIsLoading] = useState(Boolean(storeId));
-  const isMountedRef = useRef(true);
+  const fetchEnvironments = useCallback(
+    async (id: string) => environmentService.getAll({ storeId: id }),
+    [],
+  );
 
-  const refetch = useCallback(async () => {
-    if (!storeId) {
-      if (isMountedRef.current) {
-        setEnvironments([]);
-        setIsLoading(false);
-      }
-      return;
-    }
-
-    if (isMountedRef.current) {
-      setIsLoading(true);
-    }
-
-    try {
-      const list = await environmentService.getAll({ storeId });
-      if (isMountedRef.current) {
-        setEnvironments(list);
-      }
-    } catch (error) {
-      void error;
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [storeId]);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    void refetch();
-  }, [refetch]);
+  const {
+    value: environments,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+    updatedAt,
+    setValue,
+    patchValue,
+  } = useResource<Environment[]>({
+    resourceId: storeId,
+    getInitialValue: () => [],
+    fetch: fetchEnvironments,
+  });
 
   const statusCounts = useMemo(() => {
     if (environments.length === 0) {
@@ -81,9 +65,15 @@ export const useStoreEnvironments = (
   }, [environments]);
 
   return {
+    data: environments,
     environments,
     isLoading,
+    isFetching,
+    error,
     statusCounts,
     refetch,
+    updatedAt,
+    setEnvironments: setValue,
+    patchEnvironments: patchValue,
   };
 };

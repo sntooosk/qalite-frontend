@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 
 import type { Role } from '../../domain/entities/auth';
 import { useAuth } from '../hooks/useAuth';
-import { PageLoader } from '../components/PageLoader';
+import { PageShellSkeleton } from '../components/skeletons/PageShellSkeleton';
 
 interface ProtectedRouteProps {
   redirectTo?: string;
@@ -12,7 +12,7 @@ export const ProtectedRoute = ({ redirectTo = '/login' }: ProtectedRouteProps) =
   const { user, isInitializing } = useAuth();
 
   if (isInitializing) {
-    return <PageLoader message="Carregando acesso..." />;
+    return <PageShellSkeleton />;
   }
 
   if (!user) {
@@ -35,7 +35,7 @@ export const RoleProtectedRoute = ({
   const { user, hasRole, isInitializing } = useAuth();
 
   if (isInitializing) {
-    return <PageLoader message="Carregando acesso..." />;
+    return <PageShellSkeleton />;
   }
 
   if (!user) {

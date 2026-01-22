@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { ProtectedRoute, RoleProtectedRoute } from './ProtectedRoute';
 import { AppProviders } from '../providers/AppProviders';
-import { PageLoader } from '../components/PageLoader';
+import { PageShellSkeleton } from '../components/skeletons/PageShellSkeleton';
 import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
 
@@ -61,7 +61,7 @@ const AdminStoresPage = lazy(() =>
 export const AppRoutes = () => (
   <AppProviders>
     <BrowserRouter>
-      <Suspense fallback={<PageLoader message="Carregando página..." />}>
+      <Suspense fallback={<PageShellSkeleton />}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />

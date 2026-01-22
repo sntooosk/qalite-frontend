@@ -839,6 +839,69 @@ a.text-link:hover {
   font-size: 0.9rem;
 }
 
+.card-loading {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.error-state {
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 1.5rem;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  background: rgba(239, 68, 68, 0.06);
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.error-state__content {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.error-state__content h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--color-text-primary);
+}
+
+.error-state__content p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.error-state__action {
+  display: inline-flex;
+}
+
+.skeleton {
+  display: inline-block;
+  border-radius: 0.75rem;
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.2) 0%,
+    rgba(148, 163, 184, 0.35) 50%,
+    rgba(148, 163, 184, 0.2) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.skeleton--circle {
+  border-radius: 999px;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
 .link-button {
   background: none;
   border: none;
@@ -3538,6 +3601,13 @@ button.store-summary-highlight:focus-visible {
   gap: 1rem;
 }
 
+.environment-kanban__profiles-error {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
 .create-card__description {
   margin: 0.25rem 0 0;
   font-size: 0.9rem;
@@ -3934,6 +4004,25 @@ button.store-summary-highlight:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+.environment-card-participants-loading {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.environment-card-avatar--loading {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.2) 0%,
+    rgba(148, 163, 184, 0.35) 50%,
+    rgba(148, 163, 184, 0.2) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }
 
 .environment-card-participants-label {
@@ -4414,6 +4503,12 @@ button.store-summary-highlight:focus-visible {
   align-items: center;
   justify-content: center;
   font-weight: 600;
+}
+
+.summary-card__participants-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .summary-card__avatar-item--muted {
