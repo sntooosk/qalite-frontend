@@ -2573,6 +2573,9 @@ button.store-summary-highlight:focus-visible {
   font-size: 0.78rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .data-table td {
