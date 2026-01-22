@@ -580,6 +580,9 @@
       "scenarios.title": "Scenarios and evidence",
       "bugs.title": "Reported bugs",
       "actions.shareExport": "Sharing & export",
+      "exportExcel": "Export Excel",
+      "exportExcelFileName": "environment-report",
+      "exportExcelSheetName": "Scenarios",
       "enterError": "Unable to join environment.",
       "leaveSuccess": "You left the environment.",
       "leaveError": "Unable to leave the environment."
@@ -592,6 +595,9 @@
       "noScenarios": "No scenarios executed",
       "oneScenario": "1 scenario executed",
       "multipleScenarios": "{{count}} scenarios executed",
+      "notRecorded": "Not recorded",
+      "inProgress": "In progress",
+      "notEnded": "Not finished",
 
       "bugs": "Registered bugs",
       "storyfix": "Registered storyfixes",

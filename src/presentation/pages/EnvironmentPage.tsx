@@ -53,6 +53,7 @@ import {
   SettingsIcon,
   UsersGroupIcon,
 } from '../components/icons';
+import { downloadEnvironmentWorkbook } from '../../shared/utils/storeImportExport';
 
 interface SlackSummaryBuilderOptions {
   formattedTime: string;
@@ -276,21 +277,27 @@ export const EnvironmentPage = () => {
     }
     return value?.trim() || translation('storeSummary.emptyValue');
   };
-  const formatCriticalityLabel = (value?: string | null) => {
-    const labelKey = getCriticalityLabelKey(value);
-    if (labelKey) {
-      return translation(labelKey);
-    }
-    return value?.trim() || translation('storeSummary.emptyValue');
-  };
-  const formatScenarioStatusLabel = (value?: EnvironmentScenarioStatus | null) => {
-    if (!value) {
-      return translation('storeSummary.emptyValue');
-    }
-    const key = `environmentEvidenceTable.status_${value}`;
-    const translated = translation(key);
-    return translated === key ? value : translated;
-  };
+  const formatCriticalityLabel = useCallback(
+    (value?: string | null) => {
+      const labelKey = getCriticalityLabelKey(value);
+      if (labelKey) {
+        return translation(labelKey);
+      }
+      return value?.trim() || translation('storeSummary.emptyValue');
+    },
+    [translation],
+  );
+  const formatScenarioStatusLabel = useCallback(
+    (value?: EnvironmentScenarioStatus | null) => {
+      if (!value) {
+        return translation('storeSummary.emptyValue');
+      }
+      const key = `environmentEvidenceTable.status_${value}`;
+      const translated = translation(key);
+      return translated === key ? value : translated;
+    },
+    [translation],
+  );
 
   const clearInviteParam = useCallback(() => {
     if (!inviteParam) {
@@ -380,6 +387,10 @@ export const EnvironmentPage = () => {
   const { formattedTime, totalMs, formattedStart, formattedEnd } = useTimeTracking(
     environment?.timeTracking ?? null,
     environment?.status === 'in_progress',
+    {
+      translation,
+      locale: i18n.language,
+    },
   );
 
   const sendSlackSummary = useCallback(async () => {
@@ -467,8 +478,7 @@ export const EnvironmentPage = () => {
         showToast({ type: 'error', message: translation('environment.statusUpdateError') });
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [environment, showToast, user?.uid],
+    [environment, sendSlackSummary, showToast, translation, user?.uid],
   );
 
   const handleCopyLink = useCallback(
@@ -514,6 +524,51 @@ export const EnvironmentPage = () => {
     }
     environmentService.exportAsPDF(environment, bugs, participantProfiles);
   }, [bugs, environment, participantProfiles]);
+
+  const handleExportExcel = useCallback(() => {
+    if (!environment) {
+      return;
+    }
+
+    const headers = [
+      translation('environmentEvidenceTable.table_titulo'),
+      translation('environmentEvidenceTable.table_categoria'),
+      translation('environmentEvidenceTable.table_criticidade'),
+      translation('environmentEvidenceTable.table_observacao'),
+      translation('environmentEvidenceTable.table_status_mobile'),
+      translation('environmentEvidenceTable.table_status_desktop'),
+      translation('environmentEvidenceTable.table_evidencia'),
+    ];
+
+    const rows = Object.values(environment.scenarios ?? {}).map((scenario) => {
+      const statuses = getScenarioPlatformStatuses(scenario);
+      const statusMobile = formatScenarioStatusLabel(statuses.mobile);
+      const statusDesktop = formatScenarioStatusLabel(statuses.desktop);
+      const observation =
+        scenario.observacao?.trim() || translation('environmentEvidenceTable.observacao_none');
+      const evidence = scenario.evidenciaArquivoUrl
+        ? scenario.evidenciaArquivoUrl
+        : translation('environmentEvidenceTable.evidencia_sem');
+
+      return [
+        scenario.titulo || translation('storeSummary.emptyValue'),
+        scenario.categoria || translation('storeSummary.emptyValue'),
+        formatCriticalityLabel(scenario.criticidade),
+        observation,
+        statusMobile,
+        statusDesktop,
+        evidence,
+      ];
+    });
+
+    const fileName = `${translation('environment.exportExcelFileName')}-${environment.identificador}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    downloadEnvironmentWorkbook({
+      headers,
+      rows,
+      fileName,
+      sheetName: translation('environment.exportExcelSheetName'),
+    });
+  }, [environment, formatCriticalityLabel, formatScenarioStatusLabel, translation]);
 
   const handleCopyMarkdown = useCallback(async () => {
     if (!environment) {
@@ -742,6 +797,16 @@ export const EnvironmentPage = () => {
               >
                 <FileTextIcon aria-hidden className="icon" />
                 {translation('environment.exportPDF')}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleExportExcel}
+                disabled={isShareDisabled}
+                data-testid="export-environment-excel"
+              >
+                <FileTextIcon aria-hidden className="icon" />
+                {translation('environment.exportExcel')}
               </Button>
               <Button
                 type="button"

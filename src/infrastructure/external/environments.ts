@@ -6,6 +6,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   onSnapshot,
   query,
   runTransaction,
@@ -308,13 +309,15 @@ export const removeEnvironmentUser = async (
 
     const presentUsers: string[] = data?.presentUsersIds ?? [];
     const participants: string[] = data?.participants ?? [];
-    if (!presentUsers.includes(userId)) {
+    const isPresent = presentUsers.includes(userId);
+    const isParticipant = participants.includes(userId);
+    if (!isPresent && !isParticipant) {
       return;
     }
 
     transaction.update(environmentRef, {
-      presentUsersIds: presentUsers.filter((id) => id !== userId),
-      participants: participants.filter((id) => id !== userId),
+      presentUsersIds: isPresent ? presentUsers.filter((id) => id !== userId) : presentUsers,
+      participants: isParticipant ? participants.filter((id) => id !== userId) : participants,
       updatedAt: serverTimestamp(),
     });
   });
@@ -403,6 +406,11 @@ export const createEnvironmentBug = async (
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  await updateDoc(environmentRef, {
+    bugs: increment(1),
+    updatedAt: serverTimestamp(),
+  });
 
   const snapshot = await getDoc(docRef);
   const bug = normalizeBug(snapshot.id, (snapshot.data() ?? {}) as Record<string, unknown>);
@@ -437,6 +445,20 @@ export const deleteEnvironmentBug = async (environmentId: string, bugId: string)
     bugId,
   );
   await deleteDoc(bugRef);
+
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  await runTransaction(firebaseFirestore, async (transaction) => {
+    const snapshot = await transaction.get(environmentRef);
+    if (!snapshot.exists()) {
+      return;
+    }
+    const data = snapshot.data();
+    const currentBugs = Number(data?.bugs ?? 0);
+    transaction.update(environmentRef, {
+      bugs: Math.max(0, currentBugs - 1),
+      updatedAt: serverTimestamp(),
+    });
+  });
 };
 
 interface TransitionEnvironmentStatusParams {
@@ -568,10 +590,21 @@ const normalizeParticipants = (
 const buildTimeTrackingSummary = (environment: Environment) => {
   const isRunning = environment.status === 'in_progress';
   const totalMs = getElapsedMilliseconds(environment.timeTracking, isRunning, Date.now());
+  const t = i18n.t.bind(i18n);
+  const locale = i18n.language;
+  const emptyLabel = t('environmentSummary.notRecorded');
 
   return {
-    start: formatDateTime(environment.timeTracking?.start ?? null),
-    end: formatEndDateTime(environment.timeTracking ?? null, isRunning),
+    start: formatDateTime(environment.timeTracking?.start ?? null, {
+      locale,
+      emptyLabel,
+    }),
+    end: formatEndDateTime(environment.timeTracking ?? null, isRunning, {
+      locale,
+      emptyLabel,
+      inProgressLabel: t('environmentSummary.inProgress'),
+      notEndedLabel: t('environmentSummary.notEnded'),
+    }),
     total: formatDurationFromMs(totalMs),
   };
 };

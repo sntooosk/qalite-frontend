@@ -86,7 +86,7 @@ export const EnvironmentCard = ({
         </div>
         <div className="environment-card-stat">
           <span className="environment-card-stat-label">{bugLabel}</span>
-          <strong className="environment-card-stat-value">{environment.bugs}</strong>
+          <strong className="environment-card-stat-value">{environment.bugs ?? 0}</strong>
         </div>
       </div>
 

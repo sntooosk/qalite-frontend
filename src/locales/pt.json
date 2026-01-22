@@ -581,6 +581,9 @@
       "scenarios.title": "Cenários e evidências",
       "bugs.title": "Bugs encontrados",
       "actions.shareExport": "Compartilhamento e exportação",
+      "exportExcel": "Exportar Excel",
+      "exportExcelFileName": "relatorio-ambiente",
+      "exportExcelSheetName": "Cenários",
       "enterError": "Não foi possível entrar no ambiente.",
       "leaveSuccess": "Você saiu do ambiente.",
       "leaveError": "Não foi possível sair do ambiente."
@@ -593,6 +596,9 @@
       "noScenarios": "Nenhum cenário executado",
       "oneScenario": "1 cenário executado",
       "multipleScenarios": "{{count}} cenários executados",
+      "notRecorded": "Não registrado",
+      "inProgress": "Em andamento",
+      "notEnded": "Não encerrado",
 
       "bugs": "Bugs registrados",
       "storyfix": "Storyfix registrados",

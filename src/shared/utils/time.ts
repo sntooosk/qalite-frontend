@@ -1,16 +1,26 @@
 import type { EnvironmentTimeTracking } from '../../domain/entities/environment';
 
-export const formatDateTime = (value: string | null | undefined): string => {
+interface DateTimeFormatOptions {
+  locale?: string;
+  emptyLabel?: string;
+}
+
+export const formatDateTime = (
+  value: string | null | undefined,
+  options?: DateTimeFormatOptions,
+): string => {
+  const emptyLabel = options?.emptyLabel ?? 'Não registrado';
+
   if (!value) {
-    return 'Não registrado';
+    return emptyLabel;
   }
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return 'Não registrado';
+    return emptyLabel;
   }
 
-  return date.toLocaleString('pt-BR', {
+  return date.toLocaleString(options?.locale ?? 'pt-BR', {
     dateStyle: 'short',
     timeStyle: 'short',
   });
@@ -33,15 +43,23 @@ export const getElapsedMilliseconds = (
   return timeTracking.totalMs;
 };
 
+interface EndDateTimeFormatOptions extends DateTimeFormatOptions {
+  inProgressLabel?: string;
+  notEndedLabel?: string;
+}
+
 export const formatEndDateTime = (
   timeTracking: EnvironmentTimeTracking | null | undefined,
   isRunning: boolean,
+  options?: EndDateTimeFormatOptions,
 ): string => {
   if (timeTracking?.end) {
-    return formatDateTime(timeTracking.end);
+    return formatDateTime(timeTracking.end, options);
   }
 
-  return isRunning ? 'Em andamento' : 'Não encerrado';
+  return isRunning
+    ? (options?.inProgressLabel ?? 'Em andamento')
+    : (options?.notEndedLabel ?? 'Não encerrado');
 };
 
 export const formatDurationFromMs = (milliseconds: number): string => {
