@@ -1,6 +1,8 @@
 import {
   User as FirebaseUser,
   createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  onIdTokenChanged,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
@@ -145,6 +147,33 @@ export const getCurrentUser = async (): Promise<AuthUser | null> => {
 
   const profile = await fetchUserProfile(user.uid);
   return mapToAuthUser(user, profile);
+};
+
+export const subscribeToAuthChanges = (onChange: (user: AuthUser | null) => void): (() => void) => {
+  const unsubscribeAuth = onAuthStateChanged(firebaseAuth, async (user) => {
+    if (!user) {
+      persistFirebaseAuthCookie(null);
+      onChange(null);
+      return;
+    }
+
+    try {
+      const profile = await fetchUserProfile(user.uid);
+      onChange(mapToAuthUser(user, profile));
+    } catch (error) {
+      console.error(error);
+      onChange(null);
+    }
+  });
+
+  const unsubscribeToken = onIdTokenChanged(firebaseAuth, (user) => {
+    persistFirebaseAuthCookie(user);
+  });
+
+  return () => {
+    unsubscribeAuth();
+    unsubscribeToken();
+  };
 };
 
 const normalizeBrowserstackCredentials = (

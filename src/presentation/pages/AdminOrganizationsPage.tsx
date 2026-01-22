@@ -249,10 +249,10 @@ export const AdminOrganizationsPage = () => {
                   data-testid={`organization-card-${organization.id}`}
                   role="button"
                   tabIndex={0}
-                  onClick={() => navigate(`/admin/organizations?organizationId=${organization.id}`)}
+                  onClick={() => navigate(`/admin/organizations?Id=${organization.id}`)}
                   onKeyDown={(event) =>
                     handleCardKeyDown(event, () =>
-                      navigate(`/admin/organizations?organizationId=${organization.id}`),
+                      navigate(`/admin/organizations?Id=${organization.id}`),
                     )
                   }
                 >

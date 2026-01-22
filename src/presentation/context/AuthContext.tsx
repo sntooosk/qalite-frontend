@@ -79,35 +79,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let isMounted = true;
 
-    const loadCurrentUser = async () => {
-      try {
-        const currentUser = await authService.getCurrent();
-
-        if (!isMounted) {
-          return;
-        }
-
-        if (currentUser && !currentUser.isEmailVerified) {
-          setUser(null);
-        } else {
-          setUser(currentUser);
-        }
-      } catch (loadError) {
-        console.error(loadError);
-        if (isMounted) {
-          setUser(null);
-        }
-      } finally {
-        if (isMounted) {
-          setIsInitializing(false);
-        }
+    const unsubscribe = authService.subscribeToAuthChanges((currentUser) => {
+      if (!isMounted) {
+        return;
       }
-    };
 
-    void loadCurrentUser();
+      if (currentUser && !currentUser.isEmailVerified) {
+        setUser(null);
+      } else {
+        setUser(currentUser);
+      }
+
+      setIsInitializing(false);
+    });
 
     return () => {
       isMounted = false;
+      unsubscribe();
     };
   }, []);
 

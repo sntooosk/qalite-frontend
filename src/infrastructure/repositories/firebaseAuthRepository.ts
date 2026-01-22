@@ -6,6 +6,7 @@ import {
   logoutUser,
   registerUser,
   sendPasswordReset,
+  subscribeToAuthChanges,
   updateUserProfile,
 } from '../external/auth';
 
@@ -15,6 +16,7 @@ export const firebaseAuthRepository: AuthRepository = {
   logout: logoutUser,
   sendPasswordReset,
   getCurrent: getCurrentUser,
+  subscribeToAuthChanges,
   hasRequiredRole,
   updateProfile: updateUserProfile,
 };
