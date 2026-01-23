@@ -4248,6 +4248,58 @@ button.store-summary-highlight:focus-visible {
   border: 1px solid var(--color-border);
 }
 
+.bug-severity,
+.bug-priority {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--color-border);
+  background: rgba(148, 163, 184, 0.12);
+  color: #475569;
+}
+
+.bug-severity--baixa {
+  background: rgba(34, 197, 94, 0.15);
+  color: #166534;
+  border-color: rgba(22, 101, 52, 0.35);
+}
+
+.bug-severity--media {
+  background: rgba(234, 179, 8, 0.15);
+  color: #a16207;
+  border-color: rgba(161, 98, 7, 0.35);
+}
+
+.bug-severity--alta {
+  background: rgba(249, 115, 22, 0.15);
+  color: #c2410c;
+  border-color: rgba(194, 65, 12, 0.35);
+}
+
+.bug-severity--critica {
+  background: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.35);
+}
+
+.bug-severity--unknown {
+  background: rgba(148, 163, 184, 0.15);
+  color: #475569;
+  border-color: rgba(71, 85, 105, 0.35);
+}
+
+.bug-priority--urgente {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.3);
+}
+
 .bug-status--aberto {
   background: rgba(234, 165, 33, 0.15);
   color: #b45309;
@@ -4841,6 +4893,50 @@ button.store-summary-highlight:focus-visible {
 .environment-bug-form textarea {
   resize: vertical;
   min-height: 6rem;
+}
+
+.bug-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.bug-details__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+}
+
+.bug-details__label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.bug-details__value {
+  display: block;
+  color: var(--color-text-primary);
+}
+
+.bug-details__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.bug-details__list dt {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.bug-details__list dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
 }
 
 .status-pill {

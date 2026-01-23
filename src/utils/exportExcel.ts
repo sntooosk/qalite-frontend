@@ -13,9 +13,9 @@ export type EnvironmentExportRow = {
 
 export type EnvironmentBugExportRow = {
   cenario: string;
-  titulo: string;
-  status: string;
-  descricao: string;
+  severidade: string;
+  prioridade: string;
+  resultadoAtual: string;
 };
 
 export type ScenarioExportRow = {
@@ -39,6 +39,9 @@ const COLORS = {
 
   greenBg: '0E5A3A',
   greenText: 'D7FFE9',
+
+  orangeBg: '7C2D12',
+  orangeText: 'FFEDD5',
 
   redBg: '6B1F2A',
   redText: 'FFD6DC',
@@ -114,6 +117,27 @@ const criticidadeStyle = (criticality: string) => {
   }
   if (normalized.includes('alta') || normalized.includes('high')) {
     return { bg: COLORS.redBg, fg: COLORS.redText };
+  }
+  return { bg: COLORS.grayBg, fg: COLORS.grayText };
+};
+
+const severityStyle = (severity: string) => {
+  const normalized = normalize(severity);
+  if (normalized.includes('crit') || normalized.includes('critical')) {
+    return { bg: COLORS.redBg, fg: COLORS.redText };
+  }
+  if (normalized.includes('alta') || normalized.includes('high')) {
+    return { bg: COLORS.orangeBg, fg: COLORS.orangeText };
+  }
+  if (
+    normalized.includes('média') ||
+    normalized.includes('media') ||
+    normalized.includes('medium')
+  ) {
+    return { bg: COLORS.yellowBg, fg: COLORS.yellowText };
+  }
+  if (normalized.includes('baixa') || normalized.includes('low')) {
+    return { bg: COLORS.greenBg, fg: COLORS.greenText };
   }
   return { bg: COLORS.grayBg, fg: COLORS.grayText };
 };
@@ -279,9 +303,9 @@ export const exportEnvironmentExcel = async ({
 
   bugWorksheet.columns = [
     { header: bugHeaderLabels[0], key: 'cenario' },
-    { header: bugHeaderLabels[1], key: 'titulo' },
-    { header: bugHeaderLabels[2], key: 'status' },
-    { header: bugHeaderLabels[3], key: 'descricao' },
+    { header: bugHeaderLabels[1], key: 'severidade' },
+    { header: bugHeaderLabels[2], key: 'prioridade' },
+    { header: bugHeaderLabels[3], key: 'resultadoAtual' },
   ];
 
   const bugHeaderRow = bugWorksheet.getRow(1);
@@ -294,16 +318,16 @@ export const exportEnvironmentExcel = async ({
     const row = bugWorksheet.getRow(rowIndex);
     row.eachCell((cell) => applyBaseCellStyle(cell));
 
-    const statusCell = row.getCell(3);
-    const status = statusStyle(String(statusCell.value ?? ''));
-    stylePill(statusCell, status.bg, status.fg);
+    const severityCell = row.getCell(2);
+    const severity = severityStyle(String(severityCell.value ?? ''));
+    stylePill(severityCell, severity.bg, severity.fg);
   }
 
   const bugColumnValues = [
     [bugWorksheet.getColumn(1).header as string, ...bugRows.map((row) => row.cenario)],
-    [bugWorksheet.getColumn(2).header as string, ...bugRows.map((row) => row.titulo)],
-    [bugWorksheet.getColumn(3).header as string, ...bugRows.map((row) => row.status)],
-    [bugWorksheet.getColumn(4).header as string, ...bugRows.map((row) => row.descricao)],
+    [bugWorksheet.getColumn(2).header as string, ...bugRows.map((row) => row.severidade)],
+    [bugWorksheet.getColumn(3).header as string, ...bugRows.map((row) => row.prioridade)],
+    [bugWorksheet.getColumn(4).header as string, ...bugRows.map((row) => row.resultadoAtual)],
   ];
   const bugColumnWidths = applyColumnWidths(bugWorksheet, bugColumnValues);
   applyAutoRowHeights(bugWorksheet, bugColumnWidths);

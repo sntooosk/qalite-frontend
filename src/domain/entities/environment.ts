@@ -83,6 +83,8 @@ export interface EnvironmentScenarioUpdate {
 }
 
 export type EnvironmentBugStatus = 'aberto' | 'em_andamento' | 'resolvido';
+export type EnvironmentBugSeverity = 'baixa' | 'media' | 'alta' | 'critica';
+export type EnvironmentBugPriority = 'baixa' | 'media' | 'alta' | 'urgente';
 
 export interface EnvironmentBug {
   id: string;
@@ -90,6 +92,12 @@ export interface EnvironmentBug {
   title: string;
   description: string | null;
   status: EnvironmentBugStatus;
+  severity: EnvironmentBugSeverity | null;
+  priority: EnvironmentBugPriority | null;
+  reportedBy: string | null;
+  stepsToReproduce: string | null;
+  expectedResult: string | null;
+  actualResult: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -99,6 +107,12 @@ export interface CreateEnvironmentBugInput {
   title: string;
   description: string | null;
   status: EnvironmentBugStatus;
+  severity: EnvironmentBugSeverity | null;
+  priority: EnvironmentBugPriority | null;
+  reportedBy: string | null;
+  stepsToReproduce: string | null;
+  expectedResult: string | null;
+  actualResult: string | null;
 }
 
 export type UpdateEnvironmentBugInput = Partial<Omit<EnvironmentBug, 'id'>>;
