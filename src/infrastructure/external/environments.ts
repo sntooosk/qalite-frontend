@@ -4,14 +4,17 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
-  getDocs,
+  increment,
   onSnapshot,
   query,
   runTransaction,
   serverTimestamp,
   updateDoc,
   where,
+  orderBy,
+  limit,
+  startAfter,
+  type QueryDocumentSnapshot,
   type QueryConstraint,
 } from 'firebase/firestore';
 
@@ -33,7 +36,11 @@ import type {
 import type { UserSummary } from '../../domain/entities/user';
 import { firebaseFirestore } from '../database/firebase';
 import { EnvironmentStatusError } from '../../shared/errors/firebaseErrors';
-import { BUG_STATUS_LABEL, ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
+import {
+  BUG_PRIORITY_LABEL,
+  BUG_SEVERITY_LABEL,
+  ENVIRONMENT_STATUS_LABEL,
+} from '../../shared/config/environmentLabels';
 import {
   formatDateTime,
   formatDurationFromMs,
@@ -43,10 +50,27 @@ import {
 import { translateEnvironmentOption } from '../../shared/utils/environmentOptions';
 import i18n from '../../lib/i18n';
 import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
+import { getDocsCacheThenServer } from './firestoreCache';
+import { CacheStore } from '../cache/CacheStore';
+import { fetchWithCache } from '../cache/cacheFetch';
+import { buildStorageFileName, uploadFileAndGetUrl } from './storage';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
 const environmentsCollection = collection(firebaseFirestore, ENVIRONMENTS_COLLECTION);
+const ENVIRONMENT_CACHE = new CacheStore({
+  namespace: 'environments',
+  version: 'v1',
+  ttlMs: 1000 * 60 * 5,
+});
+const ENVIRONMENT_LIST_CACHE_PREFIX = 'listSummary:';
+const ENVIRONMENT_DETAIL_CACHE_PREFIX = 'detail:';
+const ENVIRONMENT_PAGE_SIZE = 50;
+const invalidateEnvironmentLists = () => {
+  ENVIRONMENT_CACHE.invalidatePrefix(ENVIRONMENT_LIST_CACHE_PREFIX);
+};
+const buildEnvironmentDetailKey = (environmentId: string) =>
+  `${ENVIRONMENT_DETAIL_CACHE_PREFIX}${environmentId}`;
 
 export const SCENARIO_COMPLETED_STATUSES: EnvironmentScenarioStatus[] = [
   'concluido',
@@ -133,6 +157,12 @@ const normalizeBug = (id: string, data: Record<string, unknown>): EnvironmentBug
   title: getString(data.title ?? data.titulo),
   description: getStringOrNull(data.description ?? data.descricao),
   status: (data.status ?? 'aberto') as EnvironmentBugStatus,
+  severity: getStringOrNull(data.severity ?? data.severidade) as EnvironmentBug['severity'],
+  priority: getStringOrNull(data.priority ?? data.prioridade) as EnvironmentBug['priority'],
+  reportedBy: getStringOrNull(data.reportedBy ?? data.reportadoPor),
+  stepsToReproduce: getStringOrNull(data.stepsToReproduce ?? data.passosParaReproduzir),
+  expectedResult: getStringOrNull(data.expectedResult ?? data.resultadoEsperado),
+  actualResult: getStringOrNull(data.actualResult ?? data.resultadoAtual),
   createdAt: parseTimestamp(data.createdAt as Timestamp | string | null | undefined),
   updatedAt: parseTimestamp(data.updatedAt as Timestamp | string | null | undefined),
 });
@@ -183,6 +213,7 @@ const normalizeEnvironment = (id: string, data: Record<string, unknown>): Enviro
 });
 
 export const createEnvironment = async (payload: CreateEnvironmentInput): Promise<Environment> => {
+  const now = new Date().toISOString();
   const docRef = await addDoc(environmentsCollection, {
     ...payload,
     loja: payload.storeId,
@@ -190,11 +221,34 @@ export const createEnvironment = async (payload: CreateEnvironmentInput): Promis
     updatedAt: serverTimestamp(),
   });
 
-  const snapshot = await getDoc(docRef);
-  const environment = normalizeEnvironment(
-    snapshot.id,
-    (snapshot.data() ?? {}) as Record<string, unknown>,
-  );
+  invalidateEnvironmentLists();
+
+  const environment: Environment = {
+    id: docRef.id,
+    identificador: payload.identificador,
+    storeId: payload.storeId,
+    suiteId: payload.suiteId,
+    suiteName: payload.suiteName,
+    urls: payload.urls,
+    jiraTask: payload.jiraTask,
+    tipoAmbiente: payload.tipoAmbiente,
+    tipoTeste: payload.tipoTeste,
+    momento: payload.momento,
+    release: payload.release,
+    status: payload.status,
+    createdAt: now,
+    updatedAt: now,
+    timeTracking: payload.timeTracking,
+    presentUsersIds: payload.presentUsersIds,
+    concludedBy: payload.concludedBy,
+    scenarios: payload.scenarios,
+    bugs: payload.bugs,
+    totalCenarios: payload.totalCenarios,
+    participants: payload.participants,
+    publicShareLanguage: payload.publicShareLanguage,
+  };
+
+  ENVIRONMENT_CACHE.set(buildEnvironmentDetailKey(environment.id), environment);
 
   return environment;
 };
@@ -214,31 +268,50 @@ export const updateEnvironment = async (
   }
 
   await updateDoc(environmentRef, data);
+  invalidateEnvironmentLists();
+  ENVIRONMENT_CACHE.remove(buildEnvironmentDetailKey(environmentId));
 };
 
 export const deleteEnvironment = async (environmentId: string): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
   await deleteDoc(environmentRef);
+  invalidateEnvironmentLists();
+  ENVIRONMENT_CACHE.remove(buildEnvironmentDetailKey(environmentId));
 };
 
 export const observeEnvironment = (
   environmentId: string,
   callback: (environment: Environment | null) => void,
+  onError?: (error: Error) => void,
 ): (() => void) => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  return onSnapshot(environmentRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      callback(null);
-      return;
-    }
+  return onSnapshot(
+    environmentRef,
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        callback(null);
+        return;
+      }
 
-    callback(normalizeEnvironment(snapshot.id, snapshot.data() ?? {}));
-  });
+      const environment = normalizeEnvironment(
+        snapshot.id,
+        snapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+      );
+      ENVIRONMENT_CACHE.set(buildEnvironmentDetailKey(snapshot.id), environment);
+      callback(environment);
+    },
+    (error) => {
+      console.error(error);
+      onError?.(error as Error);
+      callback(null);
+    },
+  );
 };
 
 export const observeEnvironments = (
   filters: EnvironmentRealtimeFilters,
   callback: (environments: Environment[]) => void,
+  onError?: (error: Error) => void,
 ): (() => void) => {
   const constraints: QueryConstraint[] = [];
 
@@ -249,17 +322,115 @@ export const observeEnvironments = (
   const environmentsQuery =
     constraints.length > 0 ? query(environmentsCollection, ...constraints) : environmentsCollection;
 
-  return onSnapshot(environmentsQuery, (snapshot) => {
-    const list = snapshot.docs
-      .map((docSnapshot) => normalizeEnvironment(docSnapshot.id, docSnapshot.data() ?? {}))
+  return onSnapshot(
+    environmentsQuery,
+    (snapshot) => {
+      const list = snapshot.docs
+        .map((docSnapshot) =>
+          normalizeEnvironment(
+            docSnapshot.id,
+            docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+          ),
+        )
+        .sort((a, b) => {
+          const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bDate - aDate;
+        });
+
+      callback(list);
+    },
+    (error) => {
+      console.error(error);
+      onError?.(error as Error);
+      callback([]);
+    },
+  );
+};
+
+const buildEnvironmentQuery = (filters: EnvironmentRealtimeFilters) => {
+  const constraints: QueryConstraint[] = [];
+
+  if (filters.storeId) {
+    constraints.push(where('loja', '==', filters.storeId));
+  }
+
+  return constraints.length > 0
+    ? query(environmentsCollection, ...constraints, orderBy('createdAt', 'desc'))
+    : query(environmentsCollection, orderBy('createdAt', 'desc'));
+};
+
+const buildEnvironmentListKey = (filters: EnvironmentRealtimeFilters) =>
+  `${ENVIRONMENT_LIST_CACHE_PREFIX}${filters.storeId ?? 'all'}`;
+
+const listEnvironmentsFromServer = async (
+  filters: EnvironmentRealtimeFilters,
+): Promise<Environment[]> => {
+  try {
+    const environmentsQuery = buildEnvironmentQuery(filters);
+    const environments: Environment[] = [];
+    let lastDoc: QueryDocumentSnapshot | null = null;
+    let hasMore = true;
+
+    while (hasMore) {
+      const pageQuery = lastDoc
+        ? query(environmentsQuery, startAfter(lastDoc), limit(ENVIRONMENT_PAGE_SIZE))
+        : query(environmentsQuery, limit(ENVIRONMENT_PAGE_SIZE));
+      const snapshot = await getDocsCacheThenServer(pageQuery);
+
+      snapshot.docs.forEach((docSnapshot) => {
+        environments.push(
+          normalizeEnvironment(
+            docSnapshot.id,
+            docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+          ),
+        );
+      });
+
+      lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+      hasMore = Boolean(lastDoc && snapshot.size === ENVIRONMENT_PAGE_SIZE);
+    }
+
+    return environments;
+  } catch (error) {
+    console.error(error);
+    const fallbackQuery = filters.storeId
+      ? query(environmentsCollection, where('loja', '==', filters.storeId))
+      : environmentsCollection;
+    const snapshot = await getDocsCacheThenServer(fallbackQuery);
+    return snapshot.docs
+      .map((docSnapshot) =>
+        normalizeEnvironment(
+          docSnapshot.id,
+          docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+        ),
+      )
       .sort((a, b) => {
         const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return bDate - aDate;
       });
+  }
+};
 
-    callback(list);
+export const listEnvironmentsSummary = async (
+  filters: EnvironmentRealtimeFilters,
+): Promise<Environment[]> => {
+  const cacheKey = buildEnvironmentListKey(filters);
+  return fetchWithCache({
+    cache: ENVIRONMENT_CACHE,
+    key: cacheKey,
+    fetcher: () => listEnvironmentsFromServer(filters),
+    fallback: [],
   });
+};
+
+export const getEnvironmentCached = (environmentId: string): Environment | null => {
+  if (!environmentId) {
+    return null;
+  }
+
+  return ENVIRONMENT_CACHE.get(buildEnvironmentDetailKey(environmentId));
 };
 
 export const addEnvironmentUser = async (environmentId: string, userId: string): Promise<void> => {
@@ -270,13 +441,13 @@ export const addEnvironmentUser = async (environmentId: string, userId: string):
       throw new Error('Ambiente não encontrado.');
     }
 
-    const data = snapshot.data();
+    const data = snapshot.data({ serverTimestamps: 'estimate' }) ?? {};
     if (data.status === 'done') {
       throw new Error('Ambiente já concluído.');
     }
 
-    const presentUsers: string[] = data.presentUsersIds ?? [];
-    const participants: string[] = data.participants ?? [];
+    const presentUsers: string[] = (data.presentUsersIds as string[] | undefined) ?? [];
+    const participants: string[] = (data.participants as string[] | undefined) ?? [];
 
     if (presentUsers.includes(userId)) {
       return;
@@ -301,20 +472,22 @@ export const removeEnvironmentUser = async (
       return;
     }
 
-    const data = snapshot.data();
+    const data = snapshot.data({ serverTimestamps: 'estimate' }) ?? {};
     if (data?.status === 'done') {
       throw new Error('Não é possível sair de um ambiente concluído.');
     }
 
-    const presentUsers: string[] = data?.presentUsersIds ?? [];
-    const participants: string[] = data?.participants ?? [];
-    if (!presentUsers.includes(userId)) {
+    const presentUsers: string[] = (data?.presentUsersIds as string[] | undefined) ?? [];
+    const participants: string[] = (data?.participants as string[] | undefined) ?? [];
+    const isPresent = presentUsers.includes(userId);
+    const isParticipant = participants.includes(userId);
+    if (!isPresent && !isParticipant) {
       return;
     }
 
     transaction.update(environmentRef, {
-      presentUsersIds: presentUsers.filter((id) => id !== userId),
-      participants: participants.filter((id) => id !== userId),
+      presentUsersIds: isPresent ? presentUsers.filter((id) => id !== userId) : presentUsers,
+      participants: isParticipant ? participants.filter((id) => id !== userId) : participants,
       updatedAt: serverTimestamp(),
     });
   });
@@ -357,40 +530,60 @@ export const updateScenarioStatus = async (
 export const uploadScenarioEvidence = async (
   environmentId: string,
   scenarioId: string,
-  evidenceLink: string,
+  evidenceLink: string | File,
 ): Promise<string> => {
-  const trimmedLink = evidenceLink.trim();
-  if (!trimmedLink) {
-    throw new Error('Informe um link válido para a evidência.');
-  }
+  let resolvedLink = '';
 
-  try {
-    const parsedUrl = new URL(trimmedLink);
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+  if (typeof evidenceLink === 'string') {
+    const trimmedLink = evidenceLink.trim();
+    if (!trimmedLink) {
       throw new Error('Informe um link válido para a evidência.');
     }
-  } catch (error) {
-    console.error(error);
-    throw new Error('Informe um link válido para a evidência.');
+
+    try {
+      const parsedUrl = new URL(trimmedLink);
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        throw new Error('Informe um link válido para a evidência.');
+      }
+    } catch (error) {
+      console.error(error);
+      throw new Error('Informe um link válido para a evidência.');
+    }
+
+    resolvedLink = trimmedLink;
+  } else {
+    const fileName = buildStorageFileName(evidenceLink);
+    resolvedLink = await uploadFileAndGetUrl(
+      `environments/${environmentId}/scenarios/${scenarioId}/${fileName}`,
+      evidenceLink,
+    );
   }
 
-  await updateScenarioField(environmentId, scenarioId, { evidenciaArquivoUrl: trimmedLink });
+  await updateScenarioField(environmentId, scenarioId, { evidenciaArquivoUrl: resolvedLink });
 
-  return trimmedLink;
+  return resolvedLink;
 };
 
 export const listEnvironmentBugs = async (environmentId: string): Promise<EnvironmentBug[]> => {
   const bugsCollectionRef = getBugCollection(environmentId);
-  const snapshot = await getDocs(bugsCollectionRef);
-  return snapshot.docs
-    .map((docSnapshot) =>
-      normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
-    )
-    .sort((first, second) => {
-      const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
-      const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
-      return secondDate - firstDate;
-    });
+  try {
+    const snapshot = await getDocsCacheThenServer(bugsCollectionRef);
+    return snapshot.docs
+      .map((docSnapshot) =>
+        normalizeBug(
+          docSnapshot.id,
+          (docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {}) as Record<string, unknown>,
+        ),
+      )
+      .sort((first, second) => {
+        const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
+        const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
+        return secondDate - firstDate;
+      });
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 };
 
 export const createEnvironmentBug = async (
@@ -398,16 +591,33 @@ export const createEnvironmentBug = async (
   payload: CreateEnvironmentBugInput,
 ): Promise<EnvironmentBug> => {
   const bugsCollectionRef = getBugCollection(environmentId);
+  const now = new Date().toISOString();
   const docRef = await addDoc(bugsCollectionRef, {
     ...payload,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  await updateDoc(environmentRef, {
+    bugs: increment(1),
+    updatedAt: serverTimestamp(),
+  });
 
-  const snapshot = await getDoc(docRef);
-  const bug = normalizeBug(snapshot.id, (snapshot.data() ?? {}) as Record<string, unknown>);
-
-  return bug;
+  return {
+    id: docRef.id,
+    scenarioId: payload.scenarioId,
+    title: payload.title,
+    description: payload.description ?? null,
+    status: payload.status,
+    severity: payload.severity ?? null,
+    priority: payload.priority ?? null,
+    reportedBy: payload.reportedBy ?? null,
+    stepsToReproduce: payload.stepsToReproduce ?? null,
+    expectedResult: payload.expectedResult ?? null,
+    actualResult: payload.actualResult ?? null,
+    createdAt: now,
+    updatedAt: now,
+  };
 };
 
 export const updateEnvironmentBug = async (
@@ -437,6 +647,20 @@ export const deleteEnvironmentBug = async (environmentId: string, bugId: string)
     bugId,
   );
   await deleteDoc(bugRef);
+
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  await runTransaction(firebaseFirestore, async (transaction) => {
+    const snapshot = await transaction.get(environmentRef);
+    if (!snapshot.exists()) {
+      return;
+    }
+    const data = snapshot.data({ serverTimestamps: 'estimate' }) ?? {};
+    const currentBugs = Number(data?.bugs ?? 0);
+    transaction.update(environmentRef, {
+      bugs: Math.max(0, currentBugs - 1),
+      updatedAt: serverTimestamp(),
+    });
+  });
 };
 
 interface TransitionEnvironmentStatusParams {
@@ -561,6 +785,7 @@ const normalizeParticipants = (
       id,
       name: displayName,
       email: profile?.email ?? t('dynamic.noEmail'),
+      photoURL: profile?.photoURL ?? null,
     };
   });
 };
@@ -568,10 +793,21 @@ const normalizeParticipants = (
 const buildTimeTrackingSummary = (environment: Environment) => {
   const isRunning = environment.status === 'in_progress';
   const totalMs = getElapsedMilliseconds(environment.timeTracking, isRunning, Date.now());
+  const t = i18n.t.bind(i18n);
+  const locale = i18n.language;
+  const emptyLabel = t('environmentSummary.notRecorded');
 
   return {
-    start: formatDateTime(environment.timeTracking?.start ?? null),
-    end: formatEndDateTime(environment.timeTracking ?? null, isRunning),
+    start: formatDateTime(environment.timeTracking?.start ?? null, {
+      locale,
+      emptyLabel,
+    }),
+    end: formatEndDateTime(environment.timeTracking ?? null, isRunning, {
+      locale,
+      emptyLabel,
+      inProgressLabel: t('environmentSummary.inProgress'),
+      notEndedLabel: t('environmentSummary.notEnded'),
+    }),
     total: formatDurationFromMs(totalMs),
   };
 };
@@ -652,10 +888,103 @@ const formatCriticalityLabel = (value: string, t: (key: string) => string) => {
   return value?.trim() || t('storeSummary.emptyValue');
 };
 
+const normalizeLabel = (value: string) =>
+  (value ?? '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toLowerCase();
+
+const getCriticalityClassName = (value: string) => {
+  const normalized = normalizeCriticalityEnum(value);
+  if (normalized === 'LOW') {
+    return 'criticality-pill criticality-pill--low';
+  }
+  if (normalized === 'MEDIUM') {
+    return 'criticality-pill criticality-pill--medium';
+  }
+  if (normalized === 'HIGH') {
+    return 'criticality-pill criticality-pill--high';
+  }
+  if (normalized === 'CRITICAL') {
+    return 'criticality-pill criticality-pill--critical';
+  }
+  return 'criticality-pill criticality-pill--unknown';
+};
+
+const getStatusClassName = (status: string) => {
+  const normalized = normalizeLabel(status);
+  if (normalized.includes('nao') && normalized.includes('aplica')) {
+    return 'status-pill status-pill--na';
+  }
+  if (
+    normalized.includes('conclu') ||
+    normalized.includes('complete') ||
+    normalized.includes('resolvid')
+  ) {
+    return 'status-pill status-pill--done';
+  }
+  if (normalized.includes('andamento') || normalized.includes('progress')) {
+    return 'status-pill status-pill--in-progress';
+  }
+  if (normalized.includes('pend') || normalized.includes('abert')) {
+    return 'status-pill status-pill--pending';
+  }
+  if (
+    normalized.includes('bloq') ||
+    normalized.includes('erro') ||
+    normalized.includes('block') ||
+    normalized.includes('fail')
+  ) {
+    return 'status-pill status-pill--blocked';
+  }
+  return 'status-pill status-pill--neutral';
+};
+
+const getSeverityClassName = (severity: string) => {
+  const normalized = normalizeLabel(severity);
+  if (normalized.includes('crit') || normalized.includes('critical')) {
+    return 'severity-pill severity-pill--critical';
+  }
+  if (normalized.includes('alta') || normalized.includes('high')) {
+    return 'severity-pill severity-pill--high';
+  }
+  if (normalized.includes('media') || normalized.includes('medium')) {
+    return 'severity-pill severity-pill--medium';
+  }
+  if (normalized.includes('baixa') || normalized.includes('low')) {
+    return 'severity-pill severity-pill--low';
+  }
+  return 'severity-pill severity-pill--unknown';
+};
+
+const getPriorityClassName = (priority: string) => {
+  const normalized = normalizeLabel(priority);
+  if (
+    normalized.includes('urgente') ||
+    normalized.includes('crit') ||
+    normalized.includes('critical')
+  ) {
+    return 'priority-pill priority-pill--critical';
+  }
+  if (normalized.includes('alta') || normalized.includes('high')) {
+    return 'priority-pill priority-pill--high';
+  }
+  if (normalized.includes('media') || normalized.includes('medium')) {
+    return 'priority-pill priority-pill--medium';
+  }
+  if (normalized.includes('baixa') || normalized.includes('low')) {
+    return 'priority-pill priority-pill--low';
+  }
+  return 'priority-pill priority-pill--unknown';
+};
+
 export const exportEnvironmentAsPDF = (
   environment: Environment,
   bugs: EnvironmentBug[] = [],
   participantProfiles: UserSummary[] = [],
+  storeName?: string,
+  organization?: { name?: string | null; logoUrl?: string | null } | null,
 ): void => {
   if (typeof window === 'undefined') {
     return;
@@ -669,6 +998,17 @@ export const exportEnvironmentAsPDF = (
   const testTypeLabel = translateEnvironmentOption(environment.tipoTeste, t);
   const momentLabel = translateEnvironmentOption(environment.momento, t);
   const exportTitle = t('environmentExport.title', { id: environment.identificador });
+  const storeLabel = storeName?.trim();
+  const exportTitleWithStore = storeLabel ? `${exportTitle} · ${storeLabel}` : exportTitle;
+  const organizationName = organization?.name?.trim() || '';
+  const organizationLogo = organization?.logoUrl?.trim() || '';
+  const organizationHeader =
+    organizationName || organizationLogo
+      ? `<div class="org-header">
+          ${organizationLogo ? `<img src="${escapeHtml(organizationLogo)}" alt="${escapeHtml(organizationName || 'Organization logo')}" class="org-logo" />` : ''}
+          ${organizationName ? `<span class="org-name">${escapeHtml(organizationName)}</span>` : ''}
+        </div>`
+      : '';
   const jiraTask = environment.jiraTask?.trim() || '';
   const jiraHref = buildExternalLink(jiraTask);
   const jiraValue = jiraHref
@@ -699,16 +1039,17 @@ export const exportEnvironmentAsPDF = (
         ? t('environmentEvidenceTable.evidencia_abrir')
         : t('environmentEvidenceTable.evidencia_sem');
       const criticalityLabel = formatCriticalityLabel(scenario.criticidade, t);
+      const criticalityClass = getCriticalityClassName(scenario.criticidade);
       const observation =
         scenario.observacao?.trim() || t('environmentEvidenceTable.observacao_none');
       return `
         <tr>
           <td>${linkifyHtml(scenario.titulo)}</td>
           <td>${linkifyHtml(scenario.categoria)}</td>
-          <td>${escapeHtml(criticalityLabel)}</td>
+          <td><span class="${criticalityClass}">${escapeHtml(criticalityLabel)}</span></td>
           <td>${linkifyHtml(observation)}</td>
-          <td>${escapeHtml(statusMobile)}</td>
-          <td>${escapeHtml(statusDesktop)}</td>
+          <td><span class="${getStatusClassName(statusMobile)}">${escapeHtml(statusMobile)}</span></td>
+          <td><span class="${getStatusClassName(statusDesktop)}">${escapeHtml(statusDesktop)}</span></td>
           <td>${
             scenario.evidenciaArquivoUrl
               ? `<a href="${escapeHtml(
@@ -727,6 +1068,15 @@ export const exportEnvironmentAsPDF = (
           .map(
             (participant) => `
         <tr>
+          <td>
+            ${
+              participant.photoURL
+                ? `<img src="${escapeHtml(participant.photoURL)}" alt="${escapeHtml(
+                    participant.name,
+                  )}" class="participant-photo" />`
+                : `<span class="participant-photo participant-photo--empty">-</span>`
+            }
+          </td>
           <td>${escapeHtml(participant.name)}</td>
           <td>${escapeHtml(participant.email)}</td>
         </tr>
@@ -735,23 +1085,32 @@ export const exportEnvironmentAsPDF = (
           .join('')
       : `
         <tr>
-          <td colspan="2">${t('environmentExport.noParticipants')}</td>
+          <td colspan="3">${t('environmentExport.noParticipants')}</td>
         </tr>
       `;
 
   const bugRows =
     bugs.length > 0
       ? bugs
-          .map(
-            (bug) => `
+          .map((bug) => {
+            const severityLabel = bug.severity
+              ? t(BUG_SEVERITY_LABEL[bug.severity])
+              : t('environmentExport.noSeverity');
+            const priorityLabel = bug.priority
+              ? t(BUG_PRIORITY_LABEL[bug.priority])
+              : t('environmentExport.noPriority');
+            const actualResult = bug.actualResult?.trim() || t('environmentExport.noActualResult');
+            const severityClass = getSeverityClassName(severityLabel);
+            const priorityClass = getPriorityClassName(priorityLabel);
+            return `
         <tr>
-          <td>${escapeHtml(bug.title)}</td>
-          <td>${escapeHtml(t(BUG_STATUS_LABEL[bug.status]))}</td>
           <td>${escapeHtml(getScenarioLabel(environment, bug.scenarioId))}</td>
-          <td>${linkifyHtml(bug.description ?? t('environmentExport.noDescription'))}</td>
+          <td><span class="${severityClass}">${escapeHtml(severityLabel)}</span></td>
+          <td><span class="${priorityClass}">${escapeHtml(priorityLabel)}</span></td>
+          <td>${linkifyHtml(actualResult)}</td>
         </tr>
-      `,
-          )
+      `;
+          })
           .join('')
       : `
         <tr>
@@ -762,19 +1121,82 @@ export const exportEnvironmentAsPDF = (
   const documentContent = `
     <html>
       <head>
-        <title>${escapeHtml(exportTitle)}</title>
+        <title>${escapeHtml(exportTitleWithStore)}</title>
         <style>
+          :root {
+            --color-surface-muted: #f5f7fb;
+            --color-border: #e5e7eb;
+            --table-border: #d1d5db;
+            --criticality-low-bg: #22c55e;
+            --criticality-low-text: #ffffff;
+            --criticality-medium-bg: #f59e0b;
+            --criticality-medium-text: #ffffff;
+            --criticality-high-bg: #f97316;
+            --criticality-high-text: #ffffff;
+            --criticality-critical-bg: #8b5cf6;
+            --criticality-critical-text: #ffffff;
+            --criticality-unknown-bg: #bdc3c7;
+            --criticality-unknown-text: #2c3e50;
+            --status-pending-bg: #f59e0b;
+            --status-pending-text: #ffffff;
+            --status-in-progress-bg: #3b82f6;
+            --status-in-progress-text: #ffffff;
+            --status-done-bg: #22c55e;
+            --status-done-text: #ffffff;
+            --status-blocked-bg: #ef4444;
+            --status-blocked-text: #ffffff;
+            --status-na-bg: #94a3b8;
+            --status-na-text: #ffffff;
+            --status-neutral-bg: #bdc3c7;
+            --status-neutral-text: #2c3e50;
+            --severity-low-bg: #22c55e;
+            --severity-low-text: #ffffff;
+            --severity-medium-bg: #f59e0b;
+            --severity-medium-text: #ffffff;
+            --severity-high-bg: #f97316;
+            --severity-high-text: #ffffff;
+            --severity-critical-bg: #8b5cf6;
+            --severity-critical-text: #ffffff;
+            --severity-unknown-bg: #bdc3c7;
+            --severity-unknown-text: #2c3e50;
+          }
           body { font-family: Arial, sans-serif; padding: 24px; }
           h1 { margin-bottom: 0; }
           h2 { margin-top: 24px; }
-          .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding: 12px; background: #f5f7fb; border: 1px solid #e5e7eb; border-radius: 12px; }
+          .org-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+          .org-logo { width: 48px; height: 48px; border-radius: 10px; object-fit: contain; border: 1px solid var(--color-border); background: #fff; }
+          .org-name { font-size: 16px; font-weight: 600; color: #111827; }
+          .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding: 12px; background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: 12px; }
           .summary-grid strong { display: block; margin-top: 4px; }
           table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-          th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+          th, td { border: 1px solid var(--table-border); padding: 8px; text-align: left; }
+          .participant-photo { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+          .participant-photo--empty { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #e5e7eb; color: #6b7280; font-size: 0.75rem; }
+          .criticality-pill,
+          .status-pill,
+          .severity-pill,
+          .priority-pill { display: inline-flex; align-items: center; justify-content: center; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid var(--table-border); }
+          .criticality-pill--low { background: var(--criticality-low-bg); color: var(--criticality-low-text); }
+          .criticality-pill--medium { background: var(--criticality-medium-bg); color: var(--criticality-medium-text); }
+          .criticality-pill--high { background: var(--criticality-high-bg); color: var(--criticality-high-text); }
+          .criticality-pill--critical { background: var(--criticality-critical-bg); color: var(--criticality-critical-text); }
+          .criticality-pill--unknown { background: var(--criticality-unknown-bg); color: var(--criticality-unknown-text); }
+          .status-pill--pending { background: var(--status-pending-bg); color: var(--status-pending-text); }
+          .status-pill--in-progress { background: var(--status-in-progress-bg); color: var(--status-in-progress-text); }
+          .status-pill--done { background: var(--status-done-bg); color: var(--status-done-text); }
+          .status-pill--blocked { background: var(--status-blocked-bg); color: var(--status-blocked-text); }
+          .status-pill--na { background: var(--status-na-bg); color: var(--status-na-text); }
+          .status-pill--neutral { background: var(--status-neutral-bg); color: var(--status-neutral-text); }
+          .severity-pill--low, .priority-pill--low { background: var(--severity-low-bg); color: var(--severity-low-text); }
+          .severity-pill--medium, .priority-pill--medium { background: var(--severity-medium-bg); color: var(--severity-medium-text); }
+          .severity-pill--high, .priority-pill--high { background: var(--severity-high-bg); color: var(--severity-high-text); }
+          .severity-pill--critical, .priority-pill--critical { background: var(--severity-critical-bg); color: var(--severity-critical-text); }
+          .severity-pill--unknown, .priority-pill--unknown { background: var(--severity-unknown-bg); color: var(--severity-unknown-text); }
         </style>
       </head>
       <body>
-        <h1>${escapeHtml(exportTitle)}</h1>
+        ${organizationHeader}
+        <h1>${escapeHtml(exportTitleWithStore)}</h1>
         <p>${escapeHtml(t('environmentExport.statusLabel'))}: ${escapeHtml(statusLabel)}</p>
         <p>${escapeHtml(t('environmentExport.typeLabel'))}: ${escapeHtml(
           environment.tipoAmbiente,
@@ -829,6 +1251,7 @@ export const exportEnvironmentAsPDF = (
         <table class="participants-table">
           <thead>
             <tr>
+              <th>${t('environmentExport.participantPhoto')}</th>
               <th>${t('environmentExport.participantName')}</th>
               <th>${t('environmentExport.participantEmail')}</th>
             </tr>
@@ -854,10 +1277,10 @@ export const exportEnvironmentAsPDF = (
         <table>
           <thead>
             <tr>
-              <th>${t('environmentExport.bugTitle')}</th>
-              <th>${t('environmentExport.bugStatus')}</th>
               <th>${t('environmentExport.bugScenario')}</th>
-              <th>${t('environmentExport.bugDescription')}</th>
+              <th>${t('environmentExport.bugSeverity')}</th>
+              <th>${t('environmentExport.bugPriority')}</th>
+              <th>${t('environmentExport.bugActualResult')}</th>
             </tr>
           </thead>
           <tbody>${bugRows}</tbody>
@@ -881,6 +1304,7 @@ export const copyEnvironmentAsMarkdown = async (
   environment: Environment,
   bugs: EnvironmentBug[] = [],
   participantProfiles: UserSummary[] = [],
+  storeName?: string,
 ): Promise<void> => {
   if (typeof navigator === 'undefined' && typeof document === 'undefined') {
     return;
@@ -893,6 +1317,8 @@ export const copyEnvironmentAsMarkdown = async (
   const statusLabel = t(ENVIRONMENT_STATUS_LABEL[environment.status]);
   const testTypeLabel = translateEnvironmentOption(environment.tipoTeste, t);
   const momentLabel = translateEnvironmentOption(environment.momento, t);
+  const normalizeMarkdownCell = (value: string) =>
+    value.replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
   const scenarioTableRows = Object.values(environment.scenarios ?? {})
     .map((scenario) => {
       const statuses = getScenarioPlatformStatuses(scenario);
@@ -906,20 +1332,37 @@ export const copyEnvironmentAsMarkdown = async (
         : evidenceLabel;
       const observation =
         scenario.observacao?.trim() || t('environmentEvidenceTable.observacao_none');
-      return `| ${scenario.titulo} | ${scenario.categoria} | ${scenario.criticidade} | ${observation} | ${statusMobile} | ${statusDesktop} | ${evidenceLink} |`;
+      return `| ${normalizeMarkdownCell(scenario.titulo)} | ${normalizeMarkdownCell(
+        scenario.categoria,
+      )} | ${normalizeMarkdownCell(scenario.criticidade)} | ${normalizeMarkdownCell(
+        observation,
+      )} | ${normalizeMarkdownCell(statusMobile)} | ${normalizeMarkdownCell(
+        statusDesktop,
+      )} | ${evidenceLink} |`;
     })
     .join('\n');
   const scenarioTable = scenarioTableRows
     ? `| ${t('environmentEvidenceTable.table_titulo')} | ${t('environmentEvidenceTable.table_categoria')} | ${t('environmentEvidenceTable.table_criticidade')} | ${t('environmentEvidenceTable.table_observacao')} | ${t('environmentEvidenceTable.table_status_mobile')} | ${t('environmentEvidenceTable.table_status_desktop')} | ${t('environmentEvidenceTable.table_evidencia')} |\n| --- | --- | --- | --- | --- | --- | --- |\n${scenarioTableRows}`
     : `- ${t('environmentExport.noScenarios')}`;
 
-  const bugLines = bugs
+  const bugTableRows = bugs
     .map((bug) => {
       const scenarioLabel = getScenarioLabel(environment, bug.scenarioId);
-      const description = bug.description ? ` — ${bug.description}` : '';
-      return `- **${bug.title}** (${t(BUG_STATUS_LABEL[bug.status])}) · ${t('environmentExport.bugScenario')}: ${scenarioLabel}${description}`;
+      const severityLabel = bug.severity
+        ? t(BUG_SEVERITY_LABEL[bug.severity])
+        : t('environmentExport.noSeverity');
+      const priorityLabel = bug.priority
+        ? t(BUG_PRIORITY_LABEL[bug.priority])
+        : t('environmentExport.noPriority');
+      const actualResult = bug.actualResult?.trim() || t('environmentExport.noActualResult');
+      return `| ${normalizeMarkdownCell(scenarioLabel)} | ${normalizeMarkdownCell(
+        severityLabel,
+      )} | ${normalizeMarkdownCell(priorityLabel)} | ${normalizeMarkdownCell(actualResult)} |`;
     })
     .join('\n');
+  const bugTable = bugTableRows
+    ? `| ${t('environmentExport.bugScenario')} | ${t('environmentExport.bugSeverity')} | ${t('environmentExport.bugPriority')} | ${t('environmentExport.bugActualResult')} |\n| --- | --- | --- | --- |\n${bugTableRows}`
+    : `- ${t('environmentExport.noBugs')}`;
 
   const urls = (environment.urls ?? []).map((url) => `  - ${url}`).join('\n');
   const participants = normalizedParticipants
@@ -929,7 +1372,11 @@ export const copyEnvironmentAsMarkdown = async (
     })
     .join('\n');
 
-  const markdown = `# ${t('environmentExport.title', { id: environment.identificador })}
+  const exportTitle = t('environmentExport.title', { id: environment.identificador });
+  const storeLabel = storeName?.trim();
+  const markdownTitle = storeLabel ? `${exportTitle} · ${storeLabel}` : exportTitle;
+
+  const markdown = `# ${markdownTitle}
 
 - ${t('environmentExport.statusLabel')}: ${statusLabel}
 - ${t('environmentExport.typeLabel')}: ${environment.tipoAmbiente} · ${testTypeLabel}
@@ -949,7 +1396,7 @@ ${environment.momento ? `- ${t('environmentExport.momentLabel')}: ${momentLabel}
 ${scenarioTable}
 
 ## ${t('environmentExport.bugsTitle')}
-${bugLines || `- ${t('environmentExport.noBugs')}`}
+${bugTable}
 
 ## ${t('environmentExport.participantsTitle')}
 ${participants || `- ${t('environmentExport.noParticipants')}`}

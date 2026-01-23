@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -10,9 +10,9 @@ import type {
 } from '../../domain/entities/environment';
 import type { UserSummary } from '../../domain/entities/user';
 import type { SlackTaskSummaryPayload } from '../../infrastructure/external/slack';
-import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
-import { storeService } from '../../application/use-cases/StoreUseCase';
-import { slackService } from '../../application/use-cases/SlackUseCase';
+import { environmentService } from '../../infrastructure/services/environmentService';
+import { storeService } from '../../infrastructure/services/storeService';
+import { slackService } from '../../infrastructure/services/slackService';
 import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
@@ -50,9 +50,16 @@ import {
   CopyIcon,
   FileTextIcon,
   LinkIcon,
+  LogoutIcon,
   SettingsIcon,
   UsersGroupIcon,
 } from '../components/icons';
+import { exportEnvironmentExcel } from '../../utils/exportExcel';
+import {
+  BUG_PRIORITY_LABEL,
+  BUG_SEVERITY_LABEL,
+  ENVIRONMENT_STATUS_LABEL,
+} from '../../shared/config/environmentLabels';
 
 interface SlackSummaryBuilderOptions {
   formattedTime: string;
@@ -225,13 +232,15 @@ export const EnvironmentPage = () => {
   const [editingBug, setEditingBug] = useState<EnvironmentBug | null>(null);
   const [defaultBugScenarioId, setDefaultBugScenarioId] = useState<string | null>(null);
   const [scenarioDetailsId, setScenarioDetailsId] = useState<string | null>(null);
-  const [modalEvidenceLink, setModalEvidenceLink] = useState('');
+  const [modalEvidenceFile, setModalEvidenceFile] = useState<File | null>(null);
   const [isCopyingMarkdown, setIsCopyingMarkdown] = useState(false);
   const [isSendingSlackSummary, setIsSendingSlackSummary] = useState(false);
   const [suites, setSuites] = useState<StoreSuite[]>([]);
   const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
+  const [storeName, setStoreName] = useState<string>('');
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
+  const activeOrganizationIdRef = useRef<string | null>(null);
   const {
     bugs,
     isLoading: isLoadingBugs,
@@ -276,21 +285,37 @@ export const EnvironmentPage = () => {
     }
     return value?.trim() || translation('storeSummary.emptyValue');
   };
-  const formatCriticalityLabel = (value?: string | null) => {
-    const labelKey = getCriticalityLabelKey(value);
-    if (labelKey) {
-      return translation(labelKey);
-    }
-    return value?.trim() || translation('storeSummary.emptyValue');
-  };
-  const formatScenarioStatusLabel = (value?: EnvironmentScenarioStatus | null) => {
-    if (!value) {
-      return translation('storeSummary.emptyValue');
-    }
-    const key = `environmentEvidenceTable.status_${value}`;
-    const translated = translation(key);
-    return translated === key ? value : translated;
-  };
+  const formatCriticalityLabel = useCallback(
+    (value?: string | null) => {
+      const labelKey = getCriticalityLabelKey(value);
+      if (labelKey) {
+        return translation(labelKey);
+      }
+      return value?.trim() || translation('storeSummary.emptyValue');
+    },
+    [translation],
+  );
+  const formatScenarioStatusLabel = useCallback(
+    (value?: EnvironmentScenarioStatus | null) => {
+      if (!value) {
+        return translation('storeSummary.emptyValue');
+      }
+      const key = `environmentEvidenceTable.status_${value}`;
+      const translated = translation(key);
+      return translated === key ? value : translated;
+    },
+    [translation],
+  );
+  const translateOptionValue = useCallback(
+    (value?: string | null) => {
+      if (!value) {
+        return translation('storeSummary.emptyValue');
+      }
+      const translated = translation(value);
+      return translated === value ? value : translated;
+    },
+    [translation],
+  );
 
   const clearInviteParam = useCallback(() => {
     if (!inviteParam) {
@@ -310,37 +335,30 @@ export const EnvironmentPage = () => {
     setScenarioDetailsId(null);
   }, []);
 
-  const handleModalEvidenceSave = useCallback(async () => {
-    if (!scenarioDetailsId) {
-      return;
-    }
-    const link = modalEvidenceLink.trim();
-    if (!link) {
+  const handleModalEvidenceFileUpload = useCallback(async () => {
+    if (!scenarioDetailsId || !modalEvidenceFile) {
       return;
     }
 
     try {
-      await handleEvidenceUpload(scenarioDetailsId, link);
+      await handleEvidenceUpload(scenarioDetailsId, modalEvidenceFile);
+      setModalEvidenceFile(null);
     } catch (error) {
       console.error(error);
     }
-  }, [handleEvidenceUpload, modalEvidenceLink, scenarioDetailsId]);
+  }, [handleEvidenceUpload, modalEvidenceFile, scenarioDetailsId]);
 
   useEffect(() => {
-    if (!detailScenario) {
-      setModalEvidenceLink('');
-      return;
-    }
-
-    setModalEvidenceLink(detailScenario.evidenciaArquivoUrl ?? '');
+    setModalEvidenceFile(null);
   }, [detailScenario]);
 
   useEffect(() => {
+    const nextOrganizationId = environmentOrganization?.id ?? null;
+    if (activeOrganizationIdRef.current === nextOrganizationId) {
+      return;
+    }
+    activeOrganizationIdRef.current = nextOrganizationId;
     setActiveOrganization(environmentOrganization ?? null);
-
-    return () => {
-      setActiveOrganization(null);
-    };
   }, [environmentOrganization, setActiveOrganization]);
 
   useEffect(() => {
@@ -377,9 +395,42 @@ export const EnvironmentPage = () => {
     };
   }, [environment?.storeId, isEditOpen]);
 
+  useEffect(() => {
+    if (!environment?.storeId) {
+      setStoreName('');
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchStoreName = async () => {
+      try {
+        const store = await storeService.getDetail(environment.storeId);
+        if (isMounted) {
+          setStoreName(store?.name?.trim() || '');
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setStoreName('');
+        }
+      }
+    };
+
+    void fetchStoreName();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [environment?.storeId]);
+
   const { formattedTime, totalMs, formattedStart, formattedEnd } = useTimeTracking(
     environment?.timeTracking ?? null,
     environment?.status === 'in_progress',
+    {
+      translation,
+      locale: i18n.language,
+    },
   );
 
   const sendSlackSummary = useCallback(async () => {
@@ -415,7 +466,7 @@ export const EnvironmentPage = () => {
       setIsSendingSlackSummary(false);
     }
   }, [
-    bugs.length,
+    bugs,
     environment,
     executedScenariosCount,
     formattedTime,
@@ -467,8 +518,7 @@ export const EnvironmentPage = () => {
         showToast({ type: 'error', message: translation('environment.statusUpdateError') });
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [environment, showToast, user?.uid],
+    [environment, sendSlackSummary, showToast, translation, user?.uid],
   );
 
   const handleCopyLink = useCallback(
@@ -512,8 +562,182 @@ export const EnvironmentPage = () => {
     if (!environment) {
       return;
     }
-    environmentService.exportAsPDF(environment, bugs, participantProfiles);
-  }, [bugs, environment, participantProfiles]);
+    environmentService.exportAsPDF(environment, bugs, participantProfiles, storeName, {
+      name: environmentOrganization?.name ?? null,
+      logoUrl: environmentOrganization?.logoUrl ?? null,
+    });
+  }, [
+    bugs,
+    environment,
+    environmentOrganization?.logoUrl,
+    environmentOrganization?.name,
+    participantProfiles,
+    storeName,
+  ]);
+
+  const handleExportExcel = useCallback(() => {
+    if (!environment) {
+      return;
+    }
+
+    const rows = Object.values(environment.scenarios ?? {}).map((scenario) => {
+      const statuses = getScenarioPlatformStatuses(scenario);
+      const statusMobile = formatScenarioStatusLabel(statuses.mobile);
+      const statusDesktop = formatScenarioStatusLabel(statuses.desktop);
+      const observation =
+        scenario.observacao?.trim() || translation('environmentEvidenceTable.observacao_none');
+      const evidence = scenario.evidenciaArquivoUrl
+        ? scenario.evidenciaArquivoUrl
+        : translation('environmentEvidenceTable.evidencia_sem');
+
+      return {
+        titulo: scenario.titulo || translation('storeSummary.emptyValue'),
+        categoria: scenario.categoria || translation('storeSummary.emptyValue'),
+        criticidade: formatCriticalityLabel(scenario.criticidade),
+        observacao: observation,
+        statusMobile,
+        statusDesktop,
+        evidencia: evidence,
+      };
+    });
+
+    const normalizedStoreName = storeName ? storeName.replace(/\s+/g, '_') : '';
+    const storePrefix = normalizedStoreName ? `${normalizedStoreName}_` : '';
+    const fileName = `${storePrefix}${translation('environment.exportExcelFileName')}-${environment.identificador}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    const infoRows = [
+      {
+        label: translation('editEnvironmentModal.identifier'),
+        value: environment.identificador || translation('storeSummary.emptyValue'),
+      },
+      {
+        label: translation('storeSummary.storeName'),
+        value: storeName || translation('storeSummary.emptyValue'),
+      },
+      {
+        label: translation('environment.exportExcelStatusLabel'),
+        value: translation(ENVIRONMENT_STATUS_LABEL[environment.status]),
+      },
+      {
+        label: translation('createEnvironment.suiteId'),
+        value: environment.suiteName?.trim() || translation('storeSummary.emptyValue'),
+      },
+      {
+        label: translation('editEnvironmentModal.environmentType'),
+        value: environment.tipoAmbiente || translation('storeSummary.emptyValue'),
+      },
+      {
+        label: translation('editEnvironmentModal.testType'),
+        value: translateOptionValue(environment.tipoTeste),
+      },
+      {
+        label: translation('editEnvironmentModal.moment'),
+        value: environment.momento
+          ? translateOptionValue(environment.momento)
+          : translation('environmentSummary.notRecorded'),
+      },
+      {
+        label: translation('editEnvironmentModal.release'),
+        value: environment.release?.trim() || translation('environmentSummary.notRecorded'),
+      },
+      {
+        label: translation('editEnvironmentModal.jiraTask'),
+        value: environment.jiraTask?.trim() || translation('environmentSummary.notInformed'),
+      },
+      {
+        label: translation('editEnvironmentModal.urls'),
+        value: urls.length > 0 ? urls.join('\n') : translation('environmentSummary.noUrls'),
+      },
+      {
+        label: translation('environmentSummary.participants'),
+        value:
+          participantProfiles.length > 0
+            ? participantProfiles
+                .map((profile) => profile.displayName?.trim() || profile.email)
+                .filter(Boolean)
+                .join(', ')
+            : translation('environmentSummary.noParticipants'),
+      },
+      {
+        label: translation('environmentSummary.scenarios'),
+        value: `${executedScenariosCount}/${scenarioCount}`,
+      },
+      {
+        label: translation('environmentSummary.bugs'),
+        value: String(bugs.length),
+      },
+      {
+        label: translation('environmentSummary.start'),
+        value: formattedStart,
+      },
+      {
+        label: translation('environmentSummary.end'),
+        value: formattedEnd,
+      },
+      {
+        label: translation('environmentSummary.totalTime'),
+        value: formattedTime || '00:00:00',
+      },
+    ];
+    const bugRows = bugs.map((bug) => {
+      const scenarioName = bug.scenarioId
+        ? environment.scenarios?.[bug.scenarioId]?.titulo ||
+          translation('environmentBugList.scenarioRemoved')
+        : translation('environmentBugList.notLinked');
+
+      return {
+        cenario: scenarioName,
+        severidade: bug.severity
+          ? translation(BUG_SEVERITY_LABEL[bug.severity])
+          : translation('environmentBugList.noSeverity'),
+        prioridade: bug.priority
+          ? translation(BUG_PRIORITY_LABEL[bug.priority])
+          : translation('environmentBugList.noPriority'),
+        resultadoAtual:
+          bug.actualResult?.trim() || translation('environmentBugList.noActualResult'),
+      };
+    });
+
+    exportEnvironmentExcel({
+      fileName,
+      scenarioSheetName: translation('environment.exportExcelSheetName'),
+      environmentSheetName: translation('environment.exportExcelEnvironmentSheetName'),
+      bugSheetName: translation('environment.exportExcelBugsSheetName'),
+      infoHeaderLabels: [translation('exportExcel.field'), translation('exportExcel.value')],
+      infoRows,
+      scenarioRows: rows,
+      scenarioHeaderLabels: [
+        translation('environmentEvidenceTable.table_titulo'),
+        translation('environmentEvidenceTable.table_categoria'),
+        translation('environmentEvidenceTable.table_criticidade'),
+        translation('environmentEvidenceTable.table_observacao'),
+        translation('environmentEvidenceTable.table_status_mobile'),
+        translation('environmentEvidenceTable.table_status_desktop'),
+        translation('environmentEvidenceTable.table_evidencia'),
+      ],
+      bugRows,
+      bugHeaderLabels: [
+        translation('environmentBugList.scenario'),
+        translation('environmentBugList.severity'),
+        translation('environmentBugList.priority'),
+        translation('environmentBugList.actualResult'),
+      ],
+    });
+  }, [
+    bugs,
+    environment,
+    executedScenariosCount,
+    formatCriticalityLabel,
+    formatScenarioStatusLabel,
+    formattedEnd,
+    formattedStart,
+    formattedTime,
+    participantProfiles,
+    scenarioCount,
+    storeName,
+    translateOptionValue,
+    translation,
+    urls,
+  ]);
 
   const handleCopyMarkdown = useCallback(async () => {
     if (!environment) {
@@ -523,7 +747,7 @@ export const EnvironmentPage = () => {
     setIsCopyingMarkdown(true);
 
     try {
-      await environmentService.copyAsMarkdown(environment, bugs, participantProfiles);
+      await environmentService.copyAsMarkdown(environment, bugs, participantProfiles, storeName);
       showToast({ type: 'success', message: translation('environment.copyMarkdownSuccess') });
     } catch (error) {
       console.error(error);
@@ -532,7 +756,7 @@ export const EnvironmentPage = () => {
       setIsCopyingMarkdown(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bugs, environment, participantProfiles, showToast]);
+  }, [bugs, environment, participantProfiles, showToast, storeName, translation]);
 
   const openCreateBugModal = useCallback((scenarioId: string) => {
     setEditingBug(null);
@@ -575,12 +799,13 @@ export const EnvironmentPage = () => {
     try {
       await leaveEnvironment();
       showToast({ type: 'success', message: translation('environment.leaveSuccess') });
+      navigate(-1);
     } catch (error) {
       console.error(error);
       showToast({ type: 'error', message: translation('environment.leaveError') });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leaveEnvironment, showToast]);
+  }, [leaveEnvironment, navigate, showToast, translation]);
 
   useEffect(() => {
     if (!shouldAutoJoinFromInvite) {
@@ -682,6 +907,18 @@ export const EnvironmentPage = () => {
                 {hasEnteredEnvironment && environment.status !== 'done' && (
                   <Button
                     type="button"
+                    variant="ghost"
+                    onClick={handleLeaveEnvironment}
+                    isLoading={isLeavingEnvironment}
+                    loadingText={translation('environment.leaving')}
+                  >
+                    <LogoutIcon aria-hidden className="icon" />
+                    {translation('environment.leave')}
+                  </Button>
+                )}
+                {hasEnteredEnvironment && environment.status !== 'done' && (
+                  <Button
+                    type="button"
                     variant="secondary"
                     onClick={() => setIsEditOpen(true)}
                     data-testid="edit-environment-button"
@@ -707,6 +944,7 @@ export const EnvironmentPage = () => {
             urls={urls}
             participants={participantProfiles}
             bugsCount={bugs.length}
+            storeName={storeName}
           />
           <div className="summary-card">
             <h3>{translation('environment.actions.shareExport')}</h3>
@@ -746,6 +984,16 @@ export const EnvironmentPage = () => {
               <Button
                 type="button"
                 variant="ghost"
+                onClick={handleExportExcel}
+                disabled={isShareDisabled}
+                data-testid="export-environment-excel"
+              >
+                <FileTextIcon aria-hidden className="icon" />
+                {translation('environment.exportExcel')}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
                 onClick={handleCopyMarkdown}
                 disabled={isShareDisabled}
                 isLoading={isCopyingMarkdown}
@@ -773,6 +1021,7 @@ export const EnvironmentPage = () => {
         <EnvironmentBugList
           environment={environment}
           bugs={bugs}
+          participants={participantProfiles}
           isLocked={Boolean(isInteractionLocked)}
           isLoading={isLoadingBugs}
           onEdit={handleEditBug}
@@ -790,9 +1039,6 @@ export const EnvironmentPage = () => {
           setIsEditOpen(false);
           setIsDeleteOpen(true);
         }}
-        onLeave={handleLeaveEnvironment}
-        canLeave={hasEnteredEnvironment && environment.status !== 'done'}
-        isLeaving={isLeavingEnvironment}
       />
 
       <DeleteEnvironmentModal
@@ -816,11 +1062,12 @@ export const EnvironmentPage = () => {
         isOpen={Boolean(scenarioDetailsId)}
         onClose={handleCloseScenarioDetails}
         title={translation('storeSummary.scenarioDetailsTitle')}
+        bodyClassName="scenario-details"
       >
         {detailScenario ? (
-          <div className="scenario-details">
+          <>
             <p className="scenario-details-title">{detailScenario.titulo}</p>
-            <div className="scenario-details-grid">
+            <div className="scenario-details-items">
               <div className="scenario-details-item">
                 <span className="scenario-details-label">
                   {translation('environmentEvidenceTable.table_categoria')}
@@ -904,21 +1151,29 @@ export const EnvironmentPage = () => {
                 </a>
               ) : canManageEvidence ? (
                 <div className="scenario-evidence-actions">
-                  <input
-                    type="url"
-                    value={modalEvidenceLink}
-                    onChange={(event) => setModalEvidenceLink(event.target.value)}
-                    placeholder={translation('environmentEvidenceTable.evidencia_placeholder')}
-                    className="scenario-evidence-input"
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleModalEvidenceSave}
-                    isLoading={isUpdatingEvidence}
-                    loadingText={translation('saving')}
-                  >
-                    {translation('environmentEvidenceTable.evidencia_salvar')}
-                  </Button>
+                  <div className="scenario-evidence-field">
+                    <input
+                      id="scenario-evidence-upload"
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="file-input"
+                      onChange={(event) => setModalEvidenceFile(event.target.files?.[0] ?? null)}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="scenario-evidence-upload-button"
+                      onClick={handleModalEvidenceFileUpload}
+                      disabled={!modalEvidenceFile}
+                      isLoading={isUpdatingEvidence}
+                      loadingText={translation('saving')}
+                    >
+                      {translation('environmentEvidenceTable.evidencia_upload')}
+                    </Button>
+                  </div>
+                  <span className="form-hint">
+                    {translation('environmentEvidenceTable.evidencia_upload_hint')}
+                  </span>
                 </div>
               ) : (
                 <span className="section-subtitle">
@@ -954,7 +1209,7 @@ export const EnvironmentPage = () => {
                 )}
               </div>
             </div>
-          </div>
+          </>
         ) : (
           <p className="section-subtitle">{translation('storeSummary.emptyValue')}</p>
         )}

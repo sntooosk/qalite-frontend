@@ -6,20 +6,20 @@ import type {
   UpdateEnvironmentInput,
 } from '../../../domain/entities/environment';
 import type { StoreScenario, StoreSuite } from '../../../domain/entities/store';
-import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
+import { environmentService } from '../../../infrastructure/services/environmentService';
 import { getScenarioPlatformStatuses } from '../../../infrastructure/external/environments';
 import { Button } from '../Button';
 import { Modal } from '../Modal';
 import { SelectInput } from '../SelectInput';
 import { TextArea } from '../TextArea';
 import { TextInput } from '../TextInput';
+import { TrashIcon } from '../icons';
 import {
   MOMENT_OPTIONS_BY_ENVIRONMENT,
   TEST_TYPES_BY_ENVIRONMENT,
   requiresReleaseField,
 } from '../../constants/environmentOptions';
 import { useTranslation } from 'react-i18next';
-import { LogoutIcon } from '../icons';
 import { useToast } from '../../context/ToastContext';
 
 interface EditEnvironmentModalProps {
@@ -29,9 +29,6 @@ interface EditEnvironmentModalProps {
   suites: StoreSuite[];
   scenarios: StoreScenario[];
   onDeleteRequest?: () => void;
-  onLeave?: () => void;
-  canLeave?: boolean;
-  isLeaving?: boolean;
 }
 
 const buildScenarioMap = (
@@ -72,9 +69,6 @@ export const EditEnvironmentModal = ({
   suites,
   scenarios,
   onDeleteRequest,
-  onLeave,
-  canLeave,
-  isLeaving,
 }: EditEnvironmentModalProps) => {
   const { t: translation } = useTranslation();
 
@@ -360,18 +354,6 @@ export const EditEnvironmentModal = ({
             >
               {translation('editEnvironmentModal.saveChanges')}
             </Button>
-            {canLeave && onLeave && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={onLeave}
-                isLoading={isLeaving}
-                loadingText={translation('environment.leaving')}
-              >
-                <LogoutIcon aria-hidden className="icon" />
-                {translation('environment.leave')}
-              </Button>
-            )}
           </div>
         </form>
         {canDelete && (
@@ -380,7 +362,12 @@ export const EditEnvironmentModal = ({
               <h4>{translation('editEnvironmentModal.dangerZoneTitle')}</h4>
               <p>{translation('editEnvironmentModal.dangerZoneDescription')}</p>
             </div>
-            <button type="button" className="link-danger" onClick={onDeleteRequest}>
+            <button
+              type="button"
+              className="link-danger link-danger--with-icon"
+              onClick={onDeleteRequest}
+            >
+              <TrashIcon aria-hidden className="icon" />
               {translation('deleteEnvironmentModal.deleteEnvironment')}
             </button>
           </div>

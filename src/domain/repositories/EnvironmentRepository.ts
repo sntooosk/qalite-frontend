@@ -24,6 +24,7 @@ export interface EnvironmentRepository {
     filters: EnvironmentRealtimeFilters,
     onChange: (environments: Environment[]) => void,
   ) => () => void;
+  listSummary: (filters: EnvironmentRealtimeFilters) => Promise<Environment[]>;
   addUser: (id: string, userId: string) => Promise<void>;
   removeUser: (id: string, userId: string) => Promise<void>;
   updateScenarioStatus: (
@@ -35,7 +36,7 @@ export interface EnvironmentRepository {
   uploadScenarioEvidence: (
     environmentId: string,
     scenarioId: string,
-    evidenceLink: string,
+    evidenceLink: string | File,
   ) => Promise<string>;
   listBugs: (environmentId: string) => Promise<EnvironmentBug[]>;
   createBug: (environmentId: string, bug: CreateEnvironmentBugInput) => Promise<EnvironmentBug>;
@@ -50,10 +51,13 @@ export interface EnvironmentRepository {
     environment: Environment,
     bugs?: EnvironmentBug[],
     participantProfiles?: UserSummary[],
+    storeName?: string,
+    organization?: { name?: string | null; logoUrl?: string | null } | null,
   ) => void;
   copyAsMarkdown: (
     environment: Environment,
     bugs?: EnvironmentBug[],
     participantProfiles?: UserSummary[],
+    storeName?: string,
   ) => Promise<void>;
 }

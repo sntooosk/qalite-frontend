@@ -9,7 +9,7 @@ import {
   signOut,
   updateProfile as firebaseUpdateProfile,
 } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 import type {
   AuthUser,
@@ -23,6 +23,8 @@ import type { BrowserstackCredentials } from '../../domain/entities/browserstack
 import { DEFAULT_ROLE, DEFAULT_USER_PREFERENCES } from '../../domain/entities/auth';
 import { addUserToOrganizationByEmailDomain } from './organizations';
 import { firebaseAuth, firebaseFirestore } from '../database/firebase';
+import { getDocCacheFirst } from './firestoreCache';
+import { buildStorageFileName, uploadFileAndGetUrl } from './storage';
 import {
   getStoredLanguagePreference,
   getStoredThemePreference,
@@ -82,7 +84,7 @@ export const registerUser = async ({ role, ...payload }: RegisterPayload): Promi
   );
 
   if (!user.emailVerified) {
-    await sendEmailVerification(user);
+    void sendEmailVerification(user);
   }
 
   persistFirebaseAuthCookie(user);
@@ -111,18 +113,20 @@ export const loginUser = async ({ email, password }: LoginPayload): Promise<Auth
   const credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
 
   if (!credential.user.emailVerified) {
-    await sendEmailVerification(credential.user);
+    void sendEmailVerification(credential.user);
   }
 
   persistFirebaseAuthCookie(credential.user);
 
   const profile = await fetchUserProfile(credential.user.uid);
-  const organizationId = await addUserToOrganizationByEmailDomain({
-    uid: credential.user.uid,
-    email: credential.user.email ?? email,
-    displayName: credential.user.displayName ?? email,
-    photoURL: null,
-  });
+  const organizationId = profile.organizationId
+    ? profile.organizationId
+    : await addUserToOrganizationByEmailDomain({
+        uid: credential.user.uid,
+        email: credential.user.email ?? email,
+        displayName: credential.user.displayName ?? email,
+        photoURL: null,
+      });
 
   const resolvedProfile = {
     ...profile,
@@ -217,7 +221,12 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
   }
 
   const currentProfile = await fetchUserProfile(user.uid);
-  const photoURL = null;
+  const resolvedPhotoUrl = payload.photoFile
+    ? await uploadFileAndGetUrl(
+        `users/${user.uid}/profile/${buildStorageFileName(payload.photoFile)}`,
+        payload.photoFile,
+      )
+    : (currentProfile.photoURL ?? user.photoURL ?? null);
 
   const trimmedFirstName = payload.firstName?.trim() ?? currentProfile.firstName ?? '';
   const trimmedLastName = payload.lastName?.trim() ?? currentProfile.lastName ?? '';
@@ -235,7 +244,7 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
 
   await firebaseUpdateProfile(user, {
     displayName: displayName || undefined,
-    photoURL,
+    photoURL: resolvedPhotoUrl ?? undefined,
   });
 
   await persistUserProfile(
@@ -245,7 +254,7 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
       displayName,
       firstName: trimmedFirstName,
       lastName: trimmedLastName,
-      photoURL,
+      photoURL: resolvedPhotoUrl ?? null,
       organizationId: currentProfile.organizationId ?? null,
       browserstackCredentials,
       preferences,
@@ -259,7 +268,7 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
     displayName,
     firstName: trimmedFirstName,
     lastName: trimmedLastName,
-    photoURL,
+    photoURL: resolvedPhotoUrl ?? null,
     organizationId: currentProfile.organizationId ?? null,
     browserstackCredentials,
     preferences,
@@ -346,21 +355,25 @@ const persistUserProfile = async (
 
 const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
   const userDoc = doc(firebaseFirestore, USERS_COLLECTION, uid);
-  const snapshot = await getDoc(userDoc);
+  try {
+    const snapshot = await getDocCacheFirst(userDoc);
 
-  if (snapshot.exists()) {
-    const data = snapshot.data();
-    const profile = {
-      role: (data.role as Role) ?? DEFAULT_ROLE,
-      displayName: (data.displayName as string) ?? '',
-      firstName: (data.firstName as string) ?? '',
-      lastName: (data.lastName as string) ?? '',
-      photoURL: (data.photoURL as string | null) ?? null,
-      organizationId: (data.organizationId as string | null) ?? null,
-      browserstackCredentials: parseBrowserstackCredentials(data?.browserstackCredentials),
-      preferences: normalizeUserPreferences(data?.preferences, getInitialPreferences()),
-    };
-    return profile;
+    if (snapshot.exists()) {
+      const data = snapshot.data({ serverTimestamps: 'estimate' });
+      const profile = {
+        role: (data.role as Role) ?? DEFAULT_ROLE,
+        displayName: (data.displayName as string) ?? '',
+        firstName: (data.firstName as string) ?? '',
+        lastName: (data.lastName as string) ?? '',
+        photoURL: (data.photoURL as string | null) ?? null,
+        organizationId: (data.organizationId as string | null) ?? null,
+        browserstackCredentials: parseBrowserstackCredentials(data?.browserstackCredentials),
+        preferences: normalizeUserPreferences(data?.preferences, getInitialPreferences()),
+      };
+      return profile;
+    }
+  } catch (error) {
+    console.error(error);
   }
 
   return {

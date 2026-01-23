@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Button } from './Button';
 import { UserAvatar } from './UserAvatar';
+import { CachedImage } from './CachedImage';
 import { LogoutIcon } from './icons';
 import qliteLogo from '../assets/logo.png';
 import { useTranslation } from 'react-i18next';
@@ -20,13 +21,13 @@ export const Layout = ({ children }: LayoutProps) => {
   const brandSource = activeOrganization;
   const { t } = useTranslation();
   const brandName = brandSource?.name || t('app.brandName');
-  const brandLogo = qliteLogo;
+  const brandLogo = brandSource?.logoUrl || qliteLogo;
 
   return (
     <div className="app-shell">
       <header className="app-header">
         <Link to="/" className="app-brand" aria-label={t('layout.homeAriaLabel', { brandName })}>
-          <img
+          <CachedImage
             src={brandLogo}
             alt={t('layout.brandLogoAlt', { brandName })}
             className="app-brand-logo"
@@ -42,7 +43,7 @@ export const Layout = ({ children }: LayoutProps) => {
                   className="header-profile"
                   onClick={() => navigate('/profile')}
                 >
-                  <UserAvatar name={displayName} size="sm" />
+                  <UserAvatar name={displayName} size="sm" photoUrl={user?.photoURL ?? null} />
                   <span>{t('profile')}</span>
                 </button>
                 <Button type="button" variant="ghost" onClick={() => void logout()}>

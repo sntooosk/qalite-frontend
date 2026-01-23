@@ -8,9 +8,17 @@ interface ModalProps {
   description?: string;
   onClose: () => void;
   children: ReactNode;
+  bodyClassName?: string;
 }
 
-export const Modal = ({ isOpen, title, description, onClose, children }: ModalProps) => {
+export const Modal = ({
+  isOpen,
+  title,
+  description,
+  onClose,
+  children,
+  bodyClassName,
+}: ModalProps) => {
   const { t } = useTranslation();
   useEffect(() => {
     if (!isOpen) {
@@ -48,7 +56,7 @@ export const Modal = ({ isOpen, title, description, onClose, children }: ModalPr
             &times;
           </button>
         </div>
-        <div className="modal-body">{children}</div>
+        <div className={['modal-body', bodyClassName].filter(Boolean).join(' ')}>{children}</div>
       </div>
     </div>
   );

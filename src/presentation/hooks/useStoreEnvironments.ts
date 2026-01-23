@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { Environment, EnvironmentStatus } from '../../domain/entities/environment';
-import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
+import { environmentService } from '../../infrastructure/services/environmentService';
 
 interface StatusCounts extends Record<EnvironmentStatus, number> {
   total: number;
@@ -11,6 +11,7 @@ interface UseStoreEnvironmentsResult {
   environments: Environment[];
   isLoading: boolean;
   statusCounts: StatusCounts;
+  addEnvironment: (environment: Environment) => void;
 }
 
 const buildEmptyCounts = (): StatusCounts => ({
@@ -27,20 +28,46 @@ export const useStoreEnvironments = (
   const [isLoading, setIsLoading] = useState(Boolean(storeId));
 
   useEffect(() => {
+    let isMounted = true;
+
     if (!storeId) {
       setEnvironments([]);
       setIsLoading(false);
-      return;
+      return () => {
+        isMounted = false;
+      };
     }
 
-    setIsLoading(true);
-    const unsubscribe = environmentService.observeAll({ storeId }, (list) => {
-      setEnvironments(list);
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const list = await environmentService.listSummary({ storeId });
+        if (isMounted) {
+          setEnvironments(list);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setEnvironments([]);
+          setIsLoading(false);
+        }
+      }
+    };
+    void load();
+    return () => {
+      isMounted = false;
+    };
   }, [storeId]);
+
+  const addEnvironment = useCallback((environment: Environment) => {
+    setEnvironments((current) => {
+      if (current.some((item) => item.id === environment.id)) {
+        return current;
+      }
+      return [environment, ...current];
+    });
+  }, []);
 
   const statusCounts = useMemo(() => {
     if (environments.length === 0) {
@@ -60,5 +87,6 @@ export const useStoreEnvironments = (
     environments,
     isLoading,
     statusCounts,
+    addEnvironment,
   };
 };

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import type { Organization } from '../../domain/entities/organization';
-import { organizationService } from '../../application/use-cases/OrganizationUseCase';
+import { organizationService } from '../../infrastructure/services/organizationService';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
@@ -40,7 +40,7 @@ export const OrganizationDashboardPage = () => {
     const fetchOrganization = async () => {
       try {
         setIsLoading(true);
-        const data = await organizationService.getById(user.organizationId as string);
+        const data = await organizationService.getDetail(user.organizationId as string);
 
         if (!data) {
           showToast({ type: 'error', message: t('organizationPage.notFound') });
@@ -106,7 +106,10 @@ export const OrganizationDashboardPage = () => {
             <ul className="member-list member-list--compact">
               {organization?.members.map((member) => (
                 <li key={member.uid} className="member-list-item">
-                  <UserAvatar name={member.displayName || member.email} />
+                  <UserAvatar
+                    name={member.displayName || member.email}
+                    photoUrl={member.photoURL ?? null}
+                  />
                   <div className="member-list-details">
                     <span className="member-list-name">{member.displayName || member.email}</span>
                     <span className="member-list-email">{member.email}</span>

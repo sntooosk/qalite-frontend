@@ -1,3 +1,4 @@
+import type { Organization } from '../../domain/entities/organization';
 import type { StoreExportPayload, StoreScenario } from '../../domain/entities/store';
 import { formatDateTime } from './time';
 import i18n from '../../lib/i18n';
@@ -290,24 +291,37 @@ const createWorkbookBlob = (sheets: WorksheetDefinition[], exportedAt: string) =
 };
 
 const buildScenarioSheets = (payload: StoreExportPayload): WorksheetDefinition[] => {
+  const t = i18n.t.bind(i18n);
+  const locale = i18n.language;
   const summaryRows: string[][] = [
-    ['Loja', payload.store.name],
-    ['Site', payload.store.site],
-    ['Ambiente', payload.store.stage || 'Não informado'],
-    ['Quantidade de cenários', `${payload.scenarios.length}`],
-    ['Exportado em', formatDateTime(payload.exportedAt)],
+    [t('storeSummary.store'), payload.store.name],
+    [t('storeSummary.siteLabel'), payload.store.site || t('storeSummary.notProvided')],
+    [t('storeSummary.environmentLabel'), payload.store.stage || t('storeSummary.notInformed')],
+    [t('storeSummary.scenarioCountLabel'), `${payload.scenarios.length}`],
+    [
+      t('storeSummary.exportedAtLabel'),
+      formatDateTime(payload.exportedAt, { locale, emptyLabel: t('storeSummary.notInformed') }),
+    ],
   ];
 
   const scenarioRows: string[][] = [
-    ['#', 'Título', 'Categoria', 'Automação', 'Criticidade', 'Observação', 'BDD'],
+    [
+      '#',
+      t('storeSummary.title'),
+      t('storeSummary.category'),
+      t('storeSummary.automation'),
+      t('storeSummary.criticality'),
+      t('storeSummary.observation'),
+      t('storeSummary.bdd'),
+    ],
     ...payload.scenarios.map((scenario: StoreScenario, index: number) => [
       `${index + 1}`,
-      scenario.title || '—',
-      scenario.category || '—',
-      scenario.automation || '—',
-      scenario.criticality || '—',
-      scenario.observation || '—',
-      scenario.bdd || '—',
+      scenario.title || t('storeSummary.emptyValue'),
+      scenario.category || t('storeSummary.emptyValue'),
+      formatAutomationLabel(scenario.automation, t),
+      formatCriticalityLabel(scenario.criticality, t),
+      scenario.observation || t('storeSummary.emptyValue'),
+      scenario.bdd || t('storeSummary.emptyValue'),
     ]),
   ];
 
@@ -384,6 +398,23 @@ const formatCriticalityLabel = (value: string | null | undefined, t: (key: strin
   return value?.trim() || t('storeSummary.emptyValue');
 };
 
+const getCriticalityClassName = (value: string | null | undefined) => {
+  const normalized = normalizeCriticalityEnum(value);
+  if (normalized === 'LOW') {
+    return 'criticality-pill criticality-pill--low';
+  }
+  if (normalized === 'MEDIUM') {
+    return 'criticality-pill criticality-pill--medium';
+  }
+  if (normalized === 'HIGH') {
+    return 'criticality-pill criticality-pill--high';
+  }
+  if (normalized === 'CRITICAL') {
+    return 'criticality-pill criticality-pill--critical';
+  }
+  return 'criticality-pill criticality-pill--unknown';
+};
+
 const buildExternalLink = (value: string | null | undefined) => {
   const trimmed = value?.trim();
   if (!trimmed) {
@@ -402,6 +433,7 @@ export const openScenarioPdf = (
   payload: StoreExportPayload,
   title: string,
   targetWindow?: Window | null,
+  organization?: Pick<Organization, 'name' | 'logoUrl'> | null,
 ) => {
   const t = i18n.t.bind(i18n);
   const printableWindow = targetWindow ?? window.open('', '_blank');
@@ -416,6 +448,7 @@ export const openScenarioPdf = (
       const bdd = scenario.bdd?.trim() || t('storeSummary.emptyValue');
       const automation = formatAutomationLabel(scenario.automation, t);
       const criticality = formatCriticalityLabel(scenario.criticality, t);
+      const criticalityClass = getCriticalityClassName(scenario.criticality);
 
       return `
         <tr>
@@ -423,7 +456,7 @@ export const openScenarioPdf = (
           <td>${linkifyHtml(scenario.title || t('storeSummary.emptyValue'))}</td>
           <td>${linkifyHtml(scenario.category || t('storeSummary.emptyValue'))}</td>
           <td>${escapeHtml(automation)}</td>
-          <td>${escapeHtml(criticality)}</td>
+          <td><span class="${criticalityClass}">${escapeHtml(criticality)}</span></td>
           <td>${linkifyHtml(observation)}</td>
           <td>${linkifyHtml(bdd)}</td>
         </tr>
@@ -438,6 +471,15 @@ export const openScenarioPdf = (
         siteLabel,
       )}</a>`
     : escapeHtml(siteLabel);
+  const organizationName = organization?.name?.trim() || '';
+  const organizationLogo = organization?.logoUrl?.trim() || '';
+  const hasOrganizationHeader = Boolean(organizationName || organizationLogo);
+  const organizationHeader = hasOrganizationHeader
+    ? `<div class="org-header">
+        ${organizationLogo ? `<img src="${escapeHtml(organizationLogo)}" alt="${escapeHtml(organizationName || 'Organization logo')}" class="org-logo" />` : ''}
+        ${organizationName ? `<span class="org-name">${escapeHtml(organizationName)}</span>` : ''}
+      </div>`
+    : '';
 
   const content = `
     <!doctype html>
@@ -446,17 +488,44 @@ export const openScenarioPdf = (
         <meta charset="UTF-8" />
         <title>${escapeHtml(title)}</title>
         <style>
+          :root {
+            --color-surface-muted: #f5f7fb;
+            --color-border: #e5e7eb;
+            --color-text-muted: #6b7280;
+            --table-border: #d1d5db;
+            --table-header-bg: #f9fafb;
+            --criticality-low-bg: #22c55e;
+            --criticality-low-text: #ffffff;
+            --criticality-medium-bg: #f59e0b;
+            --criticality-medium-text: #ffffff;
+            --criticality-high-bg: #f97316;
+            --criticality-high-text: #ffffff;
+            --criticality-critical-bg: #8b5cf6;
+            --criticality-critical-text: #ffffff;
+            --criticality-unknown-bg: #bdc3c7;
+            --criticality-unknown-text: #2c3e50;
+          }
           body { font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 24px; }
           h1 { margin-bottom: 4px; }
-          .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0; padding: 12px; background: #f5f7fb; border: 1px solid #e5e7eb; border-radius: 12px; }
-          .summary-grid span { color: #6b7280; font-size: 12px; }
+          .org-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+          .org-logo { width: 48px; height: 48px; border-radius: 10px; object-fit: contain; border: 1px solid var(--color-border); background: #fff; }
+          .org-name { font-size: 16px; font-weight: 600; color: #111827; }
+          .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0; padding: 12px; background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: 12px; }
+          .summary-grid span { color: var(--color-text-muted); font-size: 12px; }
           .summary-grid strong { display: block; margin-top: 4px; }
           table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-          th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; vertical-align: top; }
-          th { background: #f9fafb; }
+          th, td { border: 1px solid var(--table-border); padding: 8px; text-align: left; vertical-align: top; }
+          th { background: var(--table-header-bg); }
+          .criticality-pill { display: inline-flex; align-items: center; justify-content: center; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid var(--table-border); }
+          .criticality-pill--low { background: var(--criticality-low-bg); color: var(--criticality-low-text); }
+          .criticality-pill--medium { background: var(--criticality-medium-bg); color: var(--criticality-medium-text); }
+          .criticality-pill--high { background: var(--criticality-high-bg); color: var(--criticality-high-text); }
+          .criticality-pill--critical { background: var(--criticality-critical-bg); color: var(--criticality-critical-text); }
+          .criticality-pill--unknown { background: var(--criticality-unknown-bg); color: var(--criticality-unknown-text); }
         </style>
       </head>
       <body>
+        ${organizationHeader}
         <h1>${escapeHtml(title)}</h1>
         <div class="summary-grid">
           <div>
@@ -477,7 +546,12 @@ export const openScenarioPdf = (
           </div>
           <div>
             <span>${escapeHtml(t('storeSummary.exportedAtLabel'))}</span>
-            <strong>${escapeHtml(formatDateTime(payload.exportedAt))}</strong>
+            <strong>${escapeHtml(
+              formatDateTime(payload.exportedAt, {
+                locale: i18n.language,
+                emptyLabel: t('storeSummary.notInformed'),
+              }),
+            )}</strong>
           </div>
         </div>
         <table>
@@ -514,6 +588,31 @@ export const downloadScenarioWorkbook = (payload: StoreExportPayload, fileName: 
   const workbookBlob = createWorkbookBlob(
     buildScenarioSheets(payload),
     new Date(payload.exportedAt).toISOString(),
+  );
+  downloadBlobFile(workbookBlob, fileName);
+};
+
+interface EnvironmentWorkbookOptions {
+  headers: string[];
+  rows: string[][];
+  fileName: string;
+  sheetName?: string;
+}
+
+export const downloadEnvironmentWorkbook = ({
+  headers,
+  rows,
+  fileName,
+  sheetName = 'Report',
+}: EnvironmentWorkbookOptions) => {
+  const workbookBlob = createWorkbookBlob(
+    [
+      {
+        name: sheetName,
+        rows: [headers, ...rows],
+      },
+    ],
+    new Date().toISOString(),
   );
   downloadBlobFile(workbookBlob, fileName);
 };

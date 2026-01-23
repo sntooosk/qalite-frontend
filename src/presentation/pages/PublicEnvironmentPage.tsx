@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { storeService } from '../../infrastructure/services/storeService';
 import { Layout } from '../components/Layout';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
 import { EnvironmentBugList } from '../components/environments/EnvironmentBugList';
@@ -17,20 +18,24 @@ import { useTranslation } from 'react-i18next';
 export const PublicEnvironmentPage = () => {
   const { environmentId } = useParams<{ environmentId: string }>();
   const { environment, isLoading } = useEnvironmentRealtime(environmentId);
+  const [storeName, setStoreName] = useState<string>('');
   const participants = useUserProfiles(environment?.participants ?? []);
   const { organization: environmentOrganization } = useStoreOrganizationBranding(
     environment?.storeId ?? null,
   );
   const { setActiveOrganization } = useOrganizationBranding();
+  const { t, i18n } = useTranslation();
   const { formattedTime, formattedStart, formattedEnd } = useTimeTracking(
     environment?.timeTracking ?? null,
     Boolean(environment?.status === 'in_progress'),
+    {
+      translation: t,
+      locale: i18n.language,
+    },
   );
   const { bugs, isLoading: isLoadingBugs } = useEnvironmentBugs(environment?.id ?? null);
   const { progressPercentage, progressLabel, scenarioCount, headerMeta, urls } =
     useEnvironmentDetails(environment, bugs);
-
-  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     setActiveOrganization(environmentOrganization ?? null);
@@ -45,6 +50,35 @@ export const PublicEnvironmentPage = () => {
       void i18n.changeLanguage(environment.publicShareLanguage);
     }
   }, [environment?.publicShareLanguage, i18n]);
+
+  useEffect(() => {
+    if (!environment?.storeId) {
+      setStoreName('');
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchStoreName = async () => {
+      try {
+        const store = await storeService.getDetail(environment.storeId);
+        if (isMounted) {
+          setStoreName(store?.name?.trim() || '');
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setStoreName('');
+        }
+      }
+    };
+
+    void fetchStoreName();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [environment?.storeId]);
 
   if (isLoading) {
     return (
@@ -92,6 +126,7 @@ export const PublicEnvironmentPage = () => {
             urls={urls}
             participants={participants}
             bugsCount={bugs.length}
+            storeName={storeName}
           />
         </div>
 
@@ -101,6 +136,7 @@ export const PublicEnvironmentPage = () => {
         <EnvironmentBugList
           environment={environment}
           bugs={bugs}
+          participants={participants}
           isLocked
           isLoading={isLoadingBugs}
           onEdit={() => {}}

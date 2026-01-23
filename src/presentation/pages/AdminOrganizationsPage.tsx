@@ -2,13 +2,13 @@ import { FormEvent, KeyboardEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import type { Organization } from '../../domain/entities/organization';
-import { organizationService } from '../../application/use-cases/OrganizationUseCase';
-import { storeService } from '../../application/use-cases/StoreUseCase';
+import { organizationService } from '../../infrastructure/services/organizationService';
 import { useToast } from '../context/ToastContext';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
 import { Modal } from '../components/Modal';
+import { CachedImage } from '../components/CachedImage';
 import { useTranslation } from 'react-i18next';
 
 interface OrganizationFormState {
@@ -32,7 +32,6 @@ export const AdminOrganizationsPage = () => {
   const { showToast } = useToast();
   const { t: translation } = useTranslation();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [storeCounts, setStoreCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [organizationForm, setOrganizationForm] =
@@ -52,7 +51,7 @@ export const AdminOrganizationsPage = () => {
     const fetchOrganizations = async () => {
       try {
         setIsLoading(true);
-        const data = await organizationService.list();
+        const data = await organizationService.listSummary();
         setOrganizations(data);
       } catch (error) {
         console.error(error);
@@ -67,38 +66,6 @@ export const AdminOrganizationsPage = () => {
 
     void fetchOrganizations();
   }, [showToast, translation]);
-
-  useEffect(() => {
-    if (organizations.length === 0) {
-      setStoreCounts({});
-      return;
-    }
-
-    let isMounted = true;
-
-    const fetchStoreCounts = async () => {
-      try {
-        const counts = await Promise.all(
-          organizations.map(async (organization) => {
-            const stores = await storeService.listByOrganization(organization.id);
-            return [organization.id, stores.length] as const;
-          }),
-        );
-
-        if (isMounted) {
-          setStoreCounts(Object.fromEntries(counts));
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    void fetchStoreCounts();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [organizations]);
 
   const openCreateModal = () => {
     setOrganizationForm(initialOrganizationForm);
@@ -236,12 +203,6 @@ export const AdminOrganizationsPage = () => {
         ) : (
           <div className="dashboard-grid">
             {organizations.map((organization) => {
-              const membersCount = organization.members.length;
-              const membersLabel =
-                membersCount === 1
-                  ? translation('adminOrganizationsPage.members.one')
-                  : translation('adminOrganizationsPage.members.other');
-
               return (
                 <div
                   key={organization.id}
@@ -261,15 +222,6 @@ export const AdminOrganizationsPage = () => {
                   </div>
 
                   <div className="organization-card-footer">
-                    <span className="badge">
-                      {translation('adminOrganizationsPage.storeCount', {
-                        count: storeCounts[organization.id] ?? 0,
-                      })}
-                    </span>
-                    <span className="badge">
-                      {membersCount} {membersLabel}
-                    </span>
-
                     <div className="card-link-hint">
                       <span>{translation('adminOrganizationsPage.viewStores')}</span>
                       <span aria-hidden>&rarr;</span>
@@ -322,7 +274,7 @@ export const AdminOrganizationsPage = () => {
           <div className="collapsible-section">
             <div className="collapsible-section__header">
               <div className="collapsible-section__titles">
-                <img
+                <CachedImage
                   className="collapsible-section__icon"
                   src="https://img.icons8.com/color/48/browser-stack.png"
                   alt={translation('adminOrganizationsPage.form.browserstack.iconAlt')}
@@ -400,7 +352,7 @@ export const AdminOrganizationsPage = () => {
           <div className="collapsible-section">
             <div className="collapsible-section__header">
               <div className="collapsible-section__titles">
-                <img
+                <CachedImage
                   className="collapsible-section__icon"
                   src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/24/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
                   alt={translation('adminOrganizationsPage.form.slack.iconAlt')}

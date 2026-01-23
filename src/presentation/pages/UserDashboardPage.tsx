@@ -7,15 +7,13 @@ import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { useOrganizationStores } from '../hooks/useOrganizationStores';
 import { UserAvatar } from '../components/UserAvatar';
-import { SimpleBarChart } from '../components/SimpleBarChart';
 import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanban';
-import { BarChartIcon, SparklesIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
+import { StoreScenarioComparisonChart } from '../components/StoreScenarioComparisonChart';
+import { InboxIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
-import { storeService } from '../../application/use-cases/StoreUseCase';
-import { browserstackService } from '../../application/use-cases/BrowserstackUseCase';
+import { browserstackService } from '../../infrastructure/services/browserstackService';
 import type { BrowserstackBuild } from '../../domain/entities/browserstack';
-import { isAutomatedScenario } from '../../shared/utils/automation';
 import { useTranslation } from 'react-i18next';
 
 export const UserDashboardPage = () => {
@@ -25,12 +23,30 @@ export const UserDashboardPage = () => {
   const organizationId = user?.organizationId ?? null;
   const { organization, stores, isLoading, status } = useOrganizationStores(organizationId);
   const { setActiveOrganization } = useOrganizationBranding();
-  const [storeAutomationCounts, setStoreAutomationCounts] = useState<Record<string, number>>({});
-  const [isLoadingAutomationStats, setIsLoadingAutomationStats] = useState(false);
   const [browserstackBuilds, setBrowserstackBuilds] = useState<BrowserstackBuild[]>([]);
   const [isLoadingBrowserstack, setIsLoadingBrowserstack] = useState(false);
 
   const { t } = useTranslation();
+  const scenarioChartData = useMemo(() => {
+    return stores
+      .map((store) => {
+        const automated = store.automatedScenarioCount ?? 0;
+        const notAutomated =
+          store.notAutomatedScenarioCount ?? Math.max(store.scenarioCount - automated, 0);
+        const total = store.scenarioCount || automated + notAutomated;
+
+        return {
+          label: store.name,
+          automated,
+          notAutomated,
+          total,
+        };
+      })
+      .sort(
+        (first, second) => second.total - first.total || first.label.localeCompare(second.label),
+      );
+  }, [stores]);
+  const hasScenarioChartData = scenarioChartData.some((item) => item.total > 0);
 
   useEffect(() => {
     if (isInitializing) {
@@ -61,50 +77,6 @@ export const UserDashboardPage = () => {
     };
   }, [organization, setActiveOrganization]);
 
-  useEffect(() => {
-    if (stores.length === 0) {
-      setStoreAutomationCounts({});
-      return;
-    }
-
-    let isMounted = true;
-
-    const fetchAutomationStats = async () => {
-      setIsLoadingAutomationStats(true);
-      try {
-        const stats = await Promise.all(
-          stores.map(async (store) => {
-            const scenarios = await storeService.listScenarios(store.id);
-            const automatedCount = scenarios.filter((scenario) =>
-              isAutomatedScenario(scenario.automation),
-            ).length;
-
-            return [store.id, automatedCount] as const;
-          }),
-        );
-
-        if (isMounted) {
-          setStoreAutomationCounts(Object.fromEntries(stats));
-        }
-      } catch (error) {
-        console.error(error);
-        if (isMounted) {
-          setStoreAutomationCounts({});
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingAutomationStats(false);
-        }
-      }
-    };
-
-    void fetchAutomationStats();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [stores]);
-
   const handleSelectStore = (storeId: string) => {
     navigate(`/stores/${storeId}`);
   };
@@ -124,24 +96,6 @@ export const UserDashboardPage = () => {
   const isError = status === 'error';
   const emptyStateTitle = isError ? t('userPage.loadingStores') : t('userPage.unavailableStores');
   const emptyStateDescription = isError ? t('userPage.updatePage') : t('userPage.addStores');
-
-  const scenariosPerStoreData = useMemo(
-    () =>
-      stores.map((store) => ({
-        label: store.name,
-        value: store.scenarioCount,
-      })),
-    [stores],
-  );
-
-  const automatedScenariosPerStoreData = useMemo(
-    () =>
-      stores.map((store) => ({
-        label: store.name,
-        value: storeAutomationCounts[store.id] ?? 0,
-      })),
-    [stores, storeAutomationCounts],
-  );
 
   const organizationCredentials = organization?.browserstackCredentials ?? null;
   const hasBrowserstackCredentials = useMemo(
@@ -189,6 +143,7 @@ export const UserDashboardPage = () => {
           <EmptyState
             title={emptyStateTitle}
             description={emptyStateDescription}
+            icon={<InboxIcon className="icon icon--lg" aria-hidden />}
             action={
               isError ? (
                 <Button type="button" variant="secondary" onClick={() => window.location.reload()}>
@@ -215,11 +170,15 @@ export const UserDashboardPage = () => {
                     <span className="card-title-icon" aria-hidden>
                       <StorefrontIcon className="icon icon--lg" />
                     </span>
-                    <h2 className="card-title">{store.name}</h2>
+                    <div>
+                      <h2 className="card-title">{store.name}</h2>
+                      <span className="badge store-card-scenarios">
+                        {t('AdminStoresPage.store-card-scenarios-badge', {
+                          scenarioCount: store.scenarioCount,
+                        })}
+                      </span>
+                    </div>
                   </div>
-                  <span className="badge">
-                    {t('storesPage.scenarios', { count: store.scenarioCount })}
-                  </span>
                 </div>
                 <div className="card-link-hint">
                   <span>{t('storesPage.openStore')}</span>
@@ -257,7 +216,11 @@ export const UserDashboardPage = () => {
                   <ul className="collaborator-list">
                     {organization.members.map((member) => (
                       <li key={member.uid} className="collaborator-card">
-                        <UserAvatar name={member.displayName || member.email} size="sm" />
+                        <UserAvatar
+                          name={member.displayName || member.email}
+                          size="sm"
+                          photoUrl={member.photoURL ?? null}
+                        />
                         <div className="collaborator-card__details">
                           <strong>{member.displayName || member.email}</strong>
                         </div>
@@ -267,25 +230,18 @@ export const UserDashboardPage = () => {
                 )}
               </section>
             )}
+          </div>
+        )}
 
-            <section className="organization-charts-grid">
-              <SimpleBarChart
-                title={t('userPage.storeScenarios')}
-                description={t('userPage.totalScenarios')}
-                data={scenariosPerStoreData}
-                emptyMessage={t('userPage.emptyStores')}
-                icon={<BarChartIcon aria-hidden className="icon icon--lg" />}
-              />
-              <SimpleBarChart
-                title={t('userPage.automatedScenarios')}
-                description={t('userPage.scenariosDescription')}
-                data={automatedScenariosPerStoreData}
-                emptyMessage={t('userPage.emptyScenarios')}
-                isLoading={isLoadingAutomationStats}
-                variant="info"
-                icon={<SparklesIcon aria-hidden className="icon icon--lg" />}
-              />
-            </section>
+        {stores.length > 0 && (
+          <div className="organization-charts-grid organization-charts-grid--dashboard">
+            <StoreScenarioComparisonChart
+              title={t('AdminStoresPage.chart-automation-comparison-title')}
+              description={t('AdminStoresPage.chart-automation-comparison-description')}
+              data={hasScenarioChartData ? scenarioChartData : []}
+              emptyMessage={t('AdminStoresPage.chart-automation-comparison-empty-message')}
+              isLoading={isLoading}
+            />
           </div>
         )}
       </section>

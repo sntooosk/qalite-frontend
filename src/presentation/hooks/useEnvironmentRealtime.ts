@@ -1,8 +1,8 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { Environment } from '../../domain/entities/environment';
-import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
-import { useRealtimeResource } from './useRealtimeResource';
+import { environmentService } from '../../infrastructure/services/environmentService';
+import { getEnvironmentCached } from '../../infrastructure/external/environments';
 
 export const useEnvironmentRealtime = (environmentId: string | null | undefined) => {
   const subscribeToEnvironment = useCallback(
@@ -11,12 +11,41 @@ export const useEnvironmentRealtime = (environmentId: string | null | undefined)
     [],
   );
 
-  const { value, isLoading, error } = useRealtimeResource<Environment | null>({
-    resourceId: environmentId,
-    getInitialValue: () => null,
-    subscribe: subscribeToEnvironment,
-    missingResourceMessage: 'Ambiente não encontrado.',
-  });
+  const cachedEnvironment = useMemo(
+    () => (environmentId ? getEnvironmentCached(environmentId) : null),
+    [environmentId],
+  );
+  const [environment, setEnvironment] = useState<Environment | null>(cachedEnvironment);
+  const [isLoading, setIsLoading] = useState(Boolean(environmentId) && !cachedEnvironment);
+  const [error, setError] = useState<string | null>(null);
 
-  return { environment: value, isLoading, error };
+  useEffect(() => {
+    if (!environmentId) {
+      setEnvironment(null);
+      setIsLoading(false);
+      setError('Ambiente não encontrado.');
+      return;
+    }
+
+    let isMounted = true;
+    setEnvironment(cachedEnvironment);
+    setIsLoading(!cachedEnvironment);
+    setError(null);
+
+    const unsubscribe = subscribeToEnvironment(environmentId, (nextValue) => {
+      if (!isMounted) {
+        return;
+      }
+      setEnvironment(nextValue);
+      setIsLoading(false);
+      setError(nextValue ? null : 'Ambiente não encontrado.');
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [cachedEnvironment, environmentId, subscribeToEnvironment]);
+
+  return { environment, isLoading, error };
 };

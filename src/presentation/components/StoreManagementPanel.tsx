@@ -7,7 +7,7 @@ import type {
   StoreScenario,
   StoreScenarioInput,
 } from '../../domain/entities/store';
-import { storeService } from '../../application/use-cases/StoreUseCase';
+import { storeService } from '../../infrastructure/services/storeService';
 import { useStoresRealtime } from '../context/StoresRealtimeContext';
 import { useToast } from '../context/ToastContext';
 import { Button } from './Button';
@@ -33,9 +33,12 @@ import {
   sortScenarioList,
   type ScenarioSortConfig,
 } from './ScenarioColumnSortControl';
-import { downloadScenarioWorkbook, openScenarioPdf } from '../../shared/utils/storeImportExport';
+import { openScenarioPdf } from '../../shared/utils/storeImportExport';
+import { exportScenarioExcel } from '../../utils/exportExcel';
+import { formatDateTime } from '../../shared/utils/time';
 import { buildExternalLink } from '../utils/externalLink';
 import { FileTextIcon, PencilIcon, TrashIcon } from './icons';
+import { useStoreOrganizationBranding } from '../hooks/useStoreOrganizationBranding';
 
 interface StoreManagementPanelProps {
   organizationId: string;
@@ -65,7 +68,7 @@ export const StoreManagementPanel = ({
   canManageScenarios,
   showScenarioForm = true,
 }: StoreManagementPanelProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { showToast } = useToast();
   const { organizationId: activeOrganizationId, stores, isLoading, error } = useStoresRealtime();
   const storesForOrganization = useMemo(
@@ -80,6 +83,7 @@ export const StoreManagementPanel = ({
   const [storeFormError, setStoreFormError] = useState<string | null>(null);
   const [isSavingStore, setIsSavingStore] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  const { organization: storeOrganization } = useStoreOrganizationBranding(selectedStoreId);
 
   const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
   const [isLoadingScenarios, setIsLoadingScenarios] = useState(false);
@@ -780,7 +784,53 @@ export const StoreManagementPanel = ({
       const baseFileName = `${selectedStore.name.replace(/\s+/g, '_')}_${t('storeManagement.exportFileSuffix')}`;
 
       if (format === 'xlsx') {
-        downloadScenarioWorkbook(data, `${baseFileName}.xlsx`);
+        const scenarioRows = data.scenarios.map((scenario) => ({
+          titulo: scenario.title?.trim() || t('storeSummary.emptyValue'),
+          categoria: scenario.category?.trim() || t('storeSummary.emptyValue'),
+          automacao: formatAutomationLabel(scenario.automation),
+          criticidade: formatCriticalityLabel(scenario.criticality),
+          observacao: scenario.observation?.trim() || t('storeSummary.emptyValue'),
+          bdd: scenario.bdd?.trim() || t('storeSummary.emptyValue'),
+        }));
+        const infoRows = [
+          { label: t('storeSummary.store'), value: data.store.name },
+          {
+            label: t('storeSummary.siteLabel'),
+            value: data.store.site?.trim() || t('storeSummary.notProvided'),
+          },
+          {
+            label: t('storeSummary.environmentLabel'),
+            value: data.store.stage?.trim() || t('storeSummary.notInformed'),
+          },
+          {
+            label: t('storeSummary.scenarioCountLabel'),
+            value: String(data.store.scenarioCount),
+          },
+          {
+            label: t('storeSummary.exportedAtLabel'),
+            value: formatDateTime(data.exportedAt, {
+              locale: i18n.language,
+              emptyLabel: t('storeSummary.notInformed'),
+            }),
+          },
+        ];
+
+        exportScenarioExcel({
+          fileName: `${baseFileName}.xlsx`,
+          scenarioSheetName: t('storeSummary.exportExcelSheetName'),
+          infoSheetName: t('storeSummary.exportExcelInfoSheetName'),
+          infoHeaderLabels: [t('exportExcel.field'), t('exportExcel.value')],
+          infoRows,
+          scenarioRows,
+          scenarioHeaderLabels: [
+            t('storeSummary.title'),
+            t('storeSummary.category'),
+            t('storeSummary.automation'),
+            t('storeSummary.criticality'),
+            t('storeSummary.observation'),
+            t('storeSummary.bdd'),
+          ],
+        });
       }
 
       if (format === 'pdf') {
@@ -788,6 +838,10 @@ export const StoreManagementPanel = ({
           data,
           t('storeManagement.exportTitle', { name: selectedStore.name }),
           pdfWindow,
+          {
+            name: storeOrganization?.name ?? organizationName,
+            logoUrl: storeOrganization?.logoUrl ?? null,
+          },
         );
       }
 
@@ -1227,7 +1281,7 @@ export const StoreManagementPanel = ({
                 <table className="scenario-table data-table">
                   <thead>
                     <tr>
-                      <th>{t('storeSummary.title')}</th>
+                      <th>{t('storeSummary.scenarioTitle')}</th>
                       <th>
                         <ScenarioColumnSortControl
                           label={t('storeSummary.category')}

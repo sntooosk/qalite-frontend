@@ -4,10 +4,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
 import type { BrowserstackBuild } from '../../domain/entities/browserstack';
 import type { UserSummary } from '../../domain/entities/user';
-import { organizationService } from '../../application/use-cases/OrganizationUseCase';
-import { storeService } from '../../application/use-cases/StoreUseCase';
-import { browserstackService } from '../../application/use-cases/BrowserstackUseCase';
-import { userService } from '../../application/use-cases/UserUseCase';
+import { organizationService } from '../../infrastructure/services/organizationService';
+import { storeService } from '../../infrastructure/services/storeService';
+import { browserstackService } from '../../infrastructure/services/browserstackService';
+import { userService } from '../../infrastructure/services/userService';
 import { useStoresRealtime } from '../context/StoresRealtimeContext';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
@@ -18,16 +18,10 @@ import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { TextInput } from '../components/TextInput';
 import { Modal } from '../components/Modal';
 import { UserAvatar } from '../components/UserAvatar';
-import { SimpleBarChart } from '../components/SimpleBarChart';
 import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanban';
-import {
-  BarChartIcon,
-  SettingsIcon,
-  SparklesIcon,
-  StorefrontIcon,
-  UsersGroupIcon,
-} from '../components/icons';
-import { isAutomatedScenario } from '../../shared/utils/automation';
+import { StoreScenarioComparisonChart } from '../components/StoreScenarioComparisonChart';
+import { SettingsIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
+import { CachedImage } from '../components/CachedImage';
 import { useTranslation } from 'react-i18next';
 
 interface StoreForm {
@@ -63,6 +57,7 @@ export const AdminStoresPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
+  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const { organizationId: activeOrganizationId, stores, isLoading, error } = useStoresRealtime();
   const storesForOrganization = useMemo(
     () => (activeOrganizationId && activeOrganizationId === selectedOrganizationId ? stores : []),
@@ -79,6 +74,8 @@ export const AdminStoresPage = () => {
   const [isOrganizationModalOpen, setIsOrganizationModalOpen] = useState(false);
   const [organizationForm, setOrganizationForm] =
     useState<OrganizationFormState>(initialOrganizationForm);
+  const [organizationLogoFile, setOrganizationLogoFile] = useState<File | null>(null);
+  const [organizationLogoPreview, setOrganizationLogoPreview] = useState<string | null>(null);
   const [isOrganizationSlackSectionOpen, setIsOrganizationSlackSectionOpen] = useState(false);
   const [isOrganizationBrowserstackSectionOpen, setIsOrganizationBrowserstackSectionOpen] =
     useState(false);
@@ -94,16 +91,35 @@ export const AdminStoresPage = () => {
     onConfirm: () => Promise<void> | void;
   } | null>(null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  const [storeAutomationCounts, setStoreAutomationCounts] = useState<Record<string, number>>({});
-  const [isLoadingAutomationStats, setIsLoadingAutomationStats] = useState(false);
   const [browserstackBuilds, setBrowserstackBuilds] = useState<BrowserstackBuild[]>([]);
   const [isLoadingBrowserstack, setIsLoadingBrowserstack] = useState(false);
   const { t: translation } = useTranslation();
+  const scenarioChartData = useMemo(() => {
+    return storesForOrganization
+      .map((store) => {
+        const automated = store.automatedScenarioCount ?? 0;
+        const notAutomated =
+          store.notAutomatedScenarioCount ?? Math.max(store.scenarioCount - automated, 0);
+        const total = store.scenarioCount || automated + notAutomated;
+
+        return {
+          label: store.name,
+          automated,
+          notAutomated,
+          total,
+        };
+      })
+      .sort(
+        (first, second) => second.total - first.total || first.label.localeCompare(second.label),
+      );
+  }, [storesForOrganization]);
+  const hasScenarioChartData = scenarioChartData.some((item) => item.total > 0);
+  const organizationLogoSource = organizationLogoPreview ?? selectedOrganization?.logoUrl ?? null;
 
   useEffect(() => {
     const fetchOrganizations = async () => {
       try {
-        const data = await organizationService.list();
+        const data = await organizationService.listSummary();
         setOrganizations(data);
         const organizationFromParam = searchParams.get('Id');
         const hasValidOrganizationParam = Boolean(
@@ -133,7 +149,6 @@ export const AdminStoresPage = () => {
 
   useEffect(() => {
     if (!selectedOrganizationId) {
-      setStoreAutomationCounts({});
       return;
     }
 
@@ -151,63 +166,50 @@ export const AdminStoresPage = () => {
     });
   }, [error, showToast, translation]);
 
-  const selectedOrganization = useMemo(
+  const selectedOrganizationSummary = useMemo(
     () => organizations.find((organization) => organization.id === selectedOrganizationId) ?? null,
     [organizations, selectedOrganizationId],
   );
+
+  useEffect(() => {
+    if (!selectedOrganizationId) {
+      setSelectedOrganization(null);
+      return;
+    }
+
+    setSelectedOrganization(selectedOrganizationSummary);
+  }, [selectedOrganizationId, selectedOrganizationSummary]);
+
+  useEffect(() => {
+    if (!selectedOrganizationId) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchOrganizationDetail = async () => {
+      try {
+        const detail = await organizationService.getDetail(selectedOrganizationId);
+        if (isMounted && detail) {
+          setSelectedOrganization(detail);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void fetchOrganizationDetail();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedOrganizationId]);
 
   useEffect(() => {
     setActiveOrganization(selectedOrganization ?? null);
   }, [selectedOrganization, setActiveOrganization]);
 
   useEffect(() => () => setActiveOrganization(null), [setActiveOrganization]);
-
-  useEffect(() => {
-    if (!selectedOrganizationId || storesForOrganization.length === 0) {
-      setStoreAutomationCounts({});
-      return;
-    }
-
-    let isMounted = true;
-
-    const fetchAutomationStats = async () => {
-      setIsLoadingAutomationStats(true);
-      try {
-        const results = await Promise.all(
-          storesForOrganization.map(async (store) => {
-            const scenarios = await storeService.listScenarios(store.id);
-            const automatedCount = scenarios.filter((scenario) =>
-              isAutomatedScenario(scenario.automation),
-            ).length;
-
-            return [store.id, automatedCount] as const;
-          }),
-        );
-
-        if (isMounted) {
-          setStoreAutomationCounts(Object.fromEntries(results));
-        }
-      } catch (error) {
-        console.error(error);
-        if (isMounted) {
-          showToast({
-            type: 'error',
-            message: translation('AdminStoresPage.toast-error-load-automation-stats'),
-          });
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingAutomationStats(false);
-        }
-      }
-    };
-
-    void fetchAutomationStats();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedOrganizationId, storesForOrganization, showToast, translation]);
 
   useEffect(() => {
     const searchTerm = newMemberEmail.trim();
@@ -280,23 +282,16 @@ export const AdminStoresPage = () => {
     void loadBrowserstackBuilds();
   }, [loadBrowserstackBuilds]);
 
-  const scenariosPerStoreData = useMemo(
-    () =>
-      storesForOrganization.map((store) => ({
-        label: store.name,
-        value: store.scenarioCount,
-      })),
-    [storesForOrganization],
-  );
+  useEffect(() => {
+    if (!organizationLogoFile) {
+      setOrganizationLogoPreview(null);
+      return;
+    }
 
-  const automatedScenariosPerStoreData = useMemo(
-    () =>
-      storesForOrganization.map((store) => ({
-        label: store.name,
-        value: storeAutomationCounts[store.id] ?? 0,
-      })),
-    [storesForOrganization, storeAutomationCounts],
-  );
+    const objectUrl = URL.createObjectURL(organizationLogoFile);
+    setOrganizationLogoPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [organizationLogoFile]);
 
   const openCreateModal = () => {
     setStoreForm(initialStoreForm);
@@ -332,6 +327,7 @@ export const AdminStoresPage = () => {
       Boolean(browserstackUsername.trim() || browserstackAccessKey.trim()),
     );
     setOrganizationError(null);
+    setOrganizationLogoFile(null);
     setIsOrganizationModalOpen(true);
   };
 
@@ -341,6 +337,8 @@ export const AdminStoresPage = () => {
     setIsOrganizationSlackSectionOpen(false);
     setIsOrganizationBrowserstackSectionOpen(false);
     setOrganizationForm(initialOrganizationForm);
+    setOrganizationLogoFile(null);
+    setOrganizationLogoPreview(null);
     setNewMemberEmail('');
     setUserSuggestions([]);
   };
@@ -449,10 +447,14 @@ export const AdminStoresPage = () => {
       const browserstackAccessKey = isOrganizationBrowserstackSectionOpen
         ? organizationForm.browserstackAccessKey.trim()
         : '';
+      const logoUrl = organizationLogoFile
+        ? await organizationService.uploadLogo(selectedOrganization.id, organizationLogoFile)
+        : undefined;
 
       const updated = await organizationService.update(selectedOrganization.id, {
         name: trimmedName,
         description: (selectedOrganization.description ?? '').trim(),
+        ...(logoUrl !== undefined ? { logoUrl } : {}),
         slackWebhookUrl,
         emailDomain,
         browserstackCredentials:
@@ -467,6 +469,7 @@ export const AdminStoresPage = () => {
       setOrganizations((previous) =>
         previous.map((organization) => (organization.id === updated.id ? updated : organization)),
       );
+      setSelectedOrganization((previous) => (previous?.id === updated.id ? updated : previous));
       showToast({
         type: 'success',
         message: translation('AdminStoresPage.toast-success-org-updated'),
@@ -552,6 +555,15 @@ export const AdminStoresPage = () => {
             : organization,
         ),
       );
+      setSelectedOrganization((previous) =>
+        previous?.id === selectedOrganization.id
+          ? {
+              ...previous,
+              members: [...previous.members, member],
+              memberIds: [...previous.memberIds, member.uid],
+            }
+          : previous,
+      );
 
       setNewMemberEmail('');
       setUserSuggestions([]);
@@ -595,6 +607,15 @@ export const AdminStoresPage = () => {
               }
             : organization,
         ),
+      );
+      setSelectedOrganization((previous) =>
+        previous?.id === selectedOrganization.id
+          ? {
+              ...previous,
+              members: previous.members.filter((item) => item.uid !== member.uid),
+              memberIds: previous.memberIds.filter((item) => item !== member.uid),
+            }
+          : previous,
       );
 
       showToast({
@@ -757,13 +778,13 @@ export const AdminStoresPage = () => {
                       </span>
                       <div>
                         <h2 className="card-title">{store.name}</h2>
+                        <span className="badge store-card-scenarios">
+                          {translation('AdminStoresPage.store-card-scenarios-badge', {
+                            scenarioCount: store.scenarioCount,
+                          })}
+                        </span>
                       </div>
                     </div>
-                    <span className="badge">
-                      {translation('AdminStoresPage.store-card-scenarios-badge', {
-                        scenarioCount: store.scenarioCount,
-                      })}
-                    </span>
                   </div>
                   <div className="card-link-hint">
                     <span>{translation('storesPage.openStore')}</span>
@@ -804,7 +825,11 @@ export const AdminStoresPage = () => {
                     <ul className="collaborator-list">
                       {selectedOrganization.members.map((member) => (
                         <li key={member.uid} className="collaborator-card">
-                          <UserAvatar name={member.displayName || member.email} size="sm" />
+                          <UserAvatar
+                            name={member.displayName || member.email}
+                            size="sm"
+                            photoUrl={member.photoURL ?? null}
+                          />
                           <div className="collaborator-card__details">
                             <strong>{member.displayName || member.email}</strong>
                           </div>
@@ -815,29 +840,6 @@ export const AdminStoresPage = () => {
                 </section>
               )}
 
-              <section className="organization-charts-grid">
-                <SimpleBarChart
-                  title={translation('AdminStoresPage.chart-scenarios-title')}
-                  description={translation('AdminStoresPage.scenarios-per-store-chart-description')}
-                  data={scenariosPerStoreData}
-                  emptyMessage={translation(
-                    'AdminStoresPage.scenarios-per-store-chart-empty-message',
-                  )}
-                  icon={<BarChartIcon aria-hidden className="icon icon--lg" />}
-                />
-                <SimpleBarChart
-                  title={translation('AdminStoresPage.chart-automated-title')}
-                  description={translation('AdminStoresPage.automated-scenarios-chart-description')}
-                  data={automatedScenariosPerStoreData}
-                  emptyMessage={translation(
-                    'AdminStoresPage.automated-scenarios-chart-empty-message',
-                  )}
-                  isLoading={isLoadingAutomationStats}
-                  variant="info"
-                  icon={<SparklesIcon aria-hidden className="icon icon--lg" />}
-                />
-              </section>
-
               {hasBrowserstackCredentials && (
                 <BrowserstackKanban
                   builds={browserstackBuilds}
@@ -845,6 +847,18 @@ export const AdminStoresPage = () => {
                   onRefresh={loadBrowserstackBuilds}
                 />
               )}
+            </div>
+
+            <div className="organization-charts-grid organization-charts-grid--dashboard">
+              <StoreScenarioComparisonChart
+                title={translation('AdminStoresPage.chart-automation-comparison-title')}
+                description={translation('AdminStoresPage.chart-automation-comparison-description')}
+                data={hasScenarioChartData ? scenarioChartData : []}
+                emptyMessage={translation(
+                  'AdminStoresPage.chart-automation-comparison-empty-message',
+                )}
+                isLoading={isLoadingStores}
+              />
             </div>
           </>
         )}
@@ -929,6 +943,33 @@ export const AdminStoresPage = () => {
               required
               dataTestId="organization-settings-name"
             />
+            <div className="organization-logo-field">
+              <div className="organization-logo-preview">
+                {organizationLogoSource ? (
+                  <CachedImage
+                    src={organizationLogoSource}
+                    alt={translation('AdminStoresPage.org-logo-preview')}
+                  />
+                ) : (
+                  <span className="organization-logo-fallback">
+                    {translation('AdminStoresPage.org-logo-placeholder')}
+                  </span>
+                )}
+              </div>
+              <div className="organization-logo-actions">
+                <label htmlFor="organization-logo-upload" className="field-label">
+                  {translation('AdminStoresPage.org-logo-label')}
+                </label>
+                <input
+                  id="organization-logo-upload"
+                  type="file"
+                  accept="image/*"
+                  className="file-input"
+                  onChange={(event) => setOrganizationLogoFile(event.target.files?.[0] ?? null)}
+                />
+                <p className="form-hint">{translation('AdminStoresPage.org-logo-hint')}</p>
+              </div>
+            </div>
             <TextInput
               id="organization-email-domain"
               label={translation('AdminStoresPage.org-email-domain-label')}
@@ -946,7 +987,7 @@ export const AdminStoresPage = () => {
             <div className="collapsible-section">
               <div className="collapsible-section__header">
                 <div className="collapsible-section__titles">
-                  <img
+                  <CachedImage
                     className="collapsible-section__icon"
                     src="https://img.icons8.com/color/48/browser-stack.png"
                     alt={translation('AdminStoresPage.org-browserstack-icon-alt')}
@@ -1023,7 +1064,7 @@ export const AdminStoresPage = () => {
             <div className="collapsible-section">
               <div className="collapsible-section__header">
                 <div className="collapsible-section__titles">
-                  <img
+                  <CachedImage
                     className="collapsible-section__icon"
                     src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/24/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
                     alt={translation('AdminStoresPage.org-slack-icon-alt')}
@@ -1152,7 +1193,11 @@ export const AdminStoresPage = () => {
                       className="suggestion-option"
                       onClick={() => setNewMemberEmail(suggestion.email)}
                     >
-                      <UserAvatar name={suggestion.displayName || suggestion.email} size="sm" />
+                      <UserAvatar
+                        name={suggestion.displayName || suggestion.email}
+                        size="sm"
+                        photoUrl={suggestion.photoURL ?? null}
+                      />
                       <div className="suggestion-option__details">
                         <span className="suggestion-option__name">
                           {suggestion.displayName || suggestion.email}
@@ -1176,7 +1221,10 @@ export const AdminStoresPage = () => {
               <ul className="member-list">
                 {selectedOrganization.members.map((member) => (
                   <li key={member.uid} className="member-list-item">
-                    <UserAvatar name={member.displayName || member.email} />
+                    <UserAvatar
+                      name={member.displayName || member.email}
+                      photoUrl={member.photoURL ?? null}
+                    />
                     <div className="member-list-details">
                       <span className="member-list-name">{member.displayName || member.email}</span>
                       <span className="member-list-email">{member.email}</span>
