@@ -4,10 +4,11 @@ import type { Environment } from '../../../domain/entities/environment';
 import type { EnvironmentBug } from '../../../domain/entities/environment';
 import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
 import { useToast } from '../../context/ToastContext';
-import { BUG_STATUS_LABEL } from '../../../shared/config/environmentLabels';
+import { BUG_PRIORITY_LABEL, BUG_SEVERITY_LABEL } from '../../../shared/config/environmentLabels';
 import { ConfirmDeleteModal } from '../ConfirmDeleteModal';
 import { useTranslation } from 'react-i18next';
-import { PencilIcon, TrashIcon } from '../icons';
+import { EyeIcon, PencilIcon, TrashIcon } from '../icons';
+import { EnvironmentBugDetailsModal } from './EnvironmentBugDetailsModal';
 
 interface EnvironmentBugListProps {
   environment: Environment;
@@ -35,6 +36,7 @@ export const EnvironmentBugList = ({
 
   const isReadOnly = Boolean(isLocked);
   const [bugToDelete, setBugToDelete] = useState<EnvironmentBug | null>(null);
+  const [bugToView, setBugToView] = useState<EnvironmentBug | null>(null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   const handleDelete = async (bug: EnvironmentBug) => {
@@ -89,6 +91,22 @@ export const EnvironmentBugList = ({
     );
   };
 
+  const getSeverityLabel = (severity: EnvironmentBug['severity']) => {
+    if (!severity) {
+      return translation('environmentBugList.noSeverity');
+    }
+
+    return translation(BUG_SEVERITY_LABEL[severity]);
+  };
+
+  const getPriorityLabel = (priority: EnvironmentBug['priority']) => {
+    if (!priority) {
+      return translation('environmentBugList.noPriority');
+    }
+
+    return translation(BUG_PRIORITY_LABEL[priority]);
+  };
+
   if (!isLoading && bugs.length === 0) {
     return <p className="section-subtitle">{translation('environmentBugList.noBugs')}</p>;
   }
@@ -109,27 +127,42 @@ export const EnvironmentBugList = ({
         <table className="data-table">
           <thead>
             <tr>
-              <th>{translation('environmentBugList.title')}</th>
-              <th>{translation('environmentBugList.status')}</th>
               <th>{translation('environmentBugList.scenario')}</th>
-              <th>{translation('environmentBugList.description')}</th>
+              <th>{translation('environmentBugList.severity')}</th>
+              <th>{translation('environmentBugList.priority')}</th>
+              <th>{translation('environmentBugList.actualResult')}</th>
               {showActions && <th>{translation('environmentBugList.actions')}</th>}
             </tr>
           </thead>
           <tbody>
             {bugs.map((bug) => (
               <tr key={bug.id}>
-                <td>{bug.title}</td>
+                <td>{getScenarioLabel(bug.scenarioId)}</td>
                 <td>
-                  <span className={`bug-status bug-status--${bug.status}`}>
-                    {translation(BUG_STATUS_LABEL[bug.status])}
+                  <span className={`bug-severity bug-severity--${bug.severity ?? 'unknown'}`}>
+                    {getSeverityLabel(bug.severity)}
                   </span>
                 </td>
-                <td>{getScenarioLabel(bug.scenarioId)}</td>
-                <td>{bug.description || translation('environmentBugList.noDescription')}</td>
+                <td>
+                  <span className={`bug-priority bug-priority--${bug.priority ?? 'unknown'}`}>
+                    {getPriorityLabel(bug.priority)}
+                  </span>
+                </td>
+                <td>
+                  {bug.actualResult?.trim() || translation('environmentBugList.noActualResult')}
+                </td>
                 {showActions && (
                   <td className="environment-bugs__actions">
                     <div className="environment-bugs__actions-content">
+                      <button
+                        type="button"
+                        className="action-button"
+                        onClick={() => setBugToView(bug)}
+                        aria-label={translation('environmentBugList.viewDetails')}
+                        title={translation('environmentBugList.viewDetails')}
+                      >
+                        <EyeIcon aria-hidden className="action-button__icon" />
+                      </button>
                       <button
                         type="button"
                         className="action-button"
@@ -168,6 +201,12 @@ export const EnvironmentBugList = ({
         onClose={closeDeleteModal}
         onConfirm={handleConfirmDelete}
         isConfirming={isConfirmingDelete}
+      />
+      <EnvironmentBugDetailsModal
+        isOpen={Boolean(bugToView)}
+        bug={bugToView}
+        environment={environment}
+        onClose={() => setBugToView(null)}
       />
     </div>
   );
