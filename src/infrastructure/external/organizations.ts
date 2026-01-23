@@ -20,7 +20,12 @@ import type { BrowserstackCredentials } from '../../domain/entities/browserstack
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
 import { getNormalizedEmailDomain, normalizeEmailDomain } from '../../shared/utils/email';
 import { firebaseFirestore } from '../database/firebase';
-import { getDocCacheFirst, getDocsCacheFirst, getDocsCacheThenServer } from './firestoreCache';
+import {
+  getDocCacheFirst,
+  getDocCacheThenServer,
+  getDocsCacheFirst,
+  getDocsCacheThenServer,
+} from './firestoreCache';
 
 const ORGANIZATIONS_COLLECTION = 'organizations';
 const USERS_COLLECTION = 'users';
@@ -94,7 +99,7 @@ export const listOrganizations = async (): Promise<Organization[]> => {
 export const getOrganization = async (id: string): Promise<Organization | null> => {
   const organizationRef = doc(firebaseFirestore, ORGANIZATIONS_COLLECTION, id);
   try {
-    const snapshot = await getDocCacheFirst(organizationRef);
+    const snapshot = await getDocCacheThenServer(organizationRef);
 
     if (!snapshot.exists()) {
       return null;
@@ -306,7 +311,7 @@ export const removeUserFromOrganization = async (
 export const getUserOrganization = async (userId: string): Promise<Organization | null> => {
   const userRef = doc(firebaseFirestore, USERS_COLLECTION, userId);
   try {
-    const userSnapshot = await getDocCacheFirst(userRef);
+    const userSnapshot = await getDocCacheThenServer(userRef);
 
     if (!userSnapshot.exists()) {
       return null;
@@ -464,7 +469,7 @@ const fetchMembers = async (memberIds: string[]): Promise<OrganizationMember[]> 
   const chunks = chunkArray(uniqueIds, 10);
   const snapshots = await Promise.all(
     chunks.map((chunk) =>
-      getDocsCacheFirst(query(usersRef, where(documentId(), 'in', chunk))),
+      getDocsCacheThenServer(query(usersRef, where(documentId(), 'in', chunk))),
     ),
   );
 

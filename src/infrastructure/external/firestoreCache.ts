@@ -21,6 +21,28 @@ export const getDocCacheFirst = async <T>(
   }
 };
 
+export const getDocCacheThenServer = async <T>(
+  reference: DocumentReference<T>,
+): Promise<DocumentSnapshot<T>> => {
+  let cacheSnapshot: DocumentSnapshot<T> | null = null;
+
+  try {
+    cacheSnapshot = await getDocFromCache(reference);
+  } catch {
+    cacheSnapshot = null;
+  }
+
+  try {
+    return await getDocFromServer(reference);
+  } catch (error) {
+    console.error(error);
+    if (cacheSnapshot) {
+      return cacheSnapshot;
+    }
+    throw error;
+  }
+};
+
 export const getDocsCacheFirst = async <T = DocumentData>(
   reference: Query<T> | CollectionReference<T>,
 ): Promise<QuerySnapshot<T>> => {
@@ -38,12 +60,6 @@ export const getDocsCacheThenServer = async <T = DocumentData>(
 
   try {
     cacheSnapshot = await getDocsFromCache(reference);
-    if (!cacheSnapshot.empty) {
-      void getDocsFromServer(reference).catch((error) => {
-        console.error(error);
-      });
-      return cacheSnapshot;
-    }
   } catch {
     cacheSnapshot = null;
   }
