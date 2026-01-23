@@ -5,10 +5,6 @@ import {
   deleteDoc,
   doc,
   getDoc,
-  getDocFromCache,
-  getDocFromServer,
-  getDocsFromCache,
-  getDocsFromServer,
   onSnapshot,
   orderBy,
   query,
@@ -18,10 +14,6 @@ import {
   type Unsubscribe,
   where,
   writeBatch,
-  type CollectionReference,
-  type DocumentData,
-  type DocumentReference,
-  type Query,
 } from 'firebase/firestore';
 
 import type {
@@ -41,6 +33,11 @@ import {
   normalizeCriticalityEnum,
 } from '../../shared/utils/scenarioEnums';
 import { firebaseFirestore } from '../database/firebase';
+import {
+  getDocCacheFirst,
+  getDocsCacheFirst,
+  getDocsCacheThenServer,
+} from './firestoreCache';
 
 const STORES_COLLECTION = 'stores';
 const SCENARIOS_SUBCOLLECTION = 'scenarios';
@@ -135,13 +132,16 @@ const normalizeCategoryInput = (input: StoreCategoryInput): StoreCategoryInput =
 export const listStores = async (organizationId: string): Promise<Store[]> => {
   const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
   const storesQuery = query(storesCollection, where('organizationId', '==', organizationId));
-  // Primeiro tentamos o cache local para reduzir leituras repetidas e aproveitar o IndexedDB.
-  // Caso não exista cache (primeiro acesso/dispositivo novo), buscamos do servidor como fallback.
-  const snapshot = await getDocsFromCache(storesQuery).catch(() => getDocsFromServer(storesQuery));
-  const stores = snapshot.docs.map((docSnapshot) =>
-    mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-  );
-  return stores.sort((a, b) => a.name.localeCompare(b.name));
+  try {
+    const snapshot = await getDocsCacheThenServer(storesQuery);
+    const stores = snapshot.docs.map((docSnapshot) =>
+      mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    );
+    return stores.sort((a, b) => a.name.localeCompare(b.name));
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 };
 
 export const listenToStores = (
@@ -169,10 +169,15 @@ export const listenToStores = (
 
 export const getStore = async (storeId: string): Promise<Store | null> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-  const snapshot = await getDocCacheFirst(storeRef);
-  return snapshot.exists()
-    ? mapStore(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {})
-    : null;
+  try {
+    const snapshot = await getDocCacheFirst(storeRef);
+    return snapshot.exists()
+      ? mapStore(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {})
+      : null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
 };
 
 export const createStore = async (payload: CreateStorePayload): Promise<Store> => {
@@ -244,10 +249,15 @@ export const listScenarios = async (storeId: string): Promise<StoreScenario[]> =
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
   const scenariosQuery = query(scenariosCollection, orderBy('title'));
-  const snapshot = await getDocsCacheFirst(scenariosQuery);
-  return snapshot.docs.map((docSnapshot) =>
-    mapScenario(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-  );
+  try {
+    const snapshot = await getDocsCacheThenServer(scenariosQuery);
+    return snapshot.docs.map((docSnapshot) =>
+      mapScenario(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    );
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 };
 
 export const createScenario = async (
@@ -273,7 +283,9 @@ export const createScenario = async (
       updatedAt: serverTimestamp(),
     });
 
-    const currentCount = Number(storeSnapshot.data()?.scenarioCount ?? 0);
+    const currentCount = Number(
+      storeSnapshot.data({ serverTimestamps: 'estimate' })?.scenarioCount ?? 0,
+    );
     transaction.update(storeRef, {
       scenarioCount: currentCount + 1,
       updatedAt: serverTimestamp(),
@@ -333,7 +345,9 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
 
     transaction.delete(scenarioRef);
 
-    const currentCount = Number(storeSnapshot.data()?.scenarioCount ?? 0);
+    const currentCount = Number(
+      storeSnapshot.data({ serverTimestamps: 'estimate' })?.scenarioCount ?? 0,
+    );
     transaction.update(storeRef, {
       scenarioCount: Math.max(currentCount - 1, 0),
       updatedAt: serverTimestamp(),
@@ -345,10 +359,15 @@ export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
   const suitesQuery = query(suitesCollection, orderBy('name'));
-  const snapshot = await getDocsCacheFirst(suitesQuery);
-  return snapshot.docs.map((docSnapshot) =>
-    mapSuite(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-  );
+  try {
+    const snapshot = await getDocsCacheThenServer(suitesQuery);
+    return snapshot.docs.map((docSnapshot) =>
+      mapSuite(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    );
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 };
 
 export const createSuite = async (
@@ -425,10 +444,15 @@ export const listCategories = async (storeId: string): Promise<StoreCategory[]> 
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const categoriesCollection = collection(storeRef, CATEGORIES_SUBCOLLECTION);
   const categoriesQuery = query(categoriesCollection, orderBy('searchName'));
-  const snapshot = await getDocsCacheFirst(categoriesQuery);
-  return snapshot.docs.map((docSnapshot) =>
-    mapCategory(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-  );
+  try {
+    const snapshot = await getDocsCacheThenServer(categoriesQuery);
+    return snapshot.docs.map((docSnapshot) =>
+      mapCategory(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    );
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 };
 
 export const createCategory = async (
@@ -596,24 +620,4 @@ export const exportStoreData = async (storeId: string): Promise<StoreExportPaylo
     exportedAt: new Date().toISOString(),
     scenarios,
   };
-};
-
-const getDocCacheFirst = async <T>(
-  reference: DocumentReference<T>,
-): Promise<ReturnType<typeof getDocFromCache<T>>> => {
-  try {
-    return await getDocFromCache(reference);
-  } catch {
-    return await getDocFromServer(reference);
-  }
-};
-
-const getDocsCacheFirst = async <T = DocumentData>(
-  reference: Query<T> | CollectionReference<T>,
-): Promise<ReturnType<typeof getDocsFromCache<T>>> => {
-  try {
-    return await getDocsFromCache(reference);
-  } catch {
-    return await getDocsFromServer(reference);
-  }
 };

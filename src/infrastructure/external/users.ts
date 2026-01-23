@@ -1,20 +1,8 @@
-import {
-  collection,
-  doc,
-  getDocFromCache,
-  getDocFromServer,
-  getDocsFromCache,
-  getDocsFromServer,
-  limit,
-  query,
-  type CollectionReference,
-  type DocumentData,
-  type DocumentReference,
-  type Query,
-} from 'firebase/firestore';
+import { collection, doc, limit, query } from 'firebase/firestore';
 
 import type { UserSummary } from '../../domain/entities/user';
 import { firebaseFirestore } from '../database/firebase';
+import { getDocCacheFirst, getDocsCacheThenServer } from './firestoreCache';
 
 const USERS_COLLECTION = 'users';
 const DEFAULT_DISPLAY_NAME = 'Usuário';
@@ -36,26 +24,31 @@ export const searchUsersByTerm = async (term: string): Promise<UserSummary[]> =>
     return [];
   }
 
-  const usersRef = collection(firebaseFirestore, USERS_COLLECTION);
-  const snapshot = await getDocsCacheFirst(query(usersRef, limit(100)));
+  try {
+    const usersRef = collection(firebaseFirestore, USERS_COLLECTION);
+    const snapshot = await getDocsCacheThenServer(query(usersRef, limit(100)));
 
-  const matches: UserSummary[] = [];
+    const matches: UserSummary[] = [];
 
-  snapshot.forEach((userDoc) => {
-    const data = userDoc.data({ serverTimestamps: 'estimate' });
-    const email = typeof data?.email === 'string' ? data.email : '';
-    const displayName = resolveDisplayName(data?.displayName, email);
-    const photoURL = typeof data?.photoURL === 'string' ? data.photoURL : null;
+    snapshot.forEach((userDoc) => {
+      const data = userDoc.data({ serverTimestamps: 'estimate' });
+      const email = typeof data?.email === 'string' ? data.email : '';
+      const displayName = resolveDisplayName(data?.displayName, email);
+      const photoURL = typeof data?.photoURL === 'string' ? data.photoURL : null;
 
-    const searchableEmail = email.toLowerCase();
-    const searchableName = displayName.toLowerCase();
+      const searchableEmail = email.toLowerCase();
+      const searchableName = displayName.toLowerCase();
 
-    if (searchableEmail.includes(normalizedTerm) || searchableName.includes(normalizedTerm)) {
-      matches.push({ id: userDoc.id, email, displayName, photoURL });
-    }
-  });
+      if (searchableEmail.includes(normalizedTerm) || searchableName.includes(normalizedTerm)) {
+        matches.push({ id: userDoc.id, email, displayName, photoURL });
+      }
+    });
 
-  return matches.slice(0, MAX_SUGGESTION_RESULTS);
+    return matches.slice(0, MAX_SUGGESTION_RESULTS);
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 };
 
 const fetchUserSummary = async (userId: string): Promise<UserSummary | null> => {
@@ -63,24 +56,29 @@ const fetchUserSummary = async (userId: string): Promise<UserSummary | null> => 
     return null;
   }
 
-  const userRef = doc(firebaseFirestore, USERS_COLLECTION, userId);
-  const snapshot = await getDocCacheFirst(userRef);
+  try {
+    const userRef = doc(firebaseFirestore, USERS_COLLECTION, userId);
+    const snapshot = await getDocCacheFirst(userRef);
 
-  if (!snapshot.exists()) {
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    const data = snapshot.data({ serverTimestamps: 'estimate' });
+    const email = typeof data?.email === 'string' ? data.email : '';
+    const displayName = resolveDisplayName(data?.displayName, email);
+    const photoURL = typeof data?.photoURL === 'string' ? data.photoURL : null;
+
+    return {
+      id: userId,
+      email,
+      displayName,
+      photoURL,
+    };
+  } catch (error) {
+    console.error(error);
     return null;
   }
-
-  const data = snapshot.data({ serverTimestamps: 'estimate' });
-  const email = typeof data?.email === 'string' ? data.email : '';
-  const displayName = resolveDisplayName(data?.displayName, email);
-  const photoURL = typeof data?.photoURL === 'string' ? data.photoURL : null;
-
-  return {
-    id: userId,
-    email,
-    displayName,
-    photoURL,
-  };
 };
 
 const resolveDisplayName = (rawDisplayName: unknown, email: string): string => {
@@ -95,24 +93,4 @@ const resolveDisplayName = (rawDisplayName: unknown, email: string): string => {
   }
 
   return DEFAULT_DISPLAY_NAME;
-};
-
-const getDocCacheFirst = async <T>(
-  reference: DocumentReference<T>,
-): Promise<ReturnType<typeof getDocFromCache<T>>> => {
-  try {
-    return await getDocFromCache(reference);
-  } catch {
-    return await getDocFromServer(reference);
-  }
-};
-
-const getDocsCacheFirst = async <T = DocumentData>(
-  reference: Query<T> | CollectionReference<T>,
-): Promise<ReturnType<typeof getDocsFromCache<T>>> => {
-  try {
-    return await getDocsFromCache(reference);
-  } catch {
-    return await getDocsFromServer(reference);
-  }
 };
