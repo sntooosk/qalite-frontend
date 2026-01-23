@@ -42,6 +42,7 @@ export const EnvironmentKanban = ({
   const [userProfilesMap, setUserProfilesMap] = useState<Record<string, UserSummary>>({});
   const [isArchiveMinimized, setIsArchiveMinimized] = useState(true);
   const [archivedVisibleCount, setArchivedVisibleCount] = useState(5);
+  const [bugCounts, setBugCounts] = useState<Record<string, number>>({});
   const { user } = useAuth();
   const { t } = useTranslation();
 
@@ -75,6 +76,37 @@ export const EnvironmentKanban = ({
     };
 
     void fetchProfiles();
+    return () => {
+      isMounted = false;
+    };
+  }, [environments]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchBugCounts = async () => {
+      try {
+        const entries = await Promise.all(
+          environments.map(async (environment) => {
+            const bugs = await environmentService.listBugs(environment.id);
+            return [environment.id, bugs.length] as const;
+          }),
+        );
+
+        if (isMounted) {
+          setBugCounts(Object.fromEntries(entries));
+        }
+      } catch (error) {
+        console.error('Failed to fetch environment bugs', error);
+      }
+    };
+
+    if (environments.length > 0) {
+      void fetchBugCounts();
+    } else {
+      setBugCounts({});
+    }
+
     return () => {
       isMounted = false;
     };
@@ -262,6 +294,7 @@ export const EnvironmentKanban = ({
                         .map((id) => userProfilesMap[id])
                         .filter((user): user is UserSummary => Boolean(user))}
                       suiteName={suiteNameByEnvironment[environment.id]}
+                      bugCount={bugCounts[environment.id]}
                       draggable
                       onDragStart={handleDragStart}
                       onOpen={handleOpenEnvironment}
@@ -321,6 +354,7 @@ export const EnvironmentKanban = ({
                         .map((id) => userProfilesMap[id])
                         .filter((user): user is UserSummary => Boolean(user))}
                       suiteName={suiteNameByEnvironment[environment.id]}
+                      bugCount={bugCounts[environment.id]}
                       draggable
                       onDragStart={handleDragStart}
                       onOpen={handleOpenEnvironment}

@@ -4,8 +4,7 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
-  getDocs,
+  increment,
   onSnapshot,
   query,
   runTransaction,
@@ -33,7 +32,11 @@ import type {
 import type { UserSummary } from '../../domain/entities/user';
 import { firebaseFirestore } from '../database/firebase';
 import { EnvironmentStatusError } from '../../shared/errors/firebaseErrors';
-import { BUG_STATUS_LABEL, ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
+import {
+  BUG_PRIORITY_LABEL,
+  BUG_SEVERITY_LABEL,
+  ENVIRONMENT_STATUS_LABEL,
+} from '../../shared/config/environmentLabels';
 import {
   formatDateTime,
   formatDurationFromMs,
@@ -43,6 +46,7 @@ import {
 import { translateEnvironmentOption } from '../../shared/utils/environmentOptions';
 import i18n from '../../lib/i18n';
 import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
+import { getDocsCacheThenServer } from './firestoreCache';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
@@ -133,6 +137,12 @@ const normalizeBug = (id: string, data: Record<string, unknown>): EnvironmentBug
   title: getString(data.title ?? data.titulo),
   description: getStringOrNull(data.description ?? data.descricao),
   status: (data.status ?? 'aberto') as EnvironmentBugStatus,
+  severity: getStringOrNull(data.severity ?? data.severidade) as EnvironmentBug['severity'],
+  priority: getStringOrNull(data.priority ?? data.prioridade) as EnvironmentBug['priority'],
+  reportedBy: getStringOrNull(data.reportedBy ?? data.reportadoPor),
+  stepsToReproduce: getStringOrNull(data.stepsToReproduce ?? data.passosParaReproduzir),
+  expectedResult: getStringOrNull(data.expectedResult ?? data.resultadoEsperado),
+  actualResult: getStringOrNull(data.actualResult ?? data.resultadoAtual),
   createdAt: parseTimestamp(data.createdAt as Timestamp | string | null | undefined),
   updatedAt: parseTimestamp(data.updatedAt as Timestamp | string | null | undefined),
 });
@@ -183,6 +193,7 @@ const normalizeEnvironment = (id: string, data: Record<string, unknown>): Enviro
 });
 
 export const createEnvironment = async (payload: CreateEnvironmentInput): Promise<Environment> => {
+  const now = new Date().toISOString();
   const docRef = await addDoc(environmentsCollection, {
     ...payload,
     loja: payload.storeId,
@@ -190,13 +201,30 @@ export const createEnvironment = async (payload: CreateEnvironmentInput): Promis
     updatedAt: serverTimestamp(),
   });
 
-  const snapshot = await getDoc(docRef);
-  const environment = normalizeEnvironment(
-    snapshot.id,
-    (snapshot.data() ?? {}) as Record<string, unknown>,
-  );
-
-  return environment;
+  return {
+    id: docRef.id,
+    identificador: payload.identificador,
+    storeId: payload.storeId,
+    suiteId: payload.suiteId,
+    suiteName: payload.suiteName,
+    urls: payload.urls,
+    jiraTask: payload.jiraTask,
+    tipoAmbiente: payload.tipoAmbiente,
+    tipoTeste: payload.tipoTeste,
+    momento: payload.momento,
+    release: payload.release,
+    status: payload.status,
+    createdAt: now,
+    updatedAt: now,
+    timeTracking: payload.timeTracking,
+    presentUsersIds: payload.presentUsersIds,
+    concludedBy: payload.concludedBy,
+    scenarios: payload.scenarios,
+    bugs: payload.bugs,
+    totalCenarios: payload.totalCenarios,
+    participants: payload.participants,
+    publicShareLanguage: payload.publicShareLanguage,
+  };
 };
 
 export const updateEnvironment = async (
@@ -224,21 +252,33 @@ export const deleteEnvironment = async (environmentId: string): Promise<void> =>
 export const observeEnvironment = (
   environmentId: string,
   callback: (environment: Environment | null) => void,
+  onError?: (error: Error) => void,
 ): (() => void) => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  return onSnapshot(environmentRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      callback(null);
-      return;
-    }
+  return onSnapshot(
+    environmentRef,
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        callback(null);
+        return;
+      }
 
-    callback(normalizeEnvironment(snapshot.id, snapshot.data() ?? {}));
-  });
+      callback(
+        normalizeEnvironment(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {}),
+      );
+    },
+    (error) => {
+      console.error(error);
+      onError?.(error as Error);
+      callback(null);
+    },
+  );
 };
 
 export const observeEnvironments = (
   filters: EnvironmentRealtimeFilters,
   callback: (environments: Environment[]) => void,
+  onError?: (error: Error) => void,
 ): (() => void) => {
   const constraints: QueryConstraint[] = [];
 
@@ -249,17 +289,30 @@ export const observeEnvironments = (
   const environmentsQuery =
     constraints.length > 0 ? query(environmentsCollection, ...constraints) : environmentsCollection;
 
-  return onSnapshot(environmentsQuery, (snapshot) => {
-    const list = snapshot.docs
-      .map((docSnapshot) => normalizeEnvironment(docSnapshot.id, docSnapshot.data() ?? {}))
-      .sort((a, b) => {
-        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return bDate - aDate;
-      });
+  return onSnapshot(
+    environmentsQuery,
+    (snapshot) => {
+      const list = snapshot.docs
+        .map((docSnapshot) =>
+          normalizeEnvironment(
+            docSnapshot.id,
+            docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+          ),
+        )
+        .sort((a, b) => {
+          const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bDate - aDate;
+        });
 
-    callback(list);
-  });
+      callback(list);
+    },
+    (error) => {
+      console.error(error);
+      onError?.(error as Error);
+      callback([]);
+    },
+  );
 };
 
 export const addEnvironmentUser = async (environmentId: string, userId: string): Promise<void> => {
@@ -270,13 +323,13 @@ export const addEnvironmentUser = async (environmentId: string, userId: string):
       throw new Error('Ambiente não encontrado.');
     }
 
-    const data = snapshot.data();
+    const data = snapshot.data({ serverTimestamps: 'estimate' }) ?? {};
     if (data.status === 'done') {
       throw new Error('Ambiente já concluído.');
     }
 
-    const presentUsers: string[] = data.presentUsersIds ?? [];
-    const participants: string[] = data.participants ?? [];
+    const presentUsers: string[] = (data.presentUsersIds as string[] | undefined) ?? [];
+    const participants: string[] = (data.participants as string[] | undefined) ?? [];
 
     if (presentUsers.includes(userId)) {
       return;
@@ -301,20 +354,22 @@ export const removeEnvironmentUser = async (
       return;
     }
 
-    const data = snapshot.data();
+    const data = snapshot.data({ serverTimestamps: 'estimate' }) ?? {};
     if (data?.status === 'done') {
       throw new Error('Não é possível sair de um ambiente concluído.');
     }
 
-    const presentUsers: string[] = data?.presentUsersIds ?? [];
-    const participants: string[] = data?.participants ?? [];
-    if (!presentUsers.includes(userId)) {
+    const presentUsers: string[] = (data?.presentUsersIds as string[] | undefined) ?? [];
+    const participants: string[] = (data?.participants as string[] | undefined) ?? [];
+    const isPresent = presentUsers.includes(userId);
+    const isParticipant = participants.includes(userId);
+    if (!isPresent && !isParticipant) {
       return;
     }
 
     transaction.update(environmentRef, {
-      presentUsersIds: presentUsers.filter((id) => id !== userId),
-      participants: participants.filter((id) => id !== userId),
+      presentUsersIds: isPresent ? presentUsers.filter((id) => id !== userId) : presentUsers,
+      participants: isParticipant ? participants.filter((id) => id !== userId) : participants,
       updatedAt: serverTimestamp(),
     });
   });
@@ -381,16 +436,24 @@ export const uploadScenarioEvidence = async (
 
 export const listEnvironmentBugs = async (environmentId: string): Promise<EnvironmentBug[]> => {
   const bugsCollectionRef = getBugCollection(environmentId);
-  const snapshot = await getDocs(bugsCollectionRef);
-  return snapshot.docs
-    .map((docSnapshot) =>
-      normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
-    )
-    .sort((first, second) => {
-      const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
-      const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
-      return secondDate - firstDate;
-    });
+  try {
+    const snapshot = await getDocsCacheThenServer(bugsCollectionRef);
+    return snapshot.docs
+      .map((docSnapshot) =>
+        normalizeBug(
+          docSnapshot.id,
+          (docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {}) as Record<string, unknown>,
+        ),
+      )
+      .sort((first, second) => {
+        const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
+        const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
+        return secondDate - firstDate;
+      });
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 };
 
 export const createEnvironmentBug = async (
@@ -398,16 +461,33 @@ export const createEnvironmentBug = async (
   payload: CreateEnvironmentBugInput,
 ): Promise<EnvironmentBug> => {
   const bugsCollectionRef = getBugCollection(environmentId);
+  const now = new Date().toISOString();
   const docRef = await addDoc(bugsCollectionRef, {
     ...payload,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  await updateDoc(environmentRef, {
+    bugs: increment(1),
+    updatedAt: serverTimestamp(),
+  });
 
-  const snapshot = await getDoc(docRef);
-  const bug = normalizeBug(snapshot.id, (snapshot.data() ?? {}) as Record<string, unknown>);
-
-  return bug;
+  return {
+    id: docRef.id,
+    scenarioId: payload.scenarioId,
+    title: payload.title,
+    description: payload.description ?? null,
+    status: payload.status,
+    severity: payload.severity ?? null,
+    priority: payload.priority ?? null,
+    reportedBy: payload.reportedBy ?? null,
+    stepsToReproduce: payload.stepsToReproduce ?? null,
+    expectedResult: payload.expectedResult ?? null,
+    actualResult: payload.actualResult ?? null,
+    createdAt: now,
+    updatedAt: now,
+  };
 };
 
 export const updateEnvironmentBug = async (
@@ -437,6 +517,20 @@ export const deleteEnvironmentBug = async (environmentId: string, bugId: string)
     bugId,
   );
   await deleteDoc(bugRef);
+
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  await runTransaction(firebaseFirestore, async (transaction) => {
+    const snapshot = await transaction.get(environmentRef);
+    if (!snapshot.exists()) {
+      return;
+    }
+    const data = snapshot.data({ serverTimestamps: 'estimate' }) ?? {};
+    const currentBugs = Number(data?.bugs ?? 0);
+    transaction.update(environmentRef, {
+      bugs: Math.max(0, currentBugs - 1),
+      updatedAt: serverTimestamp(),
+    });
+  });
 };
 
 interface TransitionEnvironmentStatusParams {
@@ -568,10 +662,21 @@ const normalizeParticipants = (
 const buildTimeTrackingSummary = (environment: Environment) => {
   const isRunning = environment.status === 'in_progress';
   const totalMs = getElapsedMilliseconds(environment.timeTracking, isRunning, Date.now());
+  const t = i18n.t.bind(i18n);
+  const locale = i18n.language;
+  const emptyLabel = t('environmentSummary.notRecorded');
 
   return {
-    start: formatDateTime(environment.timeTracking?.start ?? null),
-    end: formatEndDateTime(environment.timeTracking ?? null, isRunning),
+    start: formatDateTime(environment.timeTracking?.start ?? null, {
+      locale,
+      emptyLabel,
+    }),
+    end: formatEndDateTime(environment.timeTracking ?? null, isRunning, {
+      locale,
+      emptyLabel,
+      inProgressLabel: t('environmentSummary.inProgress'),
+      notEndedLabel: t('environmentSummary.notEnded'),
+    }),
     total: formatDurationFromMs(totalMs),
   };
 };
@@ -742,16 +847,23 @@ export const exportEnvironmentAsPDF = (
   const bugRows =
     bugs.length > 0
       ? bugs
-          .map(
-            (bug) => `
+          .map((bug) => {
+            const severityLabel = bug.severity
+              ? t(BUG_SEVERITY_LABEL[bug.severity])
+              : t('environmentExport.noSeverity');
+            const priorityLabel = bug.priority
+              ? t(BUG_PRIORITY_LABEL[bug.priority])
+              : t('environmentExport.noPriority');
+            const actualResult = bug.actualResult?.trim() || t('environmentExport.noActualResult');
+            return `
         <tr>
-          <td>${escapeHtml(bug.title)}</td>
-          <td>${escapeHtml(t(BUG_STATUS_LABEL[bug.status]))}</td>
           <td>${escapeHtml(getScenarioLabel(environment, bug.scenarioId))}</td>
-          <td>${linkifyHtml(bug.description ?? t('environmentExport.noDescription'))}</td>
+          <td>${escapeHtml(severityLabel)}</td>
+          <td>${escapeHtml(priorityLabel)}</td>
+          <td>${linkifyHtml(actualResult)}</td>
         </tr>
-      `,
-          )
+      `;
+          })
           .join('')
       : `
         <tr>
@@ -854,10 +966,10 @@ export const exportEnvironmentAsPDF = (
         <table>
           <thead>
             <tr>
-              <th>${t('environmentExport.bugTitle')}</th>
-              <th>${t('environmentExport.bugStatus')}</th>
               <th>${t('environmentExport.bugScenario')}</th>
-              <th>${t('environmentExport.bugDescription')}</th>
+              <th>${t('environmentExport.bugSeverity')}</th>
+              <th>${t('environmentExport.bugPriority')}</th>
+              <th>${t('environmentExport.bugActualResult')}</th>
             </tr>
           </thead>
           <tbody>${bugRows}</tbody>
@@ -893,6 +1005,8 @@ export const copyEnvironmentAsMarkdown = async (
   const statusLabel = t(ENVIRONMENT_STATUS_LABEL[environment.status]);
   const testTypeLabel = translateEnvironmentOption(environment.tipoTeste, t);
   const momentLabel = translateEnvironmentOption(environment.momento, t);
+  const normalizeMarkdownCell = (value: string) =>
+    value.replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
   const scenarioTableRows = Object.values(environment.scenarios ?? {})
     .map((scenario) => {
       const statuses = getScenarioPlatformStatuses(scenario);
@@ -906,20 +1020,37 @@ export const copyEnvironmentAsMarkdown = async (
         : evidenceLabel;
       const observation =
         scenario.observacao?.trim() || t('environmentEvidenceTable.observacao_none');
-      return `| ${scenario.titulo} | ${scenario.categoria} | ${scenario.criticidade} | ${observation} | ${statusMobile} | ${statusDesktop} | ${evidenceLink} |`;
+      return `| ${normalizeMarkdownCell(scenario.titulo)} | ${normalizeMarkdownCell(
+        scenario.categoria,
+      )} | ${normalizeMarkdownCell(scenario.criticidade)} | ${normalizeMarkdownCell(
+        observation,
+      )} | ${normalizeMarkdownCell(statusMobile)} | ${normalizeMarkdownCell(
+        statusDesktop,
+      )} | ${evidenceLink} |`;
     })
     .join('\n');
   const scenarioTable = scenarioTableRows
     ? `| ${t('environmentEvidenceTable.table_titulo')} | ${t('environmentEvidenceTable.table_categoria')} | ${t('environmentEvidenceTable.table_criticidade')} | ${t('environmentEvidenceTable.table_observacao')} | ${t('environmentEvidenceTable.table_status_mobile')} | ${t('environmentEvidenceTable.table_status_desktop')} | ${t('environmentEvidenceTable.table_evidencia')} |\n| --- | --- | --- | --- | --- | --- | --- |\n${scenarioTableRows}`
     : `- ${t('environmentExport.noScenarios')}`;
 
-  const bugLines = bugs
+  const bugTableRows = bugs
     .map((bug) => {
       const scenarioLabel = getScenarioLabel(environment, bug.scenarioId);
-      const description = bug.description ? ` — ${bug.description}` : '';
-      return `- **${bug.title}** (${t(BUG_STATUS_LABEL[bug.status])}) · ${t('environmentExport.bugScenario')}: ${scenarioLabel}${description}`;
+      const severityLabel = bug.severity
+        ? t(BUG_SEVERITY_LABEL[bug.severity])
+        : t('environmentExport.noSeverity');
+      const priorityLabel = bug.priority
+        ? t(BUG_PRIORITY_LABEL[bug.priority])
+        : t('environmentExport.noPriority');
+      const actualResult = bug.actualResult?.trim() || t('environmentExport.noActualResult');
+      return `| ${normalizeMarkdownCell(scenarioLabel)} | ${normalizeMarkdownCell(
+        severityLabel,
+      )} | ${normalizeMarkdownCell(priorityLabel)} | ${normalizeMarkdownCell(actualResult)} |`;
     })
     .join('\n');
+  const bugTable = bugTableRows
+    ? `| ${t('environmentExport.bugScenario')} | ${t('environmentExport.bugSeverity')} | ${t('environmentExport.bugPriority')} | ${t('environmentExport.bugActualResult')} |\n| --- | --- | --- | --- |\n${bugTableRows}`
+    : `- ${t('environmentExport.noBugs')}`;
 
   const urls = (environment.urls ?? []).map((url) => `  - ${url}`).join('\n');
   const participants = normalizedParticipants
@@ -949,7 +1080,7 @@ ${environment.momento ? `- ${t('environmentExport.momentLabel')}: ${momentLabel}
 ${scenarioTable}
 
 ## ${t('environmentExport.bugsTitle')}
-${bugLines || `- ${t('environmentExport.noBugs')}`}
+${bugTable}
 
 ## ${t('environmentExport.participantsTitle')}
 ${participants || `- ${t('environmentExport.noParticipants')}`}

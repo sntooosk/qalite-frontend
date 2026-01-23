@@ -5,9 +5,6 @@ import {
   deleteDoc,
   doc,
   getDoc,
-  getDocs,
-  getDocsFromCache,
-  getDocsFromServer,
   onSnapshot,
   orderBy,
   query,
@@ -36,6 +33,7 @@ import {
   normalizeCriticalityEnum,
 } from '../../shared/utils/scenarioEnums';
 import { firebaseFirestore } from '../database/firebase';
+import { getDocCacheFirst, getDocsCacheFirst, getDocsCacheThenServer } from './firestoreCache';
 
 const STORES_COLLECTION = 'stores';
 const SCENARIOS_SUBCOLLECTION = 'scenarios';
@@ -130,11 +128,16 @@ const normalizeCategoryInput = (input: StoreCategoryInput): StoreCategoryInput =
 export const listStores = async (organizationId: string): Promise<Store[]> => {
   const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
   const storesQuery = query(storesCollection, where('organizationId', '==', organizationId));
-  // Primeiro tentamos o cache local para reduzir leituras repetidas e aproveitar o IndexedDB.
-  // Caso não exista cache (primeiro acesso/dispositivo novo), buscamos do servidor como fallback.
-  const snapshot = await getDocsFromCache(storesQuery).catch(() => getDocsFromServer(storesQuery));
-  const stores = snapshot.docs.map((docSnapshot) => mapStore(docSnapshot.id, docSnapshot.data()));
-  return stores.sort((a, b) => a.name.localeCompare(b.name));
+  try {
+    const snapshot = await getDocsCacheThenServer(storesQuery);
+    const stores = snapshot.docs.map((docSnapshot) =>
+      mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    );
+    return stores.sort((a, b) => a.name.localeCompare(b.name));
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 };
 
 export const listenToStores = (
@@ -150,7 +153,7 @@ export const listenToStores = (
     (snapshot) => {
       // O listener sempre recalcula o array completo para manter a lista consistente no cliente.
       const stores = snapshot.docs.map((docSnapshot) =>
-        mapStore(docSnapshot.id, docSnapshot.data()),
+        mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
       );
       onChange(stores.sort((a, b) => a.name.localeCompare(b.name)));
     },
@@ -162,12 +165,20 @@ export const listenToStores = (
 
 export const getStore = async (storeId: string): Promise<Store | null> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-  const snapshot = await getDoc(storeRef);
-  return snapshot.exists() ? mapStore(snapshot.id, snapshot.data() ?? {}) : null;
+  try {
+    const snapshot = await getDocCacheFirst(storeRef);
+    return snapshot.exists()
+      ? mapStore(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {})
+      : null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
 };
 
 export const createStore = async (payload: CreateStorePayload): Promise<Store> => {
   const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
+  const now = new Date();
   const docRef = await addDoc(storesCollection, {
     organizationId: payload.organizationId,
     name: payload.name.trim(),
@@ -178,10 +189,16 @@ export const createStore = async (payload: CreateStorePayload): Promise<Store> =
     updatedAt: serverTimestamp(),
   });
 
-  const snapshot = await getDoc(docRef);
-  const createdStore = mapStore(snapshot.id, snapshot.data() ?? {});
-
-  return createdStore;
+  return {
+    id: docRef.id,
+    organizationId: payload.organizationId,
+    name: payload.name.trim(),
+    site: payload.site.trim(),
+    stage: payload.stage.trim(),
+    scenarioCount: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
 };
 
 export const updateStore = async (storeId: string, payload: UpdateStorePayload): Promise<Store> => {
@@ -193,8 +210,8 @@ export const updateStore = async (storeId: string, payload: UpdateStorePayload):
     updatedAt: serverTimestamp(),
   });
 
-  const snapshot = await getDoc(storeRef);
-  const updated = mapStore(snapshot.id, snapshot.data() ?? {});
+  const snapshot = await getDocCacheFirst(storeRef);
+  const updated = mapStore(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {});
 
   return updated;
 };
@@ -208,9 +225,9 @@ export const deleteStore = async (storeId: string): Promise<void> => {
   }
 
   const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
-  const scenariosSnapshot = await getDocs(scenariosCollection);
+  const scenariosSnapshot = await getDocsCacheFirst(scenariosCollection);
   const categoriesCollection = collection(storeRef, CATEGORIES_SUBCOLLECTION);
-  const categoriesSnapshot = await getDocs(categoriesCollection);
+  const categoriesSnapshot = await getDocsCacheFirst(categoriesCollection);
 
   const batch = writeBatch(firebaseFirestore);
   scenariosSnapshot.forEach((scenarioDoc) => {
@@ -228,17 +245,25 @@ export const listScenarios = async (storeId: string): Promise<StoreScenario[]> =
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
   const scenariosQuery = query(scenariosCollection, orderBy('title'));
-  const snapshot = await getDocs(scenariosQuery);
-  return snapshot.docs.map((docSnapshot) =>
-    mapScenario(storeId, docSnapshot.id, docSnapshot.data()),
-  );
+  try {
+    const snapshot = await getDocsCacheThenServer(scenariosQuery);
+    return snapshot.docs.map((docSnapshot) =>
+      mapScenario(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    );
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 };
 
 export const createScenario = async (
   payload: { storeId: string } & StoreScenarioInput,
 ): Promise<StoreScenario> => {
-  const storeRef = doc(firebaseFirestore, STORES_COLLECTION, payload.storeId);
+  const { storeId, ...scenarioInput } = payload;
+  const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
+  const normalizedScenario = normalizeScenarioInput(scenarioInput);
+  const now = new Date();
 
   const scenarioRef = await runTransaction(firebaseFirestore, async (transaction) => {
     const storeSnapshot = await transaction.get(storeRef);
@@ -249,12 +274,14 @@ export const createScenario = async (
 
     const newScenarioRef = doc(scenariosCollection);
     transaction.set(newScenarioRef, {
-      ...normalizeScenarioInput(payload),
+      ...normalizedScenario,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
 
-    const currentCount = Number(storeSnapshot.data()?.scenarioCount ?? 0);
+    const currentCount = Number(
+      storeSnapshot.data({ serverTimestamps: 'estimate' })?.scenarioCount ?? 0,
+    );
     transaction.update(storeRef, {
       scenarioCount: currentCount + 1,
       updatedAt: serverTimestamp(),
@@ -263,14 +290,18 @@ export const createScenario = async (
     return newScenarioRef;
   });
 
-  const scenarioSnapshot = await getDoc(scenarioRef);
-  const createdScenario = mapScenario(
-    payload.storeId,
-    scenarioSnapshot.id,
-    scenarioSnapshot.data() ?? {},
-  );
-
-  return createdScenario;
+  return {
+    id: scenarioRef.id,
+    storeId,
+    title: normalizedScenario.title,
+    category: normalizedScenario.category,
+    automation: normalizedScenario.automation || '',
+    criticality: normalizedScenario.criticality || '',
+    observation: normalizedScenario.observation,
+    bdd: normalizedScenario.bdd,
+    createdAt: now,
+    updatedAt: now,
+  };
 };
 
 export const updateScenario = async (
@@ -288,8 +319,12 @@ export const updateScenario = async (
 
   await updateDoc(storeRef, { updatedAt: serverTimestamp() });
 
-  const scenarioSnapshot = await getDoc(scenarioRef);
-  const updatedScenario = mapScenario(storeId, scenarioSnapshot.id, scenarioSnapshot.data() ?? {});
+  const scenarioSnapshot = await getDocCacheFirst(scenarioRef);
+  const updatedScenario = mapScenario(
+    storeId,
+    scenarioSnapshot.id,
+    scenarioSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+  );
 
   return updatedScenario;
 };
@@ -306,7 +341,9 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
 
     transaction.delete(scenarioRef);
 
-    const currentCount = Number(storeSnapshot.data()?.scenarioCount ?? 0);
+    const currentCount = Number(
+      storeSnapshot.data({ serverTimestamps: 'estimate' })?.scenarioCount ?? 0,
+    );
     transaction.update(storeRef, {
       scenarioCount: Math.max(currentCount - 1, 0),
       updatedAt: serverTimestamp(),
@@ -318,15 +355,22 @@ export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
   const suitesQuery = query(suitesCollection, orderBy('name'));
-  const snapshot = await getDocs(suitesQuery);
-  return snapshot.docs.map((docSnapshot) => mapSuite(storeId, docSnapshot.id, docSnapshot.data()));
+  try {
+    const snapshot = await getDocsCacheThenServer(suitesQuery);
+    return snapshot.docs.map((docSnapshot) =>
+      mapSuite(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    );
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 };
 
 export const createSuite = async (
   payload: { storeId: string } & StoreSuiteInput,
 ): Promise<StoreSuite> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, payload.storeId);
-  const storeSnapshot = await getDoc(storeRef);
+  const storeSnapshot = await getDocCacheFirst(storeRef);
 
   if (!storeSnapshot.exists()) {
     throw new Error('Loja não encontrada.');
@@ -334,16 +378,22 @@ export const createSuite = async (
 
   const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
   const normalized = normalizeSuiteInput(payload);
+  const now = new Date();
   const suiteRef = await addDoc(suitesCollection, {
     ...normalized,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 
-  const snapshot = await getDoc(suiteRef);
-  const createdSuite = mapSuite(payload.storeId, snapshot.id, snapshot.data() ?? {});
-
-  return createdSuite;
+  return {
+    id: suiteRef.id,
+    storeId: payload.storeId,
+    name: normalized.name,
+    description: normalized.description,
+    scenarioIds: normalized.scenarioIds,
+    createdAt: now,
+    updatedAt: now,
+  };
 };
 
 export const updateSuite = async (
@@ -353,7 +403,7 @@ export const updateSuite = async (
 ): Promise<StoreSuite> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const suiteRef = doc(storeRef, SUITES_SUBCOLLECTION, suiteId);
-  const suiteSnapshot = await getDoc(suiteRef);
+  const suiteSnapshot = await getDocCacheFirst(suiteRef);
 
   if (!suiteSnapshot.exists()) {
     throw new Error('Suite de testes não encontrada.');
@@ -364,8 +414,12 @@ export const updateSuite = async (
     updatedAt: serverTimestamp(),
   });
 
-  const updatedSnapshot = await getDoc(suiteRef);
-  const updatedSuite = mapSuite(storeId, updatedSnapshot.id, updatedSnapshot.data() ?? {});
+  const updatedSnapshot = await getDocCacheFirst(suiteRef);
+  const updatedSuite = mapSuite(
+    storeId,
+    updatedSnapshot.id,
+    updatedSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+  );
 
   return updatedSuite;
 };
@@ -373,7 +427,7 @@ export const updateSuite = async (
 export const deleteSuite = async (storeId: string, suiteId: string): Promise<void> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const suiteRef = doc(storeRef, SUITES_SUBCOLLECTION, suiteId);
-  const snapshot = await getDoc(suiteRef);
+  const snapshot = await getDocCacheFirst(suiteRef);
 
   if (!snapshot.exists()) {
     throw new Error('Suite de testes não encontrada.');
@@ -386,17 +440,22 @@ export const listCategories = async (storeId: string): Promise<StoreCategory[]> 
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const categoriesCollection = collection(storeRef, CATEGORIES_SUBCOLLECTION);
   const categoriesQuery = query(categoriesCollection, orderBy('searchName'));
-  const snapshot = await getDocs(categoriesQuery);
-  return snapshot.docs.map((docSnapshot) =>
-    mapCategory(storeId, docSnapshot.id, docSnapshot.data()),
-  );
+  try {
+    const snapshot = await getDocsCacheThenServer(categoriesQuery);
+    return snapshot.docs.map((docSnapshot) =>
+      mapCategory(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    );
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 };
 
 export const createCategory = async (
   payload: { storeId: string } & StoreCategoryInput,
 ): Promise<StoreCategory> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, payload.storeId);
-  const storeSnapshot = await getDoc(storeRef);
+  const storeSnapshot = await getDocCacheFirst(storeRef);
 
   if (!storeSnapshot.exists()) {
     throw new Error('Loja não encontrada.');
@@ -410,7 +469,7 @@ export const createCategory = async (
   const searchName = name.toLowerCase();
   const categoriesCollection = collection(storeRef, CATEGORIES_SUBCOLLECTION);
   const existingQuery = query(categoriesCollection, where('searchName', '==', searchName));
-  const existingSnapshot = await getDocs(existingQuery);
+  const existingSnapshot = await getDocsCacheFirst(existingQuery);
 
   if (!existingSnapshot.empty) {
     throw new Error('Já existe uma categoria com este nome.');
@@ -423,8 +482,14 @@ export const createCategory = async (
     updatedAt: serverTimestamp(),
   });
 
-  const categorySnapshot = await getDoc(categoryRef);
-  return mapCategory(payload.storeId, categorySnapshot.id, categorySnapshot.data() ?? {});
+  const now = new Date();
+  return {
+    id: categoryRef.id,
+    storeId: payload.storeId,
+    name,
+    createdAt: now,
+    updatedAt: now,
+  };
 };
 
 export const updateCategory = async (
@@ -434,13 +499,15 @@ export const updateCategory = async (
 ): Promise<StoreCategory> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const categoryRef = doc(storeRef, CATEGORIES_SUBCOLLECTION, categoryId);
-  const categorySnapshot = await getDoc(categoryRef);
+  const categorySnapshot = await getDocCacheFirst(categoryRef);
 
   if (!categorySnapshot.exists()) {
     throw new Error('Categoria não encontrada.');
   }
 
-  const previousName = ((categorySnapshot.data()?.name as string) ?? '').trim();
+  const previousName = (
+    (categorySnapshot.data({ serverTimestamps: 'estimate' })?.name as string) ?? ''
+  ).trim();
   const { name } = normalizeCategoryInput(payload);
   if (!name) {
     throw new Error('Informe o nome da categoria.');
@@ -449,7 +516,7 @@ export const updateCategory = async (
   const searchName = name.toLowerCase();
   const categoriesCollection = collection(storeRef, CATEGORIES_SUBCOLLECTION);
   const existingQuery = query(categoriesCollection, where('searchName', '==', searchName));
-  const existingSnapshot = await getDocs(existingQuery);
+  const existingSnapshot = await getDocsCacheFirst(existingQuery);
   const duplicated = existingSnapshot.docs.some((docSnapshot) => docSnapshot.id !== categoryId);
 
   if (duplicated) {
@@ -466,8 +533,12 @@ export const updateCategory = async (
     await updateScenarioCategories(storeId, previousName, name);
   }
 
-  const updatedSnapshot = await getDoc(categoryRef);
-  return mapCategory(storeId, updatedSnapshot.id, updatedSnapshot.data() ?? {});
+  const updatedSnapshot = await getDocCacheFirst(categoryRef);
+  return mapCategory(
+    storeId,
+    updatedSnapshot.id,
+    updatedSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+  );
 };
 
 export const deleteCategory = async (
@@ -477,7 +548,7 @@ export const deleteCategory = async (
 ): Promise<void> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const categoryRef = doc(storeRef, CATEGORIES_SUBCOLLECTION, categoryId);
-  const snapshot = await getDoc(categoryRef);
+  const snapshot = await getDocCacheFirst(categoryRef);
 
   if (!snapshot.exists()) {
     throw new Error('Categoria não encontrada.');
@@ -487,9 +558,9 @@ export const deleteCategory = async (
     const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
     const scenariosQuery = query(
       scenariosCollection,
-      where('category', '==', snapshot.data()?.name),
+      where('category', '==', snapshot.data({ serverTimestamps: 'estimate' })?.name),
     );
-    const scenariosSnapshot = await getDocs(scenariosQuery);
+    const scenariosSnapshot = await getDocsCacheFirst(scenariosQuery);
 
     if (!scenariosSnapshot.empty) {
       throw new Error(
@@ -509,7 +580,7 @@ const updateScenarioCategories = async (
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
   const scenariosQuery = query(scenariosCollection, where('category', '==', previousName));
-  const snapshot = await getDocs(scenariosQuery);
+  const snapshot = await getDocsCacheFirst(scenariosQuery);
 
   if (snapshot.empty) {
     return;
