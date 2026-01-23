@@ -5,8 +5,12 @@ import {
   arrayUnion,
   collection,
   doc,
+  documentId,
   getDoc,
-  getDocs,
+  getDocFromCache,
+  getDocFromServer,
+  getDocsFromCache,
+  getDocsFromServer,
   limit,
   query,
   runTransaction,
@@ -14,6 +18,10 @@ import {
   updateDoc,
   where,
   writeBatch,
+  type CollectionReference,
+  type DocumentData,
+  type DocumentReference,
+  type Query,
 } from 'firebase/firestore';
 
 import type { BrowserstackCredentials } from '../../domain/entities/browserstack';
@@ -66,9 +74,11 @@ const normalizeBrowserstackCredentials = (
 };
 
 export const listOrganizations = async (): Promise<Organization[]> => {
-  const snapshot = await getDocs(organizationsCollection);
+  const snapshot = await getDocsCacheFirst(organizationsCollection);
   const organizations = await Promise.all(
-    snapshot.docs.map((docSnapshot) => mapOrganization(docSnapshot.id, docSnapshot.data())),
+    snapshot.docs.map((docSnapshot) =>
+      mapOrganization(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    ),
   );
 
   return organizations.sort((a, b) => a.name.localeCompare(b.name));
@@ -76,13 +86,13 @@ export const listOrganizations = async (): Promise<Organization[]> => {
 
 export const getOrganization = async (id: string): Promise<Organization | null> => {
   const organizationRef = doc(firebaseFirestore, ORGANIZATIONS_COLLECTION, id);
-  const snapshot = await getDoc(organizationRef);
+  const snapshot = await getDocCacheFirst(organizationRef);
 
   if (!snapshot.exists()) {
     return null;
   }
 
-  return mapOrganization(snapshot.id, snapshot.data());
+  return mapOrganization(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }));
 };
 
 export const createOrganization = async (
@@ -106,8 +116,8 @@ export const createOrganization = async (
     updatedAt: serverTimestamp(),
   });
 
-  const snapshot = await getDoc(docRef);
-  return mapOrganization(snapshot.id, snapshot.data() ?? {});
+  const snapshot = await getDocCacheFirst(docRef);
+  return mapOrganization(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {});
 };
 
 export const updateOrganization = async (
@@ -131,8 +141,8 @@ export const updateOrganization = async (
 
   await updateDoc(organizationRef, updatePayload);
 
-  const snapshot = await getDoc(organizationRef);
-  return mapOrganization(snapshot.id, snapshot.data() ?? {});
+  const snapshot = await getDocCacheFirst(organizationRef);
+  return mapOrganization(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {});
 };
 
 export const deleteOrganization = async (id: string): Promise<void> => {
@@ -172,7 +182,7 @@ export const addUserToOrganization = async (
 
   const usersRef = collection(firebaseFirestore, USERS_COLLECTION);
   const userQuery = query(usersRef, where('email', '==', normalizedEmail), limit(1));
-  const userQuerySnapshot = await getDocs(userQuery);
+  const userQuerySnapshot = await getDocsCacheFirst(userQuery);
 
   if (userQuerySnapshot.empty) {
     throw new Error('Usuário não encontrado.');
@@ -279,13 +289,14 @@ export const removeUserFromOrganization = async (
 
 export const getUserOrganization = async (userId: string): Promise<Organization | null> => {
   const userRef = doc(firebaseFirestore, USERS_COLLECTION, userId);
-  const userSnapshot = await getDoc(userRef);
+  const userSnapshot = await getDocCacheFirst(userRef);
 
   if (!userSnapshot.exists()) {
     return null;
   }
 
-  const organizationId = (userSnapshot.data()?.organizationId as string | null) ?? null;
+  const organizationId =
+    (userSnapshot.data({ serverTimestamps: 'estimate' })?.organizationId as string | null) ?? null;
   if (!organizationId) {
     return null;
   }
@@ -307,14 +318,17 @@ export const findOrganizationByEmailDomain = async (
     where('emailDomain', '==', normalizedDomain),
     limit(1),
   );
-  const snapshot = await getDocs(organizationQuery);
+  const snapshot = await getDocsCacheFirst(organizationQuery);
 
   if (snapshot.empty) {
     return null;
   }
 
   const organizationDoc = snapshot.docs[0];
-  return mapOrganization(organizationDoc.id, organizationDoc.data());
+  return mapOrganization(
+    organizationDoc.id,
+    organizationDoc.data({ serverTimestamps: 'estimate' }),
+  );
 };
 
 export const addUserToOrganizationByEmailDomain = async (
@@ -413,24 +427,64 @@ const fetchMembers = async (memberIds: string[]): Promise<OrganizationMember[]> 
     return [];
   }
 
-  const members = await Promise.all(
-    memberIds.map(async (uid) => {
-      const userRef = doc(firebaseFirestore, USERS_COLLECTION, uid);
-      const snapshot = await getDoc(userRef);
+  const uniqueIds = Array.from(new Set(memberIds)).filter((id) => id.length > 0);
+  const usersRef = collection(firebaseFirestore, USERS_COLLECTION);
+  const chunks = chunkArray(uniqueIds, 10);
+  const snapshots = await Promise.all(
+    chunks.map((chunk) =>
+      getDocsCacheFirst(query(usersRef, where(documentId(), 'in', chunk))),
+    ),
+  );
 
-      if (!snapshot.exists()) {
-        return null;
-      }
-
-      const data = snapshot.data();
-      return {
-        uid,
+  const memberMap = new Map<string, OrganizationMember>();
+  snapshots.forEach((snapshot) => {
+    snapshot.forEach((docSnapshot) => {
+      const data = docSnapshot.data({ serverTimestamps: 'estimate' });
+      memberMap.set(docSnapshot.id, {
+        uid: docSnapshot.id,
         email: (data.email as string) ?? '',
         displayName: (data.displayName as string) ?? '',
         photoURL: (data.photoURL as string | null) ?? null,
-      };
-    }),
-  );
+      });
+    });
+  });
 
-  return members.filter((member): member is OrganizationMember => Boolean(member));
+  return memberIds
+    .map((id) => memberMap.get(id))
+    .filter((member): member is OrganizationMember => Boolean(member));
+};
+
+const chunkArray = <T>(items: T[], size: number): T[][] => {
+  if (items.length === 0) {
+    return [];
+  }
+
+  return items.reduce<T[][]>((acc, item, index) => {
+    const chunkIndex = Math.floor(index / size);
+    if (!acc[chunkIndex]) {
+      acc[chunkIndex] = [];
+    }
+    acc[chunkIndex].push(item);
+    return acc;
+  }, []);
+};
+
+const getDocCacheFirst = async <T>(
+  reference: DocumentReference<T>,
+): Promise<ReturnType<typeof getDocFromCache<T>>> => {
+  try {
+    return await getDocFromCache(reference);
+  } catch {
+    return await getDocFromServer(reference);
+  }
+};
+
+const getDocsCacheFirst = async <T = DocumentData>(
+  reference: Query<T> | CollectionReference<T>,
+): Promise<ReturnType<typeof getDocsFromCache<T>>> => {
+  try {
+    return await getDocsFromCache(reference);
+  } catch {
+    return await getDocsFromServer(reference);
+  }
 };

@@ -1,4 +1,17 @@
-import { collection, doc, getDoc, getDocs, limit } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDocFromCache,
+  getDocFromServer,
+  getDocsFromCache,
+  getDocsFromServer,
+  limit,
+  query,
+  type CollectionReference,
+  type DocumentData,
+  type DocumentReference,
+  type Query,
+} from 'firebase/firestore';
 
 import type { UserSummary } from '../../domain/entities/user';
 import { firebaseFirestore } from '../database/firebase';
@@ -24,12 +37,12 @@ export const searchUsersByTerm = async (term: string): Promise<UserSummary[]> =>
   }
 
   const usersRef = collection(firebaseFirestore, USERS_COLLECTION);
-  const snapshot = await getDocs(limit(usersRef, 100));
+  const snapshot = await getDocsCacheFirst(query(usersRef, limit(100)));
 
   const matches: UserSummary[] = [];
 
   snapshot.forEach((userDoc) => {
-    const data = userDoc.data();
+    const data = userDoc.data({ serverTimestamps: 'estimate' });
     const email = typeof data?.email === 'string' ? data.email : '';
     const displayName = resolveDisplayName(data?.displayName, email);
     const photoURL = typeof data?.photoURL === 'string' ? data.photoURL : null;
@@ -51,9 +64,13 @@ const fetchUserSummary = async (userId: string): Promise<UserSummary | null> => 
   }
 
   const userRef = doc(firebaseFirestore, USERS_COLLECTION, userId);
-  const snapshot = await getDoc(userRef);
+  const snapshot = await getDocCacheFirst(userRef);
 
-  const data = snapshot.data();
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  const data = snapshot.data({ serverTimestamps: 'estimate' });
   const email = typeof data?.email === 'string' ? data.email : '';
   const displayName = resolveDisplayName(data?.displayName, email);
   const photoURL = typeof data?.photoURL === 'string' ? data.photoURL : null;
@@ -78,4 +95,24 @@ const resolveDisplayName = (rawDisplayName: unknown, email: string): string => {
   }
 
   return DEFAULT_DISPLAY_NAME;
+};
+
+const getDocCacheFirst = async <T>(
+  reference: DocumentReference<T>,
+): Promise<ReturnType<typeof getDocFromCache<T>>> => {
+  try {
+    return await getDocFromCache(reference);
+  } catch {
+    return await getDocFromServer(reference);
+  }
+};
+
+const getDocsCacheFirst = async <T = DocumentData>(
+  reference: Query<T> | CollectionReference<T>,
+): Promise<ReturnType<typeof getDocsFromCache<T>>> => {
+  try {
+    return await getDocsFromCache(reference);
+  } catch {
+    return await getDocsFromServer(reference);
+  }
 };
