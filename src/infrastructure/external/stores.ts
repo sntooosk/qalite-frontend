@@ -250,7 +250,7 @@ export const listScenarios = async (storeId: string): Promise<StoreScenario[]> =
   const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
   const scenariosQuery = query(scenariosCollection, orderBy('title'));
   try {
-    const snapshot = await getDocsCacheFirst(scenariosQuery);
+    const snapshot = await getDocsCacheThenServer(scenariosQuery);
     return snapshot.docs.map((docSnapshot) =>
       mapScenario(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
     );
@@ -360,7 +360,7 @@ export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {
   const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
   const suitesQuery = query(suitesCollection, orderBy('name'));
   try {
-    const snapshot = await getDocsCacheFirst(suitesQuery);
+    const snapshot = await getDocsCacheThenServer(suitesQuery);
     return snapshot.docs.map((docSnapshot) =>
       mapSuite(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
     );
@@ -445,7 +445,7 @@ export const listCategories = async (storeId: string): Promise<StoreCategory[]> 
   const categoriesCollection = collection(storeRef, CATEGORIES_SUBCOLLECTION);
   const categoriesQuery = query(categoriesCollection, orderBy('searchName'));
   try {
-    const snapshot = await getDocsCacheFirst(categoriesQuery);
+    const snapshot = await getDocsCacheThenServer(categoriesQuery);
     return snapshot.docs.map((docSnapshot) =>
       mapCategory(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
     );

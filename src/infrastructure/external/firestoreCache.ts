@@ -38,6 +38,12 @@ export const getDocsCacheThenServer = async <T = DocumentData>(
 
   try {
     cacheSnapshot = await getDocsFromCache(reference);
+    if (!cacheSnapshot.empty) {
+      void getDocsFromServer(reference).catch((error) => {
+        console.error(error);
+      });
+      return cacheSnapshot;
+    }
   } catch {
     cacheSnapshot = null;
   }
@@ -45,6 +51,7 @@ export const getDocsCacheThenServer = async <T = DocumentData>(
   try {
     return await getDocsFromServer(reference);
   } catch (error) {
+    console.error(error);
     if (cacheSnapshot) {
       return cacheSnapshot;
     }
