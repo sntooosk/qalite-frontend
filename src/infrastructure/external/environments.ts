@@ -4,8 +4,6 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDocsFromCache,
-  getDocsFromServer,
   increment,
   onSnapshot,
   query,
@@ -14,9 +12,6 @@ import {
   updateDoc,
   where,
   type QueryConstraint,
-  type CollectionReference,
-  type DocumentData,
-  type Query,
 } from 'firebase/firestore';
 
 import type {
@@ -47,6 +42,7 @@ import {
 import { translateEnvironmentOption } from '../../shared/utils/environmentOptions';
 import i18n from '../../lib/i18n';
 import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
+import { getDocsCacheFirst, getDocsCacheThenServer } from './firestoreCache';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
@@ -246,21 +242,33 @@ export const deleteEnvironment = async (environmentId: string): Promise<void> =>
 export const observeEnvironment = (
   environmentId: string,
   callback: (environment: Environment | null) => void,
+  onError?: (error: Error) => void,
 ): (() => void) => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  return onSnapshot(environmentRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      callback(null);
-      return;
-    }
+  return onSnapshot(
+    environmentRef,
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        callback(null);
+        return;
+      }
 
-    callback(normalizeEnvironment(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {}));
-  });
+      callback(
+        normalizeEnvironment(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {}),
+      );
+    },
+    (error) => {
+      console.error(error);
+      onError?.(error as Error);
+      callback(null);
+    },
+  );
 };
 
 export const observeEnvironments = (
   filters: EnvironmentRealtimeFilters,
   callback: (environments: Environment[]) => void,
+  onError?: (error: Error) => void,
 ): (() => void) => {
   const constraints: QueryConstraint[] = [];
 
@@ -271,22 +279,30 @@ export const observeEnvironments = (
   const environmentsQuery =
     constraints.length > 0 ? query(environmentsCollection, ...constraints) : environmentsCollection;
 
-  return onSnapshot(environmentsQuery, (snapshot) => {
-    const list = snapshot.docs
-      .map((docSnapshot) =>
-        normalizeEnvironment(
-          docSnapshot.id,
-          docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
-        ),
-      )
-      .sort((a, b) => {
-        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return bDate - aDate;
-      });
+  return onSnapshot(
+    environmentsQuery,
+    (snapshot) => {
+      const list = snapshot.docs
+        .map((docSnapshot) =>
+          normalizeEnvironment(
+            docSnapshot.id,
+            docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+          ),
+        )
+        .sort((a, b) => {
+          const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bDate - aDate;
+        });
 
-    callback(list);
-  });
+      callback(list);
+    },
+    (error) => {
+      console.error(error);
+      onError?.(error as Error);
+      callback([]);
+    },
+  );
 };
 
 export const addEnvironmentUser = async (environmentId: string, userId: string): Promise<void> => {
@@ -297,13 +313,13 @@ export const addEnvironmentUser = async (environmentId: string, userId: string):
       throw new Error('Ambiente não encontrado.');
     }
 
-    const data = snapshot.data();
+    const data = snapshot.data({ serverTimestamps: 'estimate' }) ?? {};
     if (data.status === 'done') {
       throw new Error('Ambiente já concluído.');
     }
 
-    const presentUsers: string[] = data.presentUsersIds ?? [];
-    const participants: string[] = data.participants ?? [];
+    const presentUsers: string[] = (data.presentUsersIds as string[] | undefined) ?? [];
+    const participants: string[] = (data.participants as string[] | undefined) ?? [];
 
     if (presentUsers.includes(userId)) {
       return;
@@ -328,13 +344,13 @@ export const removeEnvironmentUser = async (
       return;
     }
 
-    const data = snapshot.data();
+    const data = snapshot.data({ serverTimestamps: 'estimate' }) ?? {};
     if (data?.status === 'done') {
       throw new Error('Não é possível sair de um ambiente concluído.');
     }
 
-    const presentUsers: string[] = data?.presentUsersIds ?? [];
-    const participants: string[] = data?.participants ?? [];
+    const presentUsers: string[] = (data?.presentUsersIds as string[] | undefined) ?? [];
+    const participants: string[] = (data?.participants as string[] | undefined) ?? [];
     const isPresent = presentUsers.includes(userId);
     const isParticipant = participants.includes(userId);
     if (!isPresent && !isParticipant) {
@@ -410,19 +426,24 @@ export const uploadScenarioEvidence = async (
 
 export const listEnvironmentBugs = async (environmentId: string): Promise<EnvironmentBug[]> => {
   const bugsCollectionRef = getBugCollection(environmentId);
-  const snapshot = await getDocsCacheFirst(bugsCollectionRef);
-  return snapshot.docs
-    .map((docSnapshot) =>
-      normalizeBug(
-        docSnapshot.id,
-        (docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {}) as Record<string, unknown>,
-      ),
-    )
-    .sort((first, second) => {
-      const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
-      const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
-      return secondDate - firstDate;
-    });
+  try {
+    const snapshot = await getDocsCacheThenServer(bugsCollectionRef);
+    return snapshot.docs
+      .map((docSnapshot) =>
+        normalizeBug(
+          docSnapshot.id,
+          (docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {}) as Record<string, unknown>,
+        ),
+      )
+      .sort((first, second) => {
+        const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
+        const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
+        return secondDate - firstDate;
+      });
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
 };
 
 export const createEnvironmentBug = async (
@@ -451,16 +472,6 @@ export const createEnvironmentBug = async (
     createdAt: now,
     updatedAt: now,
   };
-};
-
-const getDocsCacheFirst = async <T = DocumentData>(
-  reference: Query<T> | CollectionReference<T>,
-): Promise<ReturnType<typeof getDocsFromCache<T>>> => {
-  try {
-    return await getDocsFromCache(reference);
-  } catch {
-    return await getDocsFromServer(reference);
-  }
 };
 
 export const updateEnvironmentBug = async (
@@ -497,7 +508,7 @@ export const deleteEnvironmentBug = async (environmentId: string, bugId: string)
     if (!snapshot.exists()) {
       return;
     }
-    const data = snapshot.data();
+    const data = snapshot.data({ serverTimestamps: 'estimate' }) ?? {};
     const currentBugs = Number(data?.bugs ?? 0);
     transaction.update(environmentRef, {
       bugs: Math.max(0, currentBugs - 1),

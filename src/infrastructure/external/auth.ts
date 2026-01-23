@@ -9,14 +9,7 @@ import {
   signOut,
   updateProfile as firebaseUpdateProfile,
 } from 'firebase/auth';
-import {
-  doc,
-  getDocFromCache,
-  getDocFromServer,
-  serverTimestamp,
-  setDoc,
-  type DocumentReference,
-} from 'firebase/firestore';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 import type {
   AuthUser,
@@ -30,6 +23,7 @@ import type { BrowserstackCredentials } from '../../domain/entities/browserstack
 import { DEFAULT_ROLE, DEFAULT_USER_PREFERENCES } from '../../domain/entities/auth';
 import { addUserToOrganizationByEmailDomain } from './organizations';
 import { firebaseAuth, firebaseFirestore } from '../database/firebase';
+import { getDocCacheFirst } from './firestoreCache';
 import {
   getStoredLanguagePreference,
   getStoredThemePreference,
@@ -355,21 +349,25 @@ const persistUserProfile = async (
 
 const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
   const userDoc = doc(firebaseFirestore, USERS_COLLECTION, uid);
-  const snapshot = await getDocCacheFirst(userDoc);
+  try {
+    const snapshot = await getDocCacheFirst(userDoc);
 
-  if (snapshot.exists()) {
-    const data = snapshot.data({ serverTimestamps: 'estimate' });
-    const profile = {
-      role: (data.role as Role) ?? DEFAULT_ROLE,
-      displayName: (data.displayName as string) ?? '',
-      firstName: (data.firstName as string) ?? '',
-      lastName: (data.lastName as string) ?? '',
-      photoURL: (data.photoURL as string | null) ?? null,
-      organizationId: (data.organizationId as string | null) ?? null,
-      browserstackCredentials: parseBrowserstackCredentials(data?.browserstackCredentials),
-      preferences: normalizeUserPreferences(data?.preferences, getInitialPreferences()),
-    };
-    return profile;
+    if (snapshot.exists()) {
+      const data = snapshot.data({ serverTimestamps: 'estimate' });
+      const profile = {
+        role: (data.role as Role) ?? DEFAULT_ROLE,
+        displayName: (data.displayName as string) ?? '',
+        firstName: (data.firstName as string) ?? '',
+        lastName: (data.lastName as string) ?? '',
+        photoURL: (data.photoURL as string | null) ?? null,
+        organizationId: (data.organizationId as string | null) ?? null,
+        browserstackCredentials: parseBrowserstackCredentials(data?.browserstackCredentials),
+        preferences: normalizeUserPreferences(data?.preferences, getInitialPreferences()),
+      };
+      return profile;
+    }
+  } catch (error) {
+    console.error(error);
   }
 
   return {
@@ -382,16 +380,6 @@ const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
     browserstackCredentials: null,
     preferences: getInitialPreferences(),
   };
-};
-
-const getDocCacheFirst = async <T>(
-  reference: DocumentReference<T>,
-): Promise<ReturnType<typeof getDocFromCache<T>>> => {
-  try {
-    return await getDocFromCache(reference);
-  } catch {
-    return await getDocFromServer(reference);
-  }
 };
 
 const extractNameParts = (fullName: string): { firstName: string; lastName: string } => {
