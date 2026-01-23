@@ -32,7 +32,11 @@ import type {
 import type { UserSummary } from '../../domain/entities/user';
 import { firebaseFirestore } from '../database/firebase';
 import { EnvironmentStatusError } from '../../shared/errors/firebaseErrors';
-import { BUG_STATUS_LABEL, ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
+import {
+  BUG_PRIORITY_LABEL,
+  BUG_SEVERITY_LABEL,
+  ENVIRONMENT_STATUS_LABEL,
+} from '../../shared/config/environmentLabels';
 import {
   formatDateTime,
   formatDurationFromMs,
@@ -42,7 +46,7 @@ import {
 import { translateEnvironmentOption } from '../../shared/utils/environmentOptions';
 import i18n from '../../lib/i18n';
 import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
-import { getDocsCacheFirst, getDocsCacheThenServer } from './firestoreCache';
+import { getDocsCacheThenServer } from './firestoreCache';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
@@ -133,6 +137,12 @@ const normalizeBug = (id: string, data: Record<string, unknown>): EnvironmentBug
   title: getString(data.title ?? data.titulo),
   description: getStringOrNull(data.description ?? data.descricao),
   status: (data.status ?? 'aberto') as EnvironmentBugStatus,
+  severity: getStringOrNull(data.severity ?? data.severidade) as EnvironmentBug['severity'],
+  priority: getStringOrNull(data.priority ?? data.prioridade) as EnvironmentBug['priority'],
+  reportedBy: getStringOrNull(data.reportedBy ?? data.reportadoPor),
+  stepsToReproduce: getStringOrNull(data.stepsToReproduce ?? data.passosParaReproduzir),
+  expectedResult: getStringOrNull(data.expectedResult ?? data.resultadoEsperado),
+  actualResult: getStringOrNull(data.actualResult ?? data.resultadoAtual),
   createdAt: parseTimestamp(data.createdAt as Timestamp | string | null | undefined),
   updatedAt: parseTimestamp(data.updatedAt as Timestamp | string | null | undefined),
 });
@@ -469,6 +479,12 @@ export const createEnvironmentBug = async (
     title: payload.title,
     description: payload.description ?? null,
     status: payload.status,
+    severity: payload.severity ?? null,
+    priority: payload.priority ?? null,
+    reportedBy: payload.reportedBy ?? null,
+    stepsToReproduce: payload.stepsToReproduce ?? null,
+    expectedResult: payload.expectedResult ?? null,
+    actualResult: payload.actualResult ?? null,
     createdAt: now,
     updatedAt: now,
   };
@@ -831,16 +847,23 @@ export const exportEnvironmentAsPDF = (
   const bugRows =
     bugs.length > 0
       ? bugs
-          .map(
-            (bug) => `
+          .map((bug) => {
+            const severityLabel = bug.severity
+              ? t(BUG_SEVERITY_LABEL[bug.severity])
+              : t('environmentExport.noSeverity');
+            const priorityLabel = bug.priority
+              ? t(BUG_PRIORITY_LABEL[bug.priority])
+              : t('environmentExport.noPriority');
+            const actualResult = bug.actualResult?.trim() || t('environmentExport.noActualResult');
+            return `
         <tr>
-          <td>${escapeHtml(bug.title)}</td>
-          <td>${escapeHtml(t(BUG_STATUS_LABEL[bug.status]))}</td>
           <td>${escapeHtml(getScenarioLabel(environment, bug.scenarioId))}</td>
-          <td>${linkifyHtml(bug.description ?? t('environmentExport.noDescription'))}</td>
+          <td>${escapeHtml(severityLabel)}</td>
+          <td>${escapeHtml(priorityLabel)}</td>
+          <td>${linkifyHtml(actualResult)}</td>
         </tr>
-      `,
-          )
+      `;
+          })
           .join('')
       : `
         <tr>
@@ -943,10 +966,10 @@ export const exportEnvironmentAsPDF = (
         <table>
           <thead>
             <tr>
-              <th>${t('environmentExport.bugTitle')}</th>
-              <th>${t('environmentExport.bugStatus')}</th>
               <th>${t('environmentExport.bugScenario')}</th>
-              <th>${t('environmentExport.bugDescription')}</th>
+              <th>${t('environmentExport.bugSeverity')}</th>
+              <th>${t('environmentExport.bugPriority')}</th>
+              <th>${t('environmentExport.bugActualResult')}</th>
             </tr>
           </thead>
           <tbody>${bugRows}</tbody>
@@ -1013,14 +1036,20 @@ export const copyEnvironmentAsMarkdown = async (
   const bugTableRows = bugs
     .map((bug) => {
       const scenarioLabel = getScenarioLabel(environment, bug.scenarioId);
-      const description = bug.description?.trim() || t('environmentBugList.noDescription');
-      return `| ${normalizeMarkdownCell(bug.title)} | ${normalizeMarkdownCell(
-        t(BUG_STATUS_LABEL[bug.status]),
-      )} | ${normalizeMarkdownCell(scenarioLabel)} | ${normalizeMarkdownCell(description)} |`;
+      const severityLabel = bug.severity
+        ? t(BUG_SEVERITY_LABEL[bug.severity])
+        : t('environmentExport.noSeverity');
+      const priorityLabel = bug.priority
+        ? t(BUG_PRIORITY_LABEL[bug.priority])
+        : t('environmentExport.noPriority');
+      const actualResult = bug.actualResult?.trim() || t('environmentExport.noActualResult');
+      return `| ${normalizeMarkdownCell(scenarioLabel)} | ${normalizeMarkdownCell(
+        severityLabel,
+      )} | ${normalizeMarkdownCell(priorityLabel)} | ${normalizeMarkdownCell(actualResult)} |`;
     })
     .join('\n');
   const bugTable = bugTableRows
-    ? `| ${t('environmentExport.bugTitle')} | ${t('environmentExport.bugStatus')} | ${t('environmentExport.bugScenario')} | ${t('environmentExport.bugDescription')} |\n| --- | --- | --- | --- |\n${bugTableRows}`
+    ? `| ${t('environmentExport.bugScenario')} | ${t('environmentExport.bugSeverity')} | ${t('environmentExport.bugPriority')} | ${t('environmentExport.bugActualResult')} |\n| --- | --- | --- | --- |\n${bugTableRows}`
     : `- ${t('environmentExport.noBugs')}`;
 
   const urls = (environment.urls ?? []).map((url) => `  - ${url}`).join('\n');

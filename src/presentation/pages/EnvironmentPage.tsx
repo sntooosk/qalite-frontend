@@ -55,7 +55,11 @@ import {
   UsersGroupIcon,
 } from '../components/icons';
 import { exportEnvironmentExcel } from '../../utils/exportExcel';
-import { BUG_STATUS_LABEL, ENVIRONMENT_STATUS_LABEL } from '../../shared/config/environmentLabels';
+import {
+  BUG_PRIORITY_LABEL,
+  BUG_SEVERITY_LABEL,
+  ENVIRONMENT_STATUS_LABEL,
+} from '../../shared/config/environmentLabels';
 
 interface SlackSummaryBuilderOptions {
   formattedTime: string;
@@ -643,9 +647,14 @@ export const EnvironmentPage = () => {
 
       return {
         cenario: scenarioName,
-        titulo: bug.title?.trim() || translation('storeSummary.emptyValue'),
-        status: translation(BUG_STATUS_LABEL[bug.status]),
-        descricao: bug.description?.trim() || translation('environmentBugList.noDescription'),
+        severidade: bug.severity
+          ? translation(BUG_SEVERITY_LABEL[bug.severity])
+          : translation('environmentBugList.noSeverity'),
+        prioridade: bug.priority
+          ? translation(BUG_PRIORITY_LABEL[bug.priority])
+          : translation('environmentBugList.noPriority'),
+        resultadoAtual:
+          bug.actualResult?.trim() || translation('environmentBugList.noActualResult'),
       };
     });
 
@@ -669,9 +678,9 @@ export const EnvironmentPage = () => {
       bugRows,
       bugHeaderLabels: [
         translation('environmentBugList.scenario'),
-        translation('environmentBugList.title'),
-        translation('environmentBugList.status'),
-        translation('environmentBugList.description'),
+        translation('environmentBugList.severity'),
+        translation('environmentBugList.priority'),
+        translation('environmentBugList.actualResult'),
       ],
     });
   }, [
