@@ -4,8 +4,8 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
-  getDocs,
+  getDocsFromCache,
+  getDocsFromServer,
   increment,
   onSnapshot,
   query,
@@ -14,6 +14,9 @@ import {
   updateDoc,
   where,
   type QueryConstraint,
+  type CollectionReference,
+  type DocumentData,
+  type Query,
 } from 'firebase/firestore';
 
 import type {
@@ -184,6 +187,7 @@ const normalizeEnvironment = (id: string, data: Record<string, unknown>): Enviro
 });
 
 export const createEnvironment = async (payload: CreateEnvironmentInput): Promise<Environment> => {
+  const now = new Date().toISOString();
   const docRef = await addDoc(environmentsCollection, {
     ...payload,
     loja: payload.storeId,
@@ -191,13 +195,30 @@ export const createEnvironment = async (payload: CreateEnvironmentInput): Promis
     updatedAt: serverTimestamp(),
   });
 
-  const snapshot = await getDoc(docRef);
-  const environment = normalizeEnvironment(
-    snapshot.id,
-    (snapshot.data() ?? {}) as Record<string, unknown>,
-  );
-
-  return environment;
+  return {
+    id: docRef.id,
+    identificador: payload.identificador,
+    storeId: payload.storeId,
+    suiteId: payload.suiteId,
+    suiteName: payload.suiteName,
+    urls: payload.urls,
+    jiraTask: payload.jiraTask,
+    tipoAmbiente: payload.tipoAmbiente,
+    tipoTeste: payload.tipoTeste,
+    momento: payload.momento,
+    release: payload.release,
+    status: payload.status,
+    createdAt: now,
+    updatedAt: now,
+    timeTracking: payload.timeTracking,
+    presentUsersIds: payload.presentUsersIds,
+    concludedBy: payload.concludedBy,
+    scenarios: payload.scenarios,
+    bugs: payload.bugs,
+    totalCenarios: payload.totalCenarios,
+    participants: payload.participants,
+    publicShareLanguage: payload.publicShareLanguage,
+  };
 };
 
 export const updateEnvironment = async (
@@ -233,7 +254,7 @@ export const observeEnvironment = (
       return;
     }
 
-    callback(normalizeEnvironment(snapshot.id, snapshot.data() ?? {}));
+    callback(normalizeEnvironment(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {}));
   });
 };
 
@@ -252,7 +273,12 @@ export const observeEnvironments = (
 
   return onSnapshot(environmentsQuery, (snapshot) => {
     const list = snapshot.docs
-      .map((docSnapshot) => normalizeEnvironment(docSnapshot.id, docSnapshot.data() ?? {}))
+      .map((docSnapshot) =>
+        normalizeEnvironment(
+          docSnapshot.id,
+          docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+        ),
+      )
       .sort((a, b) => {
         const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -384,10 +410,13 @@ export const uploadScenarioEvidence = async (
 
 export const listEnvironmentBugs = async (environmentId: string): Promise<EnvironmentBug[]> => {
   const bugsCollectionRef = getBugCollection(environmentId);
-  const snapshot = await getDocs(bugsCollectionRef);
+  const snapshot = await getDocsCacheFirst(bugsCollectionRef);
   return snapshot.docs
     .map((docSnapshot) =>
-      normalizeBug(docSnapshot.id, (docSnapshot.data() ?? {}) as Record<string, unknown>),
+      normalizeBug(
+        docSnapshot.id,
+        (docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {}) as Record<string, unknown>,
+      ),
     )
     .sort((first, second) => {
       const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
@@ -401,6 +430,7 @@ export const createEnvironmentBug = async (
   payload: CreateEnvironmentBugInput,
 ): Promise<EnvironmentBug> => {
   const bugsCollectionRef = getBugCollection(environmentId);
+  const now = new Date().toISOString();
   const docRef = await addDoc(bugsCollectionRef, {
     ...payload,
     createdAt: serverTimestamp(),
@@ -412,10 +442,25 @@ export const createEnvironmentBug = async (
     updatedAt: serverTimestamp(),
   });
 
-  const snapshot = await getDoc(docRef);
-  const bug = normalizeBug(snapshot.id, (snapshot.data() ?? {}) as Record<string, unknown>);
+  return {
+    id: docRef.id,
+    scenarioId: payload.scenarioId,
+    title: payload.title,
+    description: payload.description ?? null,
+    status: payload.status,
+    createdAt: now,
+    updatedAt: now,
+  };
+};
 
-  return bug;
+const getDocsCacheFirst = async <T = DocumentData>(
+  reference: Query<T> | CollectionReference<T>,
+): Promise<ReturnType<typeof getDocsFromCache<T>>> => {
+  try {
+    return await getDocsFromCache(reference);
+  } catch {
+    return await getDocsFromServer(reference);
+  }
 };
 
 export const updateEnvironmentBug = async (

@@ -9,7 +9,14 @@ import {
   signOut,
   updateProfile as firebaseUpdateProfile,
 } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import {
+  doc,
+  getDocFromCache,
+  getDocFromServer,
+  serverTimestamp,
+  setDoc,
+  type DocumentReference,
+} from 'firebase/firestore';
 
 import type {
   AuthUser,
@@ -82,7 +89,7 @@ export const registerUser = async ({ role, ...payload }: RegisterPayload): Promi
   );
 
   if (!user.emailVerified) {
-    await sendEmailVerification(user);
+    void sendEmailVerification(user);
   }
 
   persistFirebaseAuthCookie(user);
@@ -111,18 +118,20 @@ export const loginUser = async ({ email, password }: LoginPayload): Promise<Auth
   const credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
 
   if (!credential.user.emailVerified) {
-    await sendEmailVerification(credential.user);
+    void sendEmailVerification(credential.user);
   }
 
   persistFirebaseAuthCookie(credential.user);
 
   const profile = await fetchUserProfile(credential.user.uid);
-  const organizationId = await addUserToOrganizationByEmailDomain({
-    uid: credential.user.uid,
-    email: credential.user.email ?? email,
-    displayName: credential.user.displayName ?? email,
-    photoURL: null,
-  });
+  const organizationId = profile.organizationId
+    ? profile.organizationId
+    : await addUserToOrganizationByEmailDomain({
+        uid: credential.user.uid,
+        email: credential.user.email ?? email,
+        displayName: credential.user.displayName ?? email,
+        photoURL: null,
+      });
 
   const resolvedProfile = {
     ...profile,
@@ -346,10 +355,10 @@ const persistUserProfile = async (
 
 const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
   const userDoc = doc(firebaseFirestore, USERS_COLLECTION, uid);
-  const snapshot = await getDoc(userDoc);
+  const snapshot = await getDocCacheFirst(userDoc);
 
   if (snapshot.exists()) {
-    const data = snapshot.data();
+    const data = snapshot.data({ serverTimestamps: 'estimate' });
     const profile = {
       role: (data.role as Role) ?? DEFAULT_ROLE,
       displayName: (data.displayName as string) ?? '',
@@ -373,6 +382,16 @@ const fetchUserProfile = async (uid: string): Promise<StoredProfile> => {
     browserstackCredentials: null,
     preferences: getInitialPreferences(),
   };
+};
+
+const getDocCacheFirst = async <T>(
+  reference: DocumentReference<T>,
+): Promise<ReturnType<typeof getDocFromCache<T>>> => {
+  try {
+    return await getDocFromCache(reference);
+  } catch {
+    return await getDocFromServer(reference);
+  }
 };
 
 const extractNameParts = (fullName: string): { firstName: string; lastName: string } => {
