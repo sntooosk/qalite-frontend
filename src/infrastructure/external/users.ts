@@ -2,11 +2,12 @@ import { collection, doc, limit, query } from 'firebase/firestore';
 
 import type { UserSummary } from '../../domain/entities/user';
 import { firebaseFirestore } from '../database/firebase';
-import { getDocCacheFirst, getDocsCacheThenServer } from './firestoreCache';
+import { createInMemoryCache, getDocCacheFirst, getDocsCacheThenServer } from './firestoreCache';
 
 const USERS_COLLECTION = 'users';
 const DEFAULT_DISPLAY_NAME = 'Usuário';
 const MAX_SUGGESTION_RESULTS = 15;
+const userSummaryCache = createInMemoryCache<UserSummary | null>();
 
 export const getUserSummariesByIds = async (userIds: string[]): Promise<UserSummary[]> => {
   if (userIds.length === 0) {
@@ -57,26 +58,29 @@ const fetchUserSummary = async (userId: string): Promise<UserSummary | null> => 
   }
 
   try {
-    const userRef = doc(firebaseFirestore, USERS_COLLECTION, userId);
-    const snapshot = await getDocCacheFirst(userRef);
+    return await userSummaryCache.fetch(userId, async () => {
+      const userRef = doc(firebaseFirestore, USERS_COLLECTION, userId);
+      const snapshot = await getDocCacheFirst(userRef);
 
-    if (!snapshot.exists()) {
-      return null;
-    }
+      if (!snapshot.exists()) {
+        return null;
+      }
 
-    const data = snapshot.data({ serverTimestamps: 'estimate' });
-    const email = typeof data?.email === 'string' ? data.email : '';
-    const displayName = resolveDisplayName(data?.displayName, email);
-    const photoURL = typeof data?.photoURL === 'string' ? data.photoURL : null;
+      const data = snapshot.data({ serverTimestamps: 'estimate' });
+      const email = typeof data?.email === 'string' ? data.email : '';
+      const displayName = resolveDisplayName(data?.displayName, email);
+      const photoURL = typeof data?.photoURL === 'string' ? data.photoURL : null;
 
-    return {
-      id: userId,
-      email,
-      displayName,
-      photoURL,
-    };
+      return {
+        id: userId,
+        email,
+        displayName,
+        photoURL,
+      };
+    });
   } catch (error) {
     console.error(error);
+    userSummaryCache.clear(userId);
     return null;
   }
 };

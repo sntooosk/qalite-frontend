@@ -46,11 +46,40 @@ import {
 import { translateEnvironmentOption } from '../../shared/utils/environmentOptions';
 import i18n from '../../lib/i18n';
 import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
-import { getDocsCacheThenServer } from './firestoreCache';
+import { createInMemoryCache, getDocsCacheThenServer } from './firestoreCache';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
 const environmentsCollection = collection(firebaseFirestore, ENVIRONMENTS_COLLECTION);
+const environmentBugCache = createInMemoryCache<EnvironmentBug[]>();
+
+type EnvironmentObserver = {
+  onChange: (environment: Environment | null) => void;
+  onError?: (error: Error) => void;
+};
+
+type EnvironmentListObserver = {
+  onChange: (environments: Environment[]) => void;
+  onError?: (error: Error) => void;
+};
+
+const environmentObservers = new Map<
+  string,
+  {
+    unsubscribe: () => void;
+    observers: Set<EnvironmentObserver>;
+    lastValue?: Environment | null;
+  }
+>();
+
+const environmentListObservers = new Map<
+  string,
+  {
+    unsubscribe: () => void;
+    observers: Set<EnvironmentListObserver>;
+    lastValue?: Environment[];
+  }
+>();
 
 export const SCENARIO_COMPLETED_STATUSES: EnvironmentScenarioStatus[] = [
   'concluido',
@@ -254,25 +283,74 @@ export const observeEnvironment = (
   callback: (environment: Environment | null) => void,
   onError?: (error: Error) => void,
 ): (() => void) => {
-  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
-  return onSnapshot(
-    environmentRef,
-    (snapshot) => {
-      if (!snapshot.exists()) {
-        callback(null);
+  const existing = environmentObservers.get(environmentId);
+  const observer: EnvironmentObserver = { onChange: callback, onError };
+
+  if (existing) {
+    existing.observers.add(observer);
+    if (existing.lastValue !== undefined) {
+      callback(existing.lastValue);
+    }
+    return () => {
+      const entry = environmentObservers.get(environmentId);
+      if (!entry) {
         return;
       }
+      entry.observers.delete(observer);
+      if (entry.observers.size === 0) {
+        entry.unsubscribe();
+        environmentObservers.delete(environmentId);
+      }
+    };
+  }
 
-      callback(
-        normalizeEnvironment(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {}),
-      );
+  const observers = new Set<EnvironmentObserver>([observer]);
+  const entry = {
+    observers,
+    unsubscribe: () => {},
+    lastValue: undefined as Environment | null | undefined,
+  };
+  environmentObservers.set(environmentId, entry);
+
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+  entry.unsubscribe = onSnapshot(
+    environmentRef,
+    (snapshot) => {
+      const nextValue = snapshot.exists()
+        ? normalizeEnvironment(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {})
+        : null;
+      const currentEntry = environmentObservers.get(environmentId);
+      if (!currentEntry) {
+        return;
+      }
+      currentEntry.lastValue = nextValue;
+      currentEntry.observers.forEach((subscriber) => subscriber.onChange(nextValue));
     },
     (error) => {
       console.error(error);
-      onError?.(error as Error);
-      callback(null);
+      const currentEntry = environmentObservers.get(environmentId);
+      if (!currentEntry) {
+        return;
+      }
+      currentEntry.lastValue = null;
+      currentEntry.observers.forEach((subscriber) => {
+        subscriber.onError?.(error as Error);
+        subscriber.onChange(null);
+      });
     },
   );
+
+  return () => {
+    const currentEntry = environmentObservers.get(environmentId);
+    if (!currentEntry) {
+      return;
+    }
+    currentEntry.observers.delete(observer);
+    if (currentEntry.observers.size === 0) {
+      currentEntry.unsubscribe();
+      environmentObservers.delete(environmentId);
+    }
+  };
 };
 
 export const observeEnvironments = (
@@ -280,6 +358,36 @@ export const observeEnvironments = (
   callback: (environments: Environment[]) => void,
   onError?: (error: Error) => void,
 ): (() => void) => {
+  const key = filters.storeId ? `store:${filters.storeId}` : 'all';
+  const existing = environmentListObservers.get(key);
+  const observer: EnvironmentListObserver = { onChange: callback, onError };
+
+  if (existing) {
+    existing.observers.add(observer);
+    if (existing.lastValue !== undefined) {
+      callback(existing.lastValue);
+    }
+    return () => {
+      const entry = environmentListObservers.get(key);
+      if (!entry) {
+        return;
+      }
+      entry.observers.delete(observer);
+      if (entry.observers.size === 0) {
+        entry.unsubscribe();
+        environmentListObservers.delete(key);
+      }
+    };
+  }
+
+  const observers = new Set<EnvironmentListObserver>([observer]);
+  const entry = {
+    observers,
+    unsubscribe: () => {},
+    lastValue: undefined as Environment[] | undefined,
+  };
+  environmentListObservers.set(key, entry);
+
   const constraints: QueryConstraint[] = [];
 
   if (filters.storeId) {
@@ -289,7 +397,7 @@ export const observeEnvironments = (
   const environmentsQuery =
     constraints.length > 0 ? query(environmentsCollection, ...constraints) : environmentsCollection;
 
-  return onSnapshot(
+  entry.unsubscribe = onSnapshot(
     environmentsQuery,
     (snapshot) => {
       const list = snapshot.docs
@@ -305,14 +413,38 @@ export const observeEnvironments = (
           return bDate - aDate;
         });
 
-      callback(list);
+      const currentEntry = environmentListObservers.get(key);
+      if (!currentEntry) {
+        return;
+      }
+      currentEntry.lastValue = list;
+      currentEntry.observers.forEach((subscriber) => subscriber.onChange(list));
     },
     (error) => {
       console.error(error);
-      onError?.(error as Error);
-      callback([]);
+      const currentEntry = environmentListObservers.get(key);
+      if (!currentEntry) {
+        return;
+      }
+      currentEntry.lastValue = [];
+      currentEntry.observers.forEach((subscriber) => {
+        subscriber.onError?.(error as Error);
+        subscriber.onChange([]);
+      });
     },
   );
+
+  return () => {
+    const currentEntry = environmentListObservers.get(key);
+    if (!currentEntry) {
+      return;
+    }
+    currentEntry.observers.delete(observer);
+    if (currentEntry.observers.size === 0) {
+      currentEntry.unsubscribe();
+      environmentListObservers.delete(key);
+    }
+  };
 };
 
 export const addEnvironmentUser = async (environmentId: string, userId: string): Promise<void> => {
@@ -435,21 +567,23 @@ export const uploadScenarioEvidence = async (
 };
 
 export const listEnvironmentBugs = async (environmentId: string): Promise<EnvironmentBug[]> => {
-  const bugsCollectionRef = getBugCollection(environmentId);
   try {
-    const snapshot = await getDocsCacheThenServer(bugsCollectionRef);
-    return snapshot.docs
-      .map((docSnapshot) =>
-        normalizeBug(
-          docSnapshot.id,
-          (docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {}) as Record<string, unknown>,
-        ),
-      )
-      .sort((first, second) => {
-        const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
-        const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
-        return secondDate - firstDate;
-      });
+    return await environmentBugCache.fetch(environmentId, async () => {
+      const bugsCollectionRef = getBugCollection(environmentId);
+      const snapshot = await getDocsCacheThenServer(bugsCollectionRef);
+      return snapshot.docs
+        .map((docSnapshot) =>
+          normalizeBug(
+            docSnapshot.id,
+            (docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {}) as Record<string, unknown>,
+          ),
+        )
+        .sort((first, second) => {
+          const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
+          const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
+          return secondDate - firstDate;
+        });
+    });
   } catch (error) {
     console.error(error);
     return [];
@@ -472,6 +606,7 @@ export const createEnvironmentBug = async (
     bugs: increment(1),
     updatedAt: serverTimestamp(),
   });
+  environmentBugCache.clear(environmentId);
 
   return {
     id: docRef.id,
@@ -506,6 +641,7 @@ export const updateEnvironmentBug = async (
     ...payload,
     updatedAt: serverTimestamp(),
   });
+  environmentBugCache.clear(environmentId);
 };
 
 export const deleteEnvironmentBug = async (environmentId: string, bugId: string): Promise<void> => {
@@ -517,6 +653,7 @@ export const deleteEnvironmentBug = async (environmentId: string, bugId: string)
     bugId,
   );
   await deleteDoc(bugRef);
+  environmentBugCache.clear(environmentId);
 
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
   await runTransaction(firebaseFirestore, async (transaction) => {

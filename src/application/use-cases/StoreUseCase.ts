@@ -20,6 +20,14 @@ export class StoreUseCases {
     return this.storeRepository.listByOrganization(organizationId);
   }
 
+  observeByOrganization(
+    organizationId: string,
+    onChange: (stores: Store[]) => void,
+    onError?: (error: Error) => void,
+  ): () => void {
+    return this.storeRepository.observeByOrganization(organizationId, onChange, onError);
+  }
+
   getById(id: string): Promise<Store | null> {
     return this.storeRepository.getById(id);
   }
