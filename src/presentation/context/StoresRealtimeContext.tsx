@@ -1,7 +1,7 @@
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 import type { Store } from '../../domain/entities/store';
-import { storeService } from '../../application/use-cases/StoreUseCase';
+import { listenToStores } from '../../infrastructure/external/stores';
 import { useOrganizationBranding } from './OrganizationBrandingContext';
 
 interface StoresRealtimeContextValue {
@@ -35,7 +35,7 @@ export const StoresRealtimeProvider = ({ children }: { children: ReactNode }) =>
 
     // Um único listener centralizado evita múltiplos canais "channel?VER=8" por componente.
     // Isso reduz leituras, pois o snapshot é compartilhado e mantém o cache local sincronizado.
-    const unsubscribe = storeService.observeByOrganization(
+    const unsubscribe = listenToStores(
       activeOrganization.id,
       (stores) => {
         setState({ stores, isLoading: false, error: null });

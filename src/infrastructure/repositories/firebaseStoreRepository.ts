@@ -10,7 +10,6 @@ import {
   deleteSuite,
   exportStoreData,
   getStore,
-  listenToStores,
   listCategories,
   listScenarios,
   listStores,
@@ -23,7 +22,6 @@ import {
 
 export const firebaseStoreRepository: StoreRepository = {
   listByOrganization: listStores,
-  observeByOrganization: listenToStores,
   getById: getStore,
   create: createStore,
   update: updateStore,

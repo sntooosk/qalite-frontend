@@ -7,6 +7,7 @@ import { EnvironmentStatusError } from '../../../shared/errors/firebaseErrors';
 import type { Environment, EnvironmentStatus } from '../../../domain/entities/environment';
 import type { StoreScenario, StoreSuite } from '../../../domain/entities/store';
 import type { UserSummary } from '../../../domain/entities/user';
+import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
 import { userService } from '../../../application/use-cases/UserUseCase';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -41,6 +42,7 @@ export const EnvironmentKanban = ({
   const [userProfilesMap, setUserProfilesMap] = useState<Record<string, UserSummary>>({});
   const [isArchiveMinimized, setIsArchiveMinimized] = useState(true);
   const [archivedVisibleCount, setArchivedVisibleCount] = useState(5);
+  const [bugCounts, setBugCounts] = useState<Record<string, number>>({});
   const { user } = useAuth();
   const { t } = useTranslation();
 
@@ -79,14 +81,36 @@ export const EnvironmentKanban = ({
     };
   }, [environments]);
 
-  const bugCounts = useMemo(
-    () =>
-      environments.reduce<Record<string, number>>((acc, environment) => {
-        acc[environment.id] = Number(environment.bugs ?? 0);
-        return acc;
-      }, {}),
-    [environments],
-  );
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchBugCounts = async () => {
+      try {
+        const entries = await Promise.all(
+          environments.map(async (environment) => {
+            const bugs = await environmentService.listBugs(environment.id);
+            return [environment.id, bugs.length] as const;
+          }),
+        );
+
+        if (isMounted) {
+          setBugCounts(Object.fromEntries(entries));
+        }
+      } catch (error) {
+        console.error('Failed to fetch environment bugs', error);
+      }
+    };
+
+    if (environments.length > 0) {
+      void fetchBugCounts();
+    } else {
+      setBugCounts({});
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [environments]);
 
   const grouped = useMemo(() => {
     const columns: Record<EnvironmentStatus, Environment[]> = {

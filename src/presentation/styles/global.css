@@ -2456,46 +2456,14 @@ button.store-summary-highlight:focus-visible {
   gap: 1rem;
 }
 
-.scenario-form .field-input,
-.scenario-form .field-textarea {
-  width: 100%;
-  box-sizing: border-box;
-}
-
 @media (min-width: 768px) {
   .scenario-form-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 767px) {
-  .scenario-form-actions,
-  .environment-form-actions,
-  .category-manager-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .scenario-form-actions .button,
-  .environment-form-actions .button,
-  .category-manager-actions .button {
-    width: 100%;
-  }
-
-  .category-manager-actions .field-input {
-    width: 100%;
-  }
-
-  .environment-bugs__actions-content .action-button {
-    padding: 0.35rem 0.6rem;
-  }
-}
-
 .scenario-table-wrapper {
-  width: 100%;
   overflow-x: auto;
-  padding-bottom: 0.5rem;
-  -webkit-overflow-scrolling: touch;
 }
 
 .scenario-filter-bar {
@@ -2637,13 +2605,6 @@ button.store-summary-highlight:focus-visible {
 }
 
 .table-scroll-area {
-  width: 100%;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
-  -webkit-overflow-scrolling: touch;
-}
-
-.table-scroll {
   width: 100%;
   overflow-x: auto;
   padding-bottom: 0.5rem;
@@ -4067,12 +4028,6 @@ button.store-summary-highlight:focus-visible {
   gap: 1rem;
 }
 
-.environment-form .field-input,
-.environment-form .field-textarea {
-  width: 100%;
-  box-sizing: border-box;
-}
-
 .environment-form-actions {
   display: flex;
   flex-wrap: wrap;
@@ -4268,20 +4223,6 @@ button.store-summary-highlight:focus-visible {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.environment-bugs .data-table {
-  min-width: 720px;
-}
-
-.environment-bugs__actions-content .action-button {
-  white-space: normal;
-  text-align: left;
-}
-
-.environment-bugs__actions-content .action-button__label {
-  display: inline;
 }
 
 .scenario-actions {
