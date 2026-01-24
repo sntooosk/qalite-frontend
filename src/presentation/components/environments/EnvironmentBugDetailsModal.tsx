@@ -30,8 +30,7 @@ export const EnvironmentBugDetailsModal = ({
     }
 
     return (
-      environment.scenarios?.[bug.scenarioId]?.titulo ||
-      t('environmentBugList.scenarioRemoved')
+      environment.scenarios?.[bug.scenarioId]?.titulo || t('environmentBugList.scenarioRemoved')
     );
   }, [bug?.scenarioId, environment.scenarios, t]);
 

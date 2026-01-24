@@ -103,9 +103,7 @@ export const EnvironmentBugModal = ({
     setStatus('aberto');
     setSeverity('media');
     setPriority('media');
-    setReportedBy(
-      user?.displayName ?? user?.email ?? t('environmentBugModal.reportedByFallback'),
-    );
+    setReportedBy(user?.displayName ?? user?.email ?? t('environmentBugModal.reportedByFallback'));
   }, [bug, initialScenarioId, isOpen, t, user?.displayName, user?.email]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {

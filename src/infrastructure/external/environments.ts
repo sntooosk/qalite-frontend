@@ -46,7 +46,7 @@ import {
 import { translateEnvironmentOption } from '../../shared/utils/environmentOptions';
 import i18n from '../../lib/i18n';
 import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
-import { getDocsCacheFirst, getDocsCacheThenServer } from './firestoreCache';
+import { getDocsCacheThenServer } from './firestoreCache';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';

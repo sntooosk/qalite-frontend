@@ -33,11 +33,7 @@ import {
   normalizeCriticalityEnum,
 } from '../../shared/utils/scenarioEnums';
 import { firebaseFirestore } from '../database/firebase';
-import {
-  getDocCacheFirst,
-  getDocsCacheFirst,
-  getDocsCacheThenServer,
-} from './firestoreCache';
+import { getDocCacheFirst, getDocsCacheFirst, getDocsCacheThenServer } from './firestoreCache';
 
 const STORES_COLLECTION = 'stores';
 const SCENARIOS_SUBCOLLECTION = 'scenarios';
