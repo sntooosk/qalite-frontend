@@ -2492,7 +2492,10 @@ button.store-summary-highlight:focus-visible {
 }
 
 .scenario-table-wrapper {
+  width: 100%;
   overflow-x: auto;
+  padding-bottom: 0.5rem;
+  -webkit-overflow-scrolling: touch;
 }
 
 .scenario-filter-bar {
