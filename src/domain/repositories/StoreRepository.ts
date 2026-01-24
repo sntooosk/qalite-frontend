@@ -13,6 +13,11 @@ import type {
 
 export interface StoreRepository {
   listByOrganization: (organizationId: string) => Promise<Store[]>;
+  observeByOrganization: (
+    organizationId: string,
+    onChange: (stores: Store[]) => void,
+    onError?: (error: Error) => void,
+  ) => () => void;
   getById: (id: string) => Promise<Store | null>;
   create: (store: CreateStorePayload) => Promise<Store>;
   update: (id: string, store: UpdateStorePayload) => Promise<Store>;
