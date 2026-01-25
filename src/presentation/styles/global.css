@@ -1790,20 +1790,36 @@ button.store-summary-highlight:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.55rem 1.2rem;
   border-radius: 999px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
   color: var(--color-text-primary);
   font-weight: 600;
   cursor: pointer;
   transition:
     background var(--transition-base),
-    box-shadow var(--transition-base);
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    transform var(--transition-base);
 }
 
 .back-button:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border-strong);
   box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.back-button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.back-button:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
 }
 
 .profile-header {

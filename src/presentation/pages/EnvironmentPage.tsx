@@ -767,6 +767,14 @@ export const EnvironmentPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leaveEnvironment, navigate, showToast, translation]);
 
+  const handleEnvironmentDeleted = useCallback(() => {
+    if (environment?.storeId) {
+      navigate(`/stores/${environment.storeId}?view=environments`, { replace: true });
+      return;
+    }
+    navigate('/dashboard', { replace: true });
+  }, [environment?.storeId, navigate]);
+
   useEffect(() => {
     if (!shouldAutoJoinFromInvite) {
       return;
@@ -824,7 +832,7 @@ export const EnvironmentPage = () => {
               </h1>
               <p className="section-subtitle">
                 {environment.tipoAmbiente} {translation('environment.typeSeparator')}{' '}
-                {environment.tipoTeste}
+                {translateOptionValue(environment.tipoTeste)}
               </p>
               {headerMeta.length > 0 && (
                 <p className="section-subtitle">
@@ -1003,7 +1011,7 @@ export const EnvironmentPage = () => {
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         environment={environment ?? null}
-        onDeleted={() => navigate(-1)}
+        onDeleted={handleEnvironmentDeleted}
       />
       {environment && (
         <EnvironmentBugModal

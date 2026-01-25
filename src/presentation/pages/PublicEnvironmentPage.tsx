@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { Layout } from '../components/Layout';
+import { translateEnvironmentOption } from '../constants/environmentOptions';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
 import { EnvironmentBugList } from '../components/environments/EnvironmentBugList';
 import { EnvironmentSummaryCard } from '../components/environments/EnvironmentSummaryCard';
@@ -77,7 +78,7 @@ export const PublicEnvironmentPage = () => {
           <div>
             <h1 className="section-title">{environment.identificador}</h1>
             <p className="section-subtitle">
-              {environment.tipoAmbiente} · {environment.tipoTeste}
+              {environment.tipoAmbiente} · {translateEnvironmentOption(environment.tipoTeste, t)}
             </p>
             {headerMeta.length > 0 && <p className="section-subtitle">{headerMeta.join(' · ')}</p>}
           </div>
