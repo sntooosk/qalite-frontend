@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import type {
   EnvironmentScenarioPlatform,
@@ -7,12 +8,13 @@ import type {
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
 
 export const useScenarioEvidence = (environmentId: string | null | undefined) => {
+  const { t } = useTranslation();
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleEvidenceUpload = useCallback(
     async (scenarioId: string, link: string) => {
       if (!environmentId) {
-        throw new Error('Ambiente inválido.');
+        throw new Error(t('environmentEvidenceTable.invalidEnvironment'));
       }
 
       setIsUpdating(true);
@@ -22,7 +24,7 @@ export const useScenarioEvidence = (environmentId: string | null | undefined) =>
         setIsUpdating(false);
       }
     },
-    [environmentId],
+    [environmentId, t],
   );
 
   const changeScenarioStatus = useCallback(
@@ -32,7 +34,7 @@ export const useScenarioEvidence = (environmentId: string | null | undefined) =>
       platform: EnvironmentScenarioPlatform,
     ) => {
       if (!environmentId) {
-        throw new Error('Ambiente inválido.');
+        throw new Error(t('environmentEvidenceTable.invalidEnvironment'));
       }
 
       setIsUpdating(true);
@@ -42,7 +44,7 @@ export const useScenarioEvidence = (environmentId: string | null | undefined) =>
         setIsUpdating(false);
       }
     },
-    [environmentId],
+    [environmentId, t],
   );
 
   return { isUpdating, handleEvidenceUpload, changeScenarioStatus };
