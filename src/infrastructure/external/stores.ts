@@ -33,50 +33,12 @@ import {
   normalizeCriticalityEnum,
 } from '../../shared/utils/scenarioEnums';
 import { firebaseFirestore } from '../database/firebase';
-import {
-  createInMemoryCache,
-  getDocCacheFirst,
-  getDocsCacheFirst,
-  getDocsCacheThenServer,
-} from './firestoreCache';
+import { getDocCacheFirst, getDocsCacheFirst, getDocsCacheThenServer } from './firestoreCache';
 
 const STORES_COLLECTION = 'stores';
 const SCENARIOS_SUBCOLLECTION = 'scenarios';
 const SUITES_SUBCOLLECTION = 'suites';
 const CATEGORIES_SUBCOLLECTION = 'categories';
-
-const storeListCache = createInMemoryCache<Store[]>();
-const storeByIdCache = createInMemoryCache<Store | null>();
-const storeScenariosCache = createInMemoryCache<StoreScenario[]>();
-const storeSuitesCache = createInMemoryCache<StoreSuite[]>();
-const storeCategoriesCache = createInMemoryCache<StoreCategory[]>();
-
-const storeListKey = (organizationId: string) => `org:${organizationId}`;
-
-const updateCachedList = <T extends { id: string }>(
-  cache: ReturnType<typeof createInMemoryCache<T[]>>,
-  key: string,
-  updater: (items: T[]) => T[],
-) => {
-  const current = cache.get(key);
-  if (!current) {
-    return;
-  }
-  cache.set(key, updater(current));
-};
-
-const clearStoreCaches = (storeId: string, organizationId?: string | null) => {
-  storeByIdCache.clear(storeId);
-  storeScenariosCache.clear(storeId);
-  storeSuitesCache.clear(storeId);
-  storeCategoriesCache.clear(storeId);
-
-  if (organizationId) {
-    storeListCache.clear(storeListKey(organizationId));
-  } else {
-    storeListCache.clearAll();
-  }
-};
 
 const timestampToDate = (value: unknown): Date | null => {
   if (value instanceof Timestamp) {
@@ -164,16 +126,14 @@ const normalizeCategoryInput = (input: StoreCategoryInput): StoreCategoryInput =
 });
 
 export const listStores = async (organizationId: string): Promise<Store[]> => {
+  const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
+  const storesQuery = query(storesCollection, where('organizationId', '==', organizationId));
   try {
-    return await storeListCache.fetch(storeListKey(organizationId), async () => {
-      const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
-      const storesQuery = query(storesCollection, where('organizationId', '==', organizationId));
-      const snapshot = await getDocsCacheThenServer(storesQuery);
-      const stores = snapshot.docs.map((docSnapshot) =>
-        mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-      );
-      return stores.sort((a, b) => a.name.localeCompare(b.name));
-    });
+    const snapshot = await getDocsCacheThenServer(storesQuery);
+    const stores = snapshot.docs.map((docSnapshot) =>
+      mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    );
+    return stores.sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
     console.error(error);
     return [];
@@ -195,10 +155,7 @@ export const listenToStores = (
       const stores = snapshot.docs.map((docSnapshot) =>
         mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
       );
-      const sorted = stores.sort((a, b) => a.name.localeCompare(b.name));
-      storeListCache.set(storeListKey(organizationId), sorted);
-      sorted.forEach((store) => storeByIdCache.set(store.id, store));
-      onChange(sorted);
+      onChange(stores.sort((a, b) => a.name.localeCompare(b.name)));
     },
     (error) => {
       onError?.(error);
@@ -207,14 +164,12 @@ export const listenToStores = (
 };
 
 export const getStore = async (storeId: string): Promise<Store | null> => {
+  const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   try {
-    return await storeByIdCache.fetch(storeId, async () => {
-      const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-      const snapshot = await getDocCacheFirst(storeRef);
-      return snapshot.exists()
-        ? mapStore(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {})
-        : null;
-    });
+    const snapshot = await getDocCacheFirst(storeRef);
+    return snapshot.exists()
+      ? mapStore(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {})
+      : null;
   } catch (error) {
     console.error(error);
     return null;
@@ -234,7 +189,7 @@ export const createStore = async (payload: CreateStorePayload): Promise<Store> =
     updatedAt: serverTimestamp(),
   });
 
-  const created: Store = {
+  return {
     id: docRef.id,
     organizationId: payload.organizationId,
     name: payload.name.trim(),
@@ -244,13 +199,6 @@ export const createStore = async (payload: CreateStorePayload): Promise<Store> =
     createdAt: now,
     updatedAt: now,
   };
-
-  storeByIdCache.set(created.id, created);
-  updateCachedList(storeListCache, storeListKey(payload.organizationId), (items) =>
-    [...items, created].sort((a, b) => a.name.localeCompare(b.name)),
-  );
-
-  return created;
 };
 
 export const updateStore = async (storeId: string, payload: UpdateStorePayload): Promise<Store> => {
@@ -264,19 +212,12 @@ export const updateStore = async (storeId: string, payload: UpdateStorePayload):
 
   const snapshot = await getDocCacheFirst(storeRef);
   const updated = mapStore(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {});
-  storeByIdCache.set(storeId, updated);
-  updateCachedList(storeListCache, storeListKey(updated.organizationId), (items) =>
-    items
-      .map((item) => (item.id === storeId ? updated : item))
-      .sort((a, b) => a.name.localeCompare(b.name)),
-  );
 
   return updated;
 };
 
 export const deleteStore = async (storeId: string): Promise<void> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-  const cachedStore = storeByIdCache.get(storeId);
   const snapshot = await getDoc(storeRef);
 
   if (!snapshot.exists()) {
@@ -298,25 +239,17 @@ export const deleteStore = async (storeId: string): Promise<void> => {
 
   batch.delete(storeRef);
   await batch.commit();
-  if (cachedStore?.organizationId) {
-    updateCachedList(storeListCache, storeListKey(cachedStore.organizationId), (items) =>
-      items.filter((item) => item.id !== storeId),
-    );
-  }
-  clearStoreCaches(storeId, cachedStore?.organizationId);
 };
 
 export const listScenarios = async (storeId: string): Promise<StoreScenario[]> => {
+  const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
+  const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
+  const scenariosQuery = query(scenariosCollection, orderBy('title'));
   try {
-    return await storeScenariosCache.fetch(storeId, async () => {
-      const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-      const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
-      const scenariosQuery = query(scenariosCollection, orderBy('title'));
-      const snapshot = await getDocsCacheThenServer(scenariosQuery);
-      return snapshot.docs.map((docSnapshot) =>
-        mapScenario(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-      );
-    });
+    const snapshot = await getDocsCacheThenServer(scenariosQuery);
+    return snapshot.docs.map((docSnapshot) =>
+      mapScenario(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    );
   } catch (error) {
     console.error(error);
     return [];
@@ -357,7 +290,7 @@ export const createScenario = async (
     return newScenarioRef;
   });
 
-  const created: StoreScenario = {
+  return {
     id: scenarioRef.id,
     storeId,
     title: normalizedScenario.title,
@@ -369,24 +302,6 @@ export const createScenario = async (
     createdAt: now,
     updatedAt: now,
   };
-
-  const cachedStore = storeByIdCache.get(storeId);
-  if (cachedStore) {
-    const updatedStore = {
-      ...cachedStore,
-      scenarioCount: cachedStore.scenarioCount + 1,
-    };
-    storeByIdCache.set(storeId, updatedStore);
-    updateCachedList(storeListCache, storeListKey(updatedStore.organizationId), (items) =>
-      items.map((item) => (item.id === storeId ? updatedStore : item)),
-    );
-  }
-
-  updateCachedList(storeScenariosCache, storeId, (items) =>
-    [...items, created].sort((a, b) => a.title.localeCompare(b.title)),
-  );
-
-  return created;
 };
 
 export const updateScenario = async (
@@ -410,11 +325,6 @@ export const updateScenario = async (
     scenarioSnapshot.id,
     scenarioSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
   );
-  updateCachedList(storeScenariosCache, storeId, (items) =>
-    items
-      .map((item) => (item.id === scenarioId ? updatedScenario : item))
-      .sort((a, b) => a.title.localeCompare(b.title)),
-  );
 
   return updatedScenario;
 };
@@ -422,7 +332,6 @@ export const updateScenario = async (
 export const deleteScenario = async (storeId: string, scenarioId: string): Promise<void> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const scenarioRef = doc(storeRef, SCENARIOS_SUBCOLLECTION, scenarioId);
-  const cachedStore = storeByIdCache.get(storeId);
 
   await runTransaction(firebaseFirestore, async (transaction) => {
     const storeSnapshot = await transaction.get(storeRef);
@@ -440,33 +349,17 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
       updatedAt: serverTimestamp(),
     });
   });
-
-  if (cachedStore) {
-    const updatedStore = {
-      ...cachedStore,
-      scenarioCount: Math.max(cachedStore.scenarioCount - 1, 0),
-    };
-    storeByIdCache.set(storeId, updatedStore);
-    updateCachedList(storeListCache, storeListKey(updatedStore.organizationId), (items) =>
-      items.map((item) => (item.id === storeId ? updatedStore : item)),
-    );
-  }
-  updateCachedList(storeScenariosCache, storeId, (items) =>
-    items.filter((item) => item.id !== scenarioId),
-  );
 };
 
 export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {
+  const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
+  const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
+  const suitesQuery = query(suitesCollection, orderBy('name'));
   try {
-    return await storeSuitesCache.fetch(storeId, async () => {
-      const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-      const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
-      const suitesQuery = query(suitesCollection, orderBy('name'));
-      const snapshot = await getDocsCacheThenServer(suitesQuery);
-      return snapshot.docs.map((docSnapshot) =>
-        mapSuite(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-      );
-    });
+    const snapshot = await getDocsCacheThenServer(suitesQuery);
+    return snapshot.docs.map((docSnapshot) =>
+      mapSuite(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    );
   } catch (error) {
     console.error(error);
     return [];
@@ -492,7 +385,7 @@ export const createSuite = async (
     updatedAt: serverTimestamp(),
   });
 
-  const created: StoreSuite = {
+  return {
     id: suiteRef.id,
     storeId: payload.storeId,
     name: normalized.name,
@@ -501,12 +394,6 @@ export const createSuite = async (
     createdAt: now,
     updatedAt: now,
   };
-
-  updateCachedList(storeSuitesCache, payload.storeId, (items) =>
-    [...items, created].sort((a, b) => a.name.localeCompare(b.name)),
-  );
-
-  return created;
 };
 
 export const updateSuite = async (
@@ -533,11 +420,6 @@ export const updateSuite = async (
     updatedSnapshot.id,
     updatedSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
   );
-  updateCachedList(storeSuitesCache, storeId, (items) =>
-    items
-      .map((item) => (item.id === suiteId ? updatedSuite : item))
-      .sort((a, b) => a.name.localeCompare(b.name)),
-  );
 
   return updatedSuite;
 };
@@ -552,22 +434,17 @@ export const deleteSuite = async (storeId: string, suiteId: string): Promise<voi
   }
 
   await deleteDoc(suiteRef);
-  updateCachedList(storeSuitesCache, storeId, (items) =>
-    items.filter((item) => item.id !== suiteId),
-  );
 };
 
 export const listCategories = async (storeId: string): Promise<StoreCategory[]> => {
+  const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
+  const categoriesCollection = collection(storeRef, CATEGORIES_SUBCOLLECTION);
+  const categoriesQuery = query(categoriesCollection, orderBy('searchName'));
   try {
-    return await storeCategoriesCache.fetch(storeId, async () => {
-      const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-      const categoriesCollection = collection(storeRef, CATEGORIES_SUBCOLLECTION);
-      const categoriesQuery = query(categoriesCollection, orderBy('searchName'));
-      const snapshot = await getDocsCacheThenServer(categoriesQuery);
-      return snapshot.docs.map((docSnapshot) =>
-        mapCategory(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-      );
-    });
+    const snapshot = await getDocsCacheThenServer(categoriesQuery);
+    return snapshot.docs.map((docSnapshot) =>
+      mapCategory(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    );
   } catch (error) {
     console.error(error);
     return [];
@@ -606,19 +483,13 @@ export const createCategory = async (
   });
 
   const now = new Date();
-  const created: StoreCategory = {
+  return {
     id: categoryRef.id,
     storeId: payload.storeId,
     name,
     createdAt: now,
     updatedAt: now,
   };
-
-  updateCachedList(storeCategoriesCache, payload.storeId, (items) =>
-    [...items, created].sort((a, b) => a.name.localeCompare(b.name)),
-  );
-
-  return created;
 };
 
 export const updateCategory = async (
@@ -660,21 +531,14 @@ export const updateCategory = async (
 
   if (previousName && previousName !== name) {
     await updateScenarioCategories(storeId, previousName, name);
-    storeScenariosCache.clear(storeId);
   }
 
   const updatedSnapshot = await getDocCacheFirst(categoryRef);
-  const updatedCategory = mapCategory(
+  return mapCategory(
     storeId,
     updatedSnapshot.id,
     updatedSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
   );
-  updateCachedList(storeCategoriesCache, storeId, (items) =>
-    items
-      .map((item) => (item.id === categoryId ? updatedCategory : item))
-      .sort((a, b) => a.name.localeCompare(b.name)),
-  );
-  return updatedCategory;
 };
 
 export const deleteCategory = async (
@@ -706,9 +570,6 @@ export const deleteCategory = async (
   }
 
   await deleteDoc(categoryRef);
-  updateCachedList(storeCategoriesCache, storeId, (items) =>
-    items.filter((item) => item.id !== categoryId),
-  );
 };
 
 const updateScenarioCategories = async (
