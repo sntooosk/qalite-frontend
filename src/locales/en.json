@@ -26,10 +26,6 @@
     "scenarios": "Scenarios",
     "suites": "Suites",
     "loadingAccess": "Loading access...",
-    "pageLoader": {
-      "loading": "Loading...",
-      "loadingPage": "Loading page..."
-    },
     "backToHome": "Back to homepage",
     "saveChanges": "Save changes",
     "saving": "Saving...",
@@ -673,7 +669,6 @@
     "environmentBugList": {
       "bugRemovedSuccess": "Bug removed successfully.",
       "bugRemovedError": "Could not remove the bug.",
-      "loadError": "Unable to load the bugs.",
       "notLinked": "Not linked",
       "scenarioRemoved": "Scenario removed",
       "bugRegistry": "Bug registry",
@@ -761,11 +756,7 @@
       "toast_sem_org": "Associate this store with an organization to record scenario time.",
       "toast_save_success": "Evidence link saved successfully.",
       "toast_save_error": "Failed to save evidence link.",
-      "toast_exec_error": "Failed to register scenario execution time.",
-      "invalidEnvironment": "Invalid environment."
-    },
-    "storesRealtime": {
-      "syncError": "Unable to sync stores in real time."
+      "toast_exec_error": "Failed to register scenario execution time."
     },
     "environmentExport": {
       "title": "Environment {{id}}",

@@ -1727,7 +1727,7 @@ export const StoreSummaryPage = () => {
                                         isLoading={updatingCategoryId === category.id}
                                         loadingText={t('storeSummary.saving')}
                                       >
-                                        {t('storeManagement.saveCategory')}
+                                        Salvar
                                       </Button>
                                       <Button
                                         type="button"
