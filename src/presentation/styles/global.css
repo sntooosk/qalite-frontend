@@ -3578,6 +3578,10 @@ button.store-summary-highlight:focus-visible {
   min-height: 420px;
 }
 
+.scenario-form.create-card {
+  display: grid;
+}
+
 .create-card__header {
   display: flex;
   flex-direction: column;
