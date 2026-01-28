@@ -1,5 +1,4 @@
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import type { Store } from '../../domain/entities/store';
 import { listenToStores } from '../../infrastructure/external/stores';
@@ -22,7 +21,6 @@ const initialState = {
 
 export const StoresRealtimeProvider = ({ children }: { children: ReactNode }) => {
   const { activeOrganization } = useOrganizationBranding();
-  const { t } = useTranslation();
   const [state, setState] = useState<{ stores: Store[]; isLoading: boolean; error: string | null }>(
     initialState,
   );
@@ -47,7 +45,7 @@ export const StoresRealtimeProvider = ({ children }: { children: ReactNode }) =>
         setState((previous) => ({
           ...previous,
           isLoading: false,
-          error: t('storesRealtime.syncError'),
+          error: 'Não foi possível sincronizar as lojas em tempo real.',
         }));
       },
     );
@@ -55,7 +53,7 @@ export const StoresRealtimeProvider = ({ children }: { children: ReactNode }) =>
     return () => {
       unsubscribe();
     };
-  }, [activeOrganization?.id, t]);
+  }, [activeOrganization?.id]);
 
   const value = useMemo<StoresRealtimeContextValue>(
     () => ({

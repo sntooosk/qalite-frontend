@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import type { EnvironmentBug } from '../../domain/entities/environment';
 import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
 
 export const useEnvironmentBugs = (environmentId: string | null | undefined) => {
-  const { t } = useTranslation();
   const [bugs, setBugs] = useState<EnvironmentBug[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(environmentId));
   const [error, setError] = useState<string | null>(null);
@@ -27,11 +25,11 @@ export const useEnvironmentBugs = (environmentId: string | null | undefined) => 
     } catch (fetchError) {
       console.error(fetchError);
       setBugs([]);
-      setError(t('environmentBugList.loadError'));
+      setError('Não foi possível carregar os bugs.');
     } finally {
       setIsLoading(false);
     }
-  }, [environmentId, t]);
+  }, [environmentId]);
 
   useEffect(() => {
     void fetchBugs();

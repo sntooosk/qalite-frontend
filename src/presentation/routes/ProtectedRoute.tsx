@@ -1,5 +1,4 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 
 import type { Role } from '../../domain/entities/auth';
 import { useAuth } from '../hooks/useAuth';
@@ -11,10 +10,9 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute = ({ redirectTo = '/login' }: ProtectedRouteProps) => {
   const { user, isInitializing } = useAuth();
-  const { t } = useTranslation();
 
   if (isInitializing) {
-    return <PageLoader message={t('loadingAccess')} />;
+    return <PageLoader message="Carregando acesso..." />;
   }
 
   if (!user) {
@@ -35,10 +33,9 @@ export const RoleProtectedRoute = ({
   redirectTo,
 }: RoleProtectedRouteProps) => {
   const { user, hasRole, isInitializing } = useAuth();
-  const { t } = useTranslation();
 
   if (isInitializing) {
-    return <PageLoader message={t('loadingAccess')} />;
+    return <PageLoader message="Carregando acesso..." />;
   }
 
   if (!user) {

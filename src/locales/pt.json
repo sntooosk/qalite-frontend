@@ -26,10 +26,6 @@
     "select": "Selecionar",
     "scenarios": "Cenários",
     "loadingAccess": "Carregando Acesso...",
-    "pageLoader": {
-      "loading": "Carregando...",
-      "loadingPage": "Carregando página..."
-    },
     "backToHome": "Voltar para o início",
     "saveChanges": "Salvar alterações",
     "saving": "Salvando...",
@@ -674,7 +670,6 @@
     "environmentBugList": {
       "bugRemovedSuccess": "Bug removido com sucesso.",
       "bugRemovedError": "Não foi possível remover o bug.",
-      "loadError": "Não foi possível carregar os bugs.",
       "notLinked": "Não vinculado",
       "scenarioRemoved": "Cenário removido",
       "bugRegistry": "Registro de bugs",
@@ -764,11 +759,7 @@
       "toast_sem_org": "Associe a loja a uma organização para registrar o tempo do cenário.",
       "toast_save_success": "Link de evidência salvo com sucesso.",
       "toast_save_error": "Não foi possível salvar o link da evidência.",
-      "toast_exec_error": "Não foi possível registrar o tempo do cenário.",
-      "invalidEnvironment": "Ambiente inválido."
-    },
-    "storesRealtime": {
-      "syncError": "Não foi possível sincronizar as lojas em tempo real."
+      "toast_exec_error": "Não foi possível registrar o tempo do cenário."
     },
     "environmentExport": {
       "title": "Ambiente {{id}}",

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import type { Organization } from '../../domain/entities/organization';
 import type { Store } from '../../domain/entities/store';
@@ -25,7 +24,6 @@ const buildInitialState = (): OrganizationStoresState => ({
 
 export const useOrganizationStores = (organizationId: string | null) => {
   const { showToast } = useToast();
-  const { t } = useTranslation();
   const [state, setState] = useState<OrganizationStoresState>(buildInitialState);
 
   useEffect(() => {
@@ -60,7 +58,7 @@ export const useOrganizationStores = (organizationId: string | null) => {
         if (!isSubscribed) {
           return;
         }
-        const message = t('userPage.loadingError');
+        const message = 'Não foi possível carregar suas lojas agora. Tente novamente mais tarde.';
         setState((previous) => ({ ...previous, status: 'error', error: message }));
         showToast({ type: 'error', message });
       }
@@ -71,7 +69,7 @@ export const useOrganizationStores = (organizationId: string | null) => {
     return () => {
       isSubscribed = false;
     };
-  }, [organizationId, showToast, t]);
+  }, [organizationId, showToast]);
 
   const derivedState = useMemo(
     () => ({
