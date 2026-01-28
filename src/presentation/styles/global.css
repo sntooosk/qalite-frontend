@@ -3578,10 +3578,6 @@ button.store-summary-highlight:focus-visible {
   min-height: 420px;
 }
 
-.scenario-form.create-card {
-  display: grid;
-}
-
 .create-card__header {
   display: flex;
   flex-direction: column;
@@ -3593,10 +3589,6 @@ button.store-summary-highlight:focus-visible {
     padding: 1.25rem;
     min-height: 0;
     border-radius: 14px;
-  }
-
-  .scenario-form.create-card {
-    gap: 0.85rem;
   }
 
   .create-card__header {

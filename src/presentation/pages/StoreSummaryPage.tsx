@@ -1587,12 +1587,7 @@ export const StoreSummaryPage = () => {
                 </div>
 
                 {store && canManageScenarios && viewMode === 'scenarios' && (
-                  <form
-                    ref={scenarioFormRef}
-                    className="scenario-form create-card"
-                    onSubmit={handleScenarioSubmit}
-                    data-testid="scenario-form"
-                  >
+                  <div className="create-card">
                     <div className="create-card__header">
                       <h3 className="form-title">
                         {editingScenarioId
@@ -1603,220 +1598,227 @@ export const StoreSummaryPage = () => {
                         {t('storeSummary.createScenarioDescription')}
                       </p>
                     </div>
-                    {scenarioFormError && (
-                      <p className="form-message form-message--error">{scenarioFormError}</p>
-                    )}
-                    <TextInput
-                      id="scenario-title"
-                      label={t('storeSummary.title')}
-                      value={scenarioForm.title}
-                      onChange={handleScenarioFormChange('title')}
-                      required
-                      dataTestId="scenario-title"
-                    />
-                    <div className="scenario-form-grid">
-                      <SelectInput
-                        id="scenario-category"
-                        label={t('storeSummary.category')}
-                        value={scenarioForm.category}
-                        onChange={handleScenarioFormChange('category')}
-                        options={categorySelectOptions}
+                    <form
+                      ref={scenarioFormRef}
+                      className="scenario-form"
+                      onSubmit={handleScenarioSubmit}
+                      data-testid="scenario-form"
+                    >
+                      {scenarioFormError && (
+                        <p className="form-message form-message--error">{scenarioFormError}</p>
+                      )}
+                      <TextInput
+                        id="scenario-title"
+                        label={t('storeSummary.title')}
+                        value={scenarioForm.title}
+                        onChange={handleScenarioFormChange('title')}
                         required
-                        dataTestId="scenario-category"
+                        dataTestId="scenario-title"
                       />
-                      <SelectInput
-                        id="scenario-automation"
-                        label={t('storeSummary.automation')}
-                        value={scenarioForm.automation}
-                        onChange={handleScenarioFormChange('automation')}
-                        options={automationSelectOptions}
-                        required
-                        dataTestId="scenario-automation"
-                      />
-                      <SelectInput
-                        id="scenario-criticality"
-                        label={t('storeSummary.criticality')}
-                        value={scenarioForm.criticality}
-                        onChange={handleScenarioFormChange('criticality')}
-                        options={criticalitySelectOptions}
-                        required
-                        dataTestId="scenario-criticality"
-                      />
-                    </div>
-                    <div className="category-manager">
-                      <div className="category-manager-header">
-                        <div className="category-manager-header-text">
-                          <p className="field-label">{t('storeSummary.availableCategories')}</p>
-                          <p className="category-manager-description">
-                            {t('storeSummary.categoryManager')}
-                          </p>
+                      <div className="scenario-form-grid">
+                        <SelectInput
+                          id="scenario-category"
+                          label={t('storeSummary.category')}
+                          value={scenarioForm.category}
+                          onChange={handleScenarioFormChange('category')}
+                          options={categorySelectOptions}
+                          required
+                          dataTestId="scenario-category"
+                        />
+                        <SelectInput
+                          id="scenario-automation"
+                          label={t('storeSummary.automation')}
+                          value={scenarioForm.automation}
+                          onChange={handleScenarioFormChange('automation')}
+                          options={automationSelectOptions}
+                          required
+                          dataTestId="scenario-automation"
+                        />
+                        <SelectInput
+                          id="scenario-criticality"
+                          label={t('storeSummary.criticality')}
+                          value={scenarioForm.criticality}
+                          onChange={handleScenarioFormChange('criticality')}
+                          options={criticalitySelectOptions}
+                          required
+                          dataTestId="scenario-criticality"
+                        />
+                      </div>
+                      <div className="category-manager">
+                        <div className="category-manager-header">
+                          <div className="category-manager-header-text">
+                            <p className="field-label">{t('storeSummary.availableCategories')}</p>
+                            <p className="category-manager-description">
+                              {t('storeSummary.categoryManager')}
+                            </p>
+                          </div>
+                          {canToggleCategoryList && (
+                            <button
+                              type="button"
+                              className="category-manager-toggle"
+                              onClick={() =>
+                                setIsCategoryListCollapsed((previousState) => !previousState)
+                              }
+                              aria-expanded={!isCategoryListCollapsed}
+                            >
+                              {isCategoryListCollapsed
+                                ? t('storeSummary.maxList')
+                                : t('storeSummary.minList')}
+                            </button>
+                          )}
                         </div>
-                        {canToggleCategoryList && (
-                          <button
+                        <div className="category-manager-actions">
+                          <input
+                            type="text"
+                            className="field-input"
+                            placeholder={t('storeSummary.newCategory')}
+                            value={newCategoryName}
+                            onChange={(event) => {
+                              setNewCategoryName(event.target.value);
+                              setCategoryError(null);
+                            }}
+                            disabled={!store}
+                            data-testid="new-category-input"
+                          />
+                          <Button
                             type="button"
-                            className="category-manager-toggle"
-                            onClick={() =>
-                              setIsCategoryListCollapsed((previousState) => !previousState)
-                            }
-                            aria-expanded={!isCategoryListCollapsed}
+                            variant="secondary"
+                            onClick={handleCreateCategory}
+                            isLoading={isCreatingCategory}
+                            loadingText={t('storeSummary.saving')}
+                            disabled={!store || isLoadingCategories || isSyncingLegacyCategories}
+                            data-testid="add-category-button"
                           >
-                            {isCategoryListCollapsed
-                              ? t('storeSummary.maxList')
-                              : t('storeSummary.minList')}
-                          </button>
+                            {t('storeSummary.addCategory')}
+                          </Button>
+                        </div>
+                        {categoryError && (
+                          <p className="form-message form-message--error">{categoryError}</p>
+                        )}
+                        {isLoadingCategories || isSyncingLegacyCategories ? (
+                          <p className="category-manager-description">
+                            {t('storeSummary.loadingCategories')}
+                          </p>
+                        ) : isCategoryListCollapsed && categories.length > 0 ? (
+                          <p className="category-manager-description category-manager-collapsed-message">
+                            {t('storeSummary.collapsedMessage')}
+                          </p>
+                        ) : categories.length > 0 ? (
+                          <ul className="category-manager-list">
+                            {categories.map((category) => {
+                              const isEditingCategory = editingCategoryId === category.id;
+                              const isCategoryUsed = scenarioCategories.has(category.name);
+                              return (
+                                <li key={category.id} className="category-manager-item">
+                                  {isEditingCategory ? (
+                                    <>
+                                      <input
+                                        type="text"
+                                        className="field-input"
+                                        value={editingCategoryName}
+                                        onChange={(event) => {
+                                          setEditingCategoryName(event.target.value);
+                                          setCategoryError(null);
+                                        }}
+                                      />
+                                      <div className="category-manager-item-actions">
+                                        <Button
+                                          type="button"
+                                          onClick={handleUpdateCategory}
+                                          isLoading={updatingCategoryId === category.id}
+                                          loadingText={t('storeSummary.saving')}
+                                        >
+                                          {t('storeManagement.saveCategory')}
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          onClick={handleCancelEditCategory}
+                                          disabled={updatingCategoryId === category.id}
+                                        >
+                                          {t('cancel')}
+                                        </Button>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="category-manager-item-name">
+                                        {category.name}
+                                      </span>
+                                      <div className="category-manager-item-actions">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          onClick={() => handleStartEditCategory(category)}
+                                          disabled={deletingCategoryId === category.id}
+                                        >
+                                          {t('edit')}
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="secondary"
+                                          onClick={() => openDeleteCategoryModal(category)}
+                                          disabled={
+                                            deletingCategoryId === category.id || isCategoryUsed
+                                          }
+                                          isLoading={deletingCategoryId === category.id}
+                                          loadingText={t('deleteLoading')}
+                                          title={
+                                            isCategoryUsed
+                                              ? t('storeSummary.deleteMessage')
+                                              : undefined
+                                          }
+                                        >
+                                          {t('delete')}
+                                        </Button>
+                                      </div>
+                                    </>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : (
+                          <p className="category-manager-empty">{t('storeSummary.emptyMessage')}</p>
                         )}
                       </div>
-                      <div className="category-manager-actions">
-                        <input
-                          type="text"
-                          className="field-input"
-                          placeholder={t('storeSummary.newCategory')}
-                          value={newCategoryName}
-                          onChange={(event) => {
-                            setNewCategoryName(event.target.value);
-                            setCategoryError(null);
-                          }}
-                          disabled={!store}
-                          data-testid="new-category-input"
-                        />
+                      <TextArea
+                        id="scenario-observation"
+                        label={t('storeSummary.observation')}
+                        value={scenarioForm.observation}
+                        onChange={handleScenarioFormChange('observation')}
+                      />
+                      <TextArea
+                        id="scenario-bdd"
+                        label={t('storeSummary.bdd')}
+                        value={scenarioForm.bdd}
+                        onChange={handleScenarioFormChange('bdd')}
+                      />
+                      <div className="scenario-form-actions">
                         <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={handleCreateCategory}
-                          isLoading={isCreatingCategory}
+                          type="submit"
+                          isLoading={isSavingScenario}
                           loadingText={t('storeSummary.saving')}
-                          disabled={!store || isLoadingCategories || isSyncingLegacyCategories}
-                          data-testid="add-category-button"
+                          data-testid="save-scenario-button"
                         >
-                          {t('storeSummary.addCategory')}
+                          {editingScenarioId
+                            ? t('storeSummary.updateScenario')
+                            : t('storeSummary.addScenario')}
                         </Button>
+                        {editingScenarioId && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={handleCancelScenarioEdit}
+                            disabled={isSavingScenario}
+                            data-testid="cancel-scenario-edit"
+                          >
+                            {t('storeSummary.editionCancelled')}
+                          </Button>
+                        )}
                       </div>
-                      {categoryError && (
-                        <p className="form-message form-message--error">{categoryError}</p>
-                      )}
-                      {isLoadingCategories || isSyncingLegacyCategories ? (
-                        <p className="category-manager-description">
-                          {t('storeSummary.loadingCategories')}
-                        </p>
-                      ) : isCategoryListCollapsed && categories.length > 0 ? (
-                        <p className="category-manager-description category-manager-collapsed-message">
-                          {t('storeSummary.collapsedMessage')}
-                        </p>
-                      ) : categories.length > 0 ? (
-                        <ul className="category-manager-list">
-                          {categories.map((category) => {
-                            const isEditingCategory = editingCategoryId === category.id;
-                            const isCategoryUsed = scenarioCategories.has(category.name);
-                            return (
-                              <li key={category.id} className="category-manager-item">
-                                {isEditingCategory ? (
-                                  <>
-                                    <input
-                                      type="text"
-                                      className="field-input"
-                                      value={editingCategoryName}
-                                      onChange={(event) => {
-                                        setEditingCategoryName(event.target.value);
-                                        setCategoryError(null);
-                                      }}
-                                    />
-                                    <div className="category-manager-item-actions">
-                                      <Button
-                                        type="button"
-                                        onClick={handleUpdateCategory}
-                                        isLoading={updatingCategoryId === category.id}
-                                        loadingText={t('storeSummary.saving')}
-                                      >
-                                        {t('storeManagement.saveCategory')}
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        onClick={handleCancelEditCategory}
-                                        disabled={updatingCategoryId === category.id}
-                                      >
-                                        {t('cancel')}
-                                      </Button>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <>
-                                    <span className="category-manager-item-name">
-                                      {category.name}
-                                    </span>
-                                    <div className="category-manager-item-actions">
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        onClick={() => handleStartEditCategory(category)}
-                                        disabled={deletingCategoryId === category.id}
-                                      >
-                                        {t('edit')}
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="secondary"
-                                        onClick={() => openDeleteCategoryModal(category)}
-                                        disabled={
-                                          deletingCategoryId === category.id || isCategoryUsed
-                                        }
-                                        isLoading={deletingCategoryId === category.id}
-                                        loadingText={t('deleteLoading')}
-                                        title={
-                                          isCategoryUsed
-                                            ? t('storeSummary.deleteMessage')
-                                            : undefined
-                                        }
-                                      >
-                                        {t('delete')}
-                                      </Button>
-                                    </div>
-                                  </>
-                                )}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      ) : (
-                        <p className="category-manager-empty">{t('storeSummary.emptyMessage')}</p>
-                      )}
-                    </div>
-                    <TextArea
-                      id="scenario-observation"
-                      label={t('storeSummary.observation')}
-                      value={scenarioForm.observation}
-                      onChange={handleScenarioFormChange('observation')}
-                    />
-                    <TextArea
-                      id="scenario-bdd"
-                      label={t('storeSummary.bdd')}
-                      value={scenarioForm.bdd}
-                      onChange={handleScenarioFormChange('bdd')}
-                    />
-                    <div className="scenario-form-actions">
-                      <Button
-                        type="submit"
-                        isLoading={isSavingScenario}
-                        loadingText={t('storeSummary.saving')}
-                        data-testid="save-scenario-button"
-                      >
-                        {editingScenarioId
-                          ? t('storeSummary.updateScenario')
-                          : t('storeSummary.addScenario')}
-                      </Button>
-                      {editingScenarioId && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={handleCancelScenarioEdit}
-                          disabled={isSavingScenario}
-                          data-testid="cancel-scenario-edit"
-                        >
-                          {t('storeSummary.editionCancelled')}
-                        </Button>
-                      )}
-                    </div>
-                  </form>
+                    </form>
+                  </div>
                 )}
 
                 {viewMode !== 'environments' && (
