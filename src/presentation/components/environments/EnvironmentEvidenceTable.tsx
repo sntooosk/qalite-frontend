@@ -226,100 +226,104 @@ export const EnvironmentEvidenceTable = ({
           </select>
         </label>
       </div>
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>{translation('environmentEvidenceTable.table_titulo')}</th>
-            <th>
-              <ScenarioColumnSortControl
-                label={translation('environmentEvidenceTable.table_categoria')}
-                field="category"
-                sort={scenarioSort}
-                onChange={setScenarioSort}
-              />
-            </th>
-            <th>
-              <ScenarioColumnSortControl
-                label={translation('environmentEvidenceTable.table_criticidade')}
-                field="criticality"
-                sort={scenarioSort}
-                onChange={setScenarioSort}
-              />
-            </th>
-            <th>{translation('environmentEvidenceTable.table_status_mobile')}</th>
-            <th>{translation('environmentEvidenceTable.table_status_desktop')}</th>
-            {canViewDetails && (
-              <th className="scenario-actions-header">{translation('storeSummary.viewDetails')}</th>
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedScenarioEntries.map(([scenarioId, data]) => {
-            const statusOptions = getScenarioStatusOptions(data);
-            return (
-              <tr key={scenarioId}>
-                <td>{data.titulo}</td>
-                <td>{data.categoria}</td>
-                <td>
-                  <span
-                    className={`criticality-badge ${getCriticalityClassName(data.criticidade)}`}
-                  >
-                    {formatCriticalityLabel(data.criticidade)}
-                  </span>
-                </td>
+      <div className="table-scroll-area">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>{translation('environmentEvidenceTable.table_titulo')}</th>
+              <th>
+                <ScenarioColumnSortControl
+                  label={translation('environmentEvidenceTable.table_categoria')}
+                  field="category"
+                  sort={scenarioSort}
+                  onChange={setScenarioSort}
+                />
+              </th>
+              <th>
+                <ScenarioColumnSortControl
+                  label={translation('environmentEvidenceTable.table_criticidade')}
+                  field="criticality"
+                  sort={scenarioSort}
+                  onChange={setScenarioSort}
+                />
+              </th>
+              <th>{translation('environmentEvidenceTable.table_status_mobile')}</th>
+              <th>{translation('environmentEvidenceTable.table_status_desktop')}</th>
+              {canViewDetails && (
+                <th className="scenario-actions-header">
+                  {translation('storeSummary.viewDetails')}
+                </th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedScenarioEntries.map(([scenarioId, data]) => {
+              const statusOptions = getScenarioStatusOptions(data);
+              return (
+                <tr key={scenarioId}>
+                  <td>{data.titulo}</td>
+                  <td>{data.categoria}</td>
+                  <td>
+                    <span
+                      className={`criticality-badge ${getCriticalityClassName(data.criticidade)}`}
+                    >
+                      {formatCriticalityLabel(data.criticidade)}
+                    </span>
+                  </td>
 
-                {(['mobile', 'desktop'] as EnvironmentScenarioPlatform[]).map((platform) => {
-                  const currentStatus =
-                    platform === 'mobile'
-                      ? (data.statusMobile ?? data.status)
-                      : (data.statusDesktop ?? data.status);
-                  const selectId = `${scenarioId}-${platform}-status`;
-                  return (
-                    <td key={selectId} className="scenario-status-column">
-                      <div className="scenario-status-cell">
-                        <select
-                          id={selectId}
-                          className={`scenario-status-select scenario-status-select--${currentStatus}`}
-                          value={currentStatus}
-                          disabled={isReadOnly}
-                          aria-label={`Status ${ENVIRONMENT_PLATFORM_LABEL[platform]} do cenário ${data.titulo}`}
-                          onChange={(event) =>
-                            handleStatusChange(
-                              scenarioId,
-                              platform,
-                              event.target.value as EnvironmentScenarioStatus,
-                            )
-                          }
+                  {(['mobile', 'desktop'] as EnvironmentScenarioPlatform[]).map((platform) => {
+                    const currentStatus =
+                      platform === 'mobile'
+                        ? (data.statusMobile ?? data.status)
+                        : (data.statusDesktop ?? data.status);
+                    const selectId = `${scenarioId}-${platform}-status`;
+                    return (
+                      <td key={selectId} className="scenario-status-column">
+                        <div className="scenario-status-cell">
+                          <select
+                            id={selectId}
+                            className={`scenario-status-select scenario-status-select--${currentStatus}`}
+                            value={currentStatus}
+                            disabled={isReadOnly}
+                            aria-label={`Status ${ENVIRONMENT_PLATFORM_LABEL[platform]} do cenário ${data.titulo}`}
+                            onChange={(event) =>
+                              handleStatusChange(
+                                scenarioId,
+                                platform,
+                                event.target.value as EnvironmentScenarioStatus,
+                              )
+                            }
+                          >
+                            {statusOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </td>
+                    );
+                  })}
+                  {canViewDetails && (
+                    <td className="scenario-actions">
+                      <div className="scenario-actions__content">
+                        <button
+                          type="button"
+                          onClick={() => onViewDetails?.(scenarioId)}
+                          className="action-button action-button--primary"
                         >
-                          {statusOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                          <EyeIcon aria-hidden className="action-button__icon" />
+                          {translation('storeSummary.viewDetails')}
+                        </button>
                       </div>
                     </td>
-                  );
-                })}
-                {canViewDetails && (
-                  <td className="scenario-actions">
-                    <div className="scenario-actions__content">
-                      <button
-                        type="button"
-                        onClick={() => onViewDetails?.(scenarioId)}
-                        className="action-button action-button--primary"
-                      >
-                        <EyeIcon aria-hidden className="action-button__icon" />
-                        {translation('storeSummary.viewDetails')}
-                      </button>
-                    </div>
-                  </td>
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       <PaginationControls
         total={orderedScenarioEntries.length}
         visible={paginatedScenarioEntries.length}

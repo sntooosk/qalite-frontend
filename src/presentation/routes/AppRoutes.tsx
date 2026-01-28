@@ -1,4 +1,5 @@
 import { Suspense, lazy } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 import { ProtectedRoute, RoleProtectedRoute } from './ProtectedRoute';
@@ -58,35 +59,39 @@ const AdminStoresPage = lazy(() =>
   import('../pages/AdminStoresPage').then(({ AdminStoresPage }) => ({ default: AdminStoresPage })),
 );
 
-export const AppRoutes = () => (
-  <AppProviders>
-    <BrowserRouter>
-      <Suspense fallback={<PageLoader message="Carregando página..." />}>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/403" element={<ForbiddenPage />} />
-          <Route path="/environments/:environmentId/public" element={<PublicEnvironmentPage />} />
+export const AppRoutes = () => {
+  const { t } = useTranslation();
 
-          <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<UserDashboardPage />} />
-            <Route path="/organization" element={<OrganizationDashboardPage />} />
-            <Route path="/no-organization" element={<NoOrganizationPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/stores/:storeId" element={<StoreSummaryPage />} />
-            <Route path="/environments/:environmentId" element={<EnvironmentPage />} />
-          </Route>
+  return (
+    <AppProviders>
+      <BrowserRouter>
+        <Suspense fallback={<PageLoader message={t('pageLoader.loadingPage')} />}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/403" element={<ForbiddenPage />} />
+            <Route path="/environments/:environmentId/public" element={<PublicEnvironmentPage />} />
 
-          <Route element={<RoleProtectedRoute allowedRoles={['admin']} />}>
-            <Route path="/admin" element={<AdminOrganizationsPage />} />
-            <Route path="/admin/organizations" element={<AdminStoresPage />} />
-          </Route>
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<UserDashboardPage />} />
+              <Route path="/organization" element={<OrganizationDashboardPage />} />
+              <Route path="/no-organization" element={<NoOrganizationPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/stores/:storeId" element={<StoreSummaryPage />} />
+              <Route path="/environments/:environmentId" element={<EnvironmentPage />} />
+            </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
-  </AppProviders>
-);
+            <Route element={<RoleProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="/admin" element={<AdminOrganizationsPage />} />
+              <Route path="/admin/organizations" element={<AdminStoresPage />} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </AppProviders>
+  );
+};

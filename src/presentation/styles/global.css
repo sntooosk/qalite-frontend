@@ -3584,6 +3584,22 @@ button.store-summary-highlight:focus-visible {
   gap: 0.35rem;
 }
 
+@media (max-width: 768px) {
+  .create-card {
+    padding: 1.25rem;
+    min-height: 0;
+    border-radius: 14px;
+  }
+
+  .scenario-form.create-card {
+    gap: 0.85rem;
+  }
+
+  .create-card__header {
+    gap: 0.5rem;
+  }
+}
+
 .environment-kanban-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
