@@ -237,6 +237,7 @@ export const EnvironmentPage = () => {
   const [isSendingSlackSummary, setIsSendingSlackSummary] = useState(false);
   const [suites, setSuites] = useState<StoreSuite[]>([]);
   const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
+  const [storeName, setStoreName] = useState<string>('');
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
   const activeOrganizationIdRef = useRef<string | null>(null);
@@ -401,6 +402,35 @@ export const EnvironmentPage = () => {
     };
   }, [environment?.storeId, isEditOpen]);
 
+  useEffect(() => {
+    if (!environment?.storeId) {
+      setStoreName('');
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchStoreName = async () => {
+      try {
+        const store = await storeService.getById(environment.storeId);
+        if (isMounted) {
+          setStoreName(store?.name?.trim() || '');
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setStoreName('');
+        }
+      }
+    };
+
+    void fetchStoreName();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [environment?.storeId]);
+
   const { formattedTime, totalMs, formattedStart, formattedEnd } = useTimeTracking(
     environment?.timeTracking ?? null,
     environment?.status === 'in_progress',
@@ -539,8 +569,8 @@ export const EnvironmentPage = () => {
     if (!environment) {
       return;
     }
-    environmentService.exportAsPDF(environment, bugs, participantProfiles);
-  }, [bugs, environment, participantProfiles]);
+    environmentService.exportAsPDF(environment, bugs, participantProfiles, storeName);
+  }, [bugs, environment, participantProfiles, storeName]);
 
   const handleExportExcel = useCallback(() => {
     if (!environment) {
@@ -568,7 +598,9 @@ export const EnvironmentPage = () => {
       };
     });
 
-    const fileName = `${translation('environment.exportExcelFileName')}-${environment.identificador}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    const normalizedStoreName = storeName ? storeName.replace(/\s+/g, '_') : '';
+    const storePrefix = normalizedStoreName ? `${normalizedStoreName}_` : '';
+    const fileName = `${storePrefix}${translation('environment.exportExcelFileName')}-${environment.identificador}-${new Date().toISOString().slice(0, 10)}.xlsx`;
     const infoRows = [
       {
         label: translation('editEnvironmentModal.identifier'),
@@ -707,7 +739,7 @@ export const EnvironmentPage = () => {
     setIsCopyingMarkdown(true);
 
     try {
-      await environmentService.copyAsMarkdown(environment, bugs, participantProfiles);
+      await environmentService.copyAsMarkdown(environment, bugs, participantProfiles, storeName);
       showToast({ type: 'success', message: translation('environment.copyMarkdownSuccess') });
     } catch (error) {
       console.error(error);
@@ -716,7 +748,7 @@ export const EnvironmentPage = () => {
       setIsCopyingMarkdown(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bugs, environment, participantProfiles, showToast]);
+  }, [bugs, environment, participantProfiles, showToast, storeName, translation]);
 
   const openCreateBugModal = useCallback((scenarioId: string) => {
     setEditingBug(null);

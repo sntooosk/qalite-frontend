@@ -98,16 +98,28 @@ export class EnvironmentUseCases {
     environment: Environment,
     bugs?: EnvironmentBug[],
     participantProfiles?: UserSummary[],
+    storeName?: string,
   ): void {
-    return this.environmentRepository.exportAsPDF(environment, bugs, participantProfiles);
+    return this.environmentRepository.exportAsPDF(
+      environment,
+      bugs,
+      participantProfiles,
+      storeName,
+    );
   }
 
   copyAsMarkdown(
     environment: Environment,
     bugs?: EnvironmentBug[],
     participantProfiles?: UserSummary[],
+    storeName?: string,
   ): Promise<void> {
-    return this.environmentRepository.copyAsMarkdown(environment, bugs, participantProfiles);
+    return this.environmentRepository.copyAsMarkdown(
+      environment,
+      bugs,
+      participantProfiles,
+      storeName,
+    );
   }
 }
 
