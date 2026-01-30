@@ -2025,9 +2025,13 @@ export const StoreSummaryPage = () => {
                               {t('storeSummary.suitesRegistered')}
                             </span>
                             <div className="suite-table-actions">
-                              <Button type="button" variant="ghost" onClick={handleBackToSuiteForm}>
-                                {t('storeSummary.backToForm')}
-                              </Button>
+                              <BackButton
+                                label={t('storeSummary.backToForm')}
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  handleBackToSuiteForm();
+                                }}
+                              />
                             </div>
                           </div>
                           {isLoadingSuites ? (
