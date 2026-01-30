@@ -72,7 +72,7 @@ const applyHeaderStyle = (cell: ExcelJS.Cell) => {
 };
 
 const applyBaseCellStyle = (cell: ExcelJS.Cell) => {
-  cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+  cell.alignment = { vertical: 'top', horizontal: 'left', wrapText: false };
   applyBorder(cell);
 };
 
@@ -142,7 +142,7 @@ const severityStyle = (severity: string) => {
   return { bg: COLORS.grayBg, fg: COLORS.grayText };
 };
 
-const calcColWidth = (values: Array<string | undefined>, min = 12, max = 70) => {
+const calcColWidth = (values: Array<string | undefined>, min = 18, max = 90) => {
   const longest = values.reduce((maxValue, value) => {
     return Math.max(maxValue, String(value ?? '').length);
   }, 0);
@@ -150,19 +150,10 @@ const calcColWidth = (values: Array<string | undefined>, min = 12, max = 70) => 
 };
 
 const calcRowHeightByWrap = (
-  rowValues: Array<string | undefined>,
-  colWidths: number[],
-  base = 18,
-) => {
-  let maxLines = 1;
-  rowValues.forEach((value, index) => {
-    const text = String(value ?? '');
-    const charsPerLine = Math.max(10, Math.floor(colWidths[index] * 1.0));
-    const lines = Math.max(1, Math.ceil(text.length / charsPerLine));
-    maxLines = Math.max(maxLines, lines);
-  });
-  return Math.max(base, maxLines * 16);
-};
+  _rowValues: Array<string | undefined>,
+  _colWidths: number[],
+  base = 20,
+) => base;
 
 const applyColumnWidths = (
   worksheet: ExcelJS.Worksheet,
