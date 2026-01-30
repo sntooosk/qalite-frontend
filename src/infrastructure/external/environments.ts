@@ -761,6 +761,7 @@ export const exportEnvironmentAsPDF = (
   environment: Environment,
   bugs: EnvironmentBug[] = [],
   participantProfiles: UserSummary[] = [],
+  storeName?: string,
 ): void => {
   if (typeof window === 'undefined') {
     return;
@@ -774,6 +775,8 @@ export const exportEnvironmentAsPDF = (
   const testTypeLabel = translateEnvironmentOption(environment.tipoTeste, t);
   const momentLabel = translateEnvironmentOption(environment.momento, t);
   const exportTitle = t('environmentExport.title', { id: environment.identificador });
+  const storeLabel = storeName?.trim();
+  const exportTitleWithStore = storeLabel ? `${exportTitle} · ${storeLabel}` : exportTitle;
   const jiraTask = environment.jiraTask?.trim() || '';
   const jiraHref = buildExternalLink(jiraTask);
   const jiraValue = jiraHref
@@ -874,7 +877,7 @@ export const exportEnvironmentAsPDF = (
   const documentContent = `
     <html>
       <head>
-        <title>${escapeHtml(exportTitle)}</title>
+        <title>${escapeHtml(exportTitleWithStore)}</title>
         <style>
           body { font-family: Arial, sans-serif; padding: 24px; }
           h1 { margin-bottom: 0; }
@@ -886,7 +889,7 @@ export const exportEnvironmentAsPDF = (
         </style>
       </head>
       <body>
-        <h1>${escapeHtml(exportTitle)}</h1>
+        <h1>${escapeHtml(exportTitleWithStore)}</h1>
         <p>${escapeHtml(t('environmentExport.statusLabel'))}: ${escapeHtml(statusLabel)}</p>
         <p>${escapeHtml(t('environmentExport.typeLabel'))}: ${escapeHtml(
           environment.tipoAmbiente,
@@ -993,6 +996,7 @@ export const copyEnvironmentAsMarkdown = async (
   environment: Environment,
   bugs: EnvironmentBug[] = [],
   participantProfiles: UserSummary[] = [],
+  storeName?: string,
 ): Promise<void> => {
   if (typeof navigator === 'undefined' && typeof document === 'undefined') {
     return;
@@ -1060,7 +1064,11 @@ export const copyEnvironmentAsMarkdown = async (
     })
     .join('\n');
 
-  const markdown = `# ${t('environmentExport.title', { id: environment.identificador })}
+  const exportTitle = t('environmentExport.title', { id: environment.identificador });
+  const storeLabel = storeName?.trim();
+  const markdownTitle = storeLabel ? `${exportTitle} · ${storeLabel}` : exportTitle;
+
+  const markdown = `# ${markdownTitle}
 
 - ${t('environmentExport.statusLabel')}: ${statusLabel}
 - ${t('environmentExport.typeLabel')}: ${environment.tipoAmbiente} · ${testTypeLabel}

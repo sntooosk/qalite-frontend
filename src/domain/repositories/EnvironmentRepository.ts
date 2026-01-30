@@ -50,10 +50,12 @@ export interface EnvironmentRepository {
     environment: Environment,
     bugs?: EnvironmentBug[],
     participantProfiles?: UserSummary[],
+    storeName?: string,
   ) => void;
   copyAsMarkdown: (
     environment: Environment,
     bugs?: EnvironmentBug[],
     participantProfiles?: UserSummary[],
+    storeName?: string,
   ) => Promise<void>;
 }

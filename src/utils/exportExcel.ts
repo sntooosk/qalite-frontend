@@ -297,40 +297,42 @@ export const exportEnvironmentExcel = async ({
   const columnWidths = applyColumnWidths(worksheet, columnValues);
   applyAutoRowHeights(worksheet, columnWidths);
 
-  const bugWorksheet = workbook.addWorksheet(bugSheetName, {
-    views: [{ state: 'frozen', ySplit: 1 }],
-  });
+  if (bugRows.length > 0) {
+    const bugWorksheet = workbook.addWorksheet(bugSheetName, {
+      views: [{ state: 'frozen', ySplit: 1 }],
+    });
 
-  bugWorksheet.columns = [
-    { header: bugHeaderLabels[0], key: 'cenario' },
-    { header: bugHeaderLabels[1], key: 'severidade' },
-    { header: bugHeaderLabels[2], key: 'prioridade' },
-    { header: bugHeaderLabels[3], key: 'resultadoAtual' },
-  ];
+    bugWorksheet.columns = [
+      { header: bugHeaderLabels[0], key: 'cenario' },
+      { header: bugHeaderLabels[1], key: 'severidade' },
+      { header: bugHeaderLabels[2], key: 'prioridade' },
+      { header: bugHeaderLabels[3], key: 'resultadoAtual' },
+    ];
 
-  const bugHeaderRow = bugWorksheet.getRow(1);
-  bugHeaderRow.height = 22;
-  bugHeaderRow.eachCell((cell) => applyHeaderStyle(cell));
+    const bugHeaderRow = bugWorksheet.getRow(1);
+    bugHeaderRow.height = 22;
+    bugHeaderRow.eachCell((cell) => applyHeaderStyle(cell));
 
-  bugRows.forEach((row) => bugWorksheet.addRow(row));
+    bugRows.forEach((row) => bugWorksheet.addRow(row));
 
-  for (let rowIndex = 2; rowIndex <= bugWorksheet.rowCount; rowIndex += 1) {
-    const row = bugWorksheet.getRow(rowIndex);
-    row.eachCell((cell) => applyBaseCellStyle(cell));
+    for (let rowIndex = 2; rowIndex <= bugWorksheet.rowCount; rowIndex += 1) {
+      const row = bugWorksheet.getRow(rowIndex);
+      row.eachCell((cell) => applyBaseCellStyle(cell));
 
-    const severityCell = row.getCell(2);
-    const severity = severityStyle(String(severityCell.value ?? ''));
-    stylePill(severityCell, severity.bg, severity.fg);
+      const severityCell = row.getCell(2);
+      const severity = severityStyle(String(severityCell.value ?? ''));
+      stylePill(severityCell, severity.bg, severity.fg);
+    }
+
+    const bugColumnValues = [
+      [bugWorksheet.getColumn(1).header as string, ...bugRows.map((row) => row.cenario)],
+      [bugWorksheet.getColumn(2).header as string, ...bugRows.map((row) => row.severidade)],
+      [bugWorksheet.getColumn(3).header as string, ...bugRows.map((row) => row.prioridade)],
+      [bugWorksheet.getColumn(4).header as string, ...bugRows.map((row) => row.resultadoAtual)],
+    ];
+    const bugColumnWidths = applyColumnWidths(bugWorksheet, bugColumnValues);
+    applyAutoRowHeights(bugWorksheet, bugColumnWidths);
   }
-
-  const bugColumnValues = [
-    [bugWorksheet.getColumn(1).header as string, ...bugRows.map((row) => row.cenario)],
-    [bugWorksheet.getColumn(2).header as string, ...bugRows.map((row) => row.severidade)],
-    [bugWorksheet.getColumn(3).header as string, ...bugRows.map((row) => row.prioridade)],
-    [bugWorksheet.getColumn(4).header as string, ...bugRows.map((row) => row.resultadoAtual)],
-  ];
-  const bugColumnWidths = applyColumnWidths(bugWorksheet, bugColumnValues);
-  applyAutoRowHeights(bugWorksheet, bugColumnWidths);
 
   const buffer = await workbook.xlsx.writeBuffer();
   saveAs(new Blob([buffer]), fileName);

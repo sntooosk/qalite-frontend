@@ -1694,14 +1694,24 @@ button.store-summary-highlight:focus-visible {
   background: var(--color-surface-alt);
   color: var(--color-text-primary);
   font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background var(--transition-base),
-    box-shadow var(--transition-base);
+    box-shadow var(--transition-base),
+    transform var(--transition-base);
 }
 
 .back-button:hover {
   box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.back-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-ring);
 }
 
 .profile-header {
@@ -2463,7 +2473,7 @@ button.store-summary-highlight:focus-visible {
 }
 
 .scenario-table-wrapper {
-  overflow-x: auto;
+  overflow-x: visible;
 }
 
 .scenario-filter-bar {
@@ -2548,7 +2558,7 @@ button.store-summary-highlight:focus-visible {
 
 .data-table {
   width: 100%;
-  min-width: 640px;
+  min-width: 0;
   border-collapse: separate;
   border-spacing: 0;
   border: 1px solid var(--table-border-stronger);
@@ -2566,6 +2576,8 @@ button.store-summary-highlight:focus-visible {
   text-align: left;
   vertical-align: top;
   border-bottom: 1px solid var(--table-row-border);
+  white-space: normal;
+  word-break: break-word;
 }
 
 .data-table thead th {
@@ -2606,13 +2618,12 @@ button.store-summary-highlight:focus-visible {
 
 .table-scroll-area {
   width: 100%;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
-  -webkit-overflow-scrolling: touch;
+  overflow-x: visible;
+  padding-bottom: 0;
 }
 
 .scenario-table {
-  min-width: 720px;
+  min-width: 0;
 }
 
 .scenario-observation,
@@ -3006,7 +3017,7 @@ button.store-summary-highlight:focus-visible {
 }
 
 .suite-scenario-table {
-  min-width: 720px;
+  min-width: 0;
 }
 
 .suite-scenario-table tr.is-selected td {
@@ -4044,7 +4055,9 @@ button.store-summary-highlight:focus-visible {
 }
 
 .environment-table {
-  overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .environment-table__filters {
@@ -4096,6 +4109,11 @@ button.store-summary-highlight:focus-visible {
 
 .environment-table__filter select:hover {
   border-color: var(--color-border-strong);
+}
+
+.environment-table__cell-nowrap {
+  white-space: nowrap;
+  word-break: keep-all;
 }
 
 .scenario-evidence-actions {
