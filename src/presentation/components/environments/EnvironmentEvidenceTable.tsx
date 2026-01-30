@@ -230,7 +230,7 @@ export const EnvironmentEvidenceTable = ({
         <thead>
           <tr>
             <th>{translation('environmentEvidenceTable.table_titulo')}</th>
-            <th>
+            <th className="environment-table__cell-nowrap">
               <ScenarioColumnSortControl
                 label={translation('environmentEvidenceTable.table_categoria')}
                 field="category"
@@ -238,7 +238,7 @@ export const EnvironmentEvidenceTable = ({
                 onChange={setScenarioSort}
               />
             </th>
-            <th>
+            <th className="environment-table__cell-nowrap">
               <ScenarioColumnSortControl
                 label={translation('environmentEvidenceTable.table_criticidade')}
                 field="criticality"
@@ -259,8 +259,8 @@ export const EnvironmentEvidenceTable = ({
             return (
               <tr key={scenarioId}>
                 <td>{data.titulo}</td>
-                <td>{data.categoria}</td>
-                <td>
+                <td className="environment-table__cell-nowrap">{data.categoria}</td>
+                <td className="environment-table__cell-nowrap">
                   <span
                     className={`criticality-badge ${getCriticalityClassName(data.criticidade)}`}
                   >

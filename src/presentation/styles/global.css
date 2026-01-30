@@ -4111,6 +4111,11 @@ button.store-summary-highlight:focus-visible {
   border-color: var(--color-border-strong);
 }
 
+.environment-table__cell-nowrap {
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
 .scenario-evidence-actions {
   display: flex;
   flex-wrap: wrap;
