@@ -245,13 +245,9 @@ export const exportEnvironmentExcel = async ({
   bugHeaderLabels: [string, string, string, string];
 }) => {
   const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(environmentSheetName);
 
-  buildInfoSheet(workbook, environmentSheetName, infoHeaderLabels, infoRows);
-
-  const worksheet = workbook.addWorksheet(scenarioSheetName, {
-    views: [{ state: 'frozen', ySplit: 1 }],
-  });
-
+  const totalColumns = 7;
   worksheet.columns = [
     { header: scenarioHeaderLabels[0], key: 'titulo' },
     { header: scenarioHeaderLabels[1], key: 'categoria' },
@@ -262,13 +258,45 @@ export const exportEnvironmentExcel = async ({
     { header: scenarioHeaderLabels[6], key: 'evidencia' },
   ];
 
-  const headers = worksheet.getRow(1);
-  headers.height = 22;
-  headers.eachCell((cell) => applyHeaderStyle(cell));
+  const addSectionTitle = (title: string) => {
+    const row = worksheet.addRow([title]);
+    worksheet.mergeCells(row.number, 1, row.number, totalColumns);
+    const cell = row.getCell(1);
+    applyHeaderStyle(cell);
+    row.height = 22;
+  };
 
-  scenarioRows.forEach((row) => worksheet.addRow(row));
+  const infoHeaderRow = worksheet.addRow([infoHeaderLabels[0], infoHeaderLabels[1]]);
+  infoHeaderRow.height = 22;
+  applyHeaderStyle(infoHeaderRow.getCell(1));
+  applyHeaderStyle(infoHeaderRow.getCell(2));
 
-  for (let rowIndex = 2; rowIndex <= worksheet.rowCount; rowIndex += 1) {
+  infoRows.forEach((row) => {
+    const infoRow = worksheet.addRow([row.label, row.value]);
+    infoRow.eachCell((cell) => applyBaseCellStyle(cell));
+  });
+
+  worksheet.addRow([]);
+  addSectionTitle(scenarioSheetName);
+
+  const scenarioHeaderRow = worksheet.addRow(scenarioHeaderLabels);
+  scenarioHeaderRow.height = 22;
+  scenarioHeaderRow.eachCell((cell) => applyHeaderStyle(cell));
+
+  scenarioRows.forEach((row) => {
+    worksheet.addRow([
+      row.titulo,
+      row.categoria,
+      row.criticidade,
+      row.observacao ?? '',
+      row.statusMobile,
+      row.statusDesktop,
+      row.evidencia ?? '',
+    ]);
+  });
+
+  const scenarioStartRow = scenarioHeaderRow.number + 1;
+  for (let rowIndex = scenarioStartRow; rowIndex <= worksheet.rowCount; rowIndex += 1) {
     const row = worksheet.getRow(rowIndex);
     row.eachCell((cell) => applyBaseCellStyle(cell));
 
@@ -285,52 +313,48 @@ export const exportEnvironmentExcel = async ({
     stylePill(statusDesktopCell, statusDesktop.bg, statusDesktop.fg);
   }
 
-  const columnValues = [
-    [worksheet.getColumn(1).header as string, ...scenarioRows.map((row) => row.titulo)],
-    [worksheet.getColumn(2).header as string, ...scenarioRows.map((row) => row.categoria)],
-    [worksheet.getColumn(3).header as string, ...scenarioRows.map((row) => row.criticidade)],
-    [worksheet.getColumn(4).header as string, ...scenarioRows.map((row) => row.observacao ?? '')],
-    [worksheet.getColumn(5).header as string, ...scenarioRows.map((row) => row.statusMobile)],
-    [worksheet.getColumn(6).header as string, ...scenarioRows.map((row) => row.statusDesktop)],
-    [worksheet.getColumn(7).header as string, ...scenarioRows.map((row) => row.evidencia ?? '')],
-  ];
-  const columnWidths = applyColumnWidths(worksheet, columnValues);
-  applyAutoRowHeights(worksheet, columnWidths);
+  if (bugRows.length > 0) {
+    worksheet.addRow([]);
+    addSectionTitle(bugSheetName);
 
-  const bugWorksheet = workbook.addWorksheet(bugSheetName, {
-    views: [{ state: 'frozen', ySplit: 1 }],
-  });
+    const bugHeaderRow = worksheet.addRow(bugHeaderLabels);
+    bugHeaderRow.height = 22;
+    bugHeaderRow.eachCell((cell) => applyHeaderStyle(cell));
 
-  bugWorksheet.columns = [
-    { header: bugHeaderLabels[0], key: 'cenario' },
-    { header: bugHeaderLabels[1], key: 'severidade' },
-    { header: bugHeaderLabels[2], key: 'prioridade' },
-    { header: bugHeaderLabels[3], key: 'resultadoAtual' },
-  ];
+    bugRows.forEach((row) => {
+      worksheet.addRow([row.cenario, row.severidade, row.prioridade, row.resultadoAtual]);
+    });
 
-  const bugHeaderRow = bugWorksheet.getRow(1);
-  bugHeaderRow.height = 22;
-  bugHeaderRow.eachCell((cell) => applyHeaderStyle(cell));
+    const bugStartRow = bugHeaderRow.number + 1;
+    for (let rowIndex = bugStartRow; rowIndex <= worksheet.rowCount; rowIndex += 1) {
+      const row = worksheet.getRow(rowIndex);
+      row.eachCell((cell) => applyBaseCellStyle(cell));
 
-  bugRows.forEach((row) => bugWorksheet.addRow(row));
-
-  for (let rowIndex = 2; rowIndex <= bugWorksheet.rowCount; rowIndex += 1) {
-    const row = bugWorksheet.getRow(rowIndex);
-    row.eachCell((cell) => applyBaseCellStyle(cell));
-
-    const severityCell = row.getCell(2);
-    const severity = severityStyle(String(severityCell.value ?? ''));
-    stylePill(severityCell, severity.bg, severity.fg);
+      const severityCell = row.getCell(2);
+      const severity = severityStyle(String(severityCell.value ?? ''));
+      stylePill(severityCell, severity.bg, severity.fg);
+    }
   }
 
-  const bugColumnValues = [
-    [bugWorksheet.getColumn(1).header as string, ...bugRows.map((row) => row.cenario)],
-    [bugWorksheet.getColumn(2).header as string, ...bugRows.map((row) => row.severidade)],
-    [bugWorksheet.getColumn(3).header as string, ...bugRows.map((row) => row.prioridade)],
-    [bugWorksheet.getColumn(4).header as string, ...bugRows.map((row) => row.resultadoAtual)],
+  const columnValues = [
+    [infoHeaderLabels[0], ...infoRows.map((row) => row.label), scenarioHeaderLabels[0]],
+    [infoHeaderLabels[1], ...infoRows.map((row) => row.value), scenarioHeaderLabels[1]],
+    [scenarioHeaderLabels[2], ...scenarioRows.map((row) => row.criticidade)],
+    [scenarioHeaderLabels[3], ...scenarioRows.map((row) => row.observacao ?? '')],
+    [scenarioHeaderLabels[4], ...scenarioRows.map((row) => row.statusMobile)],
+    [scenarioHeaderLabels[5], ...scenarioRows.map((row) => row.statusDesktop)],
+    [scenarioHeaderLabels[6], ...scenarioRows.map((row) => row.evidencia ?? '')],
   ];
-  const bugColumnWidths = applyColumnWidths(bugWorksheet, bugColumnValues);
-  applyAutoRowHeights(bugWorksheet, bugColumnWidths);
+
+  if (bugRows.length > 0) {
+    columnValues[0].push(bugHeaderLabels[0], ...bugRows.map((row) => row.cenario));
+    columnValues[1].push(bugHeaderLabels[1], ...bugRows.map((row) => row.severidade));
+    columnValues[2].push(bugHeaderLabels[2], ...bugRows.map((row) => row.prioridade));
+    columnValues[3].push(bugHeaderLabels[3], ...bugRows.map((row) => row.resultadoAtual));
+  }
+
+  const columnWidths = applyColumnWidths(worksheet, columnValues);
+  applyAutoRowHeights(worksheet, columnWidths, 2);
 
   const buffer = await workbook.xlsx.writeBuffer();
   saveAs(new Blob([buffer]), fileName);

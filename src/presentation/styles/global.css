@@ -2473,9 +2473,7 @@ button.store-summary-highlight:focus-visible {
 }
 
 .scenario-table-wrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-gutter: stable;
+  overflow-x: visible;
 }
 
 .scenario-filter-bar {
@@ -2559,8 +2557,8 @@ button.store-summary-highlight:focus-visible {
 }
 
 .data-table {
-  width: max-content;
-  min-width: max(640px, 100%);
+  width: 100%;
+  min-width: 0;
   border-collapse: separate;
   border-spacing: 0;
   border: 1px solid var(--table-border-stronger);
@@ -2578,8 +2576,8 @@ button.store-summary-highlight:focus-visible {
   text-align: left;
   vertical-align: top;
   border-bottom: 1px solid var(--table-row-border);
-  white-space: nowrap;
-  word-break: keep-all;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .data-table thead th {
@@ -2620,20 +2618,17 @@ button.store-summary-highlight:focus-visible {
 
 .table-scroll-area {
   width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 0.5rem;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-gutter: stable;
+  overflow-x: visible;
+  padding-bottom: 0;
 }
 
 .scenario-table {
-  min-width: 720px;
+  min-width: 0;
 }
 
 .scenario-observation,
 .scenario-bdd {
-  white-space: nowrap;
+  white-space: pre-wrap;
 }
 
 .scenario-bdd {
@@ -3022,7 +3017,7 @@ button.store-summary-highlight:focus-visible {
 }
 
 .suite-scenario-table {
-  min-width: 720px;
+  min-width: 0;
 }
 
 .suite-scenario-table tr.is-selected td {

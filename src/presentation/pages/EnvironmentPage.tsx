@@ -607,6 +607,10 @@ export const EnvironmentPage = () => {
         value: environment.identificador || translation('storeSummary.emptyValue'),
       },
       {
+        label: translation('storeSummary.storeName'),
+        value: storeName || translation('storeSummary.emptyValue'),
+      },
+      {
         label: translation('environment.exportExcelStatusLabel'),
         value: translation(ENVIRONMENT_STATUS_LABEL[environment.status]),
       },
@@ -936,6 +940,7 @@ export const EnvironmentPage = () => {
             urls={urls}
             participants={participantProfiles}
             bugsCount={bugs.length}
+            storeName={storeName}
           />
           <div className="summary-card">
             <h3>{translation('environment.actions.shareExport')}</h3>
