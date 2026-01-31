@@ -37,45 +37,36 @@ const COLORS = {
   headerText: 'FFFFFF',
   border: '2B3B55',
 
-  greenBg: '2ECC71',
-  greenText: 'FFFFFF',
-
-  orangeBg: 'E67E22',
-  orangeText: 'FFFFFF',
-
-  redBg: 'E74C3C',
-  redText: 'FFFFFF',
-
-  redBlockedBg: 'C0392B',
-  redBlockedText: 'FFFFFF',
-
-  yellowBg: 'F1C40F',
-  yellowText: '2C3E50',
-
   grayBg: 'BDC3C7',
   grayText: '2C3E50',
 
-  blueProgressBg: '3498DB',
-  blueProgressText: 'FFFFFF',
-  blueInfoBg: '5DADE2',
-  blueInfoText: 'FFFFFF',
+  pendingBg: 'F59E0B',
+  pendingText: 'FFFFFF',
+  inProgressBg: '3B82F6',
+  inProgressText: 'FFFFFF',
+  doneBg: '22C55E',
+  doneText: 'FFFFFF',
+  blockedBg: 'EF4444',
+  blockedText: 'FFFFFF',
+  notApplicableBg: '8B5CF6',
+  notApplicableText: 'FFFFFF',
 
-  severityLowBg: '27AE60',
+  severityLowBg: '22C55E',
   severityLowText: 'FFFFFF',
-  severityMediumBg: 'F39C12',
-  severityMediumText: '2C3E50',
-  severityHighBg: 'D35400',
+  severityMediumBg: 'F59E0B',
+  severityMediumText: 'FFFFFF',
+  severityHighBg: 'F97316',
   severityHighText: 'FFFFFF',
-  severityCriticalBg: 'C0392B',
+  severityCriticalBg: 'EF4444',
   severityCriticalText: 'FFFFFF',
 
-  criticalityLowBg: '2ECC71',
+  criticalityLowBg: '22C55E',
   criticalityLowText: 'FFFFFF',
-  criticalityMediumBg: 'F1C40F',
-  criticalityMediumText: '2C3E50',
-  criticalityHighBg: 'E67E22',
+  criticalityMediumBg: 'F59E0B',
+  criticalityMediumText: 'FFFFFF',
+  criticalityHighBg: 'F97316',
   criticalityHighText: 'FFFFFF',
-  criticalityCriticalBg: 'E74C3C',
+  criticalityCriticalBg: 'EF4444',
   criticalityCriticalText: 'FFFFFF',
 };
 
@@ -112,16 +103,16 @@ const stylePill = (cell: ExcelJS.Cell, bg: string, fg: string) => {
 const statusStyle = (status: string) => {
   const normalized = normalize(status);
   if (normalized.includes('nao') && normalized.includes('aplica')) {
-    return { bg: COLORS.grayBg, fg: COLORS.grayText };
+    return { bg: COLORS.notApplicableBg, fg: COLORS.notApplicableText };
   }
   if (normalized.includes('conclu') || normalized.includes('complete')) {
-    return { bg: COLORS.greenBg, fg: COLORS.greenText };
+    return { bg: COLORS.doneBg, fg: COLORS.doneText };
   }
   if (normalized.includes('andamento') || normalized.includes('progress')) {
-    return { bg: COLORS.blueProgressBg, fg: COLORS.blueProgressText };
+    return { bg: COLORS.inProgressBg, fg: COLORS.inProgressText };
   }
   if (normalized.includes('pend')) {
-    return { bg: COLORS.grayBg, fg: COLORS.grayText };
+    return { bg: COLORS.pendingBg, fg: COLORS.pendingText };
   }
   if (
     normalized.includes('bloq') ||
@@ -129,7 +120,7 @@ const statusStyle = (status: string) => {
     normalized.includes('block') ||
     normalized.includes('fail')
   ) {
-    return { bg: COLORS.redBlockedBg, fg: COLORS.redBlockedText };
+    return { bg: COLORS.blockedBg, fg: COLORS.blockedText };
   }
   return { bg: COLORS.grayBg, fg: COLORS.grayText };
 };

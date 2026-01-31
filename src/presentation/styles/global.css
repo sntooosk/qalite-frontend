@@ -33,23 +33,23 @@
   --color-alert: #d97706;
   --color-alert-bg: rgba(245, 158, 11, 0.18);
   --color-ring: rgba(26, 92, 255, 0.4);
-  --criticality-low-bg: #2ecc71;
+  --criticality-low-bg: #22c55e;
   --criticality-low-text: #ffffff;
-  --criticality-medium-bg: #f1c40f;
-  --criticality-medium-text: #2c3e50;
-  --criticality-high-bg: #e67e22;
+  --criticality-medium-bg: #f59e0b;
+  --criticality-medium-text: #ffffff;
+  --criticality-high-bg: #f97316;
   --criticality-high-text: #ffffff;
-  --criticality-critical-bg: #e74c3c;
+  --criticality-critical-bg: #ef4444;
   --criticality-critical-text: #ffffff;
-  --qa-status-pending-bg: #bdc3c7;
-  --qa-status-pending-text: #2c3e50;
-  --qa-status-in-progress-bg: #3498db;
+  --qa-status-pending-bg: #f59e0b;
+  --qa-status-pending-text: #ffffff;
+  --qa-status-in-progress-bg: #3b82f6;
   --qa-status-in-progress-text: #ffffff;
-  --qa-status-done-bg: #2ecc71;
+  --qa-status-done-bg: #22c55e;
   --qa-status-done-text: #ffffff;
-  --qa-status-blocked-bg: #c0392b;
+  --qa-status-blocked-bg: #ef4444;
   --qa-status-blocked-text: #ffffff;
-  --qa-status-na-bg: #7f8c8d;
+  --qa-status-na-bg: #8b5cf6;
   --qa-status-na-text: #ffffff;
   --radius-md: 1rem;
   --shadow-sm: 0 10px 28px rgba(15, 30, 70, 0.14);
@@ -95,23 +95,23 @@
   --color-alert: #fbbf24;
   --color-alert-bg: rgba(251, 191, 36, 0.22);
   --color-ring: rgba(85, 173, 255, 0.5);
-  --criticality-low-bg: #2ecc71;
+  --criticality-low-bg: #22c55e;
   --criticality-low-text: #ffffff;
-  --criticality-medium-bg: #f1c40f;
-  --criticality-medium-text: #2c3e50;
-  --criticality-high-bg: #e67e22;
+  --criticality-medium-bg: #f59e0b;
+  --criticality-medium-text: #ffffff;
+  --criticality-high-bg: #f97316;
   --criticality-high-text: #ffffff;
-  --criticality-critical-bg: #e74c3c;
+  --criticality-critical-bg: #ef4444;
   --criticality-critical-text: #ffffff;
-  --qa-status-pending-bg: #bdc3c7;
-  --qa-status-pending-text: #2c3e50;
-  --qa-status-in-progress-bg: #3498db;
+  --qa-status-pending-bg: #f59e0b;
+  --qa-status-pending-text: #ffffff;
+  --qa-status-in-progress-bg: #3b82f6;
   --qa-status-in-progress-text: #ffffff;
-  --qa-status-done-bg: #2ecc71;
+  --qa-status-done-bg: #22c55e;
   --qa-status-done-text: #ffffff;
-  --qa-status-blocked-bg: #c0392b;
+  --qa-status-blocked-bg: #ef4444;
   --qa-status-blocked-text: #ffffff;
-  --qa-status-na-bg: #7f8c8d;
+  --qa-status-na-bg: #8b5cf6;
   --qa-status-na-text: #ffffff;
   --shadow-sm: 0 20px 48px rgba(3, 12, 32, 0.62);
   --shadow-md: 0 32px 72px rgba(3, 12, 32, 0.72);
@@ -3863,7 +3863,7 @@ button.store-summary-highlight:focus-visible {
 .environment-card-status-dot--backlog {
   background: var(--qa-status-pending-bg);
   color: var(--qa-status-pending-text);
-  border: 1px solid rgba(127, 140, 141, 0.75);
+  border: 1px solid color-mix(in srgb, var(--qa-status-pending-bg) 70%, transparent);
 }
 
 .environment-card-status-dot--in_progress {
@@ -4312,27 +4312,27 @@ button.store-summary-highlight:focus-visible {
 }
 
 .bug-severity--baixa {
-  background: #27ae60;
-  color: #ffffff;
-  border-color: rgba(39, 174, 96, 0.8);
+  background: var(--criticality-low-bg);
+  color: var(--criticality-low-text);
+  border-color: color-mix(in srgb, var(--criticality-low-bg) 80%, transparent);
 }
 
 .bug-severity--media {
-  background: #f39c12;
-  color: #ffffff;
-  border-color: rgba(243, 156, 18, 0.8);
+  background: var(--criticality-medium-bg);
+  color: var(--criticality-medium-text);
+  border-color: color-mix(in srgb, var(--criticality-medium-bg) 80%, transparent);
 }
 
 .bug-severity--alta {
-  background: #d35400;
-  color: #ffffff;
-  border-color: rgba(211, 84, 0, 0.8);
+  background: var(--criticality-high-bg);
+  color: var(--criticality-high-text);
+  border-color: color-mix(in srgb, var(--criticality-high-bg) 80%, transparent);
 }
 
 .bug-severity--critica {
-  background: #c0392b;
-  color: #ffffff;
-  border-color: rgba(192, 57, 43, 0.85);
+  background: var(--criticality-critical-bg);
+  color: var(--criticality-critical-text);
+  border-color: color-mix(in srgb, var(--criticality-critical-bg) 80%, transparent);
 }
 
 .bug-severity--unknown {
@@ -4342,27 +4342,27 @@ button.store-summary-highlight:focus-visible {
 }
 
 .bug-priority--urgente {
-  background: #ff3b30;
+  background: var(--qa-status-blocked-bg);
   color: #ffffff;
-  border-color: rgba(255, 59, 48, 0.85);
+  border-color: color-mix(in srgb, var(--qa-status-blocked-bg) 80%, transparent);
 }
 
 .bug-status--aberto {
-  background: #e74c3c;
-  color: #ffffff;
-  border-color: rgba(231, 76, 60, 0.85);
+  background: var(--qa-status-pending-bg);
+  color: var(--qa-status-pending-text);
+  border-color: color-mix(in srgb, var(--qa-status-pending-bg) 80%, transparent);
 }
 
 .bug-status--em_andamento {
-  background: #3498db;
-  color: #ffffff;
-  border-color: rgba(52, 152, 219, 0.85);
+  background: var(--qa-status-in-progress-bg);
+  color: var(--qa-status-in-progress-text);
+  border-color: color-mix(in srgb, var(--qa-status-in-progress-bg) 80%, transparent);
 }
 
 .bug-status--resolvido {
-  background: #2ecc71;
-  color: #ffffff;
-  border-color: rgba(46, 204, 113, 0.85);
+  background: var(--qa-status-done-bg);
+  color: var(--qa-status-done-text);
+  border-color: color-mix(in srgb, var(--qa-status-done-bg) 80%, transparent);
 }
 
 .environment-page {
@@ -4571,20 +4571,20 @@ button.store-summary-highlight:focus-visible {
 }
 
 .environment-status-card--backlog {
-  border-color: rgba(127, 140, 141, 0.6);
-  background: rgba(189, 195, 199, 0.22);
+  border-color: color-mix(in srgb, var(--qa-status-pending-bg) 55%, transparent);
+  background: color-mix(in srgb, var(--qa-status-pending-bg) 18%, transparent);
   color: var(--qa-status-pending-text);
 }
 
 .environment-status-card--in_progress {
-  border-color: rgba(52, 152, 219, 0.6);
-  background: rgba(52, 152, 219, 0.18);
+  border-color: color-mix(in srgb, var(--qa-status-in-progress-bg) 55%, transparent);
+  background: color-mix(in srgb, var(--qa-status-in-progress-bg) 18%, transparent);
   color: var(--qa-status-in-progress-text);
 }
 
 .environment-status-card--done {
-  border-color: rgba(46, 204, 113, 0.6);
-  background: rgba(46, 204, 113, 0.18);
+  border-color: color-mix(in srgb, var(--qa-status-done-bg) 55%, transparent);
+  background: color-mix(in srgb, var(--qa-status-done-bg) 18%, transparent);
   color: var(--qa-status-done-text);
 }
 
@@ -5006,19 +5006,19 @@ button.store-summary-highlight:focus-visible {
 .status-pill--backlog {
   background: var(--qa-status-pending-bg);
   color: var(--qa-status-pending-text);
-  border-color: rgba(127, 140, 141, 0.75);
+  border-color: color-mix(in srgb, var(--qa-status-pending-bg) 80%, transparent);
 }
 
 .status-pill--in_progress {
   background: var(--qa-status-in-progress-bg);
   color: var(--qa-status-in-progress-text);
-  border-color: rgba(52, 152, 219, 0.85);
+  border-color: color-mix(in srgb, var(--qa-status-in-progress-bg) 80%, transparent);
 }
 
 .status-pill--done {
   background: var(--qa-status-done-bg);
   color: var(--qa-status-done-text);
-  border-color: rgba(46, 204, 113, 0.85);
+  border-color: color-mix(in srgb, var(--qa-status-done-bg) 80%, transparent);
 }
 
 .scenario-status-select {
@@ -5066,33 +5066,33 @@ button.store-summary-highlight:focus-visible {
 
 .scenario-status-select--pendente {
   background-color: var(--qa-status-pending-bg);
-  border-color: rgba(127, 140, 141, 0.85);
+  border-color: color-mix(in srgb, var(--qa-status-pending-bg) 80%, transparent);
   color: var(--qa-status-pending-text);
 }
 
 .scenario-status-select--em_andamento {
   background-color: var(--qa-status-in-progress-bg);
-  border-color: rgba(52, 152, 219, 0.85);
+  border-color: color-mix(in srgb, var(--qa-status-in-progress-bg) 80%, transparent);
   color: var(--qa-status-in-progress-text);
 }
 
 .scenario-status-select--bloqueado {
   background-color: var(--qa-status-blocked-bg);
-  border-color: rgba(192, 57, 43, 0.9);
+  border-color: color-mix(in srgb, var(--qa-status-blocked-bg) 80%, transparent);
   color: var(--qa-status-blocked-text);
 }
 
 .scenario-status-select--concluido,
 .scenario-status-select--concluido_automatizado {
   background-color: var(--qa-status-done-bg);
-  border-color: rgba(46, 204, 113, 0.85);
+  border-color: color-mix(in srgb, var(--qa-status-done-bg) 80%, transparent);
   color: var(--qa-status-done-text);
 }
 
 .scenario-status-select--nao_se_aplica {
   background-color: var(--qa-status-na-bg);
   color: var(--qa-status-na-text);
-  border-color: rgba(127, 140, 141, 0.85);
+  border-color: color-mix(in srgb, var(--qa-status-na-bg) 80%, transparent);
 }
 
 .environment-page--public .environment-actions,
