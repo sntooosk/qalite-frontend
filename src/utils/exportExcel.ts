@@ -70,7 +70,12 @@ const COLORS = {
   criticalityCriticalText: 'FFFFFF',
 };
 
-const normalize = (value: string) => (value ?? '').trim().toLowerCase();
+const normalize = (value: string) =>
+  (value ?? '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toLowerCase();
 
 const applyBorder = (cell: ExcelJS.Cell) => {
   cell.border = {
