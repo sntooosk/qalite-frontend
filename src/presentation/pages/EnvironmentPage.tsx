@@ -378,8 +378,8 @@ export const EnvironmentPage = () => {
     const fetchStoreData = async () => {
       try {
         const [suitesData, scenariosData] = await Promise.all([
-          storeService.listSuites(environment.storeId),
-          storeService.listScenarios(environment.storeId),
+          storeService.listSuitesAll(environment.storeId),
+          storeService.listScenariosAll(environment.storeId),
         ]);
 
         if (isMounted) {
@@ -412,7 +412,7 @@ export const EnvironmentPage = () => {
 
     const fetchStoreName = async () => {
       try {
-        const store = await storeService.getById(environment.storeId);
+        const store = await storeService.getDetail(environment.storeId);
         if (isMounted) {
           setStoreName(store?.name?.trim() || '');
         }
@@ -730,6 +730,7 @@ export const EnvironmentPage = () => {
     formattedTime,
     participantProfiles,
     scenarioCount,
+    storeName,
     translateOptionValue,
     translation,
     urls,

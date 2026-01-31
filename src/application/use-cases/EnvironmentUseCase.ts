@@ -4,6 +4,7 @@ import type {
   CreateEnvironmentInput,
   Environment,
   EnvironmentBug,
+  EnvironmentBugCursor,
   EnvironmentRealtimeFilters,
   EnvironmentScenarioPlatform,
   EnvironmentScenarioStatus,
@@ -11,6 +12,7 @@ import type {
   UpdateEnvironmentBugInput,
   UpdateEnvironmentInput,
 } from '../../domain/entities/environment';
+import type { PaginatedResult, PaginationParams } from '../../domain/pagination';
 import type { UserSummary } from '../../domain/entities/user';
 import { firebaseEnvironmentRepository } from '../../infrastructure/repositories/firebaseEnvironmentRepository';
 
@@ -74,8 +76,24 @@ export class EnvironmentUseCases {
     );
   }
 
-  listBugs(environmentId: string): Promise<EnvironmentBug[]> {
-    return this.environmentRepository.listBugs(environmentId);
+  listBugs(
+    environmentId: string,
+    pagination: PaginationParams<EnvironmentBugCursor>,
+  ): Promise<PaginatedResult<EnvironmentBug, EnvironmentBugCursor>> {
+    return this.environmentRepository.listBugs(environmentId, pagination);
+  }
+
+  async listBugsAll(environmentId: string, pageSize = 50): Promise<EnvironmentBug[]> {
+    const all: EnvironmentBug[] = [];
+    let cursor: EnvironmentBugCursor | null = null;
+
+    do {
+      const page = await this.listBugs(environmentId, { limit: pageSize, cursor });
+      all.push(...page.items);
+      cursor = page.nextCursor;
+    } while (cursor);
+
+    return all;
   }
 
   createBug(environmentId: string, bug: CreateEnvironmentBugInput): Promise<EnvironmentBug> {

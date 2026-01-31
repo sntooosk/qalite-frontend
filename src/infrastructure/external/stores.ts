@@ -10,6 +10,8 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  startAfter,
+  limit,
   updateDoc,
   type Unsubscribe,
   where,
@@ -21,13 +23,19 @@ import type {
   Store,
   StoreCategory,
   StoreCategoryInput,
+  StoreCategoryCursor,
   StoreExportPayload,
   StoreScenario,
   StoreScenarioInput,
+  StoreScenarioCursor,
+  StoreSummary,
   StoreSuite,
   StoreSuiteInput,
+  StoreSuiteCursor,
+  StoreListCursor,
   UpdateStorePayload,
 } from '../../domain/entities/store';
+import type { PaginatedResult, PaginationParams } from '../../domain/pagination';
 import {
   normalizeAutomationEnum,
   normalizeCriticalityEnum,
@@ -56,6 +64,16 @@ const mapStore = (id: string, data: Record<string, unknown>): Store => ({
   stage: ((data.stage as string) ?? '').trim(),
   scenarioCount: Number(data.scenarioCount ?? 0),
   createdAt: timestampToDate(data.createdAt),
+  updatedAt: timestampToDate(data.updatedAt),
+});
+
+const mapStoreSummary = (id: string, data: Record<string, unknown>): StoreSummary => ({
+  id,
+  organizationId: ((data.organizationId as string) ?? '').trim(),
+  name: ((data.name as string) ?? '').trim(),
+  site: ((data.site as string) ?? '').trim(),
+  stage: ((data.stage as string) ?? '').trim(),
+  scenarioCount: Number(data.scenarioCount ?? 0),
   updatedAt: timestampToDate(data.updatedAt),
 });
 
@@ -125,18 +143,45 @@ const normalizeCategoryInput = (input: StoreCategoryInput): StoreCategoryInput =
   name: input.name.trim(),
 });
 
-export const listStores = async (organizationId: string): Promise<Store[]> => {
+const listAllScenarios = async (storeId: string, pageSize = 200): Promise<StoreScenario[]> => {
+  const items: StoreScenario[] = [];
+  let cursor: StoreScenarioCursor | null = null;
+
+  do {
+    const page = await listScenarios(storeId, { limit: pageSize, cursor });
+    items.push(...page.items);
+    cursor = page.nextCursor;
+  } while (cursor);
+
+  return items;
+};
+
+export const listStoreSummaries = async (
+  organizationId: string,
+  pagination: PaginationParams<StoreListCursor>,
+): Promise<PaginatedResult<StoreSummary, StoreListCursor>> => {
   const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
-  const storesQuery = query(storesCollection, where('organizationId', '==', organizationId));
+  const storesQuery = query(
+    storesCollection,
+    where('organizationId', '==', organizationId),
+    orderBy('name'),
+    orderBy('__name__'),
+    ...(pagination.cursor ? [startAfter(pagination.cursor.name, pagination.cursor.id)] : []),
+    limit(pagination.limit),
+  );
   try {
     const snapshot = await getDocsCacheThenServer(storesQuery);
     const stores = snapshot.docs.map((docSnapshot) =>
-      mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+      mapStoreSummary(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
     );
-    return stores.sort((a, b) => a.name.localeCompare(b.name));
+    const last = stores.at(-1);
+    return {
+      items: stores,
+      nextCursor: last ? { name: last.name, id: last.id } : null,
+    };
   } catch (error) {
     console.error(error);
-    return [];
+    return { items: [], nextCursor: null };
   }
 };
 
@@ -163,7 +208,7 @@ export const listenToStores = (
   );
 };
 
-export const getStore = async (storeId: string): Promise<Store | null> => {
+export const getStoreDetail = async (storeId: string): Promise<Store | null> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   try {
     const snapshot = await getDocCacheFirst(storeRef);
@@ -241,18 +286,32 @@ export const deleteStore = async (storeId: string): Promise<void> => {
   await batch.commit();
 };
 
-export const listScenarios = async (storeId: string): Promise<StoreScenario[]> => {
+export const listScenarios = async (
+  storeId: string,
+  pagination: PaginationParams<StoreScenarioCursor>,
+): Promise<PaginatedResult<StoreScenario, StoreScenarioCursor>> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
-  const scenariosQuery = query(scenariosCollection, orderBy('title'));
+  const scenariosQuery = query(
+    scenariosCollection,
+    orderBy('title'),
+    orderBy('__name__'),
+    ...(pagination.cursor ? [startAfter(pagination.cursor.title, pagination.cursor.id)] : []),
+    limit(pagination.limit),
+  );
   try {
     const snapshot = await getDocsCacheThenServer(scenariosQuery);
-    return snapshot.docs.map((docSnapshot) =>
+    const scenarios = snapshot.docs.map((docSnapshot) =>
       mapScenario(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
     );
+    const last = scenarios.at(-1);
+    return {
+      items: scenarios,
+      nextCursor: last ? { title: last.title, id: last.id } : null,
+    };
   } catch (error) {
     console.error(error);
-    return [];
+    return { items: [], nextCursor: null };
   }
 };
 
@@ -351,18 +410,32 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
   });
 };
 
-export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {
+export const listSuites = async (
+  storeId: string,
+  pagination: PaginationParams<StoreSuiteCursor>,
+): Promise<PaginatedResult<StoreSuite, StoreSuiteCursor>> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
-  const suitesQuery = query(suitesCollection, orderBy('name'));
+  const suitesQuery = query(
+    suitesCollection,
+    orderBy('name'),
+    orderBy('__name__'),
+    ...(pagination.cursor ? [startAfter(pagination.cursor.name, pagination.cursor.id)] : []),
+    limit(pagination.limit),
+  );
   try {
     const snapshot = await getDocsCacheThenServer(suitesQuery);
-    return snapshot.docs.map((docSnapshot) =>
+    const suites = snapshot.docs.map((docSnapshot) =>
       mapSuite(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
     );
+    const last = suites.at(-1);
+    return {
+      items: suites,
+      nextCursor: last ? { name: last.name, id: last.id } : null,
+    };
   } catch (error) {
     console.error(error);
-    return [];
+    return { items: [], nextCursor: null };
   }
 };
 
@@ -436,18 +509,32 @@ export const deleteSuite = async (storeId: string, suiteId: string): Promise<voi
   await deleteDoc(suiteRef);
 };
 
-export const listCategories = async (storeId: string): Promise<StoreCategory[]> => {
+export const listCategories = async (
+  storeId: string,
+  pagination: PaginationParams<StoreCategoryCursor>,
+): Promise<PaginatedResult<StoreCategory, StoreCategoryCursor>> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const categoriesCollection = collection(storeRef, CATEGORIES_SUBCOLLECTION);
-  const categoriesQuery = query(categoriesCollection, orderBy('searchName'));
+  const categoriesQuery = query(
+    categoriesCollection,
+    orderBy('searchName'),
+    orderBy('__name__'),
+    ...(pagination.cursor ? [startAfter(pagination.cursor.name, pagination.cursor.id)] : []),
+    limit(pagination.limit),
+  );
   try {
     const snapshot = await getDocsCacheThenServer(categoriesQuery);
-    return snapshot.docs.map((docSnapshot) =>
+    const categories = snapshot.docs.map((docSnapshot) =>
       mapCategory(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
     );
+    const last = categories.at(-1);
+    return {
+      items: categories,
+      nextCursor: last ? { name: last.name.toLowerCase(), id: last.id } : null,
+    };
   } catch (error) {
     console.error(error);
-    return [];
+    return { items: [], nextCursor: null };
   }
 };
 
@@ -598,13 +685,13 @@ const updateScenarioCategories = async (
 };
 
 export const exportStoreData = async (storeId: string): Promise<StoreExportPayload> => {
-  const store = await getStore(storeId);
+  const store = await getStoreDetail(storeId);
 
   if (!store) {
     throw new Error('Loja não encontrada.');
   }
 
-  const scenarios = await listScenarios(storeId);
+  const scenarios = await listAllScenarios(storeId);
   return {
     store: {
       id: store.id,

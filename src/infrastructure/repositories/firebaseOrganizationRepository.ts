@@ -3,16 +3,16 @@ import {
   addUserToOrganization,
   createOrganization,
   deleteOrganization,
-  getOrganization,
+  getOrganizationDetail,
   getUserOrganization,
-  listOrganizations,
+  listOrganizationSummaries,
   removeUserFromOrganization,
   updateOrganization,
 } from '../external/organizations';
 
 export const firebaseOrganizationRepository: OrganizationRepository = {
-  list: listOrganizations,
-  getById: getOrganization,
+  listSummary: listOrganizationSummaries,
+  getDetail: getOrganizationDetail,
   create: createOrganization,
   update: updateOrganization,
   delete: deleteOrganization,

@@ -1,43 +1,107 @@
+import type { CacheStore } from '../cache/CacheStore';
+import { cacheFirstWithRevalidate } from '../cache/cacheStrategy';
 import type { OrganizationRepository } from '../../domain/repositories/OrganizationRepository';
 import type {
   AddUserToOrganizationPayload,
   CreateOrganizationPayload,
   Organization,
+  OrganizationListCursor,
   OrganizationMember,
+  OrganizationSummary,
   RemoveUserFromOrganizationPayload,
   UpdateOrganizationPayload,
 } from '../../domain/entities/organization';
+import type { PaginatedResult, PaginationParams } from '../../domain/pagination';
+import { localCacheStore } from '../../infrastructure/cache/LocalCacheStore';
 import { firebaseOrganizationRepository } from '../../infrastructure/repositories/firebaseOrganizationRepository';
 
+const DEFAULT_PAGE_SIZE = 50;
+const SUMMARY_CACHE_TTL_MS = 2 * 60 * 1000;
+const DETAIL_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const buildSummaryCacheKey = (pagination: PaginationParams<OrganizationListCursor>) =>
+  `organizations:summary:${pagination.limit}:${pagination.cursor?.id ?? 'start'}`;
+
+const buildDetailCacheKey = (organizationId: string) => `organizations:detail:${organizationId}`;
+
 export class OrganizationUseCases {
-  constructor(private readonly organizationRepository: OrganizationRepository) {}
+  constructor(
+    private readonly organizationRepository: OrganizationRepository,
+    private readonly cacheStore: CacheStore,
+  ) {}
 
-  list(): Promise<Organization[]> {
-    return this.organizationRepository.list();
+  async listSummary(
+    pagination: PaginationParams<OrganizationListCursor> = { limit: DEFAULT_PAGE_SIZE },
+    onRevalidate?: (value: PaginatedResult<OrganizationSummary, OrganizationListCursor>) => void,
+  ): Promise<PaginatedResult<OrganizationSummary, OrganizationListCursor>> {
+    return cacheFirstWithRevalidate({
+      cacheStore: this.cacheStore,
+      cacheKey: buildSummaryCacheKey(pagination),
+      ttlMs: SUMMARY_CACHE_TTL_MS,
+      fetcher: () => this.organizationRepository.listSummary(pagination),
+      onRevalidate,
+    });
   }
 
-  getById(id: string): Promise<Organization | null> {
-    return this.organizationRepository.getById(id);
+  async listSummaryAll(
+    onRevalidate?: (value: OrganizationSummary[]) => void,
+  ): Promise<OrganizationSummary[]> {
+    const all: OrganizationSummary[] = [];
+    let cursor: OrganizationListCursor | null = null;
+
+    do {
+      const page = await this.listSummary({ limit: DEFAULT_PAGE_SIZE, cursor });
+      all.push(...page.items);
+      cursor = page.nextCursor;
+    } while (cursor);
+
+    onRevalidate?.(all);
+    return all;
   }
 
-  create(organization: CreateOrganizationPayload): Promise<Organization> {
-    return this.organizationRepository.create(organization);
+  async getDetail(
+    id: string,
+    onRevalidate?: (value: Organization | null) => void,
+  ): Promise<Organization | null> {
+    return cacheFirstWithRevalidate({
+      cacheStore: this.cacheStore,
+      cacheKey: buildDetailCacheKey(id),
+      ttlMs: DETAIL_CACHE_TTL_MS,
+      fetcher: () => this.organizationRepository.getDetail(id),
+      onRevalidate,
+    });
   }
 
-  update(id: string, organization: UpdateOrganizationPayload): Promise<Organization> {
-    return this.organizationRepository.update(id, organization);
+  async create(organization: CreateOrganizationPayload): Promise<Organization> {
+    const created = await this.organizationRepository.create(organization);
+    this.cacheStore.clearByPrefix('organizations:summary:');
+    return created;
   }
 
-  delete(id: string): Promise<void> {
-    return this.organizationRepository.delete(id);
+  async update(id: string, organization: UpdateOrganizationPayload): Promise<Organization> {
+    const updated = await this.organizationRepository.update(id, organization);
+    this.cacheStore.clearByPrefix('organizations:summary:');
+    this.cacheStore.remove(buildDetailCacheKey(id));
+    return updated;
   }
 
-  addUser(payload: AddUserToOrganizationPayload): Promise<OrganizationMember> {
-    return this.organizationRepository.addUser(payload);
+  async delete(id: string): Promise<void> {
+    await this.organizationRepository.delete(id);
+    this.cacheStore.clearByPrefix('organizations:summary:');
+    this.cacheStore.remove(buildDetailCacheKey(id));
   }
 
-  removeUser(payload: RemoveUserFromOrganizationPayload): Promise<void> {
-    return this.organizationRepository.removeUser(payload);
+  async addUser(payload: AddUserToOrganizationPayload): Promise<OrganizationMember> {
+    const member = await this.organizationRepository.addUser(payload);
+    this.cacheStore.clearByPrefix('organizations:detail:');
+    this.cacheStore.clearByPrefix('organizations:summary:');
+    return member;
+  }
+
+  async removeUser(payload: RemoveUserFromOrganizationPayload): Promise<void> {
+    await this.organizationRepository.removeUser(payload);
+    this.cacheStore.clearByPrefix('organizations:detail:');
+    this.cacheStore.clearByPrefix('organizations:summary:');
   }
 
   getUserOrganizationByUserId(userId: string): Promise<Organization | null> {
@@ -45,4 +109,7 @@ export class OrganizationUseCases {
   }
 }
 
-export const organizationService = new OrganizationUseCases(firebaseOrganizationRepository);
+export const organizationService = new OrganizationUseCases(
+  firebaseOrganizationRepository,
+  localCacheStore,
+);

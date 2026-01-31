@@ -102,6 +102,11 @@ export interface EnvironmentBug {
   updatedAt: string | null;
 }
 
+export interface EnvironmentBugCursor {
+  createdAt: string;
+  id: string;
+}
+
 export interface CreateEnvironmentBugInput {
   scenarioId: string | null;
   title: string;

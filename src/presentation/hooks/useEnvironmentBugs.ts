@@ -20,7 +20,7 @@ export const useEnvironmentBugs = (environmentId: string | null | undefined) => 
     setError(null);
 
     try {
-      const list = await environmentService.listBugs(environmentId);
+      const list = await environmentService.listBugsAll(environmentId);
       setBugs(list);
     } catch (fetchError) {
       console.error(fetchError);

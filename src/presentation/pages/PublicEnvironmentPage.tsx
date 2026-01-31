@@ -61,7 +61,7 @@ export const PublicEnvironmentPage = () => {
 
     const fetchStoreName = async () => {
       try {
-        const store = await storeService.getById(environment.storeId);
+        const store = await storeService.getDetail(environment.storeId);
         if (isMounted) {
           setStoreName(store?.name?.trim() || '');
         }

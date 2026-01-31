@@ -40,7 +40,7 @@ export const OrganizationDashboardPage = () => {
     const fetchOrganization = async () => {
       try {
         setIsLoading(true);
-        const data = await organizationService.getById(user.organizationId as string);
+        const data = await organizationService.getDetail(user.organizationId as string);
 
         if (!data) {
           showToast({ type: 'error', message: t('organizationPage.notFound') });

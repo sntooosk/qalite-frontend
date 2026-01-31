@@ -2,10 +2,10 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 're
 import { useTranslation } from 'react-i18next';
 
 import type {
-  Store,
   StoreCategory,
   StoreScenario,
   StoreScenarioInput,
+  StoreSummary,
 } from '../../domain/entities/store';
 import { storeService } from '../../application/use-cases/StoreUseCase';
 import { useStoresRealtime } from '../context/StoresRealtimeContext';
@@ -70,7 +70,7 @@ export const StoreManagementPanel = ({
   const { t, i18n } = useTranslation();
   const { showToast } = useToast();
   const { organizationId: activeOrganizationId, stores, isLoading, error } = useStoresRealtime();
-  const storesForOrganization = useMemo(
+  const storesForOrganization = useMemo<StoreSummary[]>(
     () => (activeOrganizationId && activeOrganizationId === organizationId ? stores : []),
     [activeOrganizationId, organizationId, stores],
   );
@@ -224,7 +224,7 @@ export const StoreManagementPanel = ({
     });
   }, [error, showToast, t]);
 
-  const selectedStore = useMemo(
+  const selectedStore = useMemo<StoreSummary | null>(
     () => storesForOrganization.find((store) => store.id === selectedStoreId) ?? null,
     [selectedStoreId, storesForOrganization],
   );
@@ -238,7 +238,7 @@ export const StoreManagementPanel = ({
     const fetchScenarios = async () => {
       try {
         setIsLoadingScenarios(true);
-        const data = await storeService.listScenarios(selectedStore.id);
+        const data = await storeService.listScenariosAll(selectedStore.id);
         setScenarios(data);
       } catch (error) {
         console.error(error);
@@ -265,7 +265,7 @@ export const StoreManagementPanel = ({
     const fetchCategories = async () => {
       try {
         setIsLoadingCategories(true);
-        const data = await storeService.listCategories(selectedStore.id);
+        const data = await storeService.listCategoriesAll(selectedStore.id);
         if (isMounted) {
           setCategories(data);
         }
