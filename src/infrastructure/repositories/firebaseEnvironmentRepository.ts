@@ -7,6 +7,7 @@ import {
   deleteEnvironment,
   deleteEnvironmentBug,
   listEnvironmentBugs,
+  listEnvironmentSummaries,
   observeEnvironment,
   observeEnvironments,
   removeEnvironmentUser,
@@ -15,6 +16,7 @@ import {
   updateEnvironmentBug,
   updateScenarioStatus,
   uploadScenarioEvidence,
+  getEnvironmentDetail,
   exportEnvironmentAsPDF,
 } from '../external/environments';
 
@@ -29,6 +31,8 @@ export const firebaseEnvironmentRepository: EnvironmentRepository = {
   updateScenarioStatus,
   uploadScenarioEvidence,
   listBugs: listEnvironmentBugs,
+  listSummary: listEnvironmentSummaries,
+  getDetail: getEnvironmentDetail,
   createBug: createEnvironmentBug,
   updateBug: updateEnvironmentBug,
   deleteBug: deleteEnvironmentBug,

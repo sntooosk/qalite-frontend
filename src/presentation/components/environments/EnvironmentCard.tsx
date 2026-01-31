@@ -1,18 +1,18 @@
 import type { DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { Environment } from '../../../domain/entities/environment';
+import type { EnvironmentSummary } from '../../../domain/entities/environment';
 import type { UserSummary } from '../../../domain/entities/user';
 import { getReadableUserName, getUserInitials } from '../../utils/userDisplay';
 import { ENVIRONMENT_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 import { translateEnvironmentOption } from '../../constants/environmentOptions';
 
 interface EnvironmentCardProps {
-  environment: Environment;
+  environment: EnvironmentSummary;
   participants: UserSummary[];
   suiteName?: string | null;
   bugCount?: number;
-  onOpen: (environment: Environment) => void;
+  onOpen: (environment: EnvironmentSummary) => void;
   draggable?: boolean;
   onDragStart?: (event: DragEvent<HTMLDivElement>, environmentId: string) => void;
 }

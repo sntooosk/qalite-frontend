@@ -4,13 +4,18 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   increment,
+  limit,
   onSnapshot,
+  orderBy,
   query,
   runTransaction,
   serverTimestamp,
+  startAfter,
   updateDoc,
   where,
+  select,
   type QueryConstraint,
 } from 'firebase/firestore';
 
@@ -20,12 +25,15 @@ import type {
   Environment,
   EnvironmentBug,
   EnvironmentBugStatus,
+  EnvironmentListParams,
   EnvironmentRealtimeFilters,
   EnvironmentScenario,
   EnvironmentScenarioPlatform,
   EnvironmentScenarioStatus,
   EnvironmentStatus,
   EnvironmentTimeTracking,
+  EnvironmentSummary,
+  EnvironmentSummaryPage,
   UpdateEnvironmentBugInput,
   UpdateEnvironmentInput,
 } from '../../domain/entities/environment';
@@ -46,7 +54,7 @@ import {
 import { translateEnvironmentOption } from '../../shared/utils/environmentOptions';
 import i18n from '../../lib/i18n';
 import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
-import { getDocsCacheThenServer } from './firestoreCache';
+import { getDocCacheThenServer, getDocsCacheThenServer } from './firestoreCache';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
@@ -192,6 +200,26 @@ const normalizeEnvironment = (id: string, data: Record<string, unknown>): Enviro
   publicShareLanguage: getStringOrNull(data.publicShareLanguage),
 });
 
+const normalizeEnvironmentSummary = (
+  id: string,
+  data: Record<string, unknown>,
+): EnvironmentSummary => ({
+  id,
+  identificador: getString(data.identificador),
+  storeId: getString(data.storeId ?? data.loja),
+  suiteId: getStringOrNull(data.suiteId ?? data.suite),
+  suiteName: getStringOrNull(data.suiteName ?? data.nomeSuite),
+  tipoAmbiente: getString(data.tipoAmbiente),
+  tipoTeste: getString(data.tipoTeste),
+  momento: getStringOrNull(data.momento),
+  status: (data.status ?? 'backlog') as EnvironmentStatus,
+  createdAt: parseTimestamp(data.createdAt as Timestamp | string | null | undefined) ?? null,
+  updatedAt: parseTimestamp(data.updatedAt as Timestamp | string | null | undefined) ?? null,
+  bugs: Number(data.bugs ?? 0),
+  totalCenarios: Number(data.totalCenarios ?? 0),
+  participants: getStringArray(data.participants),
+});
+
 export const createEnvironment = async (payload: CreateEnvironmentInput): Promise<Environment> => {
   const now = new Date().toISOString();
   const docRef = await addDoc(environmentsCollection, {
@@ -247,6 +275,93 @@ export const updateEnvironment = async (
 export const deleteEnvironment = async (environmentId: string): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
   await deleteDoc(environmentRef);
+};
+
+const SUMMARY_FIELDS = [
+  'identificador',
+  'storeId',
+  'loja',
+  'suiteId',
+  'suiteName',
+  'nomeSuite',
+  'tipoAmbiente',
+  'tipoTeste',
+  'momento',
+  'status',
+  'createdAt',
+  'updatedAt',
+  'bugs',
+  'totalCenarios',
+  'participants',
+] as const;
+
+export const listEnvironmentSummaries = async (
+  params: EnvironmentListParams,
+): Promise<EnvironmentSummaryPage> => {
+  try {
+    const constraints: QueryConstraint[] = [
+      where('loja', '==', params.storeId),
+      orderBy('createdAt', 'desc'),
+      orderBy('__name__', 'desc'),
+      limit(params.limit),
+    ];
+
+    if (params.cursor) {
+      const cursorDate = params.cursor.createdAt
+        ? Timestamp.fromDate(new Date(params.cursor.createdAt))
+        : Timestamp.fromDate(new Date(0));
+      constraints.push(startAfter(cursorDate, params.cursor.id));
+    }
+
+    const environmentsQuery = query(
+      environmentsCollection,
+      ...constraints,
+      select(...SUMMARY_FIELDS),
+    );
+    const snapshot = await getDocs(environmentsQuery);
+    const items = snapshot.docs.map((docSnapshot) =>
+      normalizeEnvironmentSummary(
+        docSnapshot.id,
+        docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+      ),
+    );
+    const lastDoc = snapshot.docs.at(-1);
+    const lastData = lastDoc?.data({ serverTimestamps: 'estimate' }) ?? {};
+    const nextCursor =
+      lastDoc && snapshot.docs.length === params.limit
+        ? {
+            id: lastDoc.id,
+            createdAt: parseTimestamp(
+              (lastData as Record<string, unknown>).createdAt as
+                | Timestamp
+                | string
+                | null
+                | undefined,
+            ),
+          }
+        : null;
+
+    return { items, nextCursor };
+  } catch (error) {
+    console.error(error);
+    return { items: [], nextCursor: null };
+  }
+};
+
+export const getEnvironmentDetail = async (environmentId: string): Promise<Environment | null> => {
+  const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
+
+  try {
+    const snapshot = await getDocCacheThenServer(environmentRef);
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    return normalizeEnvironment(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {});
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
 };
 
 export const observeEnvironment = (

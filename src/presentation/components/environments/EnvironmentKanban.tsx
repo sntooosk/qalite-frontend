@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { EnvironmentStatusError } from '../../../shared/errors/firebaseErrors';
-import type { Environment, EnvironmentStatus } from '../../../domain/entities/environment';
+import type { EnvironmentStatus, EnvironmentSummary } from '../../../domain/entities/environment';
 import type { StoreScenario, StoreSuite } from '../../../domain/entities/store';
 import type { UserSummary } from '../../../domain/entities/user';
 import { environmentService } from '../../../infrastructure/services/environmentService';
@@ -20,7 +20,7 @@ interface EnvironmentKanbanProps {
   storeId: string;
   suites: StoreSuite[];
   scenarios: StoreScenario[];
-  environments: Environment[];
+  environments: EnvironmentSummary[];
   isLoading: boolean;
 }
 
@@ -42,7 +42,6 @@ export const EnvironmentKanban = ({
   const [userProfilesMap, setUserProfilesMap] = useState<Record<string, UserSummary>>({});
   const [isArchiveMinimized, setIsArchiveMinimized] = useState(true);
   const [archivedVisibleCount, setArchivedVisibleCount] = useState(5);
-  const [bugCounts, setBugCounts] = useState<Record<string, number>>({});
   const { user } = useAuth();
   const { t } = useTranslation();
 
@@ -81,39 +80,8 @@ export const EnvironmentKanban = ({
     };
   }, [environments]);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchBugCounts = async () => {
-      try {
-        const entries = await Promise.all(
-          environments.map(async (environment) => {
-            const bugs = await environmentService.listBugs(environment.id);
-            return [environment.id, bugs.length] as const;
-          }),
-        );
-
-        if (isMounted) {
-          setBugCounts(Object.fromEntries(entries));
-        }
-      } catch (error) {
-        console.error('Failed to fetch environment bugs', error);
-      }
-    };
-
-    if (environments.length > 0) {
-      void fetchBugCounts();
-    } else {
-      setBugCounts({});
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [environments]);
-
   const grouped = useMemo(() => {
-    const columns: Record<EnvironmentStatus, Environment[]> = {
+    const columns: Record<EnvironmentStatus, EnvironmentSummary[]> = {
       backlog: [],
       in_progress: [],
       done: [],
@@ -148,25 +116,7 @@ export const EnvironmentKanban = ({
           return acc;
         }
 
-        const scenarioIds = Object.keys(environment.scenarios ?? {});
-        if (scenarioIds.length === 0) {
-          acc[environment.id] = null;
-          return acc;
-        }
-
-        const matchingSuite = suites.find((suite) => {
-          if (suite.scenarioIds.length === 0) {
-            return false;
-          }
-
-          if (suite.scenarioIds.length !== scenarioIds.length) {
-            return false;
-          }
-
-          return suite.scenarioIds.every((scenarioId) => scenarioIds.includes(scenarioId));
-        });
-
-        acc[environment.id] = matchingSuite?.name ?? null;
+        acc[environment.id] = null;
         return acc;
       },
       {} as Record<string, string | null>,
@@ -193,7 +143,7 @@ export const EnvironmentKanban = ({
     event.preventDefault();
   };
 
-  const moveEnvironment = async (environment: Environment, status: EnvironmentStatus) => {
+  const moveEnvironment = async (environment: EnvironmentSummary, status: EnvironmentStatus) => {
     if (environment.status === status) {
       return;
     }
@@ -204,8 +154,15 @@ export const EnvironmentKanban = ({
     }
 
     try {
+      const environmentDetail = await environmentService.getDetail(environment.id, {
+        forceRefresh: true,
+      });
+      if (!environmentDetail) {
+        showToast({ type: 'error', message: t('environmentKanban.updateError') });
+        return;
+      }
       await environmentService.transitionStatus({
-        environment,
+        environment: environmentDetail,
         targetStatus: status,
         currentUserId: user?.uid ?? null,
       });
@@ -224,7 +181,7 @@ export const EnvironmentKanban = ({
     }
   };
 
-  const handleOpenEnvironment = (environment: Environment) => {
+  const handleOpenEnvironment = (environment: EnvironmentSummary) => {
     navigate(`/environments/${environment.id}`);
   };
 
@@ -294,7 +251,6 @@ export const EnvironmentKanban = ({
                         .map((id) => userProfilesMap[id])
                         .filter((user): user is UserSummary => Boolean(user))}
                       suiteName={suiteNameByEnvironment[environment.id]}
-                      bugCount={bugCounts[environment.id]}
                       draggable
                       onDragStart={handleDragStart}
                       onOpen={handleOpenEnvironment}
@@ -354,7 +310,6 @@ export const EnvironmentKanban = ({
                         .map((id) => userProfilesMap[id])
                         .filter((user): user is UserSummary => Boolean(user))}
                       suiteName={suiteNameByEnvironment[environment.id]}
-                      bugCount={bugCounts[environment.id]}
                       draggable
                       onDragStart={handleDragStart}
                       onOpen={handleOpenEnvironment}
