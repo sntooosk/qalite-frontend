@@ -48,7 +48,7 @@ const COLORS = {
   doneText: 'FFFFFF',
   blockedBg: 'EF4444',
   blockedText: 'FFFFFF',
-  notApplicableBg: '8B5CF6',
+  notApplicableBg: '94A3B8',
   notApplicableText: 'FFFFFF',
 
   severityLowBg: '22C55E',
@@ -57,7 +57,7 @@ const COLORS = {
   severityMediumText: 'FFFFFF',
   severityHighBg: 'F97316',
   severityHighText: 'FFFFFF',
-  severityCriticalBg: 'EF4444',
+  severityCriticalBg: '8B5CF6',
   severityCriticalText: 'FFFFFF',
 
   criticalityLowBg: '22C55E',
@@ -66,7 +66,7 @@ const COLORS = {
   criticalityMediumText: 'FFFFFF',
   criticalityHighBg: 'F97316',
   criticalityHighText: 'FFFFFF',
-  criticalityCriticalBg: 'EF4444',
+  criticalityCriticalBg: '8B5CF6',
   criticalityCriticalText: 'FFFFFF',
 };
 

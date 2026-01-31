@@ -39,7 +39,7 @@
   --criticality-medium-text: #ffffff;
   --criticality-high-bg: #f97316;
   --criticality-high-text: #ffffff;
-  --criticality-critical-bg: #ef4444;
+  --criticality-critical-bg: #8b5cf6;
   --criticality-critical-text: #ffffff;
   --qa-status-pending-bg: #f59e0b;
   --qa-status-pending-text: #ffffff;
@@ -49,7 +49,7 @@
   --qa-status-done-text: #ffffff;
   --qa-status-blocked-bg: #ef4444;
   --qa-status-blocked-text: #ffffff;
-  --qa-status-na-bg: #8b5cf6;
+  --qa-status-na-bg: #94a3b8;
   --qa-status-na-text: #ffffff;
   --radius-md: 1rem;
   --shadow-sm: 0 10px 28px rgba(15, 30, 70, 0.14);
@@ -101,7 +101,7 @@
   --criticality-medium-text: #ffffff;
   --criticality-high-bg: #f97316;
   --criticality-high-text: #ffffff;
-  --criticality-critical-bg: #ef4444;
+  --criticality-critical-bg: #8b5cf6;
   --criticality-critical-text: #ffffff;
   --qa-status-pending-bg: #f59e0b;
   --qa-status-pending-text: #ffffff;
@@ -111,7 +111,7 @@
   --qa-status-done-text: #ffffff;
   --qa-status-blocked-bg: #ef4444;
   --qa-status-blocked-text: #ffffff;
-  --qa-status-na-bg: #8b5cf6;
+  --qa-status-na-bg: #94a3b8;
   --qa-status-na-text: #ffffff;
   --shadow-sm: 0 20px 48px rgba(3, 12, 32, 0.62);
   --shadow-md: 0 32px 72px rgba(3, 12, 32, 0.72);
