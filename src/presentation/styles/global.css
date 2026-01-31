@@ -41,6 +41,16 @@
   --criticality-high-text: #ffffff;
   --criticality-critical-bg: #e74c3c;
   --criticality-critical-text: #ffffff;
+  --qa-status-pending-bg: #bdc3c7;
+  --qa-status-pending-text: #2c3e50;
+  --qa-status-in-progress-bg: #3498db;
+  --qa-status-in-progress-text: #ffffff;
+  --qa-status-done-bg: #2ecc71;
+  --qa-status-done-text: #ffffff;
+  --qa-status-blocked-bg: #c0392b;
+  --qa-status-blocked-text: #ffffff;
+  --qa-status-na-bg: #7f8c8d;
+  --qa-status-na-text: #ffffff;
   --radius-md: 1rem;
   --shadow-sm: 0 10px 28px rgba(15, 30, 70, 0.14);
   --shadow-md: 0 22px 52px rgba(15, 30, 70, 0.2);
@@ -93,6 +103,16 @@
   --criticality-high-text: #ffffff;
   --criticality-critical-bg: #e74c3c;
   --criticality-critical-text: #ffffff;
+  --qa-status-pending-bg: #bdc3c7;
+  --qa-status-pending-text: #2c3e50;
+  --qa-status-in-progress-bg: #3498db;
+  --qa-status-in-progress-text: #ffffff;
+  --qa-status-done-bg: #2ecc71;
+  --qa-status-done-text: #ffffff;
+  --qa-status-blocked-bg: #c0392b;
+  --qa-status-blocked-text: #ffffff;
+  --qa-status-na-bg: #7f8c8d;
+  --qa-status-na-text: #ffffff;
   --shadow-sm: 0 20px 48px rgba(3, 12, 32, 0.62);
   --shadow-md: 0 32px 72px rgba(3, 12, 32, 0.72);
   --shadow-lg: 0 48px 108px rgba(3, 12, 32, 0.82);
@@ -3841,19 +3861,19 @@ button.store-summary-highlight:focus-visible {
 }
 
 .environment-card-status-dot--backlog {
-  background: var(--color-surface);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
+  background: var(--qa-status-pending-bg);
+  color: var(--qa-status-pending-text);
+  border: 1px solid rgba(127, 140, 141, 0.75);
 }
 
 .environment-card-status-dot--in_progress {
-  background: #2563eb;
-  color: #fff;
+  background: var(--qa-status-in-progress-bg);
+  color: var(--qa-status-in-progress-text);
 }
 
 .environment-card-status-dot--done {
-  background: #22c55e;
-  color: #fff;
+  background: var(--qa-status-done-bg);
+  color: var(--qa-status-done-text);
 }
 
 .environment-card-identifier {
@@ -4551,18 +4571,21 @@ button.store-summary-highlight:focus-visible {
 }
 
 .environment-status-card--backlog {
-  border-color: rgba(100, 116, 139, 0.45);
+  border-color: rgba(127, 140, 141, 0.6);
+  background: rgba(189, 195, 199, 0.22);
+  color: var(--qa-status-pending-text);
 }
 
 .environment-status-card--in_progress {
-  border-color: rgba(37, 99, 235, 0.35);
-  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(52, 152, 219, 0.6);
+  background: rgba(52, 152, 219, 0.18);
+  color: var(--qa-status-in-progress-text);
 }
 
 .environment-status-card--done {
-  border-color: rgba(22, 163, 74, 0.45);
-  background: rgba(22, 163, 74, 0.08);
-  color: #15803d;
+  border-color: rgba(46, 204, 113, 0.6);
+  background: rgba(46, 204, 113, 0.18);
+  color: var(--qa-status-done-text);
 }
 
 .environment-status-card__label {
@@ -4574,7 +4597,7 @@ button.store-summary-highlight:focus-visible {
 }
 
 .environment-status-card--done .environment-status-card__label {
-  color: #15803d;
+  color: var(--qa-status-done-text);
 }
 
 .environment-status-card__value {
@@ -4683,18 +4706,18 @@ button.store-summary-highlight:focus-visible {
 }
 
 .summary-card__status-badge--backlog {
-  background: rgba(100, 116, 139, 0.12);
-  color: #334155;
+  background: var(--qa-status-pending-bg);
+  color: var(--qa-status-pending-text);
 }
 
 .summary-card__status-badge--in_progress {
-  background: rgba(37, 99, 235, 0.12);
-  color: #1d4ed8;
+  background: var(--qa-status-in-progress-bg);
+  color: var(--qa-status-in-progress-text);
 }
 
 .summary-card__status-badge--done {
-  background: rgba(22, 163, 74, 0.15);
-  color: #15803d;
+  background: var(--qa-status-done-bg);
+  color: var(--qa-status-done-text);
 }
 
 .summary-card__detail-label {
@@ -4981,20 +5004,20 @@ button.store-summary-highlight:focus-visible {
 }
 
 .status-pill--backlog {
-  background: #bdc3c7;
-  color: #2c3e50;
+  background: var(--qa-status-pending-bg);
+  color: var(--qa-status-pending-text);
   border-color: rgba(127, 140, 141, 0.75);
 }
 
 .status-pill--in_progress {
-  background: #3498db;
-  color: #ffffff;
+  background: var(--qa-status-in-progress-bg);
+  color: var(--qa-status-in-progress-text);
   border-color: rgba(52, 152, 219, 0.85);
 }
 
 .status-pill--done {
-  background: #2ecc71;
-  color: #ffffff;
+  background: var(--qa-status-done-bg);
+  color: var(--qa-status-done-text);
   border-color: rgba(46, 204, 113, 0.85);
 }
 
@@ -5042,30 +5065,33 @@ button.store-summary-highlight:focus-visible {
 }
 
 .scenario-status-select--pendente {
-  background-color: #bdc3c7;
+  background-color: var(--qa-status-pending-bg);
   border-color: rgba(127, 140, 141, 0.85);
-  color: #2c3e50;
+  color: var(--qa-status-pending-text);
 }
 
 .scenario-status-select--em_andamento {
-  background-color: #3498db;
+  background-color: var(--qa-status-in-progress-bg);
   border-color: rgba(52, 152, 219, 0.85);
+  color: var(--qa-status-in-progress-text);
 }
 
 .scenario-status-select--bloqueado {
-  background-color: #c0392b;
+  background-color: var(--qa-status-blocked-bg);
   border-color: rgba(192, 57, 43, 0.9);
+  color: var(--qa-status-blocked-text);
 }
 
 .scenario-status-select--concluido,
 .scenario-status-select--concluido_automatizado {
-  background-color: #2ecc71;
+  background-color: var(--qa-status-done-bg);
   border-color: rgba(46, 204, 113, 0.85);
+  color: var(--qa-status-done-text);
 }
 
 .scenario-status-select--nao_se_aplica {
-  background-color: #7f8c8d;
-  color: #ffffff;
+  background-color: var(--qa-status-na-bg);
+  color: var(--qa-status-na-text);
   border-color: rgba(127, 140, 141, 0.85);
 }
 
