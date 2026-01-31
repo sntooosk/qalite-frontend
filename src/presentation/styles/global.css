@@ -4292,57 +4292,57 @@ button.store-summary-highlight:focus-visible {
 }
 
 .bug-severity--baixa {
-  background: rgba(39, 174, 96, 0.18);
-  color: #27ae60;
-  border-color: rgba(39, 174, 96, 0.45);
+  background: #27ae60;
+  color: #ffffff;
+  border-color: rgba(39, 174, 96, 0.8);
 }
 
 .bug-severity--media {
-  background: rgba(243, 156, 18, 0.18);
-  color: #f39c12;
-  border-color: rgba(243, 156, 18, 0.45);
+  background: #f39c12;
+  color: #ffffff;
+  border-color: rgba(243, 156, 18, 0.8);
 }
 
 .bug-severity--alta {
-  background: rgba(211, 84, 0, 0.18);
-  color: #d35400;
-  border-color: rgba(211, 84, 0, 0.45);
+  background: #d35400;
+  color: #ffffff;
+  border-color: rgba(211, 84, 0, 0.8);
 }
 
 .bug-severity--critica {
-  background: rgba(192, 57, 43, 0.2);
-  color: #c0392b;
-  border-color: rgba(192, 57, 43, 0.45);
+  background: #c0392b;
+  color: #ffffff;
+  border-color: rgba(192, 57, 43, 0.85);
 }
 
 .bug-severity--unknown {
-  background: rgba(189, 195, 199, 0.2);
-  color: #7f8c8d;
-  border-color: rgba(127, 140, 141, 0.45);
+  background: #bdc3c7;
+  color: #2c3e50;
+  border-color: rgba(127, 140, 141, 0.7);
 }
 
 .bug-priority--urgente {
-  background: rgba(255, 59, 48, 0.2);
-  color: #ff3b30;
-  border-color: rgba(255, 59, 48, 0.45);
+  background: #ff3b30;
+  color: #ffffff;
+  border-color: rgba(255, 59, 48, 0.85);
 }
 
 .bug-status--aberto {
-  background: rgba(231, 76, 60, 0.18);
-  color: #e74c3c;
-  border-color: rgba(231, 76, 60, 0.45);
+  background: #e74c3c;
+  color: #ffffff;
+  border-color: rgba(231, 76, 60, 0.85);
 }
 
 .bug-status--em_andamento {
-  background: rgba(52, 152, 219, 0.18);
-  color: #3498db;
-  border-color: rgba(52, 152, 219, 0.45);
+  background: #3498db;
+  color: #ffffff;
+  border-color: rgba(52, 152, 219, 0.85);
 }
 
 .bug-status--resolvido {
-  background: rgba(46, 204, 113, 0.18);
-  color: #2ecc71;
-  border-color: rgba(46, 204, 113, 0.45);
+  background: #2ecc71;
+  color: #ffffff;
+  border-color: rgba(46, 204, 113, 0.85);
 }
 
 .environment-page {
@@ -4981,21 +4981,21 @@ button.store-summary-highlight:focus-visible {
 }
 
 .status-pill--backlog {
-  background: rgba(189, 195, 199, 0.25);
-  color: #7f8c8d;
-  border-color: rgba(127, 140, 141, 0.45);
+  background: #bdc3c7;
+  color: #2c3e50;
+  border-color: rgba(127, 140, 141, 0.75);
 }
 
 .status-pill--in_progress {
-  background: rgba(52, 152, 219, 0.2);
-  color: #3498db;
-  border-color: rgba(52, 152, 219, 0.5);
+  background: #3498db;
+  color: #ffffff;
+  border-color: rgba(52, 152, 219, 0.85);
 }
 
 .status-pill--done {
-  background: rgba(46, 204, 113, 0.2);
-  color: #2ecc71;
-  border-color: rgba(46, 204, 113, 0.5);
+  background: #2ecc71;
+  color: #ffffff;
+  border-color: rgba(46, 204, 113, 0.85);
 }
 
 .scenario-status-select {
@@ -5043,30 +5043,30 @@ button.store-summary-highlight:focus-visible {
 
 .scenario-status-select--pendente {
   background-color: #bdc3c7;
-  border-color: rgba(127, 140, 141, 0.6);
+  border-color: rgba(127, 140, 141, 0.85);
   color: #2c3e50;
 }
 
 .scenario-status-select--em_andamento {
   background-color: #3498db;
-  border-color: rgba(52, 152, 219, 0.7);
+  border-color: rgba(52, 152, 219, 0.85);
 }
 
 .scenario-status-select--bloqueado {
   background-color: #c0392b;
-  border-color: rgba(192, 57, 43, 0.75);
+  border-color: rgba(192, 57, 43, 0.9);
 }
 
 .scenario-status-select--concluido,
 .scenario-status-select--concluido_automatizado {
   background-color: #2ecc71;
-  border-color: rgba(46, 204, 113, 0.7);
+  border-color: rgba(46, 204, 113, 0.85);
 }
 
 .scenario-status-select--nao_se_aplica {
   background-color: #7f8c8d;
   color: #ffffff;
-  border-color: rgba(127, 140, 141, 0.7);
+  border-color: rgba(127, 140, 141, 0.85);
 }
 
 .environment-page--public .environment-actions,
