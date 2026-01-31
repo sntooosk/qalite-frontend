@@ -105,13 +105,17 @@ const statusStyle = (status: string) => {
   if (normalized.includes('nao') && normalized.includes('aplica')) {
     return { bg: COLORS.notApplicableBg, fg: COLORS.notApplicableText };
   }
-  if (normalized.includes('conclu') || normalized.includes('complete')) {
+  if (
+    normalized.includes('conclu') ||
+    normalized.includes('complete') ||
+    normalized.includes('resolvid')
+  ) {
     return { bg: COLORS.doneBg, fg: COLORS.doneText };
   }
   if (normalized.includes('andamento') || normalized.includes('progress')) {
     return { bg: COLORS.inProgressBg, fg: COLORS.inProgressText };
   }
-  if (normalized.includes('pend')) {
+  if (normalized.includes('pend') || normalized.includes('abert')) {
     return { bg: COLORS.pendingBg, fg: COLORS.pendingText };
   }
   if (
@@ -149,6 +153,31 @@ const criticidadeStyle = (criticality: string) => {
 const severityStyle = (severity: string) => {
   const normalized = normalize(severity);
   if (normalized.includes('crit') || normalized.includes('critical')) {
+    return { bg: COLORS.severityCriticalBg, fg: COLORS.severityCriticalText };
+  }
+  if (normalized.includes('alta') || normalized.includes('high')) {
+    return { bg: COLORS.severityHighBg, fg: COLORS.severityHighText };
+  }
+  if (
+    normalized.includes('média') ||
+    normalized.includes('media') ||
+    normalized.includes('medium')
+  ) {
+    return { bg: COLORS.severityMediumBg, fg: COLORS.severityMediumText };
+  }
+  if (normalized.includes('baixa') || normalized.includes('low')) {
+    return { bg: COLORS.severityLowBg, fg: COLORS.severityLowText };
+  }
+  return { bg: COLORS.grayBg, fg: COLORS.grayText };
+};
+
+const priorityStyle = (priority: string) => {
+  const normalized = normalize(priority);
+  if (
+    normalized.includes('urgente') ||
+    normalized.includes('crit') ||
+    normalized.includes('critical')
+  ) {
     return { bg: COLORS.severityCriticalBg, fg: COLORS.severityCriticalText };
   }
   if (normalized.includes('alta') || normalized.includes('high')) {
@@ -347,6 +376,10 @@ export const exportEnvironmentExcel = async ({
       const severityCell = row.getCell(2);
       const severity = severityStyle(String(severityCell.value ?? ''));
       stylePill(severityCell, severity.bg, severity.fg);
+
+      const priorityCell = row.getCell(3);
+      const priority = priorityStyle(String(priorityCell.value ?? ''));
+      stylePill(priorityCell, priority.bg, priority.fg);
     }
 
     const bugColumnValues = [

@@ -4342,9 +4342,27 @@ button.store-summary-highlight:focus-visible {
 }
 
 .bug-priority--urgente {
-  background: var(--qa-status-blocked-bg);
-  color: #ffffff;
-  border-color: color-mix(in srgb, var(--qa-status-blocked-bg) 80%, transparent);
+  background: var(--criticality-critical-bg);
+  color: var(--criticality-critical-text);
+  border-color: color-mix(in srgb, var(--criticality-critical-bg) 80%, transparent);
+}
+
+.bug-priority--baixa {
+  background: var(--criticality-low-bg);
+  color: var(--criticality-low-text);
+  border-color: color-mix(in srgb, var(--criticality-low-bg) 80%, transparent);
+}
+
+.bug-priority--media {
+  background: var(--criticality-medium-bg);
+  color: var(--criticality-medium-text);
+  border-color: color-mix(in srgb, var(--criticality-medium-bg) 80%, transparent);
+}
+
+.bug-priority--alta {
+  background: var(--criticality-high-bg);
+  color: var(--criticality-high-text);
+  border-color: color-mix(in srgb, var(--criticality-high-bg) 80%, transparent);
 }
 
 .bug-status--aberto {
