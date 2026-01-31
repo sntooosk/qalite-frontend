@@ -26,6 +26,31 @@ const normalizeLanguagePreference = (value?: string | null): LanguagePreference 
   return isLanguagePreference(base) ? base : null;
 };
 
+const safeGetLocalStorageItem = (key: string): string | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    return window.localStorage.getItem(key);
+  } catch (error) {
+    console.error('Failed to read localStorage', error);
+    return null;
+  }
+};
+
+const safeSetLocalStorageItem = (key: string, value: string): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (error) {
+    console.error('Failed to persist localStorage', error);
+  }
+};
+
 export const normalizeUserPreferences = (
   value: unknown,
   fallback: UserPreferences = DEFAULT_USER_PREFERENCES,
@@ -44,16 +69,12 @@ export const normalizeUserPreferences = (
 };
 
 export const getStoredThemePreference = (): ThemePreference | null => {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  const stored = window.localStorage.getItem(THEME_PREFERENCE_STORAGE_KEY);
+  const stored = safeGetLocalStorageItem(THEME_PREFERENCE_STORAGE_KEY);
   if (isThemePreference(stored)) {
     return stored;
   }
 
-  const legacy = window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+  const legacy = safeGetLocalStorageItem(LEGACY_THEME_STORAGE_KEY);
   if (legacy === 'light' || legacy === 'dark') {
     return legacy;
   }
@@ -79,11 +100,7 @@ export const getDeviceLanguagePreference = (): LanguagePreference | null => {
 };
 
 export const getStoredLanguagePreference = (): LanguagePreference | null => {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+  const stored = safeGetLocalStorageItem(LANGUAGE_STORAGE_KEY);
   if (isLanguagePreference(stored)) {
     return stored;
   }
@@ -92,10 +109,10 @@ export const getStoredLanguagePreference = (): LanguagePreference | null => {
 };
 
 export const persistPreferencesLocally = (preferences: UserPreferences): void => {
-  if (typeof window === 'undefined') {
-    return;
-  }
+  safeSetLocalStorageItem(THEME_PREFERENCE_STORAGE_KEY, preferences.theme);
+  safeSetLocalStorageItem(LANGUAGE_STORAGE_KEY, preferences.language);
+};
 
-  window.localStorage.setItem(THEME_PREFERENCE_STORAGE_KEY, preferences.theme);
-  window.localStorage.setItem(LANGUAGE_STORAGE_KEY, preferences.language);
+export const persistLanguagePreferenceLocally = (language: string): void => {
+  safeSetLocalStorageItem(LANGUAGE_STORAGE_KEY, language);
 };

@@ -53,6 +53,39 @@ export interface Environment {
   publicShareLanguage: string | null;
 }
 
+export interface EnvironmentSummary {
+  id: string;
+  identificador: string;
+  storeId: string;
+  suiteId: string | null;
+  suiteName: string | null;
+  tipoAmbiente: string;
+  tipoTeste: string;
+  momento: string | null;
+  status: EnvironmentStatus;
+  createdAt: string | null;
+  updatedAt: string | null;
+  bugs: number;
+  totalCenarios: number;
+  participants: string[];
+}
+
+export interface EnvironmentListCursor {
+  createdAt: string | null;
+  id: string;
+}
+
+export interface EnvironmentListParams {
+  storeId: string;
+  limit: number;
+  cursor?: EnvironmentListCursor | null;
+}
+
+export interface EnvironmentSummaryPage {
+  items: EnvironmentSummary[];
+  nextCursor: EnvironmentListCursor | null;
+}
+
 export interface CreateEnvironmentInput {
   identificador: string;
   storeId: string;

@@ -3,7 +3,9 @@ import type {
   CreateEnvironmentInput,
   Environment,
   EnvironmentBug,
+  EnvironmentListParams,
   EnvironmentRealtimeFilters,
+  EnvironmentSummaryPage,
   EnvironmentScenarioPlatform,
   EnvironmentScenarioStatus,
   TransitionEnvironmentStatusParams,
@@ -38,6 +40,8 @@ export interface EnvironmentRepository {
     evidenceLink: string,
   ) => Promise<string>;
   listBugs: (environmentId: string) => Promise<EnvironmentBug[]>;
+  listSummary: (params: EnvironmentListParams) => Promise<EnvironmentSummaryPage>;
+  getDetail: (environmentId: string) => Promise<Environment | null>;
   createBug: (environmentId: string, bug: CreateEnvironmentBugInput) => Promise<EnvironmentBug>;
   updateBug: (
     environmentId: string,
