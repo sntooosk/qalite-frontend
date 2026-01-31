@@ -1,12 +1,12 @@
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-import type { Store } from '../../domain/entities/store';
-import { listenToStores } from '../../infrastructure/external/stores';
+import type { StoreSummary } from '../../domain/entities/store';
+import { storeService } from '../../application/use-cases/StoreUseCase';
 import { useOrganizationBranding } from './OrganizationBrandingContext';
 
 interface StoresRealtimeContextValue {
   organizationId: string | null;
-  stores: Store[];
+  stores: StoreSummary[];
   isLoading: boolean;
   error: string | null;
 }
@@ -21,9 +21,11 @@ const initialState = {
 
 export const StoresRealtimeProvider = ({ children }: { children: ReactNode }) => {
   const { activeOrganization } = useOrganizationBranding();
-  const [state, setState] = useState<{ stores: Store[]; isLoading: boolean; error: string | null }>(
-    initialState,
-  );
+  const [state, setState] = useState<{
+    stores: StoreSummary[];
+    isLoading: boolean;
+    error: string | null;
+  }>(initialState);
 
   useEffect(() => {
     if (!activeOrganization?.id) {
@@ -31,27 +33,35 @@ export const StoresRealtimeProvider = ({ children }: { children: ReactNode }) =>
       return;
     }
 
+    let isMounted = true;
     setState({ stores: [], isLoading: true, error: null });
 
-    // Um único listener centralizado evita múltiplos canais "channel?VER=8" por componente.
-    // Isso reduz leituras, pois o snapshot é compartilhado e mantém o cache local sincronizado.
-    const unsubscribe = listenToStores(
-      activeOrganization.id,
-      (stores) => {
-        setState({ stores, isLoading: false, error: null });
-      },
-      (error) => {
+    const fetchStores = async () => {
+      try {
+        const stores = await storeService.listSummaryAll(activeOrganization.id, (fresh) => {
+          if (isMounted) {
+            setState({ stores: fresh, isLoading: false, error: null });
+          }
+        });
+        if (isMounted) {
+          setState({ stores, isLoading: false, error: null });
+        }
+      } catch (error) {
         console.error(error);
-        setState((previous) => ({
-          ...previous,
-          isLoading: false,
-          error: 'Não foi possível sincronizar as lojas em tempo real.',
-        }));
-      },
-    );
+        if (isMounted) {
+          setState((previous) => ({
+            ...previous,
+            isLoading: false,
+            error: 'Não foi possível carregar as lojas.',
+          }));
+        }
+      }
+    };
+
+    void fetchStores();
 
     return () => {
-      unsubscribe();
+      isMounted = false;
     };
   }, [activeOrganization?.id]);
 

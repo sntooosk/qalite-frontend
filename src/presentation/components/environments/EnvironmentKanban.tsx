@@ -82,34 +82,15 @@ export const EnvironmentKanban = ({
   }, [environments]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchBugCounts = async () => {
-      try {
-        const entries = await Promise.all(
-          environments.map(async (environment) => {
-            const bugs = await environmentService.listBugs(environment.id);
-            return [environment.id, bugs.length] as const;
-          }),
-        );
-
-        if (isMounted) {
-          setBugCounts(Object.fromEntries(entries));
-        }
-      } catch (error) {
-        console.error('Failed to fetch environment bugs', error);
-      }
-    };
-
-    if (environments.length > 0) {
-      void fetchBugCounts();
-    } else {
+    if (environments.length === 0) {
       setBugCounts({});
+      return;
     }
 
-    return () => {
-      isMounted = false;
-    };
+    const entries = environments.map(
+      (environment) => [environment.id, environment.bugs ?? 0] as const,
+    );
+    setBugCounts(Object.fromEntries(entries));
   }, [environments]);
 
   const grouped = useMemo(() => {

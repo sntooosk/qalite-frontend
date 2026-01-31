@@ -40,7 +40,10 @@ import {
   SettingsIcon,
   TrashIcon,
 } from '../components/icons';
-import { normalizeAutomationEnum, normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
+import {
+  normalizeAutomationEnum,
+  normalizeCriticalityEnum,
+} from '../../shared/utils/scenarioEnums';
 import { EnvironmentKanban } from '../components/environments/EnvironmentKanban';
 import { PaginationControls } from '../components/PaginationControls';
 import {
@@ -534,7 +537,7 @@ export const StoreSummaryPage = () => {
         setIsLoadingStore(true);
         setIsLoadingScenarios(true);
 
-        const data = await storeService.getById(storeId);
+        const data = await storeService.getDetail(storeId);
 
         if (!data) {
           showToast({ type: 'error', message: t('storeSummary.storeNotFound') });
@@ -551,8 +554,8 @@ export const StoreSummaryPage = () => {
         setStore(data);
 
         const [organizationData, scenariosData] = await Promise.all([
-          organizationService.getById(data.organizationId),
-          storeService.listScenarios(data.id),
+          organizationService.getDetail(data.organizationId),
+          storeService.listScenariosAll(data.id),
         ]);
 
         if (organizationData) {
@@ -679,7 +682,7 @@ export const StoreSummaryPage = () => {
     const fetchSuites = async () => {
       try {
         setIsLoadingSuites(true);
-        const suitesData = await storeService.listSuites(storeId);
+        const suitesData = await storeService.listSuitesAll(storeId);
         if (isMounted) {
           setSuites(suitesData);
         }
@@ -713,7 +716,7 @@ export const StoreSummaryPage = () => {
     const fetchCategories = async () => {
       try {
         setIsLoadingCategories(true);
-        const data = await storeService.listCategories(store.id);
+        const data = await storeService.listCategoriesAll(store.id);
         if (isMounted) {
           setCategories(data);
         }

@@ -21,6 +21,20 @@ export interface Organization {
   updatedAt: Date | null;
 }
 
+export interface OrganizationSummary {
+  id: string;
+  name: string;
+  description: string;
+  logoUrl: string | null;
+  memberCount: number;
+  updatedAt: Date | null;
+}
+
+export interface OrganizationListCursor {
+  name: string;
+  id: string;
+}
+
 export interface CreateOrganizationPayload {
   name: string;
   description: string;

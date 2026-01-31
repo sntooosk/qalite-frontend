@@ -1,7 +1,7 @@
 import { FormEvent, KeyboardEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import type { Organization } from '../../domain/entities/organization';
+import type { Organization, OrganizationSummary } from '../../domain/entities/organization';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { useToast } from '../context/ToastContext';
 import { Layout } from '../components/Layout';
@@ -26,11 +26,20 @@ const initialOrganizationForm: OrganizationFormState = {
   browserstackAccessKey: '',
 };
 
+const toOrganizationSummary = (organization: Organization): OrganizationSummary => ({
+  id: organization.id,
+  name: organization.name,
+  description: organization.description,
+  logoUrl: organization.logoUrl,
+  memberCount: organization.members.length,
+  updatedAt: organization.updatedAt,
+});
+
 export const AdminOrganizationsPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { t: translation } = useTranslation();
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [organizationForm, setOrganizationForm] =
@@ -50,7 +59,7 @@ export const AdminOrganizationsPage = () => {
     const fetchOrganizations = async () => {
       try {
         setIsLoading(true);
-        const data = await organizationService.list();
+        const data = await organizationService.listSummaryAll();
         setOrganizations(data);
       } catch (error) {
         console.error(error);
@@ -147,7 +156,7 @@ export const AdminOrganizationsPage = () => {
               }
             : null,
       });
-      setOrganizations((previous) => [...previous, created]);
+      setOrganizations((previous) => [...previous, toOrganizationSummary(created)]);
       showToast({
         type: 'success',
         message: translation('adminOrganizationsPage.success.created'),

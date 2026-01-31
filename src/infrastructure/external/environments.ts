@@ -6,11 +6,14 @@ import {
   doc,
   increment,
   onSnapshot,
+  orderBy,
   query,
   runTransaction,
   serverTimestamp,
+  startAfter,
   updateDoc,
   where,
+  limit,
   type QueryConstraint,
 } from 'firebase/firestore';
 
@@ -19,6 +22,7 @@ import type {
   CreateEnvironmentInput,
   Environment,
   EnvironmentBug,
+  EnvironmentBugCursor,
   EnvironmentBugStatus,
   EnvironmentRealtimeFilters,
   EnvironmentScenario,
@@ -29,6 +33,7 @@ import type {
   UpdateEnvironmentBugInput,
   UpdateEnvironmentInput,
 } from '../../domain/entities/environment';
+import type { PaginatedResult, PaginationParams } from '../../domain/pagination';
 import type { UserSummary } from '../../domain/entities/user';
 import { firebaseFirestore } from '../database/firebase';
 import { EnvironmentStatusError } from '../../shared/errors/firebaseErrors';
@@ -434,25 +439,41 @@ export const uploadScenarioEvidence = async (
   return trimmedLink;
 };
 
-export const listEnvironmentBugs = async (environmentId: string): Promise<EnvironmentBug[]> => {
+export const listEnvironmentBugs = async (
+  environmentId: string,
+  pagination: PaginationParams<EnvironmentBugCursor>,
+): Promise<PaginatedResult<EnvironmentBug, EnvironmentBugCursor>> => {
   const bugsCollectionRef = getBugCollection(environmentId);
+  const bugsQuery = query(
+    bugsCollectionRef,
+    orderBy('createdAt', 'desc'),
+    orderBy('__name__'),
+    ...(pagination.cursor
+      ? [startAfter(new Date(pagination.cursor.createdAt), pagination.cursor.id)]
+      : []),
+    limit(pagination.limit),
+  );
   try {
-    const snapshot = await getDocsCacheThenServer(bugsCollectionRef);
-    return snapshot.docs
-      .map((docSnapshot) =>
-        normalizeBug(
-          docSnapshot.id,
-          (docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {}) as Record<string, unknown>,
-        ),
-      )
-      .sort((first, second) => {
-        const firstDate = first.createdAt ? new Date(first.createdAt).getTime() : 0;
-        const secondDate = second.createdAt ? new Date(second.createdAt).getTime() : 0;
-        return secondDate - firstDate;
-      });
+    const snapshot = await getDocsCacheThenServer(bugsQuery);
+    const bugs = snapshot.docs.map((docSnapshot) =>
+      normalizeBug(
+        docSnapshot.id,
+        (docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {}) as Record<string, unknown>,
+      ),
+    );
+    const last = bugs.at(-1);
+    return {
+      items: bugs,
+      nextCursor:
+        last && last.createdAt
+          ? { createdAt: last.createdAt, id: last.id }
+          : last
+            ? { createdAt: '', id: last.id }
+            : null,
+    };
   } catch (error) {
     console.error(error);
-    return [];
+    return { items: [], nextCursor: null };
   }
 };
 

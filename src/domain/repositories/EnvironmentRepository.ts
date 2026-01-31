@@ -3,6 +3,7 @@ import type {
   CreateEnvironmentInput,
   Environment,
   EnvironmentBug,
+  EnvironmentBugCursor,
   EnvironmentRealtimeFilters,
   EnvironmentScenarioPlatform,
   EnvironmentScenarioStatus,
@@ -11,6 +12,7 @@ import type {
   UpdateEnvironmentInput,
 } from '../entities/environment';
 import type { UserSummary } from '../entities/user';
+import type { PaginatedResult, PaginationParams } from '../pagination';
 
 export interface EnvironmentRepository {
   create: (input: CreateEnvironmentInput) => Promise<Environment>;
@@ -37,7 +39,10 @@ export interface EnvironmentRepository {
     scenarioId: string,
     evidenceLink: string,
   ) => Promise<string>;
-  listBugs: (environmentId: string) => Promise<EnvironmentBug[]>;
+  listBugs: (
+    environmentId: string,
+    pagination: PaginationParams<EnvironmentBugCursor>,
+  ) => Promise<PaginatedResult<EnvironmentBug, EnvironmentBugCursor>>;
   createBug: (environmentId: string, bug: CreateEnvironmentBugInput) => Promise<EnvironmentBug>;
   updateBug: (
     environmentId: string,

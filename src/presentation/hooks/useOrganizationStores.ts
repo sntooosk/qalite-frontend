@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { Organization } from '../../domain/entities/organization';
-import type { Store } from '../../domain/entities/store';
+import type { StoreSummary } from '../../domain/entities/store';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
 import { storeService } from '../../application/use-cases/StoreUseCase';
 import { useToast } from '../context/ToastContext';
@@ -10,7 +10,7 @@ export type OrganizationStoresStatus = 'idle' | 'loading' | 'ready' | 'empty' | 
 
 interface OrganizationStoresState {
   organization: Organization | null;
-  stores: Store[];
+  stores: StoreSummary[];
   status: OrganizationStoresStatus;
   error: string | null;
 }
@@ -39,8 +39,25 @@ export const useOrganizationStores = (organizationId: string | null) => {
 
       try {
         const [organizationData, storesData] = await Promise.all([
-          organizationService.getById(organizationId),
-          storeService.listByOrganization(organizationId),
+          organizationService.getDetail(organizationId, (freshOrganization) => {
+            if (!isSubscribed) {
+              return;
+            }
+            setState((previous) => ({
+              ...previous,
+              organization: freshOrganization,
+            }));
+          }),
+          storeService.listSummaryAll(organizationId, (freshStores) => {
+            if (!isSubscribed) {
+              return;
+            }
+            setState((previous) => ({
+              ...previous,
+              stores: freshStores,
+              status: freshStores.length === 0 ? 'empty' : 'ready',
+            }));
+          }),
         ]);
 
         if (!isSubscribed) {

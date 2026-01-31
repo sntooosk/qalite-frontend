@@ -8,16 +8,24 @@ import {
   documentId,
   getDoc,
   limit,
+  orderBy,
   query,
   runTransaction,
   serverTimestamp,
+  startAfter,
   updateDoc,
   where,
   writeBatch,
 } from 'firebase/firestore';
 
 import type { BrowserstackCredentials } from '../../domain/entities/browserstack';
-import type { Organization, OrganizationMember } from '../../domain/entities/organization';
+import type {
+  Organization,
+  OrganizationListCursor,
+  OrganizationMember,
+  OrganizationSummary,
+} from '../../domain/entities/organization';
+import type { PaginatedResult, PaginationParams } from '../../domain/pagination';
 import { getNormalizedEmailDomain, normalizeEmailDomain } from '../../shared/utils/email';
 import { firebaseFirestore } from '../database/firebase';
 import {
@@ -71,32 +79,34 @@ const normalizeBrowserstackCredentials = (
   return { username, accessKey };
 };
 
-export const listOrganizations = async (): Promise<Organization[]> => {
+export const listOrganizationSummaries = async (
+  pagination: PaginationParams<OrganizationListCursor>,
+): Promise<PaginatedResult<OrganizationSummary, OrganizationListCursor>> => {
+  const organizationsQuery = query(
+    organizationsCollection,
+    orderBy('name'),
+    orderBy('__name__'),
+    ...(pagination.cursor ? [startAfter(pagination.cursor.name, pagination.cursor.id)] : []),
+    limit(pagination.limit),
+  );
+
   try {
-    let snapshot = await getDocsCacheThenServer(organizationsCollection);
-    let organizations = await Promise.all(
-      snapshot.docs.map((docSnapshot) =>
-        mapOrganization(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-      ),
+    const snapshot = await getDocsCacheThenServer(organizationsQuery);
+    const organizations = snapshot.docs.map((docSnapshot) =>
+      mapOrganizationSummary(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
     );
-
-    if (organizations.length === 0) {
-      snapshot = await getDocsCacheFirst(organizationsCollection);
-      organizations = await Promise.all(
-        snapshot.docs.map((docSnapshot) =>
-          mapOrganization(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-        ),
-      );
-    }
-
-    return organizations.sort((a, b) => a.name.localeCompare(b.name));
+    const last = organizations.at(-1);
+    return {
+      items: organizations,
+      nextCursor: last ? { name: last.name, id: last.id } : null,
+    };
   } catch (error) {
     console.error(error);
-    return [];
+    return { items: [], nextCursor: null };
   }
 };
 
-export const getOrganization = async (id: string): Promise<Organization | null> => {
+export const getOrganizationDetail = async (id: string): Promise<Organization | null> => {
   const organizationRef = doc(firebaseFirestore, ORGANIZATIONS_COLLECTION, id);
   try {
     const snapshot = await getDocCacheThenServer(organizationRef);
@@ -129,6 +139,7 @@ export const createOrganization = async (
     emailDomain,
     browserstackCredentials,
     members: [],
+    memberCount: 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -244,6 +255,7 @@ export const addUserToOrganization = async (
 
     transaction.update(organizationRef, {
       members: arrayUnion(userId),
+      memberCount: currentMembers.length + 1,
       updatedAt: serverTimestamp(),
     });
 
@@ -281,6 +293,10 @@ export const removeUserFromOrganization = async (
       throw new Error('Organização não encontrada.');
     }
 
+    const currentMembers =
+      (organizationSnapshot.data({ serverTimestamps: 'estimate' })?.members as
+        | string[]
+        | undefined) ?? [];
     const userSnapshot = await transaction.get(userRef);
 
     if (!userSnapshot.exists()) {
@@ -290,8 +306,12 @@ export const removeUserFromOrganization = async (
     const userData = userSnapshot.data({ serverTimestamps: 'estimate' }) ?? {};
     const currentOrganizationId = (userData.organizationId as string | null) ?? null;
 
+    const shouldRemove = currentMembers.includes(payload.userId);
+    const nextCount = shouldRemove ? Math.max(currentMembers.length - 1, 0) : currentMembers.length;
+
     transaction.update(organizationRef, {
       members: arrayRemove(payload.userId),
+      memberCount: nextCount,
       updatedAt: serverTimestamp(),
     });
 
@@ -324,7 +344,7 @@ export const getUserOrganization = async (userId: string): Promise<Organization 
       return null;
     }
 
-    return getOrganization(organizationId);
+    return getOrganizationDetail(organizationId);
   } catch (error) {
     console.error(error);
     return null;
@@ -404,6 +424,7 @@ export const addUserToOrganizationByEmailDomain = async (
     if (shouldAddMember) {
       transaction.update(organizationRef, {
         members: arrayUnion(user.uid),
+        memberCount: currentMembers.length + 1,
         updatedAt: serverTimestamp(),
       });
     }
@@ -424,6 +445,23 @@ export const addUserToOrganizationByEmailDomain = async (
   });
 
   return assignedOrganizationId;
+};
+
+const mapOrganizationSummary = (
+  id: string,
+  data: Record<string, unknown> | undefined,
+): OrganizationSummary => {
+  const memberIds = (data?.members as string[] | undefined) ?? [];
+  const memberCount = Number(data?.memberCount ?? memberIds.length ?? 0);
+
+  return {
+    id,
+    name: ((data?.name as string) ?? '').trim(),
+    description: ((data?.description as string) ?? '').trim(),
+    logoUrl: ((data?.logoUrl as string) ?? '').trim() || null,
+    memberCount,
+    updatedAt: timestampToDate(data?.updatedAt),
+  };
 };
 
 const mapOrganization = async (

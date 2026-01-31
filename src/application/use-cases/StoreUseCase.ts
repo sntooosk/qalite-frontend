@@ -1,47 +1,130 @@
+import type { CacheStore } from '../cache/CacheStore';
+import { cacheFirstWithRevalidate } from '../cache/cacheStrategy';
 import type { StoreRepository } from '../../domain/repositories/StoreRepository';
 import type {
   CreateStorePayload,
   Store,
   StoreCategory,
   StoreCategoryInput,
+  StoreCategoryCursor,
   StoreExportPayload,
   StoreScenario,
   StoreScenarioInput,
+  StoreScenarioCursor,
+  StoreSummary,
   StoreSuite,
   StoreSuiteInput,
+  StoreSuiteCursor,
+  StoreListCursor,
   UpdateStorePayload,
 } from '../../domain/entities/store';
+import type { PaginatedResult, PaginationParams } from '../../domain/pagination';
+import { localCacheStore } from '../../infrastructure/cache/LocalCacheStore';
 import { firebaseStoreRepository } from '../../infrastructure/repositories/firebaseStoreRepository';
 
+const DEFAULT_PAGE_SIZE = 50;
+const SUMMARY_CACHE_TTL_MS = 2 * 60 * 1000;
+const DETAIL_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const buildSummaryCacheKey = (
+  organizationId: string,
+  pagination: PaginationParams<StoreListCursor>,
+) => `stores:summary:${organizationId}:${pagination.limit}:${pagination.cursor?.id ?? 'start'}`;
+
+const buildDetailCacheKey = (storeId: string) => `stores:detail:${storeId}`;
+
 export class StoreUseCases {
-  constructor(private readonly storeRepository: StoreRepository) {}
+  constructor(
+    private readonly storeRepository: StoreRepository,
+    private readonly cacheStore: CacheStore,
+  ) {}
 
-  listByOrganization(organizationId: string): Promise<Store[]> {
-    return this.storeRepository.listByOrganization(organizationId);
+  async listSummary(
+    organizationId: string,
+    pagination: PaginationParams<StoreListCursor> = { limit: DEFAULT_PAGE_SIZE },
+    onRevalidate?: (value: PaginatedResult<StoreSummary, StoreListCursor>) => void,
+  ): Promise<PaginatedResult<StoreSummary, StoreListCursor>> {
+    return cacheFirstWithRevalidate({
+      cacheStore: this.cacheStore,
+      cacheKey: buildSummaryCacheKey(organizationId, pagination),
+      ttlMs: SUMMARY_CACHE_TTL_MS,
+      fetcher: () => this.storeRepository.listSummary(organizationId, pagination),
+      onRevalidate,
+    });
   }
 
-  getById(id: string): Promise<Store | null> {
-    return this.storeRepository.getById(id);
+  async listSummaryAll(
+    organizationId: string,
+    onRevalidate?: (value: StoreSummary[]) => void,
+  ): Promise<StoreSummary[]> {
+    const all: StoreSummary[] = [];
+    let cursor: StoreListCursor | null = null;
+
+    do {
+      const page = await this.listSummary(organizationId, { limit: DEFAULT_PAGE_SIZE, cursor });
+      all.push(...page.items);
+      cursor = page.nextCursor;
+    } while (cursor);
+
+    onRevalidate?.(all);
+
+    return all;
   }
 
-  create(store: CreateStorePayload): Promise<Store> {
-    return this.storeRepository.create(store);
+  async getDetail(id: string, onRevalidate?: (value: Store | null) => void): Promise<Store | null> {
+    return cacheFirstWithRevalidate({
+      cacheStore: this.cacheStore,
+      cacheKey: buildDetailCacheKey(id),
+      ttlMs: DETAIL_CACHE_TTL_MS,
+      fetcher: () => this.storeRepository.getDetail(id),
+      onRevalidate,
+    });
   }
 
-  update(id: string, store: UpdateStorePayload): Promise<Store> {
-    return this.storeRepository.update(id, store);
+  async create(store: CreateStorePayload): Promise<Store> {
+    const created = await this.storeRepository.create(store);
+    this.cacheStore.clearByPrefix('stores:summary:');
+    return created;
   }
 
-  delete(id: string): Promise<void> {
-    return this.storeRepository.delete(id);
+  async update(id: string, store: UpdateStorePayload): Promise<Store> {
+    const updated = await this.storeRepository.update(id, store);
+    this.cacheStore.clearByPrefix('stores:summary:');
+    this.cacheStore.remove(buildDetailCacheKey(id));
+    return updated;
   }
 
-  listScenarios(storeId: string): Promise<StoreScenario[]> {
-    return this.storeRepository.listScenarios(storeId);
+  async delete(id: string): Promise<void> {
+    await this.storeRepository.delete(id);
+    this.cacheStore.clearByPrefix('stores:summary:');
+    this.cacheStore.remove(buildDetailCacheKey(id));
   }
 
-  createScenario(scenario: { storeId: string } & StoreScenarioInput): Promise<StoreScenario> {
-    return this.storeRepository.createScenario(scenario);
+  listScenarios(
+    storeId: string,
+    pagination: PaginationParams<StoreScenarioCursor>,
+  ): Promise<PaginatedResult<StoreScenario, StoreScenarioCursor>> {
+    return this.storeRepository.listScenarios(storeId, pagination);
+  }
+
+  async listScenariosAll(storeId: string): Promise<StoreScenario[]> {
+    const all: StoreScenario[] = [];
+    let cursor: StoreScenarioCursor | null = null;
+
+    do {
+      const page = await this.listScenarios(storeId, { limit: DEFAULT_PAGE_SIZE, cursor });
+      all.push(...page.items);
+      cursor = page.nextCursor;
+    } while (cursor);
+
+    return all;
+  }
+
+  async createScenario(scenario: { storeId: string } & StoreScenarioInput): Promise<StoreScenario> {
+    const created = await this.storeRepository.createScenario(scenario);
+    this.cacheStore.clearByPrefix('stores:summary:');
+    this.cacheStore.remove(buildDetailCacheKey(scenario.storeId));
+    return created;
   }
 
   updateScenario(
@@ -52,12 +135,30 @@ export class StoreUseCases {
     return this.storeRepository.updateScenario(storeId, scenarioId, scenario);
   }
 
-  deleteScenario(storeId: string, scenarioId: string): Promise<void> {
-    return this.storeRepository.deleteScenario(storeId, scenarioId);
+  async deleteScenario(storeId: string, scenarioId: string): Promise<void> {
+    await this.storeRepository.deleteScenario(storeId, scenarioId);
+    this.cacheStore.clearByPrefix('stores:summary:');
+    this.cacheStore.remove(buildDetailCacheKey(storeId));
   }
 
-  listSuites(storeId: string): Promise<StoreSuite[]> {
-    return this.storeRepository.listSuites(storeId);
+  listSuites(
+    storeId: string,
+    pagination: PaginationParams<StoreSuiteCursor>,
+  ): Promise<PaginatedResult<StoreSuite, StoreSuiteCursor>> {
+    return this.storeRepository.listSuites(storeId, pagination);
+  }
+
+  async listSuitesAll(storeId: string): Promise<StoreSuite[]> {
+    const all: StoreSuite[] = [];
+    let cursor: StoreSuiteCursor | null = null;
+
+    do {
+      const page = await this.listSuites(storeId, { limit: DEFAULT_PAGE_SIZE, cursor });
+      all.push(...page.items);
+      cursor = page.nextCursor;
+    } while (cursor);
+
+    return all;
   }
 
   createSuite(suite: { storeId: string } & StoreSuiteInput): Promise<StoreSuite> {
@@ -72,8 +173,24 @@ export class StoreUseCases {
     return this.storeRepository.deleteSuite(storeId, suiteId);
   }
 
-  listCategories(storeId: string): Promise<StoreCategory[]> {
-    return this.storeRepository.listCategories(storeId);
+  listCategories(
+    storeId: string,
+    pagination: PaginationParams<StoreCategoryCursor>,
+  ): Promise<PaginatedResult<StoreCategory, StoreCategoryCursor>> {
+    return this.storeRepository.listCategories(storeId, pagination);
+  }
+
+  async listCategoriesAll(storeId: string): Promise<StoreCategory[]> {
+    const all: StoreCategory[] = [];
+    let cursor: StoreCategoryCursor | null = null;
+
+    do {
+      const page = await this.listCategories(storeId, { limit: DEFAULT_PAGE_SIZE, cursor });
+      all.push(...page.items);
+      cursor = page.nextCursor;
+    } while (cursor);
+
+    return all;
   }
 
   createCategory(category: { storeId: string } & StoreCategoryInput): Promise<StoreCategory> {
@@ -97,4 +214,4 @@ export class StoreUseCases {
   }
 }
 
-export const storeService = new StoreUseCases(firebaseStoreRepository);
+export const storeService = new StoreUseCases(firebaseStoreRepository, localCacheStore);

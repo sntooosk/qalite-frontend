@@ -9,6 +9,36 @@ export interface Store {
   updatedAt: Date | null;
 }
 
+export interface StoreSummary {
+  id: string;
+  organizationId: string;
+  name: string;
+  site: string;
+  stage: string;
+  scenarioCount: number;
+  updatedAt: Date | null;
+}
+
+export interface StoreListCursor {
+  name: string;
+  id: string;
+}
+
+export interface StoreScenarioCursor {
+  title: string;
+  id: string;
+}
+
+export interface StoreSuiteCursor {
+  name: string;
+  id: string;
+}
+
+export interface StoreCategoryCursor {
+  name: string;
+  id: string;
+}
+
 export interface StoreScenario {
   id: string;
   storeId: string;

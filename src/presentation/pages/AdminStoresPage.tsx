@@ -1,7 +1,11 @@
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import type { Organization, OrganizationMember } from '../../domain/entities/organization';
+import type {
+  Organization,
+  OrganizationMember,
+  OrganizationSummary,
+} from '../../domain/entities/organization';
 import type { BrowserstackBuild } from '../../domain/entities/browserstack';
 import type { UserSummary } from '../../domain/entities/user';
 import { organizationService } from '../../application/use-cases/OrganizationUseCase';
@@ -48,13 +52,23 @@ const initialOrganizationForm: OrganizationFormState = {
   browserstackAccessKey: '',
 };
 
+const toOrganizationSummary = (organization: Organization): OrganizationSummary => ({
+  id: organization.id,
+  name: organization.name,
+  description: organization.description,
+  logoUrl: organization.logoUrl,
+  memberCount: organization.members.length,
+  updatedAt: organization.updatedAt,
+});
+
 export const AdminStoresPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { setActiveOrganization } = useOrganizationBranding();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
+  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const { organizationId: activeOrganizationId, stores, isLoading, error } = useStoresRealtime();
   const storesForOrganization = useMemo(
     () => (activeOrganizationId && activeOrganizationId === selectedOrganizationId ? stores : []),
@@ -93,7 +107,7 @@ export const AdminStoresPage = () => {
   useEffect(() => {
     const fetchOrganizations = async () => {
       try {
-        const data = await organizationService.list();
+        const data = await organizationService.listSummaryAll();
         setOrganizations(data);
         const organizationFromParam = searchParams.get('Id');
         const hasValidOrganizationParam = Boolean(
@@ -140,16 +154,44 @@ export const AdminStoresPage = () => {
     });
   }, [error, showToast, translation]);
 
-  const selectedOrganization = useMemo(
-    () => organizations.find((organization) => organization.id === selectedOrganizationId) ?? null,
-    [organizations, selectedOrganizationId],
-  );
-
   useEffect(() => {
     setActiveOrganization(selectedOrganization ?? null);
   }, [selectedOrganization, setActiveOrganization]);
 
   useEffect(() => () => setActiveOrganization(null), [setActiveOrganization]);
+
+  useEffect(() => {
+    if (!selectedOrganizationId) {
+      setSelectedOrganization(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchOrganizationDetails = async () => {
+      try {
+        const data = await organizationService.getDetail(selectedOrganizationId, (fresh) => {
+          if (isMounted) {
+            setSelectedOrganization(fresh);
+          }
+        });
+        if (isMounted) {
+          setSelectedOrganization(data);
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setSelectedOrganization(null);
+        }
+      }
+    };
+
+    void fetchOrganizationDetails();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedOrganizationId]);
 
   useEffect(() => {
     const searchTerm = newMemberEmail.trim();
@@ -389,8 +431,11 @@ export const AdminStoresPage = () => {
       });
 
       setOrganizations((previous) =>
-        previous.map((organization) => (organization.id === updated.id ? updated : organization)),
+        previous.map((organization) =>
+          organization.id === updated.id ? toOrganizationSummary(updated) : organization,
+        ),
       );
+      setSelectedOrganization(updated);
       showToast({
         type: 'success',
         message: translation('AdminStoresPage.toast-success-org-updated'),
@@ -465,13 +510,21 @@ export const AdminStoresPage = () => {
         userEmail: trimmedEmail,
       });
 
+      const nextMembers = [...selectedOrganization.members, member];
+      const nextMemberIds = [...selectedOrganization.memberIds, member.uid];
+
+      setSelectedOrganization({
+        ...selectedOrganization,
+        members: nextMembers,
+        memberIds: nextMemberIds,
+      });
+
       setOrganizations((previous) =>
         previous.map((organization) =>
           organization.id === selectedOrganization.id
             ? {
                 ...organization,
-                members: [...organization.members, member],
-                memberIds: [...organization.memberIds, member.uid],
+                memberCount: nextMembers.length,
               }
             : organization,
         ),
@@ -509,13 +562,21 @@ export const AdminStoresPage = () => {
         userId: member.uid,
       });
 
+      const nextMembers = selectedOrganization.members.filter((item) => item.uid !== member.uid);
+      const nextMemberIds = selectedOrganization.memberIds.filter((item) => item !== member.uid);
+
+      setSelectedOrganization({
+        ...selectedOrganization,
+        members: nextMembers,
+        memberIds: nextMemberIds,
+      });
+
       setOrganizations((previous) =>
         previous.map((organization) =>
           organization.id === selectedOrganization.id
             ? {
                 ...organization,
-                members: organization.members.filter((item) => item.uid !== member.uid),
-                memberIds: organization.memberIds.filter((item) => item !== member.uid),
+                memberCount: nextMembers.length,
               }
             : organization,
         ),
