@@ -56,10 +56,10 @@
   --shadow-md: 0 22px 52px rgba(15, 30, 70, 0.2);
   --shadow-lg: 0 36px 92px rgba(15, 30, 70, 0.28);
   --transition-base: 0.3s ease;
-  --table-surface: rgba(255, 255, 255, 0.98);
-  --table-header-bg: rgba(26, 92, 255, 0.1);
+  --table-surface: #ffffff;
+  --table-header-bg: #e7efff;
   --table-header-text: #0f172a;
-  --table-row-alt: rgba(17, 52, 132, 0.06);
+  --table-row-alt: #f3f6ff;
   --table-border-stronger: rgba(97, 123, 189, 0.38);
   --table-row-border: rgba(97, 123, 189, 0.38);
   --table-text: #0f172a;
@@ -116,10 +116,10 @@
   --shadow-sm: 0 20px 48px rgba(3, 12, 32, 0.62);
   --shadow-md: 0 32px 72px rgba(3, 12, 32, 0.72);
   --shadow-lg: 0 48px 108px rgba(3, 12, 32, 0.82);
-  --table-surface: rgba(8, 17, 36, 0.94);
-  --table-header-bg: rgba(85, 173, 255, 0.24);
+  --table-surface: #0b1428;
+  --table-header-bg: #1f355f;
   --table-header-text: #e8f0ff;
-  --table-row-alt: rgba(255, 255, 255, 0.05);
+  --table-row-alt: #111f3a;
   --table-border-stronger: rgba(126, 162, 220, 0.45);
   --table-row-border: rgba(126, 162, 220, 0.32);
   --table-text: #e8f0ff;
