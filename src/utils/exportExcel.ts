@@ -37,49 +37,45 @@ const COLORS = {
   headerText: 'FFFFFF',
   border: '2B3B55',
 
-  greenBg: '2ECC71',
-  greenText: 'FFFFFF',
-
-  orangeBg: 'E67E22',
-  orangeText: 'FFFFFF',
-
-  redBg: 'E74C3C',
-  redText: 'FFFFFF',
-
-  redBlockedBg: 'C0392B',
-  redBlockedText: 'FFFFFF',
-
-  yellowBg: 'F1C40F',
-  yellowText: '2C3E50',
-
   grayBg: 'BDC3C7',
   grayText: '2C3E50',
 
-  blueProgressBg: '3498DB',
-  blueProgressText: 'FFFFFF',
-  blueInfoBg: '5DADE2',
-  blueInfoText: 'FFFFFF',
+  pendingBg: 'F59E0B',
+  pendingText: 'FFFFFF',
+  inProgressBg: '3B82F6',
+  inProgressText: 'FFFFFF',
+  doneBg: '22C55E',
+  doneText: 'FFFFFF',
+  blockedBg: 'EF4444',
+  blockedText: 'FFFFFF',
+  notApplicableBg: '94A3B8',
+  notApplicableText: 'FFFFFF',
 
-  severityLowBg: '27AE60',
+  severityLowBg: '22C55E',
   severityLowText: 'FFFFFF',
-  severityMediumBg: 'F39C12',
-  severityMediumText: '2C3E50',
-  severityHighBg: 'D35400',
+  severityMediumBg: 'F59E0B',
+  severityMediumText: 'FFFFFF',
+  severityHighBg: 'F97316',
   severityHighText: 'FFFFFF',
-  severityCriticalBg: 'C0392B',
+  severityCriticalBg: '8B5CF6',
   severityCriticalText: 'FFFFFF',
 
-  criticalityLowBg: '2ECC71',
+  criticalityLowBg: '22C55E',
   criticalityLowText: 'FFFFFF',
-  criticalityMediumBg: 'F1C40F',
-  criticalityMediumText: '2C3E50',
-  criticalityHighBg: 'E67E22',
+  criticalityMediumBg: 'F59E0B',
+  criticalityMediumText: 'FFFFFF',
+  criticalityHighBg: 'F97316',
   criticalityHighText: 'FFFFFF',
-  criticalityCriticalBg: 'E74C3C',
+  criticalityCriticalBg: '8B5CF6',
   criticalityCriticalText: 'FFFFFF',
 };
 
-const normalize = (value: string) => (value ?? '').trim().toLowerCase();
+const normalize = (value: string) =>
+  (value ?? '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toLowerCase();
 
 const applyBorder = (cell: ExcelJS.Cell) => {
   cell.border = {
@@ -112,16 +108,20 @@ const stylePill = (cell: ExcelJS.Cell, bg: string, fg: string) => {
 const statusStyle = (status: string) => {
   const normalized = normalize(status);
   if (normalized.includes('nao') && normalized.includes('aplica')) {
-    return { bg: COLORS.grayBg, fg: COLORS.grayText };
+    return { bg: COLORS.notApplicableBg, fg: COLORS.notApplicableText };
   }
-  if (normalized.includes('conclu') || normalized.includes('complete')) {
-    return { bg: COLORS.greenBg, fg: COLORS.greenText };
+  if (
+    normalized.includes('conclu') ||
+    normalized.includes('complete') ||
+    normalized.includes('resolvid')
+  ) {
+    return { bg: COLORS.doneBg, fg: COLORS.doneText };
   }
   if (normalized.includes('andamento') || normalized.includes('progress')) {
-    return { bg: COLORS.blueProgressBg, fg: COLORS.blueProgressText };
+    return { bg: COLORS.inProgressBg, fg: COLORS.inProgressText };
   }
-  if (normalized.includes('pend')) {
-    return { bg: COLORS.grayBg, fg: COLORS.grayText };
+  if (normalized.includes('pend') || normalized.includes('abert')) {
+    return { bg: COLORS.pendingBg, fg: COLORS.pendingText };
   }
   if (
     normalized.includes('bloq') ||
@@ -129,7 +129,7 @@ const statusStyle = (status: string) => {
     normalized.includes('block') ||
     normalized.includes('fail')
   ) {
-    return { bg: COLORS.redBlockedBg, fg: COLORS.redBlockedText };
+    return { bg: COLORS.blockedBg, fg: COLORS.blockedText };
   }
   return { bg: COLORS.grayBg, fg: COLORS.grayText };
 };
@@ -158,6 +158,31 @@ const criticidadeStyle = (criticality: string) => {
 const severityStyle = (severity: string) => {
   const normalized = normalize(severity);
   if (normalized.includes('crit') || normalized.includes('critical')) {
+    return { bg: COLORS.severityCriticalBg, fg: COLORS.severityCriticalText };
+  }
+  if (normalized.includes('alta') || normalized.includes('high')) {
+    return { bg: COLORS.severityHighBg, fg: COLORS.severityHighText };
+  }
+  if (
+    normalized.includes('média') ||
+    normalized.includes('media') ||
+    normalized.includes('medium')
+  ) {
+    return { bg: COLORS.severityMediumBg, fg: COLORS.severityMediumText };
+  }
+  if (normalized.includes('baixa') || normalized.includes('low')) {
+    return { bg: COLORS.severityLowBg, fg: COLORS.severityLowText };
+  }
+  return { bg: COLORS.grayBg, fg: COLORS.grayText };
+};
+
+const priorityStyle = (priority: string) => {
+  const normalized = normalize(priority);
+  if (
+    normalized.includes('urgente') ||
+    normalized.includes('crit') ||
+    normalized.includes('critical')
+  ) {
     return { bg: COLORS.severityCriticalBg, fg: COLORS.severityCriticalText };
   }
   if (normalized.includes('alta') || normalized.includes('high')) {
@@ -356,6 +381,10 @@ export const exportEnvironmentExcel = async ({
       const severityCell = row.getCell(2);
       const severity = severityStyle(String(severityCell.value ?? ''));
       stylePill(severityCell, severity.bg, severity.fg);
+
+      const priorityCell = row.getCell(3);
+      const priority = priorityStyle(String(priorityCell.value ?? ''));
+      stylePill(priorityCell, priority.bg, priority.fg);
     }
 
     const bugColumnValues = [
