@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Environment } from '../../../domain/entities/environment';
-import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
+import { environmentService } from '../../../infrastructure/services/environmentService';
 import { Button } from '../Button';
 import { Modal } from '../Modal';
 

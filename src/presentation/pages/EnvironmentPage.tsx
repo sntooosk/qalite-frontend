@@ -10,9 +10,9 @@ import type {
 } from '../../domain/entities/environment';
 import type { UserSummary } from '../../domain/entities/user';
 import type { SlackTaskSummaryPayload } from '../../infrastructure/external/slack';
-import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
-import { storeService } from '../../application/use-cases/StoreUseCase';
-import { slackService } from '../../application/use-cases/SlackUseCase';
+import { environmentService } from '../../infrastructure/services/environmentService';
+import { storeService } from '../../infrastructure/services/storeService';
+import { slackService } from '../../infrastructure/services/slackService';
 import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
@@ -730,6 +730,7 @@ export const EnvironmentPage = () => {
     formattedTime,
     participantProfiles,
     scenarioCount,
+    storeName,
     translateOptionValue,
     translation,
     urls,

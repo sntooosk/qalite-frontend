@@ -7,7 +7,6 @@ import type {
   RemoveUserFromOrganizationPayload,
   UpdateOrganizationPayload,
 } from '../../domain/entities/organization';
-import { firebaseOrganizationRepository } from '../../infrastructure/repositories/firebaseOrganizationRepository';
 
 export class OrganizationUseCases {
   constructor(private readonly organizationRepository: OrganizationRepository) {}
@@ -44,5 +43,3 @@ export class OrganizationUseCases {
     return this.organizationRepository.getUserOrganizationByUserId(userId);
   }
 }
-
-export const organizationService = new OrganizationUseCases(firebaseOrganizationRepository);

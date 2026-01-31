@@ -12,7 +12,6 @@ import type {
   UpdateEnvironmentInput,
 } from '../../domain/entities/environment';
 import type { UserSummary } from '../../domain/entities/user';
-import { firebaseEnvironmentRepository } from '../../infrastructure/repositories/firebaseEnvironmentRepository';
 
 export class EnvironmentUseCases {
   constructor(private readonly environmentRepository: EnvironmentRepository) {}
@@ -122,5 +121,3 @@ export class EnvironmentUseCases {
     );
   }
 }
-
-export const environmentService = new EnvironmentUseCases(firebaseEnvironmentRepository);

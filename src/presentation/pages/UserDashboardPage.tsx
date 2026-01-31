@@ -11,7 +11,7 @@ import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanba
 import { StorefrontIcon, UsersGroupIcon } from '../components/icons';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
-import { browserstackService } from '../../application/use-cases/BrowserstackUseCase';
+import { browserstackService } from '../../infrastructure/services/browserstackService';
 import type { BrowserstackBuild } from '../../domain/entities/browserstack';
 import { useTranslation } from 'react-i18next';
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { Environment, EnvironmentStatus } from '../../domain/entities/environment';
-import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
+import { environmentService } from '../../infrastructure/services/environmentService';
 
 interface StatusCounts extends Record<EnvironmentStatus, number> {
   total: number;

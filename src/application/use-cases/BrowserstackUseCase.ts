@@ -3,7 +3,6 @@ import type {
   BrowserstackCredentials,
 } from '../../domain/entities/browserstack';
 import type { BrowserstackRepository } from '../../domain/repositories/BrowserstackRepository';
-import { browserstackIntegrationRepository } from '../../infrastructure/repositories/browserstackIntegrationRepository';
 
 export class BrowserstackUseCases {
   constructor(private readonly browserstackRepository: BrowserstackRepository) {}
@@ -12,5 +11,3 @@ export class BrowserstackUseCases {
     return this.browserstackRepository.listBuilds(credentials);
   }
 }
-
-export const browserstackService = new BrowserstackUseCases(browserstackIntegrationRepository);

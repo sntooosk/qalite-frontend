@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { storeService } from '../../application/use-cases/StoreUseCase';
+import { storeService } from '../../infrastructure/services/storeService';
 import { Layout } from '../components/Layout';
 import { EnvironmentEvidenceTable } from '../components/environments/EnvironmentEvidenceTable';
 import { EnvironmentBugList } from '../components/environments/EnvironmentBugList';

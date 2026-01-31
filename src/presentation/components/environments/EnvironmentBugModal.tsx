@@ -8,7 +8,7 @@ import type {
   EnvironmentBugSeverity,
   EnvironmentBugStatus,
 } from '../../../domain/entities/environment';
-import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
+import { environmentService } from '../../../infrastructure/services/environmentService';
 import { useToast } from '../../context/ToastContext';
 import { Button } from '../Button';
 import { Modal } from '../Modal';

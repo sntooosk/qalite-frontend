@@ -11,7 +11,6 @@ import type {
   StoreSuiteInput,
   UpdateStorePayload,
 } from '../../domain/entities/store';
-import { firebaseStoreRepository } from '../../infrastructure/repositories/firebaseStoreRepository';
 
 export class StoreUseCases {
   constructor(private readonly storeRepository: StoreRepository) {}
@@ -96,5 +95,3 @@ export class StoreUseCases {
     return this.storeRepository.exportStore(storeId);
   }
 }
-
-export const storeService = new StoreUseCases(firebaseStoreRepository);
