@@ -51,6 +51,15 @@ const COLORS = {
 
   grayBg: '3A3F4B',
   grayText: 'E6E6E6',
+
+  criticalityLowBg: 'D1FAE5',
+  criticalityLowText: '047857',
+  criticalityMediumBg: 'FEF08A',
+  criticalityMediumText: 'B45309',
+  criticalityHighBg: 'FECACA',
+  criticalityHighText: 'DC2626',
+  criticalityCriticalBg: 'F5D0FE',
+  criticalityCriticalText: 'A21CAF',
 };
 
 const normalize = (value: string) => (value ?? '').trim().toLowerCase();
@@ -106,17 +115,20 @@ const statusStyle = (status: string) => {
 const criticidadeStyle = (criticality: string) => {
   const normalized = normalize(criticality);
   if (normalized.includes('baixa') || normalized.includes('low')) {
-    return { bg: COLORS.greenBg, fg: COLORS.greenText };
+    return { bg: COLORS.criticalityLowBg, fg: COLORS.criticalityLowText };
   }
   if (
     normalized.includes('média') ||
     normalized.includes('media') ||
     normalized.includes('medium')
   ) {
-    return { bg: COLORS.yellowBg, fg: COLORS.yellowText };
+    return { bg: COLORS.criticalityMediumBg, fg: COLORS.criticalityMediumText };
+  }
+  if (normalized.includes('crit') || normalized.includes('critical')) {
+    return { bg: COLORS.criticalityCriticalBg, fg: COLORS.criticalityCriticalText };
   }
   if (normalized.includes('alta') || normalized.includes('high')) {
-    return { bg: COLORS.redBg, fg: COLORS.redText };
+    return { bg: COLORS.criticalityHighBg, fg: COLORS.criticalityHighText };
   }
   return { bg: COLORS.grayBg, fg: COLORS.grayText };
 };

@@ -735,7 +735,7 @@
       "filters_criticidade": "Criticidade",
       "filters_todas": "Todas",
 
-      "table_titulo": "Título",
+      "table_titulo": "Cenário",
       "table_categoria": "Categoria",
       "table_criticidade": "Criticidade",
       "table_observacao": "Observação",
@@ -1078,7 +1078,7 @@
       "scenarioCriticalityFilterAriaLabel": "Filtrar por criticidade",
       "clearFilters": "Limpar filtros",
       "noScenariosFiltered": "Nenhum cenário corresponde aos filtros aplicados.",
-      "scenarioTitle": "Título",
+      "scenarioTitle": "Cenário",
       "testTime": "Tempo de teste",
       "viewDetails": "Ver detalhes",
       "actions": "Ações",

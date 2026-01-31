@@ -7,15 +7,12 @@ import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { useOrganizationStores } from '../hooks/useOrganizationStores';
 import { UserAvatar } from '../components/UserAvatar';
-import { SimpleBarChart } from '../components/SimpleBarChart';
 import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanban';
-import { BarChartIcon, SparklesIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
+import { StorefrontIcon, UsersGroupIcon } from '../components/icons';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
-import { storeService } from '../../application/use-cases/StoreUseCase';
 import { browserstackService } from '../../application/use-cases/BrowserstackUseCase';
 import type { BrowserstackBuild } from '../../domain/entities/browserstack';
-import { isAutomatedScenario } from '../../shared/utils/automation';
 import { useTranslation } from 'react-i18next';
 
 export const UserDashboardPage = () => {
@@ -25,8 +22,6 @@ export const UserDashboardPage = () => {
   const organizationId = user?.organizationId ?? null;
   const { organization, stores, isLoading, status } = useOrganizationStores(organizationId);
   const { setActiveOrganization } = useOrganizationBranding();
-  const [storeAutomationCounts, setStoreAutomationCounts] = useState<Record<string, number>>({});
-  const [isLoadingAutomationStats, setIsLoadingAutomationStats] = useState(false);
   const [browserstackBuilds, setBrowserstackBuilds] = useState<BrowserstackBuild[]>([]);
   const [isLoadingBrowserstack, setIsLoadingBrowserstack] = useState(false);
 
@@ -61,50 +56,6 @@ export const UserDashboardPage = () => {
     };
   }, [organization, setActiveOrganization]);
 
-  useEffect(() => {
-    if (stores.length === 0) {
-      setStoreAutomationCounts({});
-      return;
-    }
-
-    let isMounted = true;
-
-    const fetchAutomationStats = async () => {
-      setIsLoadingAutomationStats(true);
-      try {
-        const stats = await Promise.all(
-          stores.map(async (store) => {
-            const scenarios = await storeService.listScenarios(store.id);
-            const automatedCount = scenarios.filter((scenario) =>
-              isAutomatedScenario(scenario.automation),
-            ).length;
-
-            return [store.id, automatedCount] as const;
-          }),
-        );
-
-        if (isMounted) {
-          setStoreAutomationCounts(Object.fromEntries(stats));
-        }
-      } catch (error) {
-        console.error(error);
-        if (isMounted) {
-          setStoreAutomationCounts({});
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingAutomationStats(false);
-        }
-      }
-    };
-
-    void fetchAutomationStats();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [stores]);
-
   const handleSelectStore = (storeId: string) => {
     navigate(`/stores/${storeId}`);
   };
@@ -124,24 +75,6 @@ export const UserDashboardPage = () => {
   const isError = status === 'error';
   const emptyStateTitle = isError ? t('userPage.loadingStores') : t('userPage.unavailableStores');
   const emptyStateDescription = isError ? t('userPage.updatePage') : t('userPage.addStores');
-
-  const scenariosPerStoreData = useMemo(
-    () =>
-      stores.map((store) => ({
-        label: store.name,
-        value: store.scenarioCount,
-      })),
-    [stores],
-  );
-
-  const automatedScenariosPerStoreData = useMemo(
-    () =>
-      stores.map((store) => ({
-        label: store.name,
-        value: storeAutomationCounts[store.id] ?? 0,
-      })),
-    [stores, storeAutomationCounts],
-  );
 
   const organizationCredentials = organization?.browserstackCredentials ?? null;
   const hasBrowserstackCredentials = useMemo(
@@ -217,9 +150,6 @@ export const UserDashboardPage = () => {
                     </span>
                     <h2 className="card-title">{store.name}</h2>
                   </div>
-                  <span className="badge">
-                    {t('storesPage.scenarios', { count: store.scenarioCount })}
-                  </span>
                 </div>
                 <div className="card-link-hint">
                   <span>{t('storesPage.openStore')}</span>
@@ -267,25 +197,6 @@ export const UserDashboardPage = () => {
                 )}
               </section>
             )}
-
-            <section className="organization-charts-grid">
-              <SimpleBarChart
-                title={t('userPage.storeScenarios')}
-                description={t('userPage.totalScenarios')}
-                data={scenariosPerStoreData}
-                emptyMessage={t('userPage.emptyStores')}
-                icon={<BarChartIcon aria-hidden className="icon icon--lg" />}
-              />
-              <SimpleBarChart
-                title={t('userPage.automatedScenarios')}
-                description={t('userPage.scenariosDescription')}
-                data={automatedScenariosPerStoreData}
-                emptyMessage={t('userPage.emptyScenarios')}
-                isLoading={isLoadingAutomationStats}
-                variant="info"
-                icon={<SparklesIcon aria-hidden className="icon icon--lg" />}
-              />
-            </section>
           </div>
         )}
       </section>

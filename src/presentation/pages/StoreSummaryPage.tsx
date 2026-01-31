@@ -90,7 +90,7 @@ interface StoreHighlight {
   onClick?: () => void;
 }
 
-type ExportFormat = 'pdf' | 'xlsx';
+type ExportFormat = 'pdf' | 'xlsx' | 'json';
 
 const emptyScenarioFilters: ScenarioFilters = {
   search: '',
@@ -208,7 +208,9 @@ export const StoreSummaryPage = () => {
   const [isViewingSuitesOnly, setIsViewingSuitesOnly] = useState(false);
   const suiteListRef = useRef<HTMLDivElement | null>(null);
   const scenarioFormRef = useRef<HTMLFormElement | null>(null);
+  const scenarioImportInputRef = useRef<HTMLInputElement | null>(null);
   const [exportingScenarioFormat, setExportingScenarioFormat] = useState<ExportFormat | null>(null);
+  const [isImportingScenarioJson, setIsImportingScenarioJson] = useState(false);
   const { t, i18n } = useTranslation();
   const storeSiteInfo = useMemo(() => {
     const link = buildExternalLink(store?.site);
@@ -1156,6 +1158,7 @@ export const StoreSummaryPage = () => {
     try {
       setExportingScenarioFormat(format);
       const data = await storeService.exportStore(store.id);
+      const baseFileName = `${store.name.replace(/\s+/g, '_')}_${t('storeSummary.exportFileSuffix')}`;
 
       if (format === 'xlsx') {
         const scenarioRows = data.scenarios.map((scenario) => ({
@@ -1188,8 +1191,6 @@ export const StoreSummaryPage = () => {
             }),
           },
         ];
-        const baseFileName = `${store.name.replace(/\s+/g, '_')}_${t('storeSummary.exportFileSuffix')}`;
-
         exportScenarioExcel({
           fileName: `${baseFileName}.xlsx`,
           scenarioSheetName: t('storeSummary.exportExcelSheetName'),
@@ -1198,7 +1199,7 @@ export const StoreSummaryPage = () => {
           infoRows,
           scenarioRows,
           scenarioHeaderLabels: [
-            t('storeSummary.title'),
+            t('storeSummary.scenarioTitle'),
             t('storeSummary.category'),
             t('storeSummary.automation'),
             t('storeSummary.criticality'),
@@ -1212,6 +1213,18 @@ export const StoreSummaryPage = () => {
         openScenarioPdf(data, `${store.name} - ${t('scenarios')}`, pdfWindow);
       }
 
+      if (format === 'json') {
+        const jsonBlob = new Blob([JSON.stringify(data, null, 2)], {
+          type: 'application/json',
+        });
+        const url = window.URL.createObjectURL(jsonBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${baseFileName}.json`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+      }
+
       showToast({ type: 'success', message: t('storeSummary.scenarioExportSuccess') });
     } catch (error) {
       console.error(error);
@@ -1221,6 +1234,128 @@ export const StoreSummaryPage = () => {
       pdfWindow?.close();
     } finally {
       setExportingScenarioFormat(null);
+    }
+  };
+
+  const handleScenarioJsonImport = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !store) {
+      return;
+    }
+
+    event.target.value = '';
+
+    try {
+      setIsImportingScenarioJson(true);
+      const content = await file.text();
+      const payload = JSON.parse(content) as
+        | { store?: { id?: string }; scenarios?: StoreScenarioInput[] }
+        | StoreScenarioInput[];
+      const payloadScenarios = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.scenarios)
+          ? payload.scenarios
+          : [];
+      const payloadStoreId = !Array.isArray(payload) ? payload?.store?.id : undefined;
+
+      if (payloadStoreId && payloadStoreId !== store.id) {
+        showToast({ type: 'error', message: t('storeSummary.importWrongStore') });
+        return;
+      }
+
+      if (payloadScenarios.length === 0) {
+        showToast({ type: 'error', message: t('storeSummary.importNoScenarios') });
+        return;
+      }
+
+      const normalizedScenarios = payloadScenarios
+        .map((scenario) => {
+          const title = String(scenario.title ?? '').trim();
+          const category = String(scenario.category ?? '').trim();
+          const automation = normalizeAutomationEnum(String(scenario.automation ?? ''));
+          const criticality = normalizeCriticalityEnum(String(scenario.criticality ?? ''));
+          return {
+            title,
+            category,
+            automation: automation || String(scenario.automation ?? '').trim(),
+            criticality: criticality || String(scenario.criticality ?? '').trim(),
+            observation: String(scenario.observation ?? '').trim(),
+            bdd: String(scenario.bdd ?? '').trim(),
+          };
+        })
+        .filter((scenario) => scenario.title);
+
+      if (normalizedScenarios.length === 0) {
+        showToast({ type: 'error', message: t('storeSummary.importNoScenarios') });
+        return;
+      }
+
+      const shouldReplace = window.confirm(t('storeSummary.importConfirmReplace'));
+      const makeScenarioKey = (scenario: StoreScenarioInput) =>
+        `${scenario.title.toLowerCase().trim()}|${scenario.category.toLowerCase().trim()}`;
+
+      const existingKeys = new Set(
+        shouldReplace ? [] : scenarios.map((scenario) => makeScenarioKey(scenario)),
+      );
+
+      if (shouldReplace && scenarios.length > 0) {
+        await Promise.all(
+          scenarios.map((scenario) => storeService.deleteScenario(store.id, scenario.id)),
+        );
+      }
+
+      const createdScenarios: StoreScenario[] = [];
+      let skippedCount = 0;
+
+      for (const scenarioInput of normalizedScenarios) {
+        const scenarioKey = makeScenarioKey(scenarioInput);
+        if (existingKeys.has(scenarioKey)) {
+          skippedCount += 1;
+          continue;
+        }
+
+        const created = await storeService.createScenario({
+          storeId: store.id,
+          ...scenarioInput,
+        });
+        existingKeys.add(scenarioKey);
+        createdScenarios.push(created);
+      }
+
+      setScenarios((previous) =>
+        shouldReplace ? createdScenarios : [...previous, ...createdScenarios],
+      );
+      setScenarioVisibleCount(PAGE_SIZE);
+      setStore((previous) =>
+        previous
+          ? {
+              ...previous,
+              scenarioCount: shouldReplace
+                ? createdScenarios.length
+                : previous.scenarioCount + createdScenarios.length,
+            }
+          : previous,
+      );
+
+      if (shouldReplace) {
+        showToast({
+          type: 'success',
+          message: t('storeSummary.importReplaceSuccess', { count: createdScenarios.length }),
+        });
+      } else {
+        showToast({
+          type: 'success',
+          message: t('storeSummary.importMergeSuccess', {
+            created: createdScenarios.length,
+            skipped: skippedCount,
+          }),
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: t('storeSummary.importError') });
+    } finally {
+      setIsImportingScenarioJson(false);
     }
   };
 
@@ -1280,21 +1415,25 @@ export const StoreSummaryPage = () => {
   const handleScenarioFilterChange =
     (field: keyof ScenarioFilters) =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setScenarioVisibleCount(PAGE_SIZE);
       setScenarioFilters((previous) => ({ ...previous, [field]: event.target.value }));
     };
 
   const handleSuiteScenarioFilterChange =
     (field: keyof ScenarioFilters) =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setSuiteScenarioVisibleCount(PAGE_SIZE);
       setSuiteScenarioFilters((previous) => ({ ...previous, [field]: event.target.value }));
     };
 
   const handleClearScenarioFilters = () => {
     setScenarioFilters(emptyScenarioFilters);
+    setScenarioVisibleCount(PAGE_SIZE);
   };
 
   const handleClearSuiteScenarioFilters = () => {
     setSuiteScenarioFilters(emptyScenarioFilters);
+    setSuiteScenarioVisibleCount(PAGE_SIZE);
   };
 
   const handleSuiteSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -1535,6 +1674,9 @@ export const StoreSummaryPage = () => {
                 <div className="store-summary-meta">
                   <div className="store-summary-context">
                     {organization?.name && <span>{organization.name}</span>}
+                    {store?.name && (
+                      <span className="store-summary-context__name">{store.name}</span>
+                    )}
                     <span>
                       {storeSiteInfo.href ? (
                         <a href={storeSiteInfo.href} target="_blank" rel="noreferrer noopener">
@@ -1828,6 +1970,13 @@ export const StoreSummaryPage = () => {
                       {viewMode === 'scenarios' ? (
                         <>
                           <div className="scenario-action-group">
+                            <input
+                              ref={scenarioImportInputRef}
+                              type="file"
+                              accept="application/json"
+                              onChange={handleScenarioJsonImport}
+                              style={{ display: 'none' }}
+                            />
                             <Button
                               type="button"
                               variant="ghost"
@@ -1841,12 +1990,32 @@ export const StoreSummaryPage = () => {
                             <Button
                               type="button"
                               variant="ghost"
+                              onClick={() => void handleScenarioExport('json')}
+                              isLoading={exportingScenarioFormat === 'json'}
+                              loadingText={t('exporting')}
+                            >
+                              <FileTextIcon aria-hidden className="icon" />
+                              {t('storeSummary.exportJson')}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
                               onClick={() => void handleScenarioExport('pdf')}
                               isLoading={exportingScenarioFormat === 'pdf'}
                               loadingText={t('exporting')}
                             >
                               <FileTextIcon aria-hidden className="icon" />
                               {t('storeSummary.exportPdf')}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={() => scenarioImportInputRef.current?.click()}
+                              isLoading={isImportingScenarioJson}
+                              loadingText={t('importing')}
+                            >
+                              <FileTextIcon aria-hidden className="icon" />
+                              {t('storeSummary.importJson')}
                             </Button>
                           </div>
                         </>
@@ -1921,7 +2090,7 @@ export const StoreSummaryPage = () => {
                               <table className="scenario-table data-table">
                                 <thead>
                                   <tr>
-                                    <th>{t('storeSummary.title')}</th>
+                                    <th>{t('storeSummary.scenarioTitle')}</th>
                                     <th>
                                       <ScenarioColumnSortControl
                                         label={t('storeSummary.category')}
@@ -2078,7 +2247,7 @@ export const StoreSummaryPage = () => {
                                 <table className="suite-preview-table data-table">
                                   <thead>
                                     <tr>
-                                      <th>{t('storeSummary.scenario')}</th>
+                                      <th>{t('storeSummary.scenarioTitle')}</th>
                                       <th>
                                         <ScenarioColumnSortControl
                                           label={t('storeSummary.category')}
@@ -2391,7 +2560,11 @@ export const StoreSummaryPage = () => {
                                                         aria-label={`Selecionar cenário ${scenario.title}`}
                                                       />
                                                     </td>
-                                                    <td data-label="Título">{scenario.title}</td>
+                                                    <td
+                                                      data-label={t('storeSummary.scenarioTitle')}
+                                                    >
+                                                      {scenario.title}
+                                                    </td>
                                                     <td data-label="Categoria">
                                                       {scenario.category}
                                                     </td>
