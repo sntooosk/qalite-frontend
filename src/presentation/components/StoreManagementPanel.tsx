@@ -1275,7 +1275,7 @@ export const StoreManagementPanel = ({
                 <table className="scenario-table data-table">
                   <thead>
                     <tr>
-                      <th>{t('storeSummary.title')}</th>
+                      <th>{t('storeSummary.scenarioTitle')}</th>
                       <th>
                         <ScenarioColumnSortControl
                           label={t('storeSummary.category')}

@@ -40,10 +40,7 @@ import {
   SettingsIcon,
   TrashIcon,
 } from '../components/icons';
-import {
-  normalizeAutomationEnum,
-  normalizeCriticalityEnum,
-} from '../../shared/utils/scenarioEnums';
+import { normalizeAutomationEnum, normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
 import { EnvironmentKanban } from '../components/environments/EnvironmentKanban';
 import { PaginationControls } from '../components/PaginationControls';
 import {
@@ -1156,6 +1153,7 @@ export const StoreSummaryPage = () => {
     try {
       setExportingScenarioFormat(format);
       const data = await storeService.exportStore(store.id);
+      const baseFileName = `${store.name.replace(/\s+/g, '_')}_${t('storeSummary.exportFileSuffix')}`;
 
       if (format === 'xlsx') {
         const scenarioRows = data.scenarios.map((scenario) => ({
@@ -1188,8 +1186,6 @@ export const StoreSummaryPage = () => {
             }),
           },
         ];
-        const baseFileName = `${store.name.replace(/\s+/g, '_')}_${t('storeSummary.exportFileSuffix')}`;
-
         exportScenarioExcel({
           fileName: `${baseFileName}.xlsx`,
           scenarioSheetName: t('storeSummary.exportExcelSheetName'),
@@ -1198,7 +1194,7 @@ export const StoreSummaryPage = () => {
           infoRows,
           scenarioRows,
           scenarioHeaderLabels: [
-            t('storeSummary.title'),
+            t('storeSummary.scenarioTitle'),
             t('storeSummary.category'),
             t('storeSummary.automation'),
             t('storeSummary.criticality'),
@@ -1280,21 +1276,25 @@ export const StoreSummaryPage = () => {
   const handleScenarioFilterChange =
     (field: keyof ScenarioFilters) =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setScenarioVisibleCount(PAGE_SIZE);
       setScenarioFilters((previous) => ({ ...previous, [field]: event.target.value }));
     };
 
   const handleSuiteScenarioFilterChange =
     (field: keyof ScenarioFilters) =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setSuiteScenarioVisibleCount(PAGE_SIZE);
       setSuiteScenarioFilters((previous) => ({ ...previous, [field]: event.target.value }));
     };
 
   const handleClearScenarioFilters = () => {
     setScenarioFilters(emptyScenarioFilters);
+    setScenarioVisibleCount(PAGE_SIZE);
   };
 
   const handleClearSuiteScenarioFilters = () => {
     setSuiteScenarioFilters(emptyScenarioFilters);
+    setSuiteScenarioVisibleCount(PAGE_SIZE);
   };
 
   const handleSuiteSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -1535,6 +1535,9 @@ export const StoreSummaryPage = () => {
                 <div className="store-summary-meta">
                   <div className="store-summary-context">
                     {organization?.name && <span>{organization.name}</span>}
+                    {store?.name && (
+                      <span className="store-summary-context__name">{store.name}</span>
+                    )}
                     <span>
                       {storeSiteInfo.href ? (
                         <a href={storeSiteInfo.href} target="_blank" rel="noreferrer noopener">
@@ -1921,7 +1924,7 @@ export const StoreSummaryPage = () => {
                               <table className="scenario-table data-table">
                                 <thead>
                                   <tr>
-                                    <th>{t('storeSummary.title')}</th>
+                                    <th>{t('storeSummary.scenarioTitle')}</th>
                                     <th>
                                       <ScenarioColumnSortControl
                                         label={t('storeSummary.category')}
@@ -2078,7 +2081,7 @@ export const StoreSummaryPage = () => {
                                 <table className="suite-preview-table data-table">
                                   <thead>
                                     <tr>
-                                      <th>{t('storeSummary.scenario')}</th>
+                                      <th>{t('storeSummary.scenarioTitle')}</th>
                                       <th>
                                         <ScenarioColumnSortControl
                                           label={t('storeSummary.category')}
@@ -2391,7 +2394,11 @@ export const StoreSummaryPage = () => {
                                                         aria-label={`Selecionar cenário ${scenario.title}`}
                                                       />
                                                     </td>
-                                                    <td data-label="Título">{scenario.title}</td>
+                                                    <td
+                                                      data-label={t('storeSummary.scenarioTitle')}
+                                                    >
+                                                      {scenario.title}
+                                                    </td>
                                                     <td data-label="Categoria">
                                                       {scenario.category}
                                                     </td>

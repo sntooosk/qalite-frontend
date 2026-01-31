@@ -18,16 +18,8 @@ import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import { TextInput } from '../components/TextInput';
 import { Modal } from '../components/Modal';
 import { UserAvatar } from '../components/UserAvatar';
-import { SimpleBarChart } from '../components/SimpleBarChart';
 import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanban';
-import {
-  BarChartIcon,
-  SettingsIcon,
-  SparklesIcon,
-  StorefrontIcon,
-  UsersGroupIcon,
-} from '../components/icons';
-import { isAutomatedScenario } from '../../shared/utils/automation';
+import { SettingsIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
 import { useTranslation } from 'react-i18next';
 
 interface StoreForm {
@@ -94,8 +86,6 @@ export const AdminStoresPage = () => {
     onConfirm: () => Promise<void> | void;
   } | null>(null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
-  const [storeAutomationCounts, setStoreAutomationCounts] = useState<Record<string, number>>({});
-  const [isLoadingAutomationStats, setIsLoadingAutomationStats] = useState(false);
   const [browserstackBuilds, setBrowserstackBuilds] = useState<BrowserstackBuild[]>([]);
   const [isLoadingBrowserstack, setIsLoadingBrowserstack] = useState(false);
   const { t: translation } = useTranslation();
@@ -133,7 +123,6 @@ export const AdminStoresPage = () => {
 
   useEffect(() => {
     if (!selectedOrganizationId) {
-      setStoreAutomationCounts({});
       return;
     }
 
@@ -161,53 +150,6 @@ export const AdminStoresPage = () => {
   }, [selectedOrganization, setActiveOrganization]);
 
   useEffect(() => () => setActiveOrganization(null), [setActiveOrganization]);
-
-  useEffect(() => {
-    if (!selectedOrganizationId || storesForOrganization.length === 0) {
-      setStoreAutomationCounts({});
-      return;
-    }
-
-    let isMounted = true;
-
-    const fetchAutomationStats = async () => {
-      setIsLoadingAutomationStats(true);
-      try {
-        const results = await Promise.all(
-          storesForOrganization.map(async (store) => {
-            const scenarios = await storeService.listScenarios(store.id);
-            const automatedCount = scenarios.filter((scenario) =>
-              isAutomatedScenario(scenario.automation),
-            ).length;
-
-            return [store.id, automatedCount] as const;
-          }),
-        );
-
-        if (isMounted) {
-          setStoreAutomationCounts(Object.fromEntries(results));
-        }
-      } catch (error) {
-        console.error(error);
-        if (isMounted) {
-          showToast({
-            type: 'error',
-            message: translation('AdminStoresPage.toast-error-load-automation-stats'),
-          });
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingAutomationStats(false);
-        }
-      }
-    };
-
-    void fetchAutomationStats();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedOrganizationId, storesForOrganization, showToast, translation]);
 
   useEffect(() => {
     const searchTerm = newMemberEmail.trim();
@@ -279,24 +221,6 @@ export const AdminStoresPage = () => {
   useEffect(() => {
     void loadBrowserstackBuilds();
   }, [loadBrowserstackBuilds]);
-
-  const scenariosPerStoreData = useMemo(
-    () =>
-      storesForOrganization.map((store) => ({
-        label: store.name,
-        value: store.scenarioCount,
-      })),
-    [storesForOrganization],
-  );
-
-  const automatedScenariosPerStoreData = useMemo(
-    () =>
-      storesForOrganization.map((store) => ({
-        label: store.name,
-        value: storeAutomationCounts[store.id] ?? 0,
-      })),
-    [storesForOrganization, storeAutomationCounts],
-  );
 
   const openCreateModal = () => {
     setStoreForm(initialStoreForm);
@@ -759,11 +683,6 @@ export const AdminStoresPage = () => {
                         <h2 className="card-title">{store.name}</h2>
                       </div>
                     </div>
-                    <span className="badge">
-                      {translation('AdminStoresPage.store-card-scenarios-badge', {
-                        scenarioCount: store.scenarioCount,
-                      })}
-                    </span>
                   </div>
                   <div className="card-link-hint">
                     <span>{translation('storesPage.openStore')}</span>
@@ -814,29 +733,6 @@ export const AdminStoresPage = () => {
                   )}
                 </section>
               )}
-
-              <section className="organization-charts-grid">
-                <SimpleBarChart
-                  title={translation('AdminStoresPage.chart-scenarios-title')}
-                  description={translation('AdminStoresPage.scenarios-per-store-chart-description')}
-                  data={scenariosPerStoreData}
-                  emptyMessage={translation(
-                    'AdminStoresPage.scenarios-per-store-chart-empty-message',
-                  )}
-                  icon={<BarChartIcon aria-hidden className="icon icon--lg" />}
-                />
-                <SimpleBarChart
-                  title={translation('AdminStoresPage.chart-automated-title')}
-                  description={translation('AdminStoresPage.automated-scenarios-chart-description')}
-                  data={automatedScenariosPerStoreData}
-                  emptyMessage={translation(
-                    'AdminStoresPage.automated-scenarios-chart-empty-message',
-                  )}
-                  isLoading={isLoadingAutomationStats}
-                  variant="info"
-                  icon={<SparklesIcon aria-hidden className="icon icon--lg" />}
-                />
-              </section>
 
               {hasBrowserstackCredentials && (
                 <BrowserstackKanban

@@ -37,20 +37,46 @@ const COLORS = {
   headerText: 'FFFFFF',
   border: '2B3B55',
 
-  greenBg: '0E5A3A',
-  greenText: 'D7FFE9',
+  greenBg: '2ECC71',
+  greenText: 'FFFFFF',
 
-  orangeBg: '7C2D12',
-  orangeText: 'FFEDD5',
+  orangeBg: 'E67E22',
+  orangeText: 'FFFFFF',
 
-  redBg: '6B1F2A',
-  redText: 'FFD6DC',
+  redBg: 'E74C3C',
+  redText: 'FFFFFF',
 
-  yellowBg: '6B5A1F',
-  yellowText: 'FFF2C7',
+  redBlockedBg: 'C0392B',
+  redBlockedText: 'FFFFFF',
 
-  grayBg: '3A3F4B',
-  grayText: 'E6E6E6',
+  yellowBg: 'F1C40F',
+  yellowText: '2C3E50',
+
+  grayBg: 'BDC3C7',
+  grayText: '2C3E50',
+
+  blueProgressBg: '3498DB',
+  blueProgressText: 'FFFFFF',
+  blueInfoBg: '5DADE2',
+  blueInfoText: 'FFFFFF',
+
+  severityLowBg: '27AE60',
+  severityLowText: 'FFFFFF',
+  severityMediumBg: 'F39C12',
+  severityMediumText: '2C3E50',
+  severityHighBg: 'D35400',
+  severityHighText: 'FFFFFF',
+  severityCriticalBg: 'C0392B',
+  severityCriticalText: 'FFFFFF',
+
+  criticalityLowBg: '2ECC71',
+  criticalityLowText: 'FFFFFF',
+  criticalityMediumBg: 'F1C40F',
+  criticalityMediumText: '2C3E50',
+  criticalityHighBg: 'E67E22',
+  criticalityHighText: 'FFFFFF',
+  criticalityCriticalBg: 'E74C3C',
+  criticalityCriticalText: 'FFFFFF',
 };
 
 const normalize = (value: string) => (value ?? '').trim().toLowerCase();
@@ -85,20 +111,25 @@ const stylePill = (cell: ExcelJS.Cell, bg: string, fg: string) => {
 
 const statusStyle = (status: string) => {
   const normalized = normalize(status);
+  if (normalized.includes('nao') && normalized.includes('aplica')) {
+    return { bg: COLORS.grayBg, fg: COLORS.grayText };
+  }
   if (normalized.includes('conclu') || normalized.includes('complete')) {
     return { bg: COLORS.greenBg, fg: COLORS.greenText };
   }
   if (normalized.includes('andamento') || normalized.includes('progress')) {
-    return { bg: COLORS.yellowBg, fg: COLORS.yellowText };
+    return { bg: COLORS.blueProgressBg, fg: COLORS.blueProgressText };
+  }
+  if (normalized.includes('pend')) {
+    return { bg: COLORS.grayBg, fg: COLORS.grayText };
   }
   if (
-    normalized.includes('pend') ||
     normalized.includes('bloq') ||
     normalized.includes('erro') ||
     normalized.includes('block') ||
     normalized.includes('fail')
   ) {
-    return { bg: COLORS.redBg, fg: COLORS.redText };
+    return { bg: COLORS.redBlockedBg, fg: COLORS.redBlockedText };
   }
   return { bg: COLORS.grayBg, fg: COLORS.grayText };
 };
@@ -106,17 +137,20 @@ const statusStyle = (status: string) => {
 const criticidadeStyle = (criticality: string) => {
   const normalized = normalize(criticality);
   if (normalized.includes('baixa') || normalized.includes('low')) {
-    return { bg: COLORS.greenBg, fg: COLORS.greenText };
+    return { bg: COLORS.criticalityLowBg, fg: COLORS.criticalityLowText };
   }
   if (
     normalized.includes('média') ||
     normalized.includes('media') ||
     normalized.includes('medium')
   ) {
-    return { bg: COLORS.yellowBg, fg: COLORS.yellowText };
+    return { bg: COLORS.criticalityMediumBg, fg: COLORS.criticalityMediumText };
+  }
+  if (normalized.includes('crit') || normalized.includes('critical')) {
+    return { bg: COLORS.criticalityCriticalBg, fg: COLORS.criticalityCriticalText };
   }
   if (normalized.includes('alta') || normalized.includes('high')) {
-    return { bg: COLORS.redBg, fg: COLORS.redText };
+    return { bg: COLORS.criticalityHighBg, fg: COLORS.criticalityHighText };
   }
   return { bg: COLORS.grayBg, fg: COLORS.grayText };
 };
@@ -124,20 +158,20 @@ const criticidadeStyle = (criticality: string) => {
 const severityStyle = (severity: string) => {
   const normalized = normalize(severity);
   if (normalized.includes('crit') || normalized.includes('critical')) {
-    return { bg: COLORS.redBg, fg: COLORS.redText };
+    return { bg: COLORS.severityCriticalBg, fg: COLORS.severityCriticalText };
   }
   if (normalized.includes('alta') || normalized.includes('high')) {
-    return { bg: COLORS.orangeBg, fg: COLORS.orangeText };
+    return { bg: COLORS.severityHighBg, fg: COLORS.severityHighText };
   }
   if (
     normalized.includes('média') ||
     normalized.includes('media') ||
     normalized.includes('medium')
   ) {
-    return { bg: COLORS.yellowBg, fg: COLORS.yellowText };
+    return { bg: COLORS.severityMediumBg, fg: COLORS.severityMediumText };
   }
   if (normalized.includes('baixa') || normalized.includes('low')) {
-    return { bg: COLORS.greenBg, fg: COLORS.greenText };
+    return { bg: COLORS.severityLowBg, fg: COLORS.severityLowText };
   }
   return { bg: COLORS.grayBg, fg: COLORS.grayText };
 };
