@@ -5,8 +5,8 @@ import enTranslation from '../locales/en.json';
 import ptTranslation from '../locales/pt.json';
 import {
   getDeviceLanguagePreference,
-  LANGUAGE_STORAGE_KEY,
   getStoredLanguagePreference,
+  persistLanguagePreferenceLocally,
 } from '../shared/config/userPreferences';
 
 const storedLanguage = getStoredLanguagePreference();
@@ -30,9 +30,7 @@ i18n.use(initReactI18next).init({
 });
 
 i18n.on('languageChanged', (language) => {
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-  }
+  persistLanguagePreferenceLocally(language);
 });
 
 export default i18n;

@@ -57,7 +57,14 @@ class LocalCacheStore implements CacheStore {
   remove(key: string): void {
     const storageKey = buildStorageKey(this.storagePrefix, key);
     this.memory.delete(storageKey);
-    this.storage?.removeItem(storageKey);
+    if (!this.storage) {
+      return;
+    }
+    try {
+      this.storage.removeItem(storageKey);
+    } catch (error) {
+      console.error('Failed to remove cache entry', error);
+    }
   }
 
   invalidatePrefix(prefix: string): void {
@@ -70,15 +77,25 @@ class LocalCacheStore implements CacheStore {
       return;
     }
 
-    const keysToRemove: string[] = [];
-    for (let index = 0; index < this.storage.length; index += 1) {
-      const key = this.storage.key(index);
-      if (key && key.startsWith(storagePrefix)) {
-        keysToRemove.push(key);
+    try {
+      const keysToRemove: string[] = [];
+      for (let index = 0; index < this.storage.length; index += 1) {
+        const key = this.storage.key(index);
+        if (key && key.startsWith(storagePrefix)) {
+          keysToRemove.push(key);
+        }
       }
-    }
 
-    keysToRemove.forEach((key) => this.storage?.removeItem(key));
+      keysToRemove.forEach((key) => {
+        try {
+          this.storage?.removeItem(key);
+        } catch (error) {
+          console.error('Failed to remove cache entry', error);
+        }
+      });
+    } catch (error) {
+      console.error('Failed to enumerate cache keys', error);
+    }
   }
 
   clear(): void {
@@ -90,7 +107,14 @@ class LocalCacheStore implements CacheStore {
       return null;
     }
 
-    const raw = this.storage.getItem(storageKey);
+    let raw: string | null = null;
+    try {
+      raw = this.storage.getItem(storageKey);
+    } catch (error) {
+      console.error('Failed to read cache entry', error);
+      return null;
+    }
+
     if (!raw) {
       return null;
     }
@@ -101,7 +125,11 @@ class LocalCacheStore implements CacheStore {
       return parsed;
     } catch (error) {
       console.error('Failed to parse cache entry', error);
-      this.storage.removeItem(storageKey);
+      try {
+        this.storage.removeItem(storageKey);
+      } catch (removeError) {
+        console.error('Failed to remove invalid cache entry', removeError);
+      }
       return null;
     }
   }
