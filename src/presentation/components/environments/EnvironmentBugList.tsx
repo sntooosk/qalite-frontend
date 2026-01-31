@@ -162,6 +162,7 @@ export const EnvironmentBugList = ({
                         title={translation('environmentBugList.viewDetails')}
                       >
                         <EyeIcon aria-hidden className="action-button__icon" />
+                        {translation('environmentBugList.viewDetails')}
                       </button>
                       <button
                         type="button"

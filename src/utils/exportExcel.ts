@@ -111,14 +111,19 @@ const stylePill = (cell: ExcelJS.Cell, bg: string, fg: string) => {
 
 const statusStyle = (status: string) => {
   const normalized = normalize(status);
+  if (normalized.includes('nao') && normalized.includes('aplica')) {
+    return { bg: COLORS.grayBg, fg: COLORS.grayText };
+  }
   if (normalized.includes('conclu') || normalized.includes('complete')) {
     return { bg: COLORS.greenBg, fg: COLORS.greenText };
   }
   if (normalized.includes('andamento') || normalized.includes('progress')) {
     return { bg: COLORS.blueProgressBg, fg: COLORS.blueProgressText };
   }
+  if (normalized.includes('pend')) {
+    return { bg: COLORS.grayBg, fg: COLORS.grayText };
+  }
   if (
-    normalized.includes('pend') ||
     normalized.includes('bloq') ||
     normalized.includes('erro') ||
     normalized.includes('block') ||
