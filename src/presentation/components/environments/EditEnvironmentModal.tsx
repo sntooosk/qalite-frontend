@@ -6,7 +6,7 @@ import type {
   UpdateEnvironmentInput,
 } from '../../../domain/entities/environment';
 import type { StoreScenario, StoreSuite } from '../../../domain/entities/store';
-import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
+import { environmentService } from '../../../infrastructure/services/environmentService';
 import { getScenarioPlatformStatuses } from '../../../infrastructure/external/environments';
 import { Button } from '../Button';
 import { Modal } from '../Modal';

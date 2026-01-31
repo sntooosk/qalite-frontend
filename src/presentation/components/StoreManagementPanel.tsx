@@ -7,7 +7,7 @@ import type {
   StoreScenario,
   StoreScenarioInput,
 } from '../../domain/entities/store';
-import { storeService } from '../../application/use-cases/StoreUseCase';
+import { storeService } from '../../infrastructure/services/storeService';
 import { useStoresRealtime } from '../context/StoresRealtimeContext';
 import { useToast } from '../context/ToastContext';
 import { Button } from './Button';

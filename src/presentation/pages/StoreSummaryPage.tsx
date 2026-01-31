@@ -10,8 +10,8 @@ import type {
   StoreSuite,
   StoreSuiteInput,
 } from '../../domain/entities/store';
-import { organizationService } from '../../application/use-cases/OrganizationUseCase';
-import { storeService } from '../../application/use-cases/StoreUseCase';
+import { organizationService } from '../../infrastructure/services/organizationService';
+import { storeService } from '../../infrastructure/services/storeService';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
@@ -40,7 +40,10 @@ import {
   SettingsIcon,
   TrashIcon,
 } from '../components/icons';
-import { normalizeAutomationEnum, normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
+import {
+  normalizeAutomationEnum,
+  normalizeCriticalityEnum,
+} from '../../shared/utils/scenarioEnums';
 import { EnvironmentKanban } from '../components/environments/EnvironmentKanban';
 import { PaginationControls } from '../components/PaginationControls';
 import {

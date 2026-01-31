@@ -5,7 +5,6 @@ import type {
   RegisterPayload,
   UpdateProfilePayload,
 } from '../../domain/entities/auth';
-import { firebaseAuthRepository } from '../../infrastructure/repositories/firebaseAuthRepository';
 
 export class AuthUseCases {
   constructor(private readonly authRepository: AuthRepository) {}
@@ -42,5 +41,3 @@ export class AuthUseCases {
     return this.authRepository.updateProfile(payload);
   }
 }
-
-export const authService = new AuthUseCases(firebaseAuthRepository);

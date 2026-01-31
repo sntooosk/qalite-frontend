@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { EnvironmentBug } from '../../domain/entities/environment';
-import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
+import { environmentService } from '../../infrastructure/services/environmentService';
 
 export const useEnvironmentBugs = (environmentId: string | null | undefined) => {
   const [bugs, setBugs] = useState<EnvironmentBug[]>([]);

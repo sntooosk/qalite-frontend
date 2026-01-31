@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import type { Environment } from '../../../domain/entities/environment';
 import type { EnvironmentBug } from '../../../domain/entities/environment';
-import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
+import { environmentService } from '../../../infrastructure/services/environmentService';
 import { useToast } from '../../context/ToastContext';
 import { BUG_PRIORITY_LABEL, BUG_SEVERITY_LABEL } from '../../../shared/config/environmentLabels';
 import { ConfirmDeleteModal } from '../ConfirmDeleteModal';
