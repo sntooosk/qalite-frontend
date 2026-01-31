@@ -2631,15 +2631,15 @@ button.store-summary-highlight:focus-visible {
   font-size: 0.9rem;
 }
 
-.data-table tbody tr {
+.data-table tbody tr td {
   background: var(--table-surface);
 }
 
-.data-table tbody tr:nth-child(even) {
+.data-table tbody tr:nth-child(even) td {
   background: var(--table-row-alt);
 }
 
-.data-table tbody tr:hover {
+.data-table tbody tr:hover td {
   background: rgba(255, 255, 255, 0.06);
 }
 
