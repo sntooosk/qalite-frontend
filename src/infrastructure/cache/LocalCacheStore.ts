@@ -61,7 +61,11 @@ export class LocalCacheStore implements CacheStore {
     this.memory.delete(key);
 
     if (storageAvailable) {
-      window.localStorage.removeItem(this.buildStorageKey(key));
+      try {
+        window.localStorage.removeItem(this.buildStorageKey(key));
+      } catch {
+        // Ignore storage errors to keep cache optional.
+      }
     }
   }
 
@@ -73,9 +77,13 @@ export class LocalCacheStore implements CacheStore {
       return;
     }
 
-    Object.keys(window.localStorage)
-      .filter((storageKey) => storageKey.startsWith(this.buildStorageKey(prefix)))
-      .forEach((storageKey) => window.localStorage.removeItem(storageKey));
+    try {
+      Object.keys(window.localStorage)
+        .filter((storageKey) => storageKey.startsWith(this.buildStorageKey(prefix)))
+        .forEach((storageKey) => window.localStorage.removeItem(storageKey));
+    } catch {
+      // Ignore storage errors to keep cache optional.
+    }
   }
 
   private readEntry<T>(key: string): StoredEntry<T> | null {
@@ -87,7 +95,13 @@ export class LocalCacheStore implements CacheStore {
       return null;
     }
 
-    const raw = window.localStorage.getItem(this.buildStorageKey(key));
+    let raw: string | null = null;
+    try {
+      raw = window.localStorage.getItem(this.buildStorageKey(key));
+    } catch {
+      return null;
+    }
+
     if (!raw) {
       return null;
     }
