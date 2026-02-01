@@ -50,7 +50,7 @@ export const AdminOrganizationsPage = () => {
     const fetchOrganizations = async () => {
       try {
         setIsLoading(true);
-        const data = await organizationService.list();
+        const data = await organizationService.listSummary();
         setOrganizations(data);
       } catch (error) {
         console.error(error);

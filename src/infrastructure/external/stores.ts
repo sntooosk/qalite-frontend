@@ -5,12 +5,15 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  limit,
   onSnapshot,
   orderBy,
   query,
   runTransaction,
   serverTimestamp,
+  startAfter,
   updateDoc,
+  type QueryDocumentSnapshot,
   type Unsubscribe,
   where,
   writeBatch,
@@ -33,12 +36,17 @@ import {
   normalizeCriticalityEnum,
 } from '../../shared/utils/scenarioEnums';
 import { firebaseFirestore } from '../database/firebase';
+import { CacheStore } from '../cache/CacheStore';
 import { getDocCacheFirst, getDocsCacheFirst, getDocsCacheThenServer } from './firestoreCache';
 
 const STORES_COLLECTION = 'stores';
 const SCENARIOS_SUBCOLLECTION = 'scenarios';
 const SUITES_SUBCOLLECTION = 'suites';
 const CATEGORIES_SUBCOLLECTION = 'categories';
+const STORE_CACHE = new CacheStore({ namespace: 'stores', version: 'v1', ttlMs: 1000 * 60 * 5 });
+const STORE_LIST_CACHE_KEY = 'listSummary';
+const STORE_DETAIL_CACHE_PREFIX = 'detail:';
+const STORE_PAGE_SIZE = 50;
 
 const timestampToDate = (value: unknown): Date | null => {
   if (value instanceof Timestamp) {
@@ -125,20 +133,62 @@ const normalizeCategoryInput = (input: StoreCategoryInput): StoreCategoryInput =
   name: input.name.trim(),
 });
 
-export const listStores = async (organizationId: string): Promise<Store[]> => {
+const listStoresFromServer = async (organizationId: string): Promise<Store[]> => {
   const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
-  const storesQuery = query(storesCollection, where('organizationId', '==', organizationId));
+  const storesQuery = query(
+    storesCollection,
+    where('organizationId', '==', organizationId),
+    orderBy('name'),
+  );
+
+  const stores: Store[] = [];
+  let lastDoc: QueryDocumentSnapshot | null = null;
+  let hasMore = true;
+
+  while (hasMore) {
+    const pageQuery = lastDoc
+      ? query(storesQuery, startAfter(lastDoc), limit(STORE_PAGE_SIZE))
+      : query(storesQuery, limit(STORE_PAGE_SIZE));
+
+    const snapshot = await getDocsCacheThenServer(pageQuery);
+
+    snapshot.docs.forEach((docSnapshot) => {
+      stores.push(mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })));
+    });
+
+    lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+    hasMore = Boolean(lastDoc && snapshot.size === STORE_PAGE_SIZE);
+  }
+
+  return stores;
+};
+
+export const listStoresSummary = async (organizationId: string): Promise<Store[]> => {
+  const cacheKey = `${STORE_LIST_CACHE_KEY}:${organizationId}`;
+  const cached = STORE_CACHE.getWithStatus<Store[]>(cacheKey);
+
+  if (cached.value && !cached.isExpired) {
+    return cached.value;
+  }
+
+  if (cached.value) {
+    void listStoresFromServer(organizationId)
+      .then((stores) => STORE_CACHE.set(cacheKey, stores))
+      .catch((error) => console.error(error));
+    return cached.value;
+  }
+
   try {
-    const snapshot = await getDocsCacheThenServer(storesQuery);
-    const stores = snapshot.docs.map((docSnapshot) =>
-      mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-    );
-    return stores.sort((a, b) => a.name.localeCompare(b.name));
+    const stores = await listStoresFromServer(organizationId);
+    STORE_CACHE.set(cacheKey, stores);
+    return stores;
   } catch (error) {
     console.error(error);
     return [];
   }
 };
+
+export const listStores = listStoresSummary;
 
 export const listenToStores = (
   organizationId: string,
@@ -163,18 +213,52 @@ export const listenToStores = (
   );
 };
 
-export const getStore = async (storeId: string): Promise<Store | null> => {
+const getStoreFromServer = async (storeId: string): Promise<Store | null> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
+  const snapshot = await getDocCacheFirst(storeRef);
+  return snapshot.exists()
+    ? mapStore(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {})
+    : null;
+};
+
+export const getStoreDetail = async (storeId: string): Promise<Store | null> => {
+  if (!storeId) {
+    return null;
+  }
+
+  const cacheKey = `${STORE_DETAIL_CACHE_PREFIX}${storeId}`;
+  const cached = STORE_CACHE.getWithStatus<Store>(cacheKey);
+
+  if (cached.value && !cached.isExpired) {
+    return cached.value;
+  }
+
+  if (cached.value) {
+    void getStoreFromServer(storeId)
+      .then((store) => {
+        if (store) {
+          STORE_CACHE.set(cacheKey, store);
+        } else {
+          STORE_CACHE.remove(cacheKey);
+        }
+      })
+      .catch((error) => console.error(error));
+    return cached.value;
+  }
+
   try {
-    const snapshot = await getDocCacheFirst(storeRef);
-    return snapshot.exists()
-      ? mapStore(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {})
-      : null;
+    const store = await getStoreFromServer(storeId);
+    if (store) {
+      STORE_CACHE.set(cacheKey, store);
+    }
+    return store;
   } catch (error) {
     console.error(error);
     return null;
   }
 };
+
+export const getStore = getStoreDetail;
 
 export const createStore = async (payload: CreateStorePayload): Promise<Store> => {
   const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
@@ -189,7 +273,7 @@ export const createStore = async (payload: CreateStorePayload): Promise<Store> =
     updatedAt: serverTimestamp(),
   });
 
-  return {
+  const store: Store = {
     id: docRef.id,
     organizationId: payload.organizationId,
     name: payload.name.trim(),
@@ -199,6 +283,11 @@ export const createStore = async (payload: CreateStorePayload): Promise<Store> =
     createdAt: now,
     updatedAt: now,
   };
+
+  STORE_CACHE.set(`${STORE_DETAIL_CACHE_PREFIX}${store.id}`, store);
+  STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
+
+  return store;
 };
 
 export const updateStore = async (storeId: string, payload: UpdateStorePayload): Promise<Store> => {
@@ -212,6 +301,9 @@ export const updateStore = async (storeId: string, payload: UpdateStorePayload):
 
   const snapshot = await getDocCacheFirst(storeRef);
   const updated = mapStore(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {});
+
+  STORE_CACHE.set(`${STORE_DETAIL_CACHE_PREFIX}${storeId}`, updated);
+  STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
 
   return updated;
 };
@@ -239,6 +331,8 @@ export const deleteStore = async (storeId: string): Promise<void> => {
 
   batch.delete(storeRef);
   await batch.commit();
+  STORE_CACHE.remove(`${STORE_DETAIL_CACHE_PREFIX}${storeId}`);
+  STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
 };
 
 export const listScenarios = async (storeId: string): Promise<StoreScenario[]> => {
@@ -290,7 +384,7 @@ export const createScenario = async (
     return newScenarioRef;
   });
 
-  return {
+  const scenario: StoreScenario = {
     id: scenarioRef.id,
     storeId,
     title: normalizedScenario.title,
@@ -302,6 +396,11 @@ export const createScenario = async (
     createdAt: now,
     updatedAt: now,
   };
+
+  STORE_CACHE.remove(`${STORE_DETAIL_CACHE_PREFIX}${storeId}`);
+  STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
+
+  return scenario;
 };
 
 export const updateScenario = async (
@@ -349,6 +448,9 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
       updatedAt: serverTimestamp(),
     });
   });
+
+  STORE_CACHE.remove(`${STORE_DETAIL_CACHE_PREFIX}${storeId}`);
+  STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
 };
 
 export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {

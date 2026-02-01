@@ -537,7 +537,7 @@ export const StoreSummaryPage = () => {
         setIsLoadingStore(true);
         setIsLoadingScenarios(true);
 
-        const data = await storeService.getById(storeId);
+        const data = await storeService.getDetail(storeId);
 
         if (!data) {
           showToast({ type: 'error', message: t('storeSummary.storeNotFound') });
@@ -554,7 +554,7 @@ export const StoreSummaryPage = () => {
         setStore(data);
 
         const [organizationData, scenariosData] = await Promise.all([
-          organizationService.getById(data.organizationId),
+          organizationService.getDetail(data.organizationId),
           storeService.listScenarios(data.id),
         ]);
 

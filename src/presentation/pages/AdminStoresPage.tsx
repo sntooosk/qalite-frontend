@@ -55,6 +55,7 @@ export const AdminStoresPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
+  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const { organizationId: activeOrganizationId, stores, isLoading, error } = useStoresRealtime();
   const storesForOrganization = useMemo(
     () => (activeOrganizationId && activeOrganizationId === selectedOrganizationId ? stores : []),
@@ -93,7 +94,7 @@ export const AdminStoresPage = () => {
   useEffect(() => {
     const fetchOrganizations = async () => {
       try {
-        const data = await organizationService.list();
+        const data = await organizationService.listSummary();
         setOrganizations(data);
         const organizationFromParam = searchParams.get('Id');
         const hasValidOrganizationParam = Boolean(
@@ -140,10 +141,44 @@ export const AdminStoresPage = () => {
     });
   }, [error, showToast, translation]);
 
-  const selectedOrganization = useMemo(
+  const selectedOrganizationSummary = useMemo(
     () => organizations.find((organization) => organization.id === selectedOrganizationId) ?? null,
     [organizations, selectedOrganizationId],
   );
+
+  useEffect(() => {
+    if (!selectedOrganizationId) {
+      setSelectedOrganization(null);
+      return;
+    }
+
+    setSelectedOrganization(selectedOrganizationSummary);
+  }, [selectedOrganizationId, selectedOrganizationSummary]);
+
+  useEffect(() => {
+    if (!selectedOrganizationId) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchOrganizationDetail = async () => {
+      try {
+        const detail = await organizationService.getDetail(selectedOrganizationId);
+        if (isMounted && detail) {
+          setSelectedOrganization(detail);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void fetchOrganizationDetail();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedOrganizationId]);
 
   useEffect(() => {
     setActiveOrganization(selectedOrganization ?? null);
@@ -391,6 +426,7 @@ export const AdminStoresPage = () => {
       setOrganizations((previous) =>
         previous.map((organization) => (organization.id === updated.id ? updated : organization)),
       );
+      setSelectedOrganization((previous) => (previous?.id === updated.id ? updated : previous));
       showToast({
         type: 'success',
         message: translation('AdminStoresPage.toast-success-org-updated'),
@@ -476,6 +512,15 @@ export const AdminStoresPage = () => {
             : organization,
         ),
       );
+      setSelectedOrganization((previous) =>
+        previous?.id === selectedOrganization.id
+          ? {
+              ...previous,
+              members: [...previous.members, member],
+              memberIds: [...previous.memberIds, member.uid],
+            }
+          : previous,
+      );
 
       setNewMemberEmail('');
       setUserSuggestions([]);
@@ -519,6 +564,15 @@ export const AdminStoresPage = () => {
               }
             : organization,
         ),
+      );
+      setSelectedOrganization((previous) =>
+        previous?.id === selectedOrganization.id
+          ? {
+              ...previous,
+              members: previous.members.filter((item) => item.uid !== member.uid),
+              memberIds: previous.memberIds.filter((item) => item !== member.uid),
+            }
+          : previous,
       );
 
       showToast({
