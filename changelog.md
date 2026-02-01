@@ -5,612 +5,1354 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-- (sem alterações)
+- (no changes)
 
-## [1.3.1] - 2026-02-01
+## [71.0.1] - 2026-02-01
 
 ### Added
 
-- feat: improve responsiveness and i18n coverage
-- feat: enhance user bug reporting features with severity and priority
-- feat: enhance environment and scenario export functionalit
-- Add formatted Excel exports
-- feat: integrate StoresRealtimeProvider into AppProviders for real-time store updates
-- feat: centralize stores realtime listener
-- feat: implement activity logging feature with real-time updates
-- feat: changelog para versão 1.3.0 e adiciona novas funcionalidades, correções e melhorias
-- Add paginated org logs fetch
-- Add moment label to environment cards
-- Add create card subtitles for scenarios and suites
-- Add suite selection to environment edit
-- feat: enhance environment and store summary pages with linkified text and external link handling
-- Add export icons and move leave action
-- Add archived icon and refine toast colors
-- Add icons and adjust scenario detail actions
-- feat: refine suite controls and archived list
-- Add delete action to environment manage modal
-- Add environment scenario details modal
-- Add criticality badges and BDD copy
-- feat: update changelog and bump version to 1.2.0
-- feat: enhance user dashboard and preferences management
-- Add browserstack toggles and scenario pdf
-- Add user settings and preferences
-- added translation at theme toggle
-- feat: translation pages and components
-- feat: translating component environmentEvidenceTable
-- feat: translationg editEnvironmentModal
-- feat: added translations files
-- feat: added translation in homepage
-- feat: translation admin store page
-- feat: translating admin page
-- feat: added translation in page
-- feat: added translating in login flow
-- feat: translating login flow
-- feat: add Excel export for scenarios and suites
-- feat: add json export for store data
-- feat: add json import for store scenarios and suites
-- feat: add organization member suggestions and unify header branding
-- feat: display organization branding in dashboards
-- feat: manage organization email domain
-- feat: auto-enroll users by email domain
-- feat: refine toast visuals and admin redirect after deletion
-- feat: persist Firebase auth cookie
-- feat: add deletion confirmation modals
-- feat: add markdown and pdf exports
-- feat: adjust kanban layouts and restrictions
-- feat: refresh kanban layouts and dark mode
-- feat: move BrowserStack credentials to user profile
-- feat: add collapsible toggles to organization modals
-- feat: add toggles for Slack and BrowserStack fields
-- feat: enhance kanban UI and show BrowserStack to users
-- feat: add BrowserStack kanban and credentials
-- Add security workflow for CI/CD
-- feat: add Slack webhook support and log enhancements
-- feat: enhance environment summaries and DTO naming
-- feat: refine organization log ux
-- feat: improve organization log filters
-- feat: show organization logs on admin organizations page
-- feat: add organization activity logs
-- feat(slack): add task identifier and timeline details
-- feat: enviar resumo do ambiente para slack
-- feat: add environment invite link
-- feat: add scenario timing averages per store
-- feat: embed store QA rankings with avatars
-- feat: add ranking metrics to admin stores
-- feat: automate scenario timing when statuses change
-- feat: track scenario execution metrics
-- feat: embed password toggle in input
-- feat: improve auth forms feedback
-- feat: enforce email verification and automation stats
-- feat: add archive column toggle
-- feat: enhance store management workflows
-- feat: improve kanban and auth flows
-- feat: allow leaving environment
-- feat: remove exit flow and export participants
-- feat: improve environment UX and store summary
-- feat: improve environment export and loading UX
-- feat: simplify bug registration workflow
-- feat: style suite actions and hide store urls
-- feat: ajustar criacao de ambiente e campos
-- feat: add mobile and desktop scenario tracking
-- feat: refine environment kanban layout
-- feat: refresh collaborator board
-- feat: improve collaborator avatars and profile form
-- feat: add per-column scenario sorting controls
-- feat: add optional scenario sorting controls
-- feat: prioritize scenarios and collapse categories
-- feat: add category list toggle and adjust environment stats
-- feat: sync legacy scenario categories
-- feat: add persistent store category management
-- feat: simplify loader presentation
-- feat: refine route loader UX and wait for store data
-- feat: add overlay loader for route transitions
-- feat: improve page loader
-- feat: improve loading states and environment participants
-- feat: show organization insights on user dashboard
-- feat: enhance admin stores insights
-- feat: show organization branding on environment pages
-- feat: show organization branding in header
-- feat: support organization logos and new header
-- feat: allow viewing environment without entering
-- feat: move organization management controls
-- feat: streamline admin cards and environment summary
-- feat: improve responsive layout and status summary
-- feat: improve environment summary and suite management
-- feat: improve environment card status and remove bug field
-- feat: persist environment entry and surface inline presence
-- feat: add enter environment gate
-- feat: show participant photos on kanban cards
-- feat: refresh kanban cards and status controls
-- feat: rework environments ux and services
-- feat: add environment kanban and evidence management
-- feat: add environment page with kanban and table
-- feat: add environment kanban board
-- feat: hide suite sections until dedicated view
-- feat: restructure suite management layouts
-- feat: add focused suites view
-- feat: update suites section layout
-- feat: improve suite builder filters and previews
-- feat: move scenario view toggle
-- feat: add store test suites management
-- feat: improve scenario management ui
-- feat: redesenhar gerenciamento administrativo
-- feat: reorganize dashboards for organization navigation
-- feat: add store scenario management
-- feat: manage organizations and user routing
-- Add extended profile fields and hide register header
-- feat: atualizar header e responsividade
-- feat: add themed ui and profile management
-- feat: scaffold firebase auth architecture
+- Refactor: reorganize UI folders, add changelog tooling, and optimize Firestore user reads (PR #250).
+
+## [71.0.0] - 2026-02-01
 
 ### Changed
 
-- Restore presentation structure, slim changelog, update README, remove unused dep
-- PR #248
-- Fallback store list on paginated query errors
-- Handle environment list cold-start fallback
-- Reduce loading delays for store and environment views
-- Simplify cached lists for suites and environments
-- Cache store scenarios list
-- Refactor Firestore caching and summaries
-- PR #247
-- Use opaque table colors
-- Restore opaque table row backgrounds
-- PR #245
-- PR #243
-- Corrige normalizacao de criticidade no Excel
-- Ajusta cores de critico e nao aplicavel
-- Padroniza cores de prioridade e status
-- Atualiza cores de status e exportacao
-- PR #242
-- Standardize status colors across themes
-- Brighten bug and status colors
-- Improve bug actions and status colors
-- Standardize bug and criticality colors
-- Align app colors with QA palette
-- Update dashboards and store scenario tools
-- PR #241
-- Restore environment export sheets and prevent label wrapping
-- Show store name in public summary and tune Excel layout
-- Refine environment exports and summary
-- Keep markdown export store name in scope
-- Improve table responsiveness and back buttons
-- PR #240
-- PR #239
-- PR #237
-- PR #235
-- PR #236
-- PR #233
-- Restore blue palette tokens
-- Apply cyan theme palette
-- Update theme palette tokens
-- Redesign theme tokens and UI styling
-- PR #232
-- Improve responsive layout for forms and bug table
-- PR #231
-- Reduce firestore reads with caching
-- PR #230
-- PR #15
-- PR #228
-- Update bug registry details and exports
-- PR #227
-- Refresh org collaborators after cache clears
-- Refine cache-then-server behavior
-- Harden firestore cache reads
-- PR #226
-- Optimize Firestore cache-first reads
-- refactor: optimize loginUser function for improved performance and user experience
-- Merge branch 'fix/1.3.1' of https://github.com/quality-digital/qalite-frontend into fix/1.3.1
-- refactor: improve code readability in UserPreferencesSection and NoOrganizationPage components
-- chore: bump version to 1.3.1 and add baseline-browser-mapping dependency
-- chore: remover o pipeline de release do GitHub Actions
-- PR #225
-- Stabilize user profile lookup deps
-- Prevent modal evidence update loop
-- PR #224
-- Keep scenario table header fixed
-- Make scenario table header sticky
-- Align action rows in environment tables
-- Format markdown bugs table and equalize columns
-- Navigate away after leaving environment
-- PR #223
-- PR #14
-- PR #219
-- PR #218
-- Allow evidence updates after completion
-- Allow evidence updates and keep details column intact
-- PR #217
-- PR #215
-- PR #214
-- Restore auth session and simplify tables
-- PR #212
-- Avoid redundant auth profile reads
-- PR #211
-- PR #210
-- PR #209
-- PR #208
-- PR #207
-- PR #206
-- Replace environment realtime listeners with fetches
-- PR #204
-- PR #203
-- Use device language defaults and speed up loads
-- PR #202
-- PR #201
-- PR #200
-- Apply create card styling to scenarios and suites
-- Move environment creation to kanban card
-- PR #198
-- Use median scenario execution estimates
-- PR #197
-- Align scenario actions and kanban header
-- Polish store summary actions and kanban header
-- Refine store summary view toggles
-- Improve store summary actions and highlights
-- PR #196
-- Format slack summary and auto-send on completion
-- PR #195
-- Use toasts for environment form validation
-- PR #12
-- PR #194
-- Enhance scenario actions and PDF exports
-- refactor: melhorar a legibilidade e a estrutura do código em várias páginas e componentes
-- PR #192
-- refactor: streamline automation value normalization and scenario check
-- PR #191
-- Unify profile save and refine scenario details
-- Refine header, environment actions, and responsive UI
-- Standardize back buttons and refine profile layout
-- PR #189
-- Move evidence/bug actions to details modal
-- Expand environment details modal
-- Simplify environment details modal
-- Refine criticality colors and suite table
-- PR #188
-- PR #187
-- refactor: prune unused styles and helpers
-- PR #186
-- PR #185
-- Update scenario enums and localized labels
-- PR #184
-- Merge branch 'main' into qm25
-- Bump version from 1.0.0 to 1.1.0
-- Update changelog.md
-- PR #183
-- Prioritize suite scenarios when editing
-- Update exports and environment sharing
-- Refine suite scenario table actions
-- Improve scenario details UX
-- PR #181
-- Localize exports and adjust public headers
-- Move BrowserStack settings to organization
-- Update profile preferences and org BrowserStack
-- PR #180
-- refactor: fix i18n and user flow
-- refactor: centralize i18n strings
-- PR #178
-- PR #8
-- Update src/locales/en.json
-- Update src/presentation/components/Layout.tsx
-- changed creatEnvironment file
-- storyfix
-- changed environment kanban file
-- Merge branch 'feat/translation' into release/1.1.0
-- changed files
-- PR #9
-- chore: update changelog
-- PR #10
-- chore: translating deleteEnviromentModal
-- chore: translating enviromentBugList
-- chore: translating component EnviromentSummaryCard
-- chore: added translation in page enviroment
-- chore: added translation in enviromentPage
-- PR #7
-- PR #6
-- chore: removing conflicts
-- PR #5
-- chore: removing conflict and remove unnecessary depedencie in useEffect
-- PR #4
-- PR #2
-- chore: removing console
-- chore: added translate in authContext
-- setup, userpage and layout
-- PR #1
-- PR #174
-- style: brighten blue themes
-- style: refine dark theme and toggle UX
-- PR #173
-- chore: remove unused auth config
-- PR #171
-- PR #170
-- chore: enable semantic release workflow
-- PR #169
-- chore: update theme palettes
-- PR #168
-- PR #167
-- PR #166
-- chore: remove organization logo option
-- PR #164
-- Merge branch 'main' into coa-teste3
-- PR #163
-- PR #162
-- PR #160
-- chore: remove JSON import/export and email invites
-- PR #157
-- PR #156
-- PR #155
-- PR #153
-- chore: enlarge logo display
-- chore: remove bundled favicon asset
-- PR #151
-- chore: reference external logo asset
-- Merge branch 'main' of https://github.com/sntooosk/QaLite
-- PR #149
-- chore: atualiza paleta azul vibrante
-- style: atualiza paleta de cores do tema
-- Update cypress.yml
-- PR #148
-- PR #147
-- Create cypress.yml
-- PR #146
-- chore: add data test ids to delete modals
-- PR #144
-- PR #143
-- chore: update vercel config
-- PR #142
-- chore: remove unused exports and spinner
-- PR #141
-- PR #140
-- PR #139
-- chore: simplify kanban headers and remove summaries
-- PR #138
-- PR #137
-- PR #136
-- PR #135
-- chore: improve browserstack kanban dark mode
-- PR #134
-- chore: refine browserstack build entity fields
-- PR #133
-- PR #132
-- PR #131
-- PR #129
-- PR #128
-- PR #126
-- chore: add data-testid hooks across key flows
-- PR #125
-- chore: remove suite description field
-- refactor: remove redundant suite details
-- PR #124
-- perf: optimize routing and environment handlers
-- PR #123
-- chore: add editor config and prettier ignore
-- PR #119
-- PR #116
-- PR #115
-- refactor: simplify types and docs
-- PR #114
-- PR #113
-- chore: rename use case files with UseCase suffix
-- PR #112
-- chore: add DTO layer for entities
-- PR #111
-- refactor: separar entidades e dtos
-- PR #110
-- Refactor environment features and module structure
-- PR #109
-- refactor: add use case classes for domain entities
-- PR #108
-- chore: improve organization log dark mode styling
-- chore: style organization log filters
-- docs: update .env.example
-- PR #106
-- PR #107
-- PR #105
-- chore: refine Slack summary message
-- chore: align Slack summary payload
-- chore: update Slack fix payload structure
-- PR #104
-- PR #103
-- PR #102
-- PR #101
-- refactor: simplify architecture with lib modules
-- PR #100
-- chore: remove admin metrics dashboards
-- PR #99
-- chore: update release workflow
-- PR #98
-- PR #97
-- PR #96
-- chore: remove phone number field
-- PR #95
-- PR #94
-- PR #93
-- PR #92
-- PR #91
-- PR #86
-- refactor: simplify environment summary
-- PR #84
-- chore: add vercel spa routing
-- PR #82
-- refactor: centralize environment labels
-- PR #81
-- refactor: streamline environment page
-- PR #80
-- refactor: simplify service wiring and realtime hooks
-- PR #79
-- chore: simplify service layer
-- PR #76
-- PR #75
-- PR #74
-- PR #73
-- PR #71
-- PR #72
-- PR #70
-- PR #69
-- PR #68
-- PR #67
-- PR #66
-- PR #65
-- PR #64
-- PR #63
-- chore: inline scenario sorting helpers
-- PR #61
-- PR #60
-- chore: remove auth helper subtitles
-- chore: remove outdated helper texts and organization descriptions
-- PR #59
-- refactor: centralize auth orchestration
-- PR #58
-- PR #57
-- PR #56
-- PR #52
-- chore: remove organization selector from admin stores page
-- PR #51
-- PR #50
-- chore: remove environment title classes
-- PR #49
-- PR #48
-- PR #47
-- PR #46
-- PR #45
-- PR #44
-- PR #43
-- PR #38
-- chore: add automated release workflow
-- PR #37
-- PR #36
-- Translate dashboard and shared copy to Portuguese
-- PR #33
-- refactor: introduce environment service and rename pages
-- PR #32
-- PR #31
-- PR #30
-- PR #29
-- PR #28
-- refactor: decouple services and presentation auth
-- PR #27
-- PR #26
-- PR #25
-- PR #24
-- PR #23
-- PR #22
-- PR #21
-- refactor: modernize suite cards
-- PR #20
-- PR #19
-- PR #18
-- PR #17
-- PR #16
-- PR #15
-- PR #14
-- PR #13
-- Adjust admin store view and login layout
-- PR #12
-- PR #11
-- Move scenario management to store summary
-- PR #10
-- Revamp admin organization dashboard layout
-- PR #9
-- PR #8
-- PR #7
-- PR #6
-- PR #5
-- refactor: remove auth hero section
-- PR #4
-- PR #3
-- Refine auth flows with themed toasts and UI refresh
-- PR #2
-- PR #1
-- Initial commit
+- Refactor Firestore caching with CacheStore and summary/detail reads (PR #248).
+
+## [70.0.1] - 2026-01-31
 
 ### Fixed
 
-- Fix table row background styling
-- fix: correct service composition imports
-- fix: adjuested
-- fix: adjuested new bugs
-- Fix sticky scenario table header
-- Fix environment page render loop
-- Fix action cell alignment in environment tables
-- Fix kanban bug counts and markdown export
-- Fix environment exports and UI counts
-- Fix scenario table collapse state error
-- fix: correct suspense indentation
-- Fix suite preview collapse state removal
-- fix: resolve member add crash and backlog badge
-- fix: adjuested coa-teste4
-- fix: teste
-- fix: remove unused member invite state resets
-- fix: reorder member removal transaction reads
-- Fix transaction user lookup in organization add
-- fix: new form
-- fix: simplify auth panel logo wrapper
-- fix: mudancças
-- fix: new logo
-- fix: adjust suite scenario table layout
-- fix: improve export loading and pdf flow
-- fix: surface BrowserStack error details
-- fix: restrict browserstack kanban to admin area
-- fix: adjust admin back navigation
-- fix: double scenario totals in exports
-- fix: show logs only on admin stores page
-- fix: normalize admin check for org log panel
-- fix: simplify Slack summary payload
-- fix: separate storyfix and bug counts for Slack summary
-- fix: remove duplicate status pill from public page
-- fix: remove tempo registrado toast
-- fix: ensure scenario helper available at runtime
-- fix: align scenario timers with automatic execution start
-- fix: auto-start scenario timers when execution begins
-- fix: remove organization label from store cards
-- fix: restrict header branding to active organization
-- fix: resend verification email on blocked login
-- fix: flatten suite form layout
-- fix: improve suite form responsiveness
-- fix: confine suite tables to their own scroll area
-- fix: limit participant export fields
-- fix: harden environment exit flow
-- fix: enforce environment exit rules
-- fix: allow manual environment exit
-- fix: allow manual leave when present
-- fix: improve environment entry flow
-- fix: streamline environment entry and bug creation
-- fix: new fix
-- fix: keep scenario order and sync statuses
-- fix: align collaborator rows and link store urls
-- fix: remove leftover custom categories reset
-- fix: show store loader until data ready
-- fix: show environment participants and suite responsiveness
-- fix: remove environment organization branding class
-- fix: remove standalone environment status card
-- fix: polish suite editor controls
-- fix: show textual status badge and auto re-enter environments
-- fix: prevent environments loading loop
-- fix: new feature
-- fix: move suite form onto card layer
-- fix: remove manage stores cta
-- fix: new commit
+- Fix table row background styling (PR #247).
+
+## [70.0.0] - 2026-01-31
+
+### Changed
+
+- Refactor: move use-case wiring to infrastructure services (PR #245).
+
+## [69.0.0] - 2026-01-31
 
 ### Removed
 
-- Remove scenario JSON actions
-- Revert "Update 3"
-- Revert "Improve responsiveness and i18n coverage for environment views"
-- Remove scenario execution feature
-- Remove activity log functionality
-- Remove log feature artifacts
-- Remove logs and improve login UX
-- Remove unused automation normalization
-- Remove unused store import/export flows
-- Remove suite import/export actions
-- Remove storage uploads for profile and evidence
-- Delete .github/workflows/security.yml
-- Delete CHANGELOG.md
-- Revert "Add Slack environment summary sharing"
-- Revert "Simplify link rendering without custom component"
-- Remove ExternalLink component
-- Revert "Add environment testing page"
+- See PR #243 for details (PR #243).
 
-### Security
+## [68.0.3] - 2026-01-31
 
-- Create security.yml
+### Changed
+
+- See PR #242 for details (PR #242).
+
+## [68.0.2] - 2026-01-30
+
+### Changed
+
+- Improve table responsiveness and back buttons (PR #241).
+
+## [68.0.1] - 2026-01-28
+
+### Removed
+
+- Revert "Update 3" (PR #240).
+
+## [68.0.0] - 2026-01-28
+
+### Removed
+
+- Revert "Improve responsiveness and i18n coverage for environment views" (PR #239).
+
+## [67.0.0] - 2026-01-28
+
+### Changed
+
+- Improve responsiveness and i18n coverage for environment views (PR #237).
+
+## [66.0.1] - 2026-01-28
+
+### Changed
+
+- Update 3 (PR #235).
+
+## [66.0.0] - 2026-01-28
+
+### Fixed
+
+- fix: adjuested (PR #236).
+
+## [65.0.0] - 2026-01-24
+
+### Fixed
+
+- fix: adjuested (PR #N/A).
+
+## [64.2.2] - 2026-01-24
+
+### Changed
+
+- Redesign theme tokens and UI styling (PR #233).
+
+## [64.2.1] - 2026-01-24
+
+### Changed
+
+- See PR #232 for details (PR #232).
+
+## [64.2.0] - 2026-01-24
+
+### Changed
+
+- Reduce Firestore reads with caching and shared listeners (PR #231).
+
+## [64.1.1] - 2026-01-24
+
+### Fixed
+
+- fix: adjuested new bugs (PR #230).
+
+## [64.1.0] - 2026-01-23
+
+### Fixed
+
+- fix: adjuested new bugs (PR #N/A).
+
+## [64.0.0] - 2026-01-23
+
+### Fixed
+
+- Fix/1.3.1 (PR #15).
+
+## [63.2.0] - 2026-01-23
+
+### Changed
+
+- Enhance environment bug tracking: severity/priority, details modal and export updates (PR #228).
+
+## [63.1.0] - 2026-01-23
+
+### Changed
+
+- Harden Firestore cache reads with cache-first helpers (PR #227).
+
+## [63.0.2] - 2026-01-23
+
+### Changed
+
+- Merge pull request #226 from sntooosk/codex/simplify-files-in-external-directory (PR #226).
+
+## [63.0.1] - 2026-01-22
+
+### Fixed
+
+- Merge branch 'fix/1.3.1' of https://github.com/quality-digital/qalite-frontend into fix/1.3.1 (PR #N/A).
+
+## [63.0.0] - 2026-01-22
+
+### Added
+
+- See PR #N/A for details (PR #N/A).
+
+## [62.1.1] - 2026-01-22
+
+### Fixed
+
+- Prevent EnvironmentPage modal evidence update loops and fix hook dependencies (PR #225).
+
+## [62.1.0] - 2026-01-22
+
+### Added
+
+- Add formatted Excel exports and move Leave action out of manage modal (PR #224).
+
+## [62.0.0] - 2026-01-22
+
+### Fixed
+
+- Fix environment exports, time localization and bug counts (PR #223).
+
+## [61.0.0] - 2026-01-22
+
+### Changed
+
+- Release1.3.0 (PR #14).
+
+## [60.0.0] - 2026-01-19
+
+### Added
+
+- feat: integrate StoresRealtimeProvider into AppProviders for real-time store updates (PR #N/A).
+
+## [59.0.0] - 2026-01-22
+
+### Changed
+
+- Centralizar listener de lojas com cache persistente do Firestore (PR #219).
+
+## [58.0.1] - 2026-01-22
+
+### Added
+
+- Allow adding evidence after completion and prevent details column wrapping (PR #218).
+
+## [58.0.0] - 2026-01-22
+
+### Removed
+
+- See PR #217 for details (PR #217).
+
+## [57.1.1] - 2026-01-22
+
+### Removed
+
+- See PR #215 for details (PR #215).
+
+## [57.1.0] - 2026-01-22
+
+### Changed
+
+- See PR #214 for details (PR #214).
+
+## [57.0.0] - 2026-01-22
+
+### Changed
+
+- Avoid redundant auth profile reads and switch bugs to on-demand listing (PR #212).
+
+## [56.0.0] - 2026-01-22
+
+### Removed
+
+- Remove activity log functionality (PR #211).
+
+## [55.0.0] - 2026-01-22
+
+### Added
+
+- feat: implement activity logging feature with real-time updates (PR #210).
+
+## [54.0.0] - 2026-01-21
+
+### Added
+
+- feat: implement activity logging feature with real-time updates (PR #N/A).
+
+## [53.0.0] - 2026-01-21
+
+### Changed
+
+- refactor(ui): replace loading placeholders with skeleton components (PR #209).
+
+## [52.0.0] - 2026-01-21
+
+### Removed
+
+- Remove remaining log feature artifacts (PR #208).
+
+## [51.1.0] - 2026-01-21
+
+### Removed
+
+- Remove console logging, improve login UX, and refactor StoreSummary performance (PR #207).
+
+## [51.0.0] - 2026-01-21
+
+### Changed
+
+- Replace realtime environment listeners with fetch-based reads and manual refetch (PR #206).
+
+## [50.3.1] - 2026-01-21
+
+### Added
+
+- See PR #204 for details (PR #204).
+
+## [50.3.0] - 2026-01-21
+
+### Added
+
+- See PR #N/A for details (PR #N/A).
+
+## [50.2.0] - 2026-01-21
+
+### Changed
+
+- Default to device language, simplify public links, and speed up page loads (PR #203).
+
+## [50.1.0] - 2026-01-21
+
+### Changed
+
+- See PR #202 for details (PR #202).
+
+## [50.0.1] - 2026-01-21
+
+### Added
+
+- Add moment label to environment cards (PR #201).
+
+## [50.0.0] - 2026-01-21
+
+### Changed
+
+- Move environment creation into kanban card (PR #200).
+
+## [49.0.4] - 2026-01-21
+
+### Changed
+
+- See PR #198 for details (PR #198).
+
+## [49.0.3] - 2026-01-21
+
+### Added
+
+- See PR #197 for details (PR #197).
+
+## [49.0.2] - 2026-01-21
+
+### Changed
+
+- Format Slack summary and auto-send on completion (PR #196).
+
+## [49.0.1] - 2026-01-21
+
+### Changed
+
+- See PR #195 for details (PR #195).
+
+## [49.0.0] - 2026-01-19
+
+### Changed
+
+- Release/1.2.0 (PR #12).
+
+## [48.1.0] - 2026-01-19
+
+### Changed
+
+- Make links clickable, improve action UI and internationalize PDF exports (PR #194).
+
+## [48.0.1] - 2026-01-18
+
+### Fixed
+
+- See PR #192 for details (PR #192).
+
+## [48.0.0] - 2026-01-18
+
+### Changed
+
+- Standardize Back navigation, simplify Profile layout, hide BrowserStack when missing, show org store counts (PR #191).
+
+## [47.1.0] - 2026-01-18
+
+### Added
+
+- See PR #189 for details (PR #189).
+
+## [47.0.0] - 2026-01-18
+
+### Removed
+
+- Remove unused automation normalization helper (PR #188).
+
+## [46.0.0] - 2026-01-18
+
+### Changed
+
+- refactor: prune unused global styles and share environment option helper (PR #187).
+
+## [45.0.0] - 2026-01-18
+
+### Removed
+
+- Remove unused store import/export flows (PR #186).
+
+## [44.0.0] - 2026-01-18
+
+### Removed
+
+- See PR #185 for details (PR #185).
+
+## [43.0.1] - 2026-01-17
+
+### Added
+
+- feat: enhance user dashboard and preferences management (PR #184).
+
+## [43.0.0] - 2026-01-17
+
+### Changed
+
+- Merge branch 'main' into qm25 (PR #N/A).
+
+## [42.0.0] - 2025-12-12
+
+### Changed
+
+- - Refactor UserDashboardPage to improve subtitle handling and error states. (PR #N/A).
+
+## [41.0.1] - 2026-01-17
+
+### Changed
+
+- See PR #183 for details (PR #183).
+
+## [41.0.0] - 2026-01-17
+
+### Added
+
+- See PR #181 for details (PR #181).
+
+## [40.0.0] - 2026-01-16
+
+### Changed
+
+- Centralize i18n strings and replace hardcoded UI text with translations (PR #180).
+
+## [39.0.0] - 2025-12-22
+
+### Changed
+
+- realease 1.10 (PR #178).
+
+## [38.0.0] - 2025-12-12
+
+### Changed
+
+- Release/1.1.0 (PR #8).
+
+## [37.0.1] - 2025-12-09
+
+### Added
+
+- Merge branch 'feat/translation' into release/1.1.0 (PR #N/A).
+
+## [37.0.0] - 2025-12-09
+
+### Added
+
+- feat: added translations files (PR #9).
+
+## [36.0.4] - 2025-12-05
+
+### Added
+
+- feat/translation-enviromentPage (PR #10).
+
+## [36.0.3] - 2025-12-05
+
+### Added
+
+- chore: added translation in enviromentPage (PR #N/A).
+
+## [36.0.2] - 2025-12-05
+
+### Added
+
+- Feat/translation-homepage (PR #7).
+
+## [36.0.1] - 2025-12-05
+
+### Added
+
+- Feat/translation admin store page (PR #6).
+
+## [36.0.0] - 2025-12-05
+
+### Removed
+
+- chore: removing conflicts (PR #N/A).
+
+## [35.0.1] - 2025-12-05
+
+### Added
+
+- Feat/translation admin page (PR #5).
+
+## [35.0.0] - 2025-12-05
+
+### Removed
+
+- chore: removing conflict and remove unnecessary depedencie in useEffect (PR #N/A).
+
+## [34.0.0] - 2025-12-05
+
+### Changed
+
+- See PR #4 for details (PR #4).
+
+## [33.1.0] - 2025-12-05
+
+### Changed
+
+- Fluxo de Login (PR #2).
+
+## [33.0.0] - 2025-12-02
+
+### Added
+
+- feat: be able to put evidences as a text (PR #1).
+
+## [32.0.1] - 2025-12-01
+
+### Changed
+
+- Refine dark theme experience and toggle UI (PR #174).
+
+## [32.0.0] - 2025-12-01
+
+### Removed
+
+- Remove unused auth config (PR #173).
+
+## [31.3.3] - 2025-12-01
+
+### Fixed
+
+- fix: adjuested coa-teste4 (PR #171).
+
+## [31.3.2] - 2025-12-01
+
+### Changed
+
+- Configure semantic release on main branch (PR #170).
+
+## [31.3.1] - 2025-12-01
+
+### Changed
+
+- Update light and dark theme palettes (PR #169).
+
+## [31.3.0] - 2025-12-01
+
+### Added
+
+- See PR #168 for details (PR #168).
+
+## [31.2.0] - 2025-12-01
+
+### Added
+
+- See PR #167 for details (PR #167).
+
+## [31.1.0] - 2025-12-01
+
+### Removed
+
+- Remove storage uploads for profile and evidence (PR #166).
+
+## [31.0.5] - 2025-11-30
+
+### Fixed
+
+- fix: adjuested (PR #164).
+
+## [31.0.4] - 2025-11-30
+
+### Changed
+
+- Merge branch 'main' into coa-teste3 (PR #N/A).
+
+## [31.0.3] - 2025-11-30
+
+### Fixed
+
+- fix: adjuested (PR #N/A).
+
+## [31.0.2] - 2025-11-30
+
+### Fixed
+
+- fix: adjuested (PR #163).
+
+## [31.0.1] - 2025-11-30
+
+### Fixed
+
+- fix: teste (PR #162).
+
+## [31.0.0] - 2025-11-29
+
+### Fixed
+
+- fix: teste (PR #N/A).
+
+## [30.0.0] - 2025-11-29
+
+### Removed
+
+- Remove JSON import/export options and email member invites (PR #160).
+
+## [29.0.2] - 2025-11-24
+
+### Changed
+
+- Display organization branding in dashboard header (PR #157).
+
+## [29.0.1] - 2025-11-24
+
+### Fixed
+
+- Fix organization user lookup within Firestore transaction (PR #156).
+
+## [29.0.0] - 2025-11-24
+
+### Changed
+
+- Enable automatic organization enrollment via email domain (PR #155).
+
+## [28.0.4] - 2025-11-24
+
+### Removed
+
+- Remove bundled favicon asset (PR #153).
+
+## [28.0.3] - 2025-11-24
+
+### Changed
+
+- Use external QaLite logo reference (PR #151).
+
+## [28.0.2] - 2025-11-24
+
+### Changed
+
+- Merge branch 'main' of https://github.com/sntooosk/QaLite (PR #N/A).
+
+## [28.0.1] - 2025-11-24
+
+### Changed
+
+- See PR #149 for details (PR #149).
+
+## [28.0.0] - 2025-11-24
+
+### Changed
+
+- Refine toast visuals and admin redirect (PR #148).
+
+## [27.1.2] - 2025-11-24
+
+### Changed
+
+- Persist Firebase auth cookie on auth state changes (PR #147).
+
+## [27.1.1] - 2025-11-23
+
+### Added
+
+- Add data-testids to delete confirmation modals (PR #146).
+
+## [27.1.0] - 2025-11-23
+
+### Added
+
+- feat: add deletion confirmation modals (PR #144).
+
+## [27.0.1] - 2025-11-23
+
+### Added
+
+- Add public flag to Vercel deployment config (PR #143).
+
+## [27.0.0] - 2025-11-23
+
+### Removed
+
+- Remove unused exports and spinner component (PR #142).
+
+## [26.2.1] - 2025-11-23
+
+### Changed
+
+- See PR #141 for details (PR #141).
+
+## [26.2.0] - 2025-11-23
+
+### Added
+
+- feat: add markdown and pdf exports (PR #140).
+
+## [26.1.9] - 2025-11-23
+
+### Changed
+
+- Simplify BrowserStack and environment kanban headers (PR #139).
+
+## [26.1.8] - 2025-11-22
+
+### Changed
+
+- Improve BrowserStack and environment kanban behaviors (PR #138).
+
+## [26.1.7] - 2025-11-22
+
+### Changed
+
+- Refresh BrowserStack and environment kanban layouts (PR #137).
+
+## [26.1.6] - 2025-11-22
+
+### Added
+
+- Add toggles for optional Slack and BrowserStack inputs (PR #136).
+
+## [26.1.5] - 2025-11-22
+
+### Changed
+
+- Improve BrowserStack kanban dark mode (PR #135).
+
+## [26.1.4] - 2025-11-22
+
+### Changed
+
+- chore: refine browserstack build entity fields (PR #134).
+
+## [26.1.3] - 2025-11-22
+
+### Changed
+
+- Enhance BrowserStack kanban and expose it to users (PR #133).
+
+## [26.1.2] - 2025-11-22
+
+### Changed
+
+- Improve BrowserStack error handling (PR #132).
+
+## [26.1.1] - 2025-11-22
+
+### Fixed
+
+- fix: restrict browserstack kanban to admin area (PR #131).
+
+## [26.1.0] - 2025-11-22
+
+### Added
+
+- Add BrowserStack kanban and credentials (PR #129).
+
+## [26.0.3] - 2025-11-22
+
+### Fixed
+
+- Fix admin store back navigation (PR #128).
+
+## [26.0.2] - 2025-11-22
+
+### Added
+
+- Add data-testid hooks across key flows (PR #126).
+
+## [26.0.1] - 2025-11-22
+
+### Removed
+
+- Remove redundant loading fallback and suite description display (PR #125).
+
+## [26.0.0] - 2025-11-22
+
+### Changed
+
+- Optimize routing performance and memoize environment handlers (PR #124).
+
+## [25.0.3] - 2025-11-22
+
+### Added
+
+- Add editor configuration and Prettier ignore (PR #123).
+
+## [25.0.2] - 2025-11-21
+
+### Added
+
+- See PR #119 for details (PR #119).
+
+## [25.0.1] - 2025-11-21
+
+### Changed
+
+- See PR #116 for details (PR #116).
+
+## [25.0.0] - 2025-11-21
+
+### Changed
+
+- refactor: simplify types and docs (PR #115).
+
+## [24.1.0] - 2025-11-21
+
+### Changed
+
+- Enhance environment summary exports and DTO naming (PR #114).
+
+## [24.0.0] - 2025-11-21
+
+### Fixed
+
+- Rename use case files with UseCase suffix (PR #113).
+
+## [23.1.0] - 2025-11-21
+
+### Added
+
+- Add DTO layer for entities (PR #112).
+
+## [23.0.0] - 2025-11-21
+
+### Changed
+
+- Refactor entities and DTOs into separate modules (PR #111).
+
+## [22.0.0] - 2025-11-21
+
+### Changed
+
+- Refactor environment workflows and repository modules (PR #110).
+
+## [21.0.0] - 2025-11-20
+
+### Added
+
+- Add explicit use case classes per domain entity (PR #109).
+
+## [20.2.0] - 2025-11-19
+
+### Added
+
+- Add Firebase activity logging and admin viewer (PR #108).
+
+## [20.1.0] - 2025-11-19
+
+### Removed
+
+- Remove custom Slack message formatting (PR #106).
+
+## [20.0.0] - 2025-11-19
+
+### Removed
+
+- Revert "Add Slack environment summary sharing" (PR #107).
+
+## [19.1.0] - 2025-11-19
+
+### Added
+
+- Add Slack environment summary sharing (PR #105).
+
+## [19.0.3] - 2025-11-19
+
+### Fixed
+
+- Fix duplicate status pill on public environment page (PR #104).
+
+## [19.0.2] - 2025-11-19
+
+### Added
+
+- Add environment invite link (PR #103).
+
+## [19.0.1] - 2025-11-19
+
+### Removed
+
+- See PR #102 for details (PR #102).
+
+## [19.0.0] - 2025-11-19
+
+### Changed
+
+- Simplify architecture with lib modules (PR #101).
+
+## [18.4.0] - 2025-11-18
+
+### Added
+
+- See PR #100 for details (PR #100).
+
+## [18.3.2] - 2025-11-18
+
+### Changed
+
+- Update release workflow to use semantic-release (PR #99).
+
+## [18.3.1] - 2025-11-18
+
+### Changed
+
+- Restrict header branding to active organization (PR #98).
+
+## [18.3.0] - 2025-11-18
+
+### Changed
+
+- Enhance auth forms with password toggle and clearer errors (PR #97).
+
+## [18.2.1] - 2025-11-18
+
+### Removed
+
+- chore: remove phone fields from auth (PR #96).
+
+## [18.2.0] - 2025-11-18
+
+### Fixed
+
+- Enforce corporate email policy and fix automation metrics (PR #95).
+
+## [18.1.1] - 2025-11-18
+
+### Added
+
+- Add toggle to archived environments column (PR #94).
+
+## [18.1.0] - 2025-11-18
+
+### Added
+
+- See PR #93 for details (PR #93).
+
+## [18.0.0] - 2025-11-18
+
+### Changed
+
+- Improve kanban stats and auth feedback (PR #92).
+
+## [17.0.0] - 2025-11-18
+
+### Changed
+
+- Restore horizontal scroll confinement for suite tables (PR #91).
+
+## [16.2.0] - 2025-11-17
+
+### Changed
+
+- Simplify environment summary card (PR #86).
+
+## [16.1.1] - 2025-11-17
+
+### Added
+
+- Add Vercel SPA routing config (PR #84).
+
+## [16.1.0] - 2025-11-17
+
+### Changed
+
+- refactor: centralize environment labels (PR #82).
+
+## [16.0.0] - 2025-11-17
+
+### Changed
+
+- Refactor environment engagement and summary hooks (PR #81).
+
+## [15.0.0] - 2025-11-17
+
+### Changed
+
+- Simplify service wiring and realtime hooks (PR #80).
+
+## [14.0.0] - 2025-11-17
+
+### Changed
+
+- Simplify service layer (PR #79).
+
+## [13.1.4] - 2025-11-17
+
+### Added
+
+- Add ability to leave environments before conclusion (PR #76).
+
+## [13.1.3] - 2025-11-17
+
+### Changed
+
+- Enforce environment exit flow rules (PR #75).
+
+## [13.1.2] - 2025-11-17
+
+### Changed
+
+- Improve environment export UX and loading indicators (PR #74).
+
+## [13.1.1] - 2025-11-17
+
+### Fixed
+
+- Fix bug workflow and environment entry (PR #73).
+
+## [13.1.0] - 2025-11-17
+
+### Changed
+
+- Revamp bug registration workflow (PR #71).
+
+## [13.0.0] - 2025-11-17
+
+### Removed
+
+- Revert "Simplify link rendering without custom component" (PR #72).
+
+## [12.7.0] - 2025-11-17
+
+### Changed
+
+- Simplify link rendering without custom component (PR #70).
+
+## [12.6.1] - 2025-11-17
+
+### Changed
+
+- Style suite action buttons and hide store URLs (PR #69).
+
+## [12.6.0] - 2025-11-17
+
+### Changed
+
+- See PR #68 for details (PR #68).
+
+## [12.5.0] - 2025-11-17
+
+### Added
+
+- See PR #67 for details (PR #67).
+
+## [12.4.2] - 2025-11-17
+
+### Fixed
+
+- See PR #66 for details (PR #66).
+
+## [12.4.1] - 2025-11-17
+
+### Changed
+
+- Improve environment kanban organization (PR #65).
+
+## [12.4.0] - 2025-11-17
+
+### Changed
+
+- Improve collaborator avatars and simplify profile form (PR #64).
+
+## [12.3.0] - 2025-11-17
+
+### Added
+
+- Add category list toggle and adjust environment stats (PR #63).
+
+## [12.2.0] - 2025-11-17
+
+### Added
+
+- See PR #61 for details (PR #61).
+
+## [12.1.3] - 2025-11-17
+
+### Removed
+
+- Remove outdated helper texts and organization description inputs (PR #60).
+
+## [12.1.2] - 2025-11-17
+
+### Changed
+
+- Refactor auth orchestration and theme context memoization (PR #59).
+
+## [12.1.1] - 2025-11-17
+
+### Changed
+
+- Improve page loading indicator (PR #58).
+
+## [12.1.0] - 2025-11-17
+
+### Added
+
+- Add page loader and environment participant visuals (PR #57).
+
+## [12.0.0] - 2025-11-17
+
+### Fixed
+
+- fix: show environment participants and improve suite responsiveness (PR #56).
+
+## [11.1.1] - 2025-11-16
+
+### Removed
+
+- Remove organization selection UI from admin stores page (PR #52).
+
+## [11.1.0] - 2025-11-16
+
+### Added
+
+- Add organization insights and cleanup branding (PR #51).
+
+## [11.0.0] - 2025-11-16
+
+### Added
+
+- Add organization logo support and update header branding (PR #50).
+
+## [10.1.9] - 2025-11-16
+
+### Changed
+
+- Allow viewing environment details without entering (PR #49).
+
+## [10.1.8] - 2025-11-16
+
+### Changed
+
+- Move organization management to store view and restrict store settings (PR #48).
+
+## [10.1.7] - 2025-11-16
+
+### Changed
+
+- Improve environment summary and admin dashboards (PR #47).
+
+## [10.1.6] - 2025-11-16
+
+### Changed
+
+- Improve responsive layout and status summary (PR #46).
+
+## [10.1.5] - 2025-11-16
+
+### Changed
+
+- Improve environment and suite management UX (PR #45).
+
+## [10.1.4] - 2025-11-16
+
+### Removed
+
+- Improve environment cards and remove bug tracking (PR #44).
+
+## [10.1.3] - 2025-11-16
+
+### Added
+
+- Gate environment features behind entry action (PR #43).
+
+## [10.1.2] - 2025-11-16
+
+### Added
+
+- Add automated release workflow (PR #38).
+
+## [10.1.1] - 2025-11-16
+
+### Changed
+
+- Show participant avatars on environment cards (PR #37).
+
+## [10.1.0] - 2025-11-16
+
+### Changed
+
+- Localize dashboard copy to Portuguese (PR #36).
+
+## [10.0.0] - 2025-11-16
+
+### Changed
+
+- Refactor environment management into services (PR #33).
+
+## [9.0.1] - 2025-11-16
+
+### Changed
+
+- Refresh kanban cards and status controls (PR #32).
+
+## [9.0.0] - 2025-11-16
+
+### Added
+
+- feat: rework environments ux and services (PR #31).
+
+## [8.1.1] - 2025-11-16
+
+### Fixed
+
+- Fix environments loading loop (PR #30).
+
+## [8.1.0] - 2025-11-16
+
+### Added
+
+- feat: add environment kanban and evidence management (PR #29).
+
+## [8.0.0] - 2025-11-16
+
+### Changed
+
+- Refactor auth wiring and service factories (PR #28).
+
+## [7.0.0] - 2025-11-16
+
+### Removed
+
+- Revert "Add environment testing page" (PR #27).
+
+## [6.0.0] - 2025-11-16
+
+### Added
+
+- Add environment testing page (PR #26).
+
+## [5.3.0] - 2025-11-16
+
+### Added
+
+- Add environments kanban board to store summary (PR #25).
+
+## [5.2.8] - 2025-11-15
+
+### Changed
+
+- Move suite form onto card layer (PR #24).
+
+## [5.2.7] - 2025-11-15
+
+### Added
+
+- feat: hide suite sections until dedicated view (PR #23).
+
+## [5.2.6] - 2025-11-15
+
+### Added
+
+- feat: restructure suite management layouts (PR #22).
+
+## [5.2.5] - 2025-11-15
+
+### Changed
+
+- refactor: modernize suite cards (PR #21).
+
+## [5.2.4] - 2025-11-15
+
+### Added
+
+- See PR #20 for details (PR #20).
+
+## [5.2.3] - 2025-11-15
+
+### Added
+
+- See PR #19 for details (PR #19).
+
+## [5.2.2] - 2025-11-15
+
+### Added
+
+- See PR #18 for details (PR #18).
+
+## [5.2.1] - 2025-11-15
+
+### Changed
+
+- See PR #17 for details (PR #17).
+
+## [5.2.0] - 2025-11-15
+
+### Added
+
+- feat: add test suite management to store summary (PR #16).
+
+## [5.1.0] - 2025-11-15
+
+### Removed
+
+- See PR #15 for details (PR #15).
+
+## [5.0.2] - 2025-11-15
+
+### Removed
+
+- Remove manage stores CTA from admin organizations page (PR #14).
+
+## [5.0.1] - 2025-11-15
+
+### Changed
+
+- Lock admin store view to selected organization (PR #13).
+
+## [5.0.0] - 2025-11-15
+
+### Added
+
+- See PR #12 for details (PR #12).
+
+## [4.1.1] - 2025-11-15
+
+### Changed
+
+- See PR #11 for details (PR #11).
+
+## [4.1.0] - 2025-11-15
+
+### Changed
+
+- Align admin dashboard with user organization layout (PR #10).
+
+## [4.0.0] - 2025-11-15
+
+### Added
+
+- feat: reorganize dashboards for organization navigation (PR #9).
+
+## [3.1.0] - 2025-11-15
+
+### Added
+
+- See PR #8 for details (PR #8).
+
+## [3.0.0] - 2025-11-15
+
+### Added
+
+- feat: manage organizations from admin dashboard (PR #7).
+
+## [2.1.2] - 2025-11-14
+
+### Added
+
+- Add profile contact fields and hide register header (PR #6).
+
+## [2.1.1] - 2025-11-14
+
+### Removed
+
+- refactor: remove auth hero section (PR #5).
+
+## [2.1.0] - 2025-11-14
+
+### Added
+
+- See PR #4 for details (PR #4).
+
+## [2.0.0] - 2025-11-14
+
+### Changed
+
+- Refine auth flows with themed toasts and UI refresh (PR #3).
+
+## [1.0.0] - 2025-11-14
+
+### Added
+
+- feat: add themed UI and profile management (PR #2).
+
+## [0.2.0] - 2025-11-14
+
+### Added
+
+- feat: scaffold firebase auth architecture (PR #1).
