@@ -11,15 +11,20 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  startAfter,
+  orderBy,
   updateDoc,
   where,
   writeBatch,
+  type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 
 import type { BrowserstackCredentials } from '../../domain/entities/browserstack';
 import type { Organization, OrganizationMember } from '../../domain/entities/organization';
 import { getNormalizedEmailDomain, normalizeEmailDomain } from '../../shared/utils/email';
 import { firebaseFirestore } from '../database/firebase';
+import { CacheStore } from '../cache/CacheStore';
+import { fetchWithCache } from '../cache/cacheFetch';
 import {
   getDocCacheFirst,
   getDocCacheThenServer,
@@ -29,6 +34,14 @@ import {
 
 const ORGANIZATIONS_COLLECTION = 'organizations';
 const USERS_COLLECTION = 'users';
+const ORGANIZATION_CACHE = new CacheStore({
+  namespace: 'organizations',
+  version: 'v1',
+  ttlMs: 1000 * 60 * 5,
+});
+const ORGANIZATION_LIST_CACHE_KEY = 'listSummary';
+const ORGANIZATION_DETAIL_CACHE_PREFIX = 'detail:';
+const ORGANIZATION_PAGE_SIZE = 50;
 
 export interface CreateOrganizationPayload {
   name: string;
@@ -71,50 +84,76 @@ const normalizeBrowserstackCredentials = (
   return { username, accessKey };
 };
 
-export const listOrganizations = async (): Promise<Organization[]> => {
-  try {
-    let snapshot = await getDocsCacheThenServer(organizationsCollection);
-    let organizations = await Promise.all(
-      snapshot.docs.map((docSnapshot) =>
-        mapOrganization(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-      ),
+const listOrganizationsFromServer = async (): Promise<Organization[]> => {
+  const organizationsQuery = query(organizationsCollection, orderBy('name'));
+  const organizations: Organization[] = [];
+  let lastDoc: QueryDocumentSnapshot | null = null;
+  let hasMore = true;
+
+  while (hasMore) {
+    const pageQuery = lastDoc
+      ? query(organizationsQuery, startAfter(lastDoc), limit(ORGANIZATION_PAGE_SIZE))
+      : query(organizationsQuery, limit(ORGANIZATION_PAGE_SIZE));
+
+    const snapshot = await getDocsCacheThenServer(pageQuery);
+    const pageItems = snapshot.docs.map((docSnapshot) =>
+      mapOrganizationSummary(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
     );
 
-    if (organizations.length === 0) {
-      snapshot = await getDocsCacheFirst(organizationsCollection);
-      organizations = await Promise.all(
-        snapshot.docs.map((docSnapshot) =>
-          mapOrganization(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-        ),
-      );
-    }
-
-    return organizations.sort((a, b) => a.name.localeCompare(b.name));
-  } catch (error) {
-    console.error(error);
-    return [];
+    organizations.push(...pageItems);
+    lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+    hasMore = Boolean(lastDoc && snapshot.size === ORGANIZATION_PAGE_SIZE);
   }
+
+  return organizations;
 };
 
-export const getOrganization = async (id: string): Promise<Organization | null> => {
+export const listOrganizationsSummary = async (): Promise<Organization[]> => {
+  return fetchWithCache({
+    cache: ORGANIZATION_CACHE,
+    key: ORGANIZATION_LIST_CACHE_KEY,
+    fetcher: listOrganizationsFromServer,
+    fallback: [],
+  });
+};
+
+export const listOrganizations = listOrganizationsSummary;
+
+const getOrganizationFromServer = async (id: string): Promise<Organization | null> => {
   const organizationRef = doc(firebaseFirestore, ORGANIZATIONS_COLLECTION, id);
-  try {
-    const snapshot = await getDocCacheThenServer(organizationRef);
+  const snapshot = await getDocCacheThenServer(organizationRef);
 
-    if (!snapshot.exists()) {
-      return null;
-    }
-
-    return mapOrganization(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }));
-  } catch (error) {
-    console.error(error);
+  if (!snapshot.exists()) {
     return null;
   }
+
+  return mapOrganizationDetail(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }));
 };
 
-export const createOrganization = async (
-  payload: CreateOrganizationPayload,
-): Promise<Organization> => {
+export const getOrganizationDetail = async (id: string): Promise<Organization | null> => {
+  if (!id) {
+    return null;
+  }
+
+  const cacheKey = `${ORGANIZATION_DETAIL_CACHE_PREFIX}${id}`;
+  return fetchWithCache({
+    cache: ORGANIZATION_CACHE,
+    key: cacheKey,
+    fetcher: () => getOrganizationFromServer(id),
+    fallback: null,
+    store: (organization) => {
+      if (organization) {
+        ORGANIZATION_CACHE.set(cacheKey, organization);
+      } else {
+        ORGANIZATION_CACHE.remove(cacheKey);
+      }
+    },
+  });
+};
+
+export const getOrganization = getOrganizationDetail;
+
+export const createOrganization = async (payload: CreateOrganizationPayload): Organization => {
   const trimmedName = payload.name.trim();
   const trimmedDescription = payload.description.trim();
   const slackWebhookUrl = payload.slackWebhookUrl?.trim() || null;
@@ -134,7 +173,13 @@ export const createOrganization = async (
   });
 
   const snapshot = await getDocCacheFirst(docRef);
-  return mapOrganization(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {});
+  const organization = await mapOrganizationDetail(
+    snapshot.id,
+    snapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+  );
+  ORGANIZATION_CACHE.invalidatePrefix(`${ORGANIZATION_LIST_CACHE_KEY}`);
+  ORGANIZATION_CACHE.set(`${ORGANIZATION_DETAIL_CACHE_PREFIX}${organization.id}`, organization);
+  return organization;
 };
 
 export const updateOrganization = async (
@@ -159,7 +204,13 @@ export const updateOrganization = async (
   await updateDoc(organizationRef, updatePayload);
 
   const snapshot = await getDocCacheFirst(organizationRef);
-  return mapOrganization(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {});
+  const organization = await mapOrganizationDetail(
+    snapshot.id,
+    snapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+  );
+  ORGANIZATION_CACHE.invalidatePrefix(`${ORGANIZATION_LIST_CACHE_KEY}`);
+  ORGANIZATION_CACHE.set(`${ORGANIZATION_DETAIL_CACHE_PREFIX}${organization.id}`, organization);
+  return organization;
 };
 
 export const deleteOrganization = async (id: string): Promise<void> => {
@@ -188,6 +239,8 @@ export const deleteOrganization = async (id: string): Promise<void> => {
 
   batch.delete(organizationRef);
   await batch.commit();
+  ORGANIZATION_CACHE.invalidatePrefix(`${ORGANIZATION_LIST_CACHE_KEY}`);
+  ORGANIZATION_CACHE.remove(`${ORGANIZATION_DETAIL_CACHE_PREFIX}${id}`);
 };
 
 export const addUserToOrganization = async (
@@ -265,6 +318,9 @@ export const addUserToOrganization = async (
     };
   });
 
+  ORGANIZATION_CACHE.invalidatePrefix(`${ORGANIZATION_LIST_CACHE_KEY}`);
+  ORGANIZATION_CACHE.remove(`${ORGANIZATION_DETAIL_CACHE_PREFIX}${payload.organizationId}`);
+
   return member;
 };
 
@@ -306,6 +362,9 @@ export const removeUserFromOrganization = async (
       );
     }
   });
+
+  ORGANIZATION_CACHE.invalidatePrefix(`${ORGANIZATION_LIST_CACHE_KEY}`);
+  ORGANIZATION_CACHE.remove(`${ORGANIZATION_DETAIL_CACHE_PREFIX}${payload.organizationId}`);
 };
 
 export const getUserOrganization = async (userId: string): Promise<Organization | null> => {
@@ -324,7 +383,7 @@ export const getUserOrganization = async (userId: string): Promise<Organization 
       return null;
     }
 
-    return getOrganization(organizationId);
+    return getOrganizationDetail(organizationId);
   } catch (error) {
     console.error(error);
     return null;
@@ -353,7 +412,7 @@ export const findOrganizationByEmailDomain = async (
     }
 
     const organizationDoc = snapshot.docs[0];
-    return mapOrganization(
+    return mapOrganizationSummary(
       organizationDoc.id,
       organizationDoc.data({ serverTimestamps: 'estimate' }),
     );
@@ -426,7 +485,32 @@ export const addUserToOrganizationByEmailDomain = async (
   return assignedOrganizationId;
 };
 
-const mapOrganization = async (
+const mapOrganizationSummary = (
+  id: string,
+  data: Record<string, unknown> | undefined,
+): Promise<Organization> => {
+  const memberIds = (data?.members as string[] | undefined) ?? [];
+  const members: OrganizationMember[] = [];
+  const browserstackCredentials = normalizeBrowserstackCredentials(
+    (data?.browserstackCredentials as BrowserstackCredentials | null | undefined) ?? null,
+  );
+
+  return {
+    id,
+    name: ((data?.name as string) ?? '').trim(),
+    description: ((data?.description as string) ?? '').trim(),
+    logoUrl: ((data?.logoUrl as string) ?? '').trim() || null,
+    slackWebhookUrl: ((data?.slackWebhookUrl as string) ?? '').trim() || null,
+    emailDomain: normalizeEmailDomain((data?.emailDomain as string | null | undefined) ?? null),
+    browserstackCredentials,
+    members,
+    memberIds,
+    createdAt: timestampToDate(data?.createdAt),
+    updatedAt: timestampToDate(data?.updatedAt),
+  };
+};
+
+const mapOrganizationDetail = async (
   id: string,
   data: Record<string, unknown> | undefined,
 ): Promise<Organization> => {

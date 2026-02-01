@@ -19,6 +19,14 @@ export class OrganizationUseCases {
     return this.organizationRepository.getById(id);
   }
 
+  listSummary(): Promise<Organization[]> {
+    return this.organizationRepository.listSummary();
+  }
+
+  getDetail(id: string): Promise<Organization | null> {
+    return this.organizationRepository.getDetail(id);
+  }
+
   create(organization: CreateOrganizationPayload): Promise<Organization> {
     return this.organizationRepository.create(organization);
   }

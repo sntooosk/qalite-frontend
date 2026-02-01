@@ -23,6 +23,14 @@ export class StoreUseCases {
     return this.storeRepository.getById(id);
   }
 
+  listSummary(organizationId: string): Promise<Store[]> {
+    return this.storeRepository.listSummary(organizationId);
+  }
+
+  getDetail(id: string): Promise<Store | null> {
+    return this.storeRepository.getDetail(id);
+  }
+
   create(store: CreateStorePayload): Promise<Store> {
     return this.storeRepository.create(store);
   }

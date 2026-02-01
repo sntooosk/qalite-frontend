@@ -39,6 +39,10 @@ export class EnvironmentUseCases {
     return this.environmentRepository.observeAll(filters, onChange);
   }
 
+  listSummary(filters: EnvironmentRealtimeFilters): Promise<Environment[]> {
+    return this.environmentRepository.listSummary(filters);
+  }
+
   addUser(id: string, userId: string): Promise<void> {
     return this.environmentRepository.addUser(id, userId);
   }

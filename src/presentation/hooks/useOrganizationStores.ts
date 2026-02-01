@@ -39,8 +39,8 @@ export const useOrganizationStores = (organizationId: string | null) => {
 
       try {
         const [organizationData, storesData] = await Promise.all([
-          organizationService.getById(organizationId),
-          storeService.listByOrganization(organizationId),
+          organizationService.getDetail(organizationId),
+          storeService.listSummary(organizationId),
         ]);
 
         if (!isSubscribed) {

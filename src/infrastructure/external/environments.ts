@@ -11,6 +11,10 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  orderBy,
+  limit,
+  startAfter,
+  type QueryDocumentSnapshot,
   type QueryConstraint,
 } from 'firebase/firestore';
 
@@ -47,10 +51,25 @@ import { translateEnvironmentOption } from '../../shared/utils/environmentOption
 import i18n from '../../lib/i18n';
 import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
 import { getDocsCacheThenServer } from './firestoreCache';
+import { CacheStore } from '../cache/CacheStore';
+import { fetchWithCache } from '../cache/cacheFetch';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
 const environmentsCollection = collection(firebaseFirestore, ENVIRONMENTS_COLLECTION);
+const ENVIRONMENT_CACHE = new CacheStore({
+  namespace: 'environments',
+  version: 'v1',
+  ttlMs: 1000 * 60 * 5,
+});
+const ENVIRONMENT_LIST_CACHE_PREFIX = 'listSummary:';
+const ENVIRONMENT_DETAIL_CACHE_PREFIX = 'detail:';
+const ENVIRONMENT_PAGE_SIZE = 50;
+const invalidateEnvironmentLists = () => {
+  ENVIRONMENT_CACHE.invalidatePrefix(ENVIRONMENT_LIST_CACHE_PREFIX);
+};
+const buildEnvironmentDetailKey = (environmentId: string) =>
+  `${ENVIRONMENT_DETAIL_CACHE_PREFIX}${environmentId}`;
 
 export const SCENARIO_COMPLETED_STATUSES: EnvironmentScenarioStatus[] = [
   'concluido',
@@ -201,7 +220,9 @@ export const createEnvironment = async (payload: CreateEnvironmentInput): Promis
     updatedAt: serverTimestamp(),
   });
 
-  return {
+  invalidateEnvironmentLists();
+
+  const environment: Environment = {
     id: docRef.id,
     identificador: payload.identificador,
     storeId: payload.storeId,
@@ -225,6 +246,10 @@ export const createEnvironment = async (payload: CreateEnvironmentInput): Promis
     participants: payload.participants,
     publicShareLanguage: payload.publicShareLanguage,
   };
+
+  ENVIRONMENT_CACHE.set(buildEnvironmentDetailKey(environment.id), environment);
+
+  return environment;
 };
 
 export const updateEnvironment = async (
@@ -242,11 +267,15 @@ export const updateEnvironment = async (
   }
 
   await updateDoc(environmentRef, data);
+  invalidateEnvironmentLists();
+  ENVIRONMENT_CACHE.remove(buildEnvironmentDetailKey(environmentId));
 };
 
 export const deleteEnvironment = async (environmentId: string): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
   await deleteDoc(environmentRef);
+  invalidateEnvironmentLists();
+  ENVIRONMENT_CACHE.remove(buildEnvironmentDetailKey(environmentId));
 };
 
 export const observeEnvironment = (
@@ -263,9 +292,12 @@ export const observeEnvironment = (
         return;
       }
 
-      callback(
-        normalizeEnvironment(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {}),
+      const environment = normalizeEnvironment(
+        snapshot.id,
+        snapshot.data({ serverTimestamps: 'estimate' }) ?? {},
       );
+      ENVIRONMENT_CACHE.set(buildEnvironmentDetailKey(snapshot.id), environment);
+      callback(environment);
     },
     (error) => {
       console.error(error);
@@ -313,6 +345,91 @@ export const observeEnvironments = (
       callback([]);
     },
   );
+};
+
+const buildEnvironmentQuery = (filters: EnvironmentRealtimeFilters) => {
+  const constraints: QueryConstraint[] = [];
+
+  if (filters.storeId) {
+    constraints.push(where('loja', '==', filters.storeId));
+  }
+
+  return constraints.length > 0
+    ? query(environmentsCollection, ...constraints, orderBy('createdAt', 'desc'))
+    : query(environmentsCollection, orderBy('createdAt', 'desc'));
+};
+
+const buildEnvironmentListKey = (filters: EnvironmentRealtimeFilters) =>
+  `${ENVIRONMENT_LIST_CACHE_PREFIX}${filters.storeId ?? 'all'}`;
+
+const listEnvironmentsFromServer = async (
+  filters: EnvironmentRealtimeFilters,
+): Promise<Environment[]> => {
+  try {
+    const environmentsQuery = buildEnvironmentQuery(filters);
+    const environments: Environment[] = [];
+    let lastDoc: QueryDocumentSnapshot | null = null;
+    let hasMore = true;
+
+    while (hasMore) {
+      const pageQuery = lastDoc
+        ? query(environmentsQuery, startAfter(lastDoc), limit(ENVIRONMENT_PAGE_SIZE))
+        : query(environmentsQuery, limit(ENVIRONMENT_PAGE_SIZE));
+      const snapshot = await getDocsCacheThenServer(pageQuery);
+
+      snapshot.docs.forEach((docSnapshot) => {
+        environments.push(
+          normalizeEnvironment(
+            docSnapshot.id,
+            docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+          ),
+        );
+      });
+
+      lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+      hasMore = Boolean(lastDoc && snapshot.size === ENVIRONMENT_PAGE_SIZE);
+    }
+
+    return environments;
+  } catch (error) {
+    console.error(error);
+    const fallbackQuery = filters.storeId
+      ? query(environmentsCollection, where('loja', '==', filters.storeId))
+      : environmentsCollection;
+    const snapshot = await getDocsCacheThenServer(fallbackQuery);
+    return snapshot.docs
+      .map((docSnapshot) =>
+        normalizeEnvironment(
+          docSnapshot.id,
+          docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+        ),
+      )
+      .sort((a, b) => {
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bDate - aDate;
+      });
+  }
+};
+
+export const listEnvironmentsSummary = async (
+  filters: EnvironmentRealtimeFilters,
+): Promise<Environment[]> => {
+  const cacheKey = buildEnvironmentListKey(filters);
+  return fetchWithCache({
+    cache: ENVIRONMENT_CACHE,
+    key: cacheKey,
+    fetcher: () => listEnvironmentsFromServer(filters),
+    fallback: [],
+  });
+};
+
+export const getEnvironmentCached = (environmentId: string): Environment | null => {
+  if (!environmentId) {
+    return null;
+  }
+
+  return ENVIRONMENT_CACHE.get(buildEnvironmentDetailKey(environmentId));
 };
 
 export const addEnvironmentUser = async (environmentId: string, userId: string): Promise<void> => {

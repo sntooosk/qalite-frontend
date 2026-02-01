@@ -13,6 +13,8 @@ import {
 export const firebaseOrganizationRepository: OrganizationRepository = {
   list: listOrganizations,
   getById: getOrganization,
+  listSummary: listOrganizations,
+  getDetail: getOrganization,
   create: createOrganization,
   update: updateOrganization,
   delete: deleteOrganization,

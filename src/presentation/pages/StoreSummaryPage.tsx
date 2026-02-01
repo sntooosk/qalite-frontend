@@ -240,12 +240,7 @@ export const StoreSummaryPage = () => {
       ? t('storeSummary.noScenario')
       : `${selectedSuiteScenarioCount} ${t('storeSummary.scenario')} ${t('storeSummary.selected')}`;
 
-  const isPreparingStoreView =
-    isLoadingStore ||
-    isLoadingScenarios ||
-    isLoadingSuites ||
-    isLoadingCategories ||
-    isSyncingLegacyCategories;
+  const isPreparingStoreView = isLoadingStore && !store;
 
   const canManageScenarios = Boolean(user);
   const canManageStoreSettings = user?.role === 'admin';
@@ -537,7 +532,7 @@ export const StoreSummaryPage = () => {
         setIsLoadingStore(true);
         setIsLoadingScenarios(true);
 
-        const data = await storeService.getById(storeId);
+        const data = await storeService.getDetail(storeId);
 
         if (!data) {
           showToast({ type: 'error', message: t('storeSummary.storeNotFound') });
@@ -554,7 +549,7 @@ export const StoreSummaryPage = () => {
         setStore(data);
 
         const [organizationData, scenariosData] = await Promise.all([
-          organizationService.getById(data.organizationId),
+          organizationService.getDetail(data.organizationId),
           storeService.listScenarios(data.id),
         ]);
 
