@@ -1,4 +1,4 @@
-import { collection, doc, documentId, limit, query, where } from 'firebase/firestore';
+import { collection, doc, limit, query } from 'firebase/firestore';
 
 import type { UserSummary } from '../../domain/entities/user';
 import { firebaseFirestore } from '../database/firebase';
@@ -13,31 +13,8 @@ export const getUserSummariesByIds = async (userIds: string[]): Promise<UserSumm
     return [];
   }
 
-  try {
-    const usersRef = collection(firebaseFirestore, USERS_COLLECTION);
-    const chunks = chunkArray(userIds, 10);
-    const snapshots = await Promise.all(
-      chunks.map((ids) => getDocsCacheThenServer(query(usersRef, where(documentId(), 'in', ids)))),
-    );
-
-    const summaries = snapshots.flatMap((snapshot) =>
-      snapshot.docs.map((userDoc) =>
-        mapUserSummary(userDoc.id, userDoc.data({ serverTimestamps: 'estimate' }) ?? {}),
-      ),
-    );
-    const summaryMap = summaries.reduce<Record<string, UserSummary>>((acc, summary) => {
-      acc[summary.id] = summary;
-      return acc;
-    }, {});
-
-    return userIds
-      .map((userId) => summaryMap[userId])
-      .filter((profile): profile is UserSummary => Boolean(profile));
-  } catch (error) {
-    console.error(error);
-    const profiles = await Promise.all(userIds.map((userId) => fetchUserSummary(userId)));
-    return profiles.filter((profile): profile is UserSummary => Boolean(profile));
-  }
+  const profiles = await Promise.all(userIds.map((userId) => fetchUserSummary(userId)));
+  return profiles.filter((profile): profile is UserSummary => Boolean(profile));
 };
 
 export const searchUsersByTerm = async (term: string): Promise<UserSummary[]> => {
@@ -54,16 +31,16 @@ export const searchUsersByTerm = async (term: string): Promise<UserSummary[]> =>
     const matches: UserSummary[] = [];
 
     snapshot.forEach((userDoc) => {
-      const summary = mapUserSummary(
-        userDoc.id,
-        userDoc.data({ serverTimestamps: 'estimate' }) ?? {},
-      );
+      const data = userDoc.data({ serverTimestamps: 'estimate' });
+      const email = typeof data?.email === 'string' ? data.email : '';
+      const displayName = resolveDisplayName(data?.displayName, email);
+      const photoURL = typeof data?.photoURL === 'string' ? data.photoURL : null;
 
-      const searchableEmail = summary.email.toLowerCase();
-      const searchableName = summary.displayName.toLowerCase();
+      const searchableEmail = email.toLowerCase();
+      const searchableName = displayName.toLowerCase();
 
       if (searchableEmail.includes(normalizedTerm) || searchableName.includes(normalizedTerm)) {
-        matches.push(summary);
+        matches.push({ id: userDoc.id, email, displayName, photoURL });
       }
     });
 
@@ -87,34 +64,21 @@ const fetchUserSummary = async (userId: string): Promise<UserSummary | null> => 
       return null;
     }
 
-    return mapUserSummary(userId, snapshot.data({ serverTimestamps: 'estimate' }) ?? {});
+    const data = snapshot.data({ serverTimestamps: 'estimate' });
+    const email = typeof data?.email === 'string' ? data.email : '';
+    const displayName = resolveDisplayName(data?.displayName, email);
+    const photoURL = typeof data?.photoURL === 'string' ? data.photoURL : null;
+
+    return {
+      id: userId,
+      email,
+      displayName,
+      photoURL,
+    };
   } catch (error) {
     console.error(error);
     return null;
   }
-};
-
-const chunkArray = <T>(items: T[], size: number): T[][] => {
-  const chunks: T[][] = [];
-
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size));
-  }
-
-  return chunks;
-};
-
-const mapUserSummary = (userId: string, data: Record<string, unknown>): UserSummary => {
-  const email = typeof data.email === 'string' ? data.email : '';
-  const displayName = resolveDisplayName(data.displayName, email);
-  const photoURL = typeof data.photoURL === 'string' ? data.photoURL : null;
-
-  return {
-    id: userId,
-    email,
-    displayName,
-    photoURL,
-  };
 };
 
 const resolveDisplayName = (rawDisplayName: unknown, email: string): string => {
