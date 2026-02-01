@@ -38,58 +38,60 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow create: if isSignedIn() && request.auth.uid == userId;
-      allow read: if isSignedIn()
-        && (request.auth.uid == userId
-          || (userDoc().exists()
-            && resource.data.organizationId != null
-            && resource.data.organizationId == userOrgId()));
-      allow update: if isSignedIn()
-        && (request.auth.uid == userId
-          || (isAdmin() && request.resource.data.organizationId == userOrgId()));
+      allow read: if isAdmin()
+        || (isSignedIn()
+          && (request.auth.uid == userId
+            || (userDoc().exists()
+              && resource.data.organizationId != null
+              && resource.data.organizationId == userOrgId())));
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow delete: if false;
     }
 
     match /organizations/{orgId} {
-      allow read: if isSignedIn()
-        && (isAdmin()
-          || (resource.data.members != null
+      allow read: if isAdmin()
+        || (isSignedIn()
+          && (resource.data.members != null
             && resource.data.members.hasAny([request.auth.uid])));
       allow create, update, delete: if isAdmin();
     }
 
     match /stores/{storeId} {
-      allow read: if isOrgMember(resource.data.organizationId);
-      allow create: if isOrgMember(request.resource.data.organizationId);
-      allow update: if isOrgMember(resource.data.organizationId)
-        && request.resource.data.organizationId == resource.data.organizationId;
-      allow delete: if isOrgMember(resource.data.organizationId);
+      allow read: if isAdmin() || isOrgMember(resource.data.organizationId);
+      allow create: if isAdmin() || isOrgMember(request.resource.data.organizationId);
+      allow update: if isAdmin()
+        || (isOrgMember(resource.data.organizationId)
+          && request.resource.data.organizationId == resource.data.organizationId);
+      allow delete: if isAdmin() || isOrgMember(resource.data.organizationId);
 
       match /scenarios/{scenarioId} {
-        allow read, write: if isOrgMemberByStore(storeId);
+        allow read, write: if isAdmin() || isOrgMemberByStore(storeId);
       }
 
       match /suites/{suiteId} {
-        allow read, write: if isOrgMemberByStore(storeId);
+        allow read, write: if isAdmin() || isOrgMemberByStore(storeId);
       }
 
       match /categories/{categoryId} {
-        allow read, write: if isOrgMemberByStore(storeId);
+        allow read, write: if isAdmin() || isOrgMemberByStore(storeId);
       }
     }
 
     match /environments/{environmentId} {
-      allow read: if isOrgMemberByStore(resource.data.storeId)
+      allow read: if isAdmin()
+        || isOrgMemberByStore(resource.data.storeId)
         || resource.data.publicShareLanguage != null;
-      allow create: if isOrgMemberByStore(request.resource.data.storeId);
-      allow update: if isOrgMemberByStore(resource.data.storeId)
-        && request.resource.data.storeId == resource.data.storeId;
-      allow delete: if isOrgMemberByStore(resource.data.storeId);
+      allow create: if isAdmin() || isOrgMemberByStore(request.resource.data.storeId);
+      allow update: if isAdmin()
+        || (isOrgMemberByStore(resource.data.storeId)
+          && request.resource.data.storeId == resource.data.storeId);
+      allow delete: if isAdmin() || isOrgMemberByStore(resource.data.storeId);
 
       match /bugs/{bugId} {
-        allow read: if isOrgMemberByStore(
+        allow read: if isAdmin() || isOrgMemberByStore(
           get(/databases/$(database)/documents/environments/$(environmentId)).data.storeId
         ) || isPublicEnvironment(environmentId);
-        allow create, update, delete: if isOrgMemberByStore(
+        allow create, update, delete: if isAdmin() || isOrgMemberByStore(
           get(/databases/$(database)/documents/environments/$(environmentId)).data.storeId
         );
       }
