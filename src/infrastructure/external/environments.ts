@@ -63,10 +63,13 @@ const ENVIRONMENT_CACHE = new CacheStore({
   ttlMs: 1000 * 60 * 5,
 });
 const ENVIRONMENT_LIST_CACHE_PREFIX = 'listSummary:';
+const ENVIRONMENT_DETAIL_CACHE_PREFIX = 'detail:';
 const ENVIRONMENT_PAGE_SIZE = 50;
 const invalidateEnvironmentLists = () => {
   ENVIRONMENT_CACHE.invalidatePrefix(ENVIRONMENT_LIST_CACHE_PREFIX);
 };
+const buildEnvironmentDetailKey = (environmentId: string) =>
+  `${ENVIRONMENT_DETAIL_CACHE_PREFIX}${environmentId}`;
 
 export const SCENARIO_COMPLETED_STATUSES: EnvironmentScenarioStatus[] = [
   'concluido',
@@ -219,7 +222,7 @@ export const createEnvironment = async (payload: CreateEnvironmentInput): Promis
 
   invalidateEnvironmentLists();
 
-  return {
+  const environment: Environment = {
     id: docRef.id,
     identificador: payload.identificador,
     storeId: payload.storeId,
@@ -243,6 +246,10 @@ export const createEnvironment = async (payload: CreateEnvironmentInput): Promis
     participants: payload.participants,
     publicShareLanguage: payload.publicShareLanguage,
   };
+
+  ENVIRONMENT_CACHE.set(buildEnvironmentDetailKey(environment.id), environment);
+
+  return environment;
 };
 
 export const updateEnvironment = async (
@@ -261,12 +268,14 @@ export const updateEnvironment = async (
 
   await updateDoc(environmentRef, data);
   invalidateEnvironmentLists();
+  ENVIRONMENT_CACHE.remove(buildEnvironmentDetailKey(environmentId));
 };
 
 export const deleteEnvironment = async (environmentId: string): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
   await deleteDoc(environmentRef);
   invalidateEnvironmentLists();
+  ENVIRONMENT_CACHE.remove(buildEnvironmentDetailKey(environmentId));
 };
 
 export const observeEnvironment = (
@@ -283,9 +292,12 @@ export const observeEnvironment = (
         return;
       }
 
-      callback(
-        normalizeEnvironment(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {}),
+      const environment = normalizeEnvironment(
+        snapshot.id,
+        snapshot.data({ serverTimestamps: 'estimate' }) ?? {},
       );
+      ENVIRONMENT_CACHE.set(buildEnvironmentDetailKey(snapshot.id), environment);
+      callback(environment);
     },
     (error) => {
       console.error(error);
@@ -390,6 +402,14 @@ export const listEnvironmentsSummary = async (
     fetcher: () => listEnvironmentsFromServer(filters),
     fallback: [],
   });
+};
+
+export const getEnvironmentCached = (environmentId: string): Environment | null => {
+  if (!environmentId) {
+    return null;
+  }
+
+  return ENVIRONMENT_CACHE.get(buildEnvironmentDetailKey(environmentId));
 };
 
 export const addEnvironmentUser = async (environmentId: string, userId: string): Promise<void> => {

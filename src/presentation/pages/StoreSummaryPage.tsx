@@ -240,12 +240,7 @@ export const StoreSummaryPage = () => {
       ? t('storeSummary.noScenario')
       : `${selectedSuiteScenarioCount} ${t('storeSummary.scenario')} ${t('storeSummary.selected')}`;
 
-  const isPreparingStoreView =
-    isLoadingStore ||
-    isLoadingScenarios ||
-    isLoadingSuites ||
-    isLoadingCategories ||
-    isSyncingLegacyCategories;
+  const isPreparingStoreView = isLoadingStore && !store;
 
   const canManageScenarios = Boolean(user);
   const canManageStoreSettings = user?.role === 'admin';
