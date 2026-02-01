@@ -365,31 +365,51 @@ const buildEnvironmentListKey = (filters: EnvironmentRealtimeFilters) =>
 const listEnvironmentsFromServer = async (
   filters: EnvironmentRealtimeFilters,
 ): Promise<Environment[]> => {
-  const environmentsQuery = buildEnvironmentQuery(filters);
-  const environments: Environment[] = [];
-  let lastDoc: QueryDocumentSnapshot | null = null;
-  let hasMore = true;
+  try {
+    const environmentsQuery = buildEnvironmentQuery(filters);
+    const environments: Environment[] = [];
+    let lastDoc: QueryDocumentSnapshot | null = null;
+    let hasMore = true;
 
-  while (hasMore) {
-    const pageQuery = lastDoc
-      ? query(environmentsQuery, startAfter(lastDoc), limit(ENVIRONMENT_PAGE_SIZE))
-      : query(environmentsQuery, limit(ENVIRONMENT_PAGE_SIZE));
-    const snapshot = await getDocsCacheThenServer(pageQuery);
+    while (hasMore) {
+      const pageQuery = lastDoc
+        ? query(environmentsQuery, startAfter(lastDoc), limit(ENVIRONMENT_PAGE_SIZE))
+        : query(environmentsQuery, limit(ENVIRONMENT_PAGE_SIZE));
+      const snapshot = await getDocsCacheThenServer(pageQuery);
 
-    snapshot.docs.forEach((docSnapshot) => {
-      environments.push(
+      snapshot.docs.forEach((docSnapshot) => {
+        environments.push(
+          normalizeEnvironment(
+            docSnapshot.id,
+            docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+          ),
+        );
+      });
+
+      lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+      hasMore = Boolean(lastDoc && snapshot.size === ENVIRONMENT_PAGE_SIZE);
+    }
+
+    return environments;
+  } catch (error) {
+    console.error(error);
+    const fallbackQuery = filters.storeId
+      ? query(environmentsCollection, where('loja', '==', filters.storeId))
+      : environmentsCollection;
+    const snapshot = await getDocsCacheThenServer(fallbackQuery);
+    return snapshot.docs
+      .map((docSnapshot) =>
         normalizeEnvironment(
           docSnapshot.id,
           docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
         ),
-      );
-    });
-
-    lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
-    hasMore = Boolean(lastDoc && snapshot.size === ENVIRONMENT_PAGE_SIZE);
+      )
+      .sort((a, b) => {
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bDate - aDate;
+      });
   }
-
-  return environments;
 };
 
 export const listEnvironmentsSummary = async (
