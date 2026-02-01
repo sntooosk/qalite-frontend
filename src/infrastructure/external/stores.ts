@@ -46,7 +46,9 @@ const CATEGORIES_SUBCOLLECTION = 'categories';
 const STORE_CACHE = new CacheStore({ namespace: 'stores', version: 'v1', ttlMs: 1000 * 60 * 5 });
 const STORE_LIST_CACHE_KEY = 'listSummary';
 const STORE_DETAIL_CACHE_PREFIX = 'detail:';
+const SCENARIO_LIST_CACHE_PREFIX = 'scenarios:';
 const STORE_PAGE_SIZE = 50;
+const SCENARIOS_PAGE_SIZE = 50;
 
 const timestampToDate = (value: unknown): Date | null => {
   if (value instanceof Timestamp) {
@@ -335,15 +337,55 @@ export const deleteStore = async (storeId: string): Promise<void> => {
   STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
 };
 
-export const listScenarios = async (storeId: string): Promise<StoreScenario[]> => {
+const listScenariosFromServer = async (storeId: string): Promise<StoreScenario[]> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
   const scenariosQuery = query(scenariosCollection, orderBy('title'));
+  const scenarios: StoreScenario[] = [];
+  let lastDoc: QueryDocumentSnapshot | null = null;
+  let hasMore = true;
+
+  while (hasMore) {
+    const pageQuery = lastDoc
+      ? query(scenariosQuery, startAfter(lastDoc), limit(SCENARIOS_PAGE_SIZE))
+      : query(scenariosQuery, limit(SCENARIOS_PAGE_SIZE));
+    const snapshot = await getDocsCacheThenServer(pageQuery);
+    snapshot.docs.forEach((docSnapshot) => {
+      scenarios.push(
+        mapScenario(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+      );
+    });
+
+    lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+    hasMore = Boolean(lastDoc && snapshot.size === SCENARIOS_PAGE_SIZE);
+  }
+
+  return scenarios;
+};
+
+export const listScenarios = async (storeId: string): Promise<StoreScenario[]> => {
+  if (!storeId) {
+    return [];
+  }
+
+  const cacheKey = `${SCENARIO_LIST_CACHE_PREFIX}${storeId}`;
+  const cached = STORE_CACHE.getWithStatus<StoreScenario[]>(cacheKey);
+
+  if (cached.value && !cached.isExpired) {
+    return cached.value;
+  }
+
+  if (cached.value) {
+    void listScenariosFromServer(storeId)
+      .then((scenarios) => STORE_CACHE.set(cacheKey, scenarios))
+      .catch((error) => console.error(error));
+    return cached.value;
+  }
+
   try {
-    const snapshot = await getDocsCacheThenServer(scenariosQuery);
-    return snapshot.docs.map((docSnapshot) =>
-      mapScenario(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-    );
+    const scenarios = await listScenariosFromServer(storeId);
+    STORE_CACHE.set(cacheKey, scenarios);
+    return scenarios;
   } catch (error) {
     console.error(error);
     return [];
@@ -398,6 +440,7 @@ export const createScenario = async (
   };
 
   STORE_CACHE.remove(`${STORE_DETAIL_CACHE_PREFIX}${storeId}`);
+  STORE_CACHE.remove(`${SCENARIO_LIST_CACHE_PREFIX}${storeId}`);
   STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
 
   return scenario;
@@ -425,6 +468,8 @@ export const updateScenario = async (
     scenarioSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
   );
 
+  STORE_CACHE.remove(`${SCENARIO_LIST_CACHE_PREFIX}${storeId}`);
+
   return updatedScenario;
 };
 
@@ -450,6 +495,7 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
   });
 
   STORE_CACHE.remove(`${STORE_DETAIL_CACHE_PREFIX}${storeId}`);
+  STORE_CACHE.remove(`${SCENARIO_LIST_CACHE_PREFIX}${storeId}`);
   STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
 };
 
