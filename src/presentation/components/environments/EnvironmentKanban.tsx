@@ -4,7 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { EnvironmentStatusError } from '../../../shared/errors/firebaseErrors';
-import type { Environment, EnvironmentStatus } from '../../../domain/entities/environment';
+import type {
+  Environment,
+  EnvironmentScenario,
+  EnvironmentStatus,
+} from '../../../domain/entities/environment';
 import type { StoreScenario, StoreSuite } from '../../../domain/entities/store';
 import type { UserSummary } from '../../../domain/entities/user';
 import { environmentService } from '../../../infrastructure/services/environmentService';
@@ -29,6 +33,22 @@ const COLUMNS: { status: EnvironmentStatus; title: string }[] = [
   { status: 'in_progress', title: 'environmentKanban.progress' },
   { status: 'done', title: 'environmentKanban.done' },
 ];
+
+const cloneScenarioMap = (
+  scenarios: Record<string, EnvironmentScenario>,
+): Record<string, EnvironmentScenario> =>
+  Object.fromEntries(
+    Object.entries(scenarios).map(([id, scenario]) => [
+      id,
+      {
+        ...scenario,
+        status: 'pendente',
+        statusMobile: 'pendente',
+        statusDesktop: 'pendente',
+        evidenciaArquivoUrl: null,
+      },
+    ]),
+  );
 
 export const EnvironmentKanban = ({
   storeId,
@@ -224,6 +244,40 @@ export const EnvironmentKanban = ({
     }
   };
 
+  const handleCloneEnvironment = async (environment: Environment) => {
+    try {
+      const suffix = t('environmentKanban.cloneIdentifierSuffix').trim().replace(/\s+/g, '-');
+      const stamp = Date.now().toString(36).slice(-4);
+      const identifier = `${environment.identificador}-${suffix}-${stamp}`;
+      const clonedScenarios = cloneScenarioMap(environment.scenarios ?? {});
+      await environmentService.create({
+        identificador: identifier,
+        storeId: environment.storeId,
+        suiteId: environment.suiteId,
+        suiteName: environment.suiteName,
+        urls: environment.urls ?? [],
+        jiraTask: environment.jiraTask ?? '',
+        tipoAmbiente: environment.tipoAmbiente,
+        tipoTeste: environment.tipoTeste,
+        momento: environment.momento,
+        release: environment.release,
+        status: 'backlog',
+        timeTracking: { start: null, end: null, totalMs: 0 },
+        presentUsersIds: [],
+        concludedBy: null,
+        scenarios: clonedScenarios,
+        bugs: 0,
+        totalCenarios: Object.keys(clonedScenarios).length,
+        participants: [],
+        publicShareLanguage: environment.publicShareLanguage ?? null,
+      });
+      showToast({ type: 'success', message: t('environmentKanban.cloneSuccess') });
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: t('environmentKanban.cloneError') });
+    }
+  };
+
   const handleOpenEnvironment = (environment: Environment) => {
     navigate(`/environments/${environment.id}`);
   };
@@ -298,6 +352,7 @@ export const EnvironmentKanban = ({
                       draggable
                       onDragStart={handleDragStart}
                       onOpen={handleOpenEnvironment}
+                      onClone={handleCloneEnvironment}
                     />
                   ))
                 )}
@@ -358,6 +413,7 @@ export const EnvironmentKanban = ({
                       draggable
                       onDragStart={handleDragStart}
                       onOpen={handleOpenEnvironment}
+                      onClone={handleCloneEnvironment}
                     />
                   ))}
                 </div>
