@@ -8,6 +8,7 @@ import { EmptyState } from '../components/EmptyState';
 import { useOrganizationStores } from '../hooks/useOrganizationStores';
 import { UserAvatar } from '../components/UserAvatar';
 import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanban';
+import { StoreScenarioComparisonChart } from '../components/StoreScenarioComparisonChart';
 import { StorefrontIcon, UsersGroupIcon } from '../components/icons';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
@@ -26,6 +27,26 @@ export const UserDashboardPage = () => {
   const [isLoadingBrowserstack, setIsLoadingBrowserstack] = useState(false);
 
   const { t } = useTranslation();
+  const scenarioChartData = useMemo(() => {
+    return stores
+      .map((store) => {
+        const automated = store.automatedScenarioCount ?? 0;
+        const notAutomated =
+          store.notAutomatedScenarioCount ?? Math.max(store.scenarioCount - automated, 0);
+        const total = store.scenarioCount || automated + notAutomated;
+
+        return {
+          label: store.name,
+          automated,
+          notAutomated,
+          total,
+        };
+      })
+      .sort(
+        (first, second) => second.total - first.total || first.label.localeCompare(second.label),
+      );
+  }, [stores]);
+  const hasScenarioChartData = scenarioChartData.some((item) => item.total > 0);
 
   useEffect(() => {
     if (isInitializing) {
@@ -148,7 +169,14 @@ export const UserDashboardPage = () => {
                     <span className="card-title-icon" aria-hidden>
                       <StorefrontIcon className="icon icon--lg" />
                     </span>
-                    <h2 className="card-title">{store.name}</h2>
+                    <div>
+                      <h2 className="card-title">{store.name}</h2>
+                      <span className="badge store-card-scenarios">
+                        {t('AdminStoresPage.store-card-scenarios-badge', {
+                          scenarioCount: store.scenarioCount,
+                        })}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <div className="card-link-hint">
@@ -157,6 +185,18 @@ export const UserDashboardPage = () => {
                 </div>
               </button>
             ))}
+          </div>
+        )}
+
+        {stores.length > 0 && (
+          <div className="organization-charts-grid organization-charts-grid--dashboard">
+            <StoreScenarioComparisonChart
+              title={t('AdminStoresPage.chart-automation-comparison-title')}
+              description={t('AdminStoresPage.chart-automation-comparison-description')}
+              data={hasScenarioChartData ? scenarioChartData : []}
+              emptyMessage={t('AdminStoresPage.chart-automation-comparison-empty-message')}
+              isLoading={isLoading}
+            />
           </div>
         )}
 

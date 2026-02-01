@@ -35,6 +35,7 @@ import {
   normalizeAutomationEnum,
   normalizeCriticalityEnum,
 } from '../../shared/utils/scenarioEnums';
+import { isAutomatedScenario } from '../../shared/utils/automation';
 import { firebaseFirestore } from '../database/firebase';
 import { CacheStore } from '../cache/CacheStore';
 import { fetchWithCache } from '../cache/cacheFetch';
@@ -97,6 +98,9 @@ const mapStore = (id: string, data: Record<string, unknown>): Store => {
   };
 };
 
+const getScenarioAutomationValue = (data: Record<string, unknown>) =>
+  ((data.automation as string) ?? (data.automatizado as string) ?? '').trim();
+
 const mapScenario = (
   storeId: string,
   id: string,
@@ -106,7 +110,7 @@ const mapScenario = (
   storeId,
   title: ((data.title as string) ?? '').trim(),
   category: ((data.category as string) ?? '').trim(),
-  automation: normalizeAutomationEnum((data.automation as string) ?? '') || '',
+  automation: normalizeAutomationEnum(getScenarioAutomationValue(data)) || '',
   criticality: normalizeCriticalityEnum((data.criticality as string) ?? '') || '',
   observation: ((data.observation as string) ?? '').trim(),
   bdd: ((data.bdd as string) ?? '').trim(),
@@ -381,6 +385,19 @@ const listScenariosFromServer = async (storeId: string): Promise<StoreScenario[]
     hasMore = Boolean(lastDoc && snapshot.size === SCENARIOS_PAGE_SIZE);
   }
 
+  const automatedScenarioCount = scenarios.filter((scenario) =>
+    isAutomatedScenario(scenario.automation),
+  ).length;
+  const scenarioCount = scenarios.length;
+  const notAutomatedScenarioCount = Math.max(scenarioCount - automatedScenarioCount, 0);
+
+  await updateDoc(storeRef, {
+    scenarioCount,
+    automatedScenarioCount,
+    notAutomatedScenarioCount,
+    updatedAt: serverTimestamp(),
+  });
+
   return scenarios;
 };
 
@@ -488,7 +505,9 @@ export const updateScenario = async (
       currentCount,
     );
     const previousAutomation = normalizeAutomationEnum(
-      (scenarioSnapshot.data({ serverTimestamps: 'estimate' })?.automation as string) ?? '',
+      getScenarioAutomationValue(
+        (scenarioSnapshot.data({ serverTimestamps: 'estimate' }) ?? {}) as Record<string, unknown>,
+      ),
     );
     const nextAutomation = normalizeAutomationEnum(normalizedScenario.automation);
     const automationDelta = getAutomationDeltas(nextAutomation);
@@ -544,7 +563,9 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
       currentCount,
     );
     const automationDelta = getAutomationDeltas(
-      (scenarioSnapshot.data({ serverTimestamps: 'estimate' })?.automation as string) ?? '',
+      getScenarioAutomationValue(
+        (scenarioSnapshot.data({ serverTimestamps: 'estimate' }) ?? {}) as Record<string, unknown>,
+      ),
     );
     transaction.update(storeRef, {
       scenarioCount: Math.max(currentCount - 1, 0),
