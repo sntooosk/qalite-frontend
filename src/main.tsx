@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 
 import { App } from './App';
-import './presentation/styles/global.css';
+import './styles/global.css';
 
 import './lib/i18n';
 

@@ -1,3 +1,3 @@
-import { AppRoutes } from './presentation/routes/AppRoutes';
+import { AppRoutes } from './routes/AppRoutes';
 
 export const App = () => <AppRoutes />;
