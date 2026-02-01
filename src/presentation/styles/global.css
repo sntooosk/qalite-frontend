@@ -33,7 +33,7 @@
   --color-alert: #d97706;
   --color-alert-bg: rgba(245, 158, 11, 0.18);
   --color-ring: rgba(26, 92, 255, 0.4);
-  --color-chart-automation: #1e3a8a;
+  --color-chart-automation: #1e40af;
   --color-chart-not-automation: #93c5fd;
   --color-chart-track: rgba(148, 163, 184, 0.3);
   --criticality-low-bg: #22c55e;
@@ -98,9 +98,9 @@
   --color-alert: #fbbf24;
   --color-alert-bg: rgba(251, 191, 36, 0.22);
   --color-ring: rgba(85, 173, 255, 0.5);
-  --color-chart-automation: #60a5fa;
-  --color-chart-not-automation: #1d4ed8;
-  --color-chart-track: rgba(96, 165, 250, 0.25);
+  --color-chart-automation: #1e40af;
+  --color-chart-not-automation: #60a5fa;
+  --color-chart-track: rgba(96, 165, 250, 0.18);
   --criticality-low-bg: #22c55e;
   --criticality-low-text: #ffffff;
   --criticality-medium-bg: #f59e0b;
