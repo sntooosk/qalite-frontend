@@ -1,4 +1,4 @@
-import type { DragEvent } from 'react';
+import type { DragEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Environment } from '../../../domain/entities/environment';
@@ -6,6 +6,7 @@ import type { UserSummary } from '../../../domain/entities/user';
 import { getReadableUserName, getUserInitials } from '../../utils/userDisplay';
 import { ENVIRONMENT_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 import { translateEnvironmentOption } from '../../constants/environmentOptions';
+import { CopyIcon } from '../icons';
 
 interface EnvironmentCardProps {
   environment: Environment;
@@ -13,6 +14,7 @@ interface EnvironmentCardProps {
   suiteName?: string | null;
   bugCount?: number;
   onOpen: (environment: Environment) => void;
+  onClone?: (environment: Environment) => void;
   draggable?: boolean;
   onDragStart?: (event: DragEvent<HTMLDivElement>, environmentId: string) => void;
 }
@@ -23,6 +25,7 @@ export const EnvironmentCard = ({
   suiteName,
   bugCount,
   onOpen,
+  onClone,
   draggable = false,
   onDragStart,
 }: EnvironmentCardProps) => {
@@ -41,6 +44,10 @@ export const EnvironmentCard = ({
   const displayBugCount = bugCount ?? environment.bugs ?? 0;
 
   const handleOpen = () => onOpen(environment);
+  const handleClone = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onClone?.(environment);
+  };
 
   return (
     <div
@@ -63,11 +70,25 @@ export const EnvironmentCard = ({
           <span className="environment-card-identifier">{environment.identificador}</span>
           <span className="environment-card-type">{t(environment.tipoTeste)}</span>
         </div>
-        <span
-          className={`environment-card-status-dot environment-card-status-dot--${environment.status}`}
-        >
-          {t(ENVIRONMENT_STATUS_LABEL[environment.status])}
-        </span>
+        <div className="environment-card-actions">
+          <span
+            className={`environment-card-status-dot environment-card-status-dot--${environment.status}`}
+          >
+            {t(ENVIRONMENT_STATUS_LABEL[environment.status])}
+          </span>
+          {onClone && (
+            <button
+              type="button"
+              className="environment-card-action"
+              onClick={handleClone}
+              onMouseDown={(event) => event.stopPropagation()}
+              aria-label={t('environmentCard.clone')}
+            >
+              <CopyIcon aria-hidden className="icon" />
+              <span>{t('environmentCard.clone')}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="environment-card-suite-row">

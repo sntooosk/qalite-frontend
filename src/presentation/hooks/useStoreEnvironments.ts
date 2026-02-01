@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { Environment, EnvironmentStatus } from '../../domain/entities/environment';
 import { environmentService } from '../../infrastructure/services/environmentService';
@@ -11,6 +11,7 @@ interface UseStoreEnvironmentsResult {
   environments: Environment[];
   isLoading: boolean;
   statusCounts: StatusCounts;
+  addEnvironment: (environment: Environment) => void;
 }
 
 const buildEmptyCounts = (): StatusCounts => ({
@@ -27,16 +28,18 @@ export const useStoreEnvironments = (
   const [isLoading, setIsLoading] = useState(Boolean(storeId));
 
   useEffect(() => {
+    let isMounted = true;
+
     if (!storeId) {
       setEnvironments([]);
       setIsLoading(false);
-      return;
+      return () => {
+        isMounted = false;
+      };
     }
 
-    setIsLoading(true);
-    let isMounted = true;
-
-    const loadEnvironments = async () => {
+    const load = async () => {
+      setIsLoading(true);
       try {
         const list = await environmentService.listSummary({ storeId });
         if (isMounted) {
@@ -51,13 +54,20 @@ export const useStoreEnvironments = (
         }
       }
     };
-
-    void loadEnvironments();
-
+    void load();
     return () => {
       isMounted = false;
     };
   }, [storeId]);
+
+  const addEnvironment = useCallback((environment: Environment) => {
+    setEnvironments((current) => {
+      if (current.some((item) => item.id === environment.id)) {
+        return current;
+      }
+      return [environment, ...current];
+    });
+  }, []);
 
   const statusCounts = useMemo(() => {
     if (environments.length === 0) {
@@ -77,5 +87,6 @@ export const useStoreEnvironments = (
     environments,
     isLoading,
     statusCounts,
+    addEnvironment,
   };
 };

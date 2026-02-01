@@ -3970,6 +3970,41 @@ button.store-summary-highlight:focus-visible {
   gap: 0.15rem;
 }
 
+.environment-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.environment-card-action {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition-base),
+    color var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.environment-card-action .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.environment-card-action:hover {
+  background: var(--color-surface);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
 [data-theme='dark'] .environment-kanban-summary-item {
   background: linear-gradient(135deg, rgba(78, 141, 255, 0.12), rgba(111, 66, 193, 0.12));
   border-color: var(--color-border-strong);

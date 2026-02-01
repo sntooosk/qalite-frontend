@@ -233,6 +233,7 @@ export const StoreSummaryPage = () => {
     environments,
     isLoading: isLoadingEnvironments,
     statusCounts: environmentStatusCounts,
+    addEnvironment,
   } = useStoreEnvironments(storeId);
   const selectedSuiteScenarioCount = suiteForm.scenarioIds.length;
   const suiteSelectionSummary =
@@ -2440,6 +2441,7 @@ export const StoreSummaryPage = () => {
                       scenarios={scenarios}
                       environments={environments}
                       isLoading={isLoadingEnvironments}
+                      onEnvironmentCreated={addEnvironment}
                     />
                   )}
                 </div>

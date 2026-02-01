@@ -225,7 +225,8 @@
       "momentLabel": "Moment/When",
       "bugStoryfix": "Storyfix",
       "bugBugs": "Bugs",
-      "noParticipants": "No participants"
+      "noParticipants": "No participants",
+      "clone": "Clone"
     },
     "createEnvironment": {
       "identifier": "Enter an identifier for the environment.",
@@ -258,11 +259,7 @@
       "statusUpdate": "Status updated successfully.",
       "statusError": "There are pending or in-progress scenarios. Complete them before finishing.",
       "updateError": "Unable to update the status.",
-      "environmentStatus": "Environment status",
-      "environments": "Environments",
       "environment": "environment",
-      "description": "Track the validation flow and move environments through statuses.",
-      "create": "Create environment",
       "archivedEnvironments": "archived",
       "consulted": "can be viewed",
       "below": "below the board.",
@@ -272,7 +269,16 @@
       "max": "Maximize",
       "min": "Minimize",
       "maxEnvironment": "Click “Maximize” to view archived environments.",
-      "environmentCreated": "Environment successfully created."
+      "environmentCreated": "Environment successfully created.",
+      "cloneIdentifierSuffix": "copy",
+      "cloneSuccess": "Environment cloned successfully.",
+      "cloneError": "Unable to clone the environment.",
+      "cloneConfirmTitle": "Clone environment",
+      "cloneConfirmDescription": "Create a new environment with the same data and scenarios.",
+      "cloneConfirmMessage": "Do you want to clone the environment {{identifier}}?",
+      "cloneConfirmAction": "Clone",
+      "cloneCancel": "Cancel",
+      "cloneLoading": "Cloning..."
     },
     "loginPage": {
       "title": "Sign in to your account",
