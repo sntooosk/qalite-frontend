@@ -64,7 +64,6 @@ export const StoreScenarioComparisonChart = ({
             const totalWidthPercentage = maxTotal === 0 ? 0 : Math.round((total / maxTotal) * 100);
             const automatedPercentage =
               total === 0 ? 0 : Math.round((item.automated / total) * 100);
-            const notAutomatedPercentage = total === 0 ? 0 : Math.max(100 - automatedPercentage, 0);
 
             return (
               <li key={item.label} className="store-scenario-chart__item">
@@ -101,7 +100,7 @@ export const StoreScenarioComparisonChart = ({
                     />
                     <span
                       className="store-scenario-chart__bar-fill store-scenario-chart__bar-fill--manual"
-                      style={{ width: `${notAutomatedPercentage}%` }}
+                      style={{ width: '100%' }}
                     />
                   </div>
                 </div>
