@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { Environment, EnvironmentStatus } from '../../domain/entities/environment';
 import { environmentService } from '../../infrastructure/services/environmentService';
@@ -11,7 +11,7 @@ interface UseStoreEnvironmentsResult {
   environments: Environment[];
   isLoading: boolean;
   statusCounts: StatusCounts;
-  refresh: () => Promise<void>;
+  addEnvironment: (environment: Environment) => void;
 }
 
 const buildEmptyCounts = (): StatusCounts => ({
@@ -26,48 +26,48 @@ export const useStoreEnvironments = (
 ): UseStoreEnvironmentsResult => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(storeId));
-  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+    let isMounted = true;
 
-  const refresh = useCallback(async () => {
     if (!storeId) {
-      if (isMountedRef.current) {
-        setEnvironments([]);
-        setIsLoading(false);
-      }
-      return;
+      setEnvironments([]);
+      setIsLoading(false);
+      return () => {
+        isMounted = false;
+      };
     }
 
-    if (isMountedRef.current) {
-      setIsLoading(true);
-    }
-
-    try {
-      const list = await environmentService.listSummary({ storeId });
-      if (isMountedRef.current) {
-        setEnvironments(list);
-        setIsLoading(false);
-      }
-    } catch (error) {
-      console.error(error);
-      if (isMountedRef.current) {
-        setEnvironments([]);
-        setIsLoading(false);
-      }
-    }
-  }, [storeId]);
-
-  useEffect(() => {
     const load = async () => {
-      await refresh();
+      setIsLoading(true);
+      try {
+        const list = await environmentService.listSummary({ storeId });
+        if (isMounted) {
+          setEnvironments(list);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setEnvironments([]);
+          setIsLoading(false);
+        }
+      }
     };
     void load();
-  }, [refresh]);
+    return () => {
+      isMounted = false;
+    };
+  }, [storeId]);
+
+  const addEnvironment = useCallback((environment: Environment) => {
+    setEnvironments((current) => {
+      if (current.some((item) => item.id === environment.id)) {
+        return current;
+      }
+      return [environment, ...current];
+    });
+  }, []);
 
   const statusCounts = useMemo(() => {
     if (environments.length === 0) {
@@ -87,6 +87,6 @@ export const useStoreEnvironments = (
     environments,
     isLoading,
     statusCounts,
-    refresh,
+    addEnvironment,
   };
 };

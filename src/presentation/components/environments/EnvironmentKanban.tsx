@@ -28,7 +28,7 @@ interface EnvironmentKanbanProps {
   scenarios: StoreScenario[];
   environments: Environment[];
   isLoading: boolean;
-  onRefresh: () => Promise<void>;
+  onEnvironmentCreated: (environment: Environment) => void;
 }
 
 const COLUMNS: { status: EnvironmentStatus; title: string }[] = [
@@ -59,14 +59,13 @@ export const EnvironmentKanban = ({
   scenarios,
   environments,
   isLoading,
-  onRefresh,
+  onEnvironmentCreated,
 }: EnvironmentKanbanProps) => {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [userProfilesMap, setUserProfilesMap] = useState<Record<string, UserSummary>>({});
   const [isArchiveMinimized, setIsArchiveMinimized] = useState(true);
   const [archivedVisibleCount, setArchivedVisibleCount] = useState(5);
-  const [bugCounts, setBugCounts] = useState<Record<string, number>>({});
   const [environmentToClone, setEnvironmentToClone] = useState<Environment | null>(null);
   const [isCloning, setIsCloning] = useState(false);
   const { user } = useAuth();
@@ -102,37 +101,6 @@ export const EnvironmentKanban = ({
     };
 
     void fetchProfiles();
-    return () => {
-      isMounted = false;
-    };
-  }, [environments]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchBugCounts = async () => {
-      try {
-        const entries = await Promise.all(
-          environments.map(async (environment) => {
-            const bugs = await environmentService.listBugs(environment.id);
-            return [environment.id, bugs.length] as const;
-          }),
-        );
-
-        if (isMounted) {
-          setBugCounts(Object.fromEntries(entries));
-        }
-      } catch (error) {
-        console.error('Failed to fetch environment bugs', error);
-      }
-    };
-
-    if (environments.length > 0) {
-      void fetchBugCounts();
-    } else {
-      setBugCounts({});
-    }
-
     return () => {
       isMounted = false;
     };
@@ -273,7 +241,7 @@ export const EnvironmentKanban = ({
       const stamp = Date.now().toString(36).slice(-4);
       const identifier = `${environment.identificador}-${suffix}-${stamp}`;
       const clonedScenarios = cloneScenarioMap(environment.scenarios ?? {});
-      await environmentService.create({
+      const createdEnvironment = await environmentService.create({
         identificador: identifier,
         storeId: environment.storeId,
         suiteId: environment.suiteId,
@@ -295,13 +263,20 @@ export const EnvironmentKanban = ({
         publicShareLanguage: environment.publicShareLanguage ?? null,
       });
       showToast({ type: 'success', message: t('environmentKanban.cloneSuccess') });
-      await onRefresh();
+      onEnvironmentCreated(createdEnvironment);
       setEnvironmentToClone(null);
     } catch (error) {
       console.error(error);
       showToast({ type: 'error', message: t('environmentKanban.cloneError') });
     } finally {
       setIsCloning(false);
+    }
+  };
+
+  const handleEnvironmentCreated = (environment: Environment | null) => {
+    showToast({ type: 'success', message: t('environmentKanban.environmentCreated') });
+    if (environment) {
+      onEnvironmentCreated(environment);
     }
   };
 
@@ -327,9 +302,7 @@ export const EnvironmentKanban = ({
           storeId={storeId}
           suites={suites}
           scenarios={scenarios}
-          onCreated={() =>
-            showToast({ type: 'success', message: t('environmentKanban.environmentCreated') })
-          }
+          onCreated={handleEnvironmentCreated}
         />
       </header>
 
@@ -375,7 +348,6 @@ export const EnvironmentKanban = ({
                         .map((id) => userProfilesMap[id])
                         .filter((user): user is UserSummary => Boolean(user))}
                       suiteName={suiteNameByEnvironment[environment.id]}
-                      bugCount={bugCounts[environment.id]}
                       draggable
                       onDragStart={handleDragStart}
                       onOpen={handleOpenEnvironment}
@@ -436,7 +408,6 @@ export const EnvironmentKanban = ({
                         .map((id) => userProfilesMap[id])
                         .filter((user): user is UserSummary => Boolean(user))}
                       suiteName={suiteNameByEnvironment[environment.id]}
-                      bugCount={bugCounts[environment.id]}
                       draggable
                       onDragStart={handleDragStart}
                       onOpen={handleOpenEnvironment}

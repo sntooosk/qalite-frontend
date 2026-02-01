@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { EnvironmentScenario } from '../../../domain/entities/environment';
+import type { Environment, EnvironmentScenario } from '../../../domain/entities/environment';
 import type { StoreScenario, StoreSuite } from '../../../domain/entities/store';
 import { environmentService } from '../../../infrastructure/services/environmentService';
 import { Button } from '../Button';
@@ -19,7 +19,7 @@ interface CreateEnvironmentCardProps {
   storeId: string;
   suites: StoreSuite[];
   scenarios: StoreScenario[];
-  onCreated?: () => void;
+  onCreated?: (environment: Environment | null) => void;
 }
 
 const buildScenarioMap = (
@@ -151,7 +151,7 @@ export const CreateEnvironmentCard = ({
 
       const timeTracking = { start: null, end: null, totalMs: 0 };
 
-      await environmentService.create({
+      const createdEnvironment = await environmentService.create({
         identificador: identificador.trim(),
         storeId,
         suiteId: selectedSuite?.id ?? null,
@@ -173,7 +173,7 @@ export const CreateEnvironmentCard = ({
         publicShareLanguage: null,
       });
 
-      onCreated?.();
+      onCreated?.(createdEnvironment);
       resetForm();
     } catch (error) {
       console.error(error);
