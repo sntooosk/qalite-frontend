@@ -62,12 +62,15 @@ export const StoreScenarioComparisonChart = ({
           {data.map((item) => {
             const total = item.total;
             const totalWidthPercentage = maxTotal === 0 ? 0 : Math.round((total / maxTotal) * 100);
-            const automatedPercentage =
-              total === 0 ? 0 : Math.round((item.automated / total) * 100);
+            const automatedPercentage = total === 0 ? 0 : (item.automated / total) * 100;
+            const automatedWidth =
+              total === 0 || item.automated === 0
+                ? 0
+                : Math.max(2, Math.round(automatedPercentage));
             const automatedStyle =
-              automatedPercentage === 0
+              automatedWidth === 0
                 ? { width: '0%' }
-                : { width: `${automatedPercentage}%`, minWidth: '6px' };
+                : { width: `${automatedWidth}%`, minWidth: '6px' };
 
             return (
               <li key={item.label} className="store-scenario-chart__item">
