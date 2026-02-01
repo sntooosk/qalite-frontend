@@ -139,33 +139,48 @@ const normalizeCategoryInput = (input: StoreCategoryInput): StoreCategoryInput =
 });
 
 const listStoresFromServer = async (organizationId: string): Promise<Store[]> => {
-  const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
-  const storesQuery = query(
-    storesCollection,
-    where('organizationId', '==', organizationId),
-    orderBy('name'),
-  );
+  try {
+    const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
+    const storesQuery = query(
+      storesCollection,
+      where('organizationId', '==', organizationId),
+      orderBy('name'),
+    );
 
-  const stores: Store[] = [];
-  let lastDoc: QueryDocumentSnapshot | null = null;
-  let hasMore = true;
+    const stores: Store[] = [];
+    let lastDoc: QueryDocumentSnapshot | null = null;
+    let hasMore = true;
 
-  while (hasMore) {
-    const pageQuery = lastDoc
-      ? query(storesQuery, startAfter(lastDoc), limit(STORE_PAGE_SIZE))
-      : query(storesQuery, limit(STORE_PAGE_SIZE));
+    while (hasMore) {
+      const pageQuery = lastDoc
+        ? query(storesQuery, startAfter(lastDoc), limit(STORE_PAGE_SIZE))
+        : query(storesQuery, limit(STORE_PAGE_SIZE));
 
-    const snapshot = await getDocsCacheThenServer(pageQuery);
+      const snapshot = await getDocsCacheThenServer(pageQuery);
 
-    snapshot.docs.forEach((docSnapshot) => {
-      stores.push(mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })));
-    });
+      snapshot.docs.forEach((docSnapshot) => {
+        stores.push(mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })));
+      });
 
-    lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
-    hasMore = Boolean(lastDoc && snapshot.size === STORE_PAGE_SIZE);
+      lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+      hasMore = Boolean(lastDoc && snapshot.size === STORE_PAGE_SIZE);
+    }
+
+    return stores;
+  } catch (error) {
+    console.error(error);
+    const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
+    const fallbackQuery = query(
+      storesCollection,
+      where('organizationId', '==', organizationId),
+    );
+    const snapshot = await getDocsCacheThenServer(fallbackQuery);
+    return snapshot.docs
+      .map((docSnapshot) =>
+        mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
-
-  return stores;
 };
 
 export const listStoresSummary = async (organizationId: string): Promise<Store[]> => {
