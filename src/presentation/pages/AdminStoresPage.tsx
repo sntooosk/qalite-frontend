@@ -19,6 +19,7 @@ import { TextInput } from '../components/TextInput';
 import { Modal } from '../components/Modal';
 import { UserAvatar } from '../components/UserAvatar';
 import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanban';
+import { StoreScenarioComparisonChart } from '../components/StoreScenarioComparisonChart';
 import { SettingsIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
 import { useTranslation } from 'react-i18next';
 
@@ -90,6 +91,26 @@ export const AdminStoresPage = () => {
   const [browserstackBuilds, setBrowserstackBuilds] = useState<BrowserstackBuild[]>([]);
   const [isLoadingBrowserstack, setIsLoadingBrowserstack] = useState(false);
   const { t: translation } = useTranslation();
+  const scenarioChartData = useMemo(() => {
+    return storesForOrganization
+      .map((store) => {
+        const automated = store.automatedScenarioCount ?? 0;
+        const notAutomated =
+          store.notAutomatedScenarioCount ?? Math.max(store.scenarioCount - automated, 0);
+        const total = store.scenarioCount || automated + notAutomated;
+
+        return {
+          label: store.name,
+          automated,
+          notAutomated,
+          total,
+        };
+      })
+      .sort(
+        (first, second) => second.total - first.total || first.label.localeCompare(second.label),
+      );
+  }, [storesForOrganization]);
+  const hasScenarioChartData = scenarioChartData.some((item) => item.total > 0);
 
   useEffect(() => {
     const fetchOrganizations = async () => {
@@ -735,6 +756,11 @@ export const AdminStoresPage = () => {
                       </span>
                       <div>
                         <h2 className="card-title">{store.name}</h2>
+                        <span className="badge store-card-scenarios">
+                          {translation('AdminStoresPage.store-card-scenarios-badge', {
+                            scenarioCount: store.scenarioCount,
+                          })}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -744,6 +770,18 @@ export const AdminStoresPage = () => {
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div className="organization-charts-grid organization-charts-grid--dashboard">
+              <StoreScenarioComparisonChart
+                title={translation('AdminStoresPage.chart-automation-comparison-title')}
+                description={translation('AdminStoresPage.chart-automation-comparison-description')}
+                data={hasScenarioChartData ? scenarioChartData : []}
+                emptyMessage={translation(
+                  'AdminStoresPage.chart-automation-comparison-empty-message',
+                )}
+                isLoading={isLoadingStores}
+              />
             </div>
 
             <div className="organization-extra">
