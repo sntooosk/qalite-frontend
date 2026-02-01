@@ -272,7 +272,13 @@
       "environmentCreated": "Environment successfully created.",
       "cloneIdentifierSuffix": "copy",
       "cloneSuccess": "Environment cloned successfully.",
-      "cloneError": "Unable to clone the environment."
+      "cloneError": "Unable to clone the environment.",
+      "cloneConfirmTitle": "Clone environment",
+      "cloneConfirmDescription": "Create a new environment with the same data and scenarios.",
+      "cloneConfirmMessage": "Do you want to clone the environment {{identifier}}?",
+      "cloneConfirmAction": "Clone",
+      "cloneCancel": "Cancel",
+      "cloneLoading": "Cloning..."
     },
     "loginPage": {
       "title": "Sign in to your account",

@@ -16,6 +16,8 @@ import { userService } from '../../../infrastructure/services/userService';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../hooks/useAuth';
 import { PaginationControls } from '../PaginationControls';
+import { Modal } from '../Modal';
+import { Button } from '../Button';
 import { EnvironmentCard } from './EnvironmentCard';
 import { CreateEnvironmentCard } from './CreateEnvironmentCard';
 import { ArchiveIcon } from '../icons';
@@ -26,6 +28,7 @@ interface EnvironmentKanbanProps {
   scenarios: StoreScenario[];
   environments: Environment[];
   isLoading: boolean;
+  onRefresh: () => Promise<void>;
 }
 
 const COLUMNS: { status: EnvironmentStatus; title: string }[] = [
@@ -56,6 +59,7 @@ export const EnvironmentKanban = ({
   scenarios,
   environments,
   isLoading,
+  onRefresh,
 }: EnvironmentKanbanProps) => {
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -63,6 +67,8 @@ export const EnvironmentKanban = ({
   const [isArchiveMinimized, setIsArchiveMinimized] = useState(true);
   const [archivedVisibleCount, setArchivedVisibleCount] = useState(5);
   const [bugCounts, setBugCounts] = useState<Record<string, number>>({});
+  const [environmentToClone, setEnvironmentToClone] = useState<Environment | null>(null);
+  const [isCloning, setIsCloning] = useState(false);
   const { user } = useAuth();
   const { t } = useTranslation();
 
@@ -244,7 +250,24 @@ export const EnvironmentKanban = ({
     }
   };
 
-  const handleCloneEnvironment = async (environment: Environment) => {
+  const requestCloneEnvironment = (environment: Environment) => {
+    setEnvironmentToClone(environment);
+  };
+
+  const handleCloseCloneModal = () => {
+    if (isCloning) {
+      return;
+    }
+    setEnvironmentToClone(null);
+  };
+
+  const handleConfirmClone = async () => {
+    if (!environmentToClone) {
+      return;
+    }
+
+    const environment = environmentToClone;
+    setIsCloning(true);
     try {
       const suffix = t('environmentKanban.cloneIdentifierSuffix').trim().replace(/\s+/g, '-');
       const stamp = Date.now().toString(36).slice(-4);
@@ -272,9 +295,13 @@ export const EnvironmentKanban = ({
         publicShareLanguage: environment.publicShareLanguage ?? null,
       });
       showToast({ type: 'success', message: t('environmentKanban.cloneSuccess') });
+      await onRefresh();
+      setEnvironmentToClone(null);
     } catch (error) {
       console.error(error);
       showToast({ type: 'error', message: t('environmentKanban.cloneError') });
+    } finally {
+      setIsCloning(false);
     }
   };
 
@@ -352,7 +379,7 @@ export const EnvironmentKanban = ({
                       draggable
                       onDragStart={handleDragStart}
                       onOpen={handleOpenEnvironment}
-                      onClone={handleCloneEnvironment}
+                      onClone={requestCloneEnvironment}
                     />
                   ))
                 )}
@@ -413,7 +440,7 @@ export const EnvironmentKanban = ({
                       draggable
                       onDragStart={handleDragStart}
                       onOpen={handleOpenEnvironment}
-                      onClone={handleCloneEnvironment}
+                      onClone={requestCloneEnvironment}
                     />
                   ))}
                 </div>
@@ -435,6 +462,37 @@ export const EnvironmentKanban = ({
           )}
         </div>
       )}
+
+      <Modal
+        isOpen={Boolean(environmentToClone)}
+        onClose={handleCloseCloneModal}
+        title={t('environmentKanban.cloneConfirmTitle')}
+        description={t('environmentKanban.cloneConfirmDescription')}
+      >
+        <p>
+          {t('environmentKanban.cloneConfirmMessage', {
+            identifier: environmentToClone?.identificador ?? '',
+          })}
+        </p>
+        <div className="modal-actions">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleCloseCloneModal}
+            disabled={isCloning}
+          >
+            {t('environmentKanban.cloneCancel')}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleConfirmClone}
+            isLoading={isCloning}
+            loadingText={t('environmentKanban.cloneLoading')}
+          >
+            {t('environmentKanban.cloneConfirmAction')}
+          </Button>
+        </div>
+      </Modal>
     </section>
   );
 };

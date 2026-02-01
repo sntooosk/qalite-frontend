@@ -273,7 +273,13 @@
       "environmentCreated": "'Ambiente criado com sucesso.'",
       "cloneIdentifierSuffix": "copia",
       "cloneSuccess": "Ambiente clonado com sucesso.",
-      "cloneError": "Não foi possível clonar o ambiente."
+      "cloneError": "Não foi possível clonar o ambiente.",
+      "cloneConfirmTitle": "Clonar ambiente",
+      "cloneConfirmDescription": "Crie um novo ambiente com os mesmos dados e cenários.",
+      "cloneConfirmMessage": "Deseja clonar o ambiente {{identifier}}?",
+      "cloneConfirmAction": "Clonar",
+      "cloneCancel": "Cancelar",
+      "cloneLoading": "Clonando..."
     },
     "loginPage": {
       "title": "Entre na sua conta",
