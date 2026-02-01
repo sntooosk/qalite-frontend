@@ -61,16 +61,41 @@ const timestampToDate = (value: unknown): Date | null => {
   return null;
 };
 
-const mapStore = (id: string, data: Record<string, unknown>): Store => ({
-  id,
-  organizationId: ((data.organizationId as string) ?? '').trim(),
-  name: ((data.name as string) ?? '').trim(),
-  site: ((data.site as string) ?? '').trim(),
-  stage: ((data.stage as string) ?? '').trim(),
-  scenarioCount: Number(data.scenarioCount ?? 0),
-  createdAt: timestampToDate(data.createdAt),
-  updatedAt: timestampToDate(data.updatedAt),
-});
+const getStoreAutomationCounts = (data: Record<string, unknown>, scenarioCount: number) => {
+  const automatedScenarioCount = Number(data.automatedScenarioCount ?? 0);
+  const hasAutomatedField = data.automatedScenarioCount !== undefined;
+  const hasNotAutomatedField = data.notAutomatedScenarioCount !== undefined;
+  const hasAutomationCounts = hasAutomatedField || hasNotAutomatedField;
+  const defaultNotAutomated = hasAutomationCounts
+    ? Number(data.notAutomatedScenarioCount ?? Math.max(scenarioCount - automatedScenarioCount, 0))
+    : scenarioCount;
+
+  return {
+    automatedScenarioCount,
+    notAutomatedScenarioCount: Math.max(defaultNotAutomated, 0),
+  };
+};
+
+const mapStore = (id: string, data: Record<string, unknown>): Store => {
+  const scenarioCount = Number(data.scenarioCount ?? 0);
+  const { automatedScenarioCount, notAutomatedScenarioCount } = getStoreAutomationCounts(
+    data,
+    scenarioCount,
+  );
+
+  return {
+    id,
+    organizationId: ((data.organizationId as string) ?? '').trim(),
+    name: ((data.name as string) ?? '').trim(),
+    site: ((data.site as string) ?? '').trim(),
+    stage: ((data.stage as string) ?? '').trim(),
+    scenarioCount,
+    automatedScenarioCount,
+    notAutomatedScenarioCount,
+    createdAt: timestampToDate(data.createdAt),
+    updatedAt: timestampToDate(data.updatedAt),
+  };
+};
 
 const mapScenario = (
   storeId: string,
@@ -138,6 +163,14 @@ const normalizeCategoryInput = (input: StoreCategoryInput): StoreCategoryInput =
   name: input.name.trim(),
 });
 
+const getAutomationDeltas = (automation: string) => {
+  const normalized = normalizeAutomationEnum(automation);
+  return {
+    automated: normalized === 'AUTOMATED' ? 1 : 0,
+    notAutomated: normalized === 'NOT_AUTOMATED' ? 1 : 0,
+  };
+};
+
 const listStoresFromServer = async (organizationId: string): Promise<Store[]> => {
   try {
     const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
@@ -170,10 +203,7 @@ const listStoresFromServer = async (organizationId: string): Promise<Store[]> =>
   } catch (error) {
     console.error(error);
     const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
-    const fallbackQuery = query(
-      storesCollection,
-      where('organizationId', '==', organizationId),
-    );
+    const fallbackQuery = query(storesCollection, where('organizationId', '==', organizationId));
     const snapshot = await getDocsCacheThenServer(fallbackQuery);
     return snapshot.docs
       .map((docSnapshot) =>
@@ -258,6 +288,8 @@ export const createStore = async (payload: CreateStorePayload): Promise<Store> =
     site: payload.site.trim(),
     stage: payload.stage.trim(),
     scenarioCount: 0,
+    automatedScenarioCount: 0,
+    notAutomatedScenarioCount: 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -269,6 +301,8 @@ export const createStore = async (payload: CreateStorePayload): Promise<Store> =
     site: payload.site.trim(),
     stage: payload.stage.trim(),
     scenarioCount: 0,
+    automatedScenarioCount: 0,
+    notAutomatedScenarioCount: 0,
     createdAt: now,
     updatedAt: now,
   };
@@ -387,11 +421,17 @@ export const createScenario = async (
       updatedAt: serverTimestamp(),
     });
 
-    const currentCount = Number(
-      storeSnapshot.data({ serverTimestamps: 'estimate' })?.scenarioCount ?? 0,
+    const storeData = storeSnapshot.data({ serverTimestamps: 'estimate' }) ?? {};
+    const currentCount = Number(storeData?.scenarioCount ?? 0);
+    const { automatedScenarioCount, notAutomatedScenarioCount } = getStoreAutomationCounts(
+      storeData,
+      currentCount,
     );
+    const automationDelta = getAutomationDeltas(normalizedScenario.automation);
     transaction.update(storeRef, {
       scenarioCount: currentCount + 1,
+      automatedScenarioCount: automatedScenarioCount + automationDelta.automated,
+      notAutomatedScenarioCount: notAutomatedScenarioCount + automationDelta.notAutomated,
       updatedAt: serverTimestamp(),
     });
 
@@ -425,13 +465,47 @@ export const updateScenario = async (
 ): Promise<StoreScenario> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const scenarioRef = doc(storeRef, SCENARIOS_SUBCOLLECTION, scenarioId);
+  const normalizedScenario = normalizeScenarioInput(payload);
 
-  await updateDoc(scenarioRef, {
-    ...normalizeScenarioInput(payload),
-    updatedAt: serverTimestamp(),
+  await runTransaction(firebaseFirestore, async (transaction) => {
+    const [storeSnapshot, scenarioSnapshot] = await Promise.all([
+      transaction.get(storeRef),
+      transaction.get(scenarioRef),
+    ]);
+
+    if (!storeSnapshot.exists()) {
+      throw new Error('Loja não encontrada.');
+    }
+
+    if (!scenarioSnapshot.exists()) {
+      throw new Error('Cenário não encontrado.');
+    }
+
+    const storeData = storeSnapshot.data({ serverTimestamps: 'estimate' }) ?? {};
+    const currentCount = Number(storeData?.scenarioCount ?? 0);
+    const { automatedScenarioCount, notAutomatedScenarioCount } = getStoreAutomationCounts(
+      storeData,
+      currentCount,
+    );
+    const previousAutomation = normalizeAutomationEnum(
+      (scenarioSnapshot.data({ serverTimestamps: 'estimate' })?.automation as string) ?? '',
+    );
+    const nextAutomation = normalizeAutomationEnum(normalizedScenario.automation);
+    const automationDelta = getAutomationDeltas(nextAutomation);
+    const previousDelta = getAutomationDeltas(previousAutomation);
+    const automatedDelta = automationDelta.automated - previousDelta.automated;
+    const notAutomatedDelta = automationDelta.notAutomated - previousDelta.notAutomated;
+
+    transaction.update(scenarioRef, {
+      ...normalizedScenario,
+      updatedAt: serverTimestamp(),
+    });
+    transaction.update(storeRef, {
+      automatedScenarioCount: Math.max(automatedScenarioCount + automatedDelta, 0),
+      notAutomatedScenarioCount: Math.max(notAutomatedScenarioCount + notAutomatedDelta, 0),
+      updatedAt: serverTimestamp(),
+    });
   });
-
-  await updateDoc(storeRef, { updatedAt: serverTimestamp() });
 
   const scenarioSnapshot = await getDocCacheFirst(scenarioRef);
   const updatedScenario = mapScenario(
@@ -450,18 +524,35 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
   const scenarioRef = doc(storeRef, SCENARIOS_SUBCOLLECTION, scenarioId);
 
   await runTransaction(firebaseFirestore, async (transaction) => {
-    const storeSnapshot = await transaction.get(storeRef);
+    const [storeSnapshot, scenarioSnapshot] = await Promise.all([
+      transaction.get(storeRef),
+      transaction.get(scenarioRef),
+    ]);
     if (!storeSnapshot.exists()) {
       throw new Error('Loja não encontrada.');
+    }
+    if (!scenarioSnapshot.exists()) {
+      throw new Error('Cenário não encontrado.');
     }
 
     transaction.delete(scenarioRef);
 
-    const currentCount = Number(
-      storeSnapshot.data({ serverTimestamps: 'estimate' })?.scenarioCount ?? 0,
+    const storeData = storeSnapshot.data({ serverTimestamps: 'estimate' }) ?? {};
+    const currentCount = Number(storeData?.scenarioCount ?? 0);
+    const { automatedScenarioCount, notAutomatedScenarioCount } = getStoreAutomationCounts(
+      storeData,
+      currentCount,
+    );
+    const automationDelta = getAutomationDeltas(
+      (scenarioSnapshot.data({ serverTimestamps: 'estimate' })?.automation as string) ?? '',
     );
     transaction.update(storeRef, {
       scenarioCount: Math.max(currentCount - 1, 0),
+      automatedScenarioCount: Math.max(automatedScenarioCount - automationDelta.automated, 0),
+      notAutomatedScenarioCount: Math.max(
+        notAutomatedScenarioCount - automationDelta.notAutomated,
+        0,
+      ),
       updatedAt: serverTimestamp(),
     });
   });
