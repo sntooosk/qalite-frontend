@@ -18,17 +18,33 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && userDoc().exists() && userData().role == 'admin';
+      return isSignedIn()
+        && (request.auth.token.admin == true
+          || request.auth.token.role == 'admin'
+          || (userDoc().exists() && userData().role == 'admin'));
     }
 
     function isOrgMember(orgId) {
       return isSignedIn() && userDoc().exists() && orgId != null && userOrgId() == orgId;
     }
 
+    function isOrgMemberByOrganization(orgId) {
+      return isSignedIn()
+        && orgId != null
+        && get(/databases/$(database)/documents/organizations/$(orgId))
+          .data.members.hasAny([request.auth.uid]);
+    }
+
     function isOrgMemberByStore(storeId) {
       return isSignedIn()
         && userDoc().exists()
         && get(/databases/$(database)/documents/stores/$(storeId)).data.organizationId == userOrgId();
+    }
+
+    function isOrgMemberByStoreMembership(storeId) {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/organizations/$(get(/databases/$(database)/documents/stores/$(storeId)).data.organizationId))
+          .data.members.hasAny([request.auth.uid]);
     }
 
     function isPublicEnvironment(environmentId) {
@@ -57,12 +73,19 @@ service cloud.firestore {
     }
 
     match /stores/{storeId} {
-      allow read: if isAdmin() || isOrgMember(resource.data.organizationId);
-      allow create: if isAdmin() || isOrgMember(request.resource.data.organizationId);
+      allow read: if isAdmin()
+        || isOrgMember(resource.data.organizationId)
+        || isOrgMemberByOrganization(resource.data.organizationId);
+      allow create: if isAdmin()
+        || isOrgMember(request.resource.data.organizationId)
+        || isOrgMemberByOrganization(request.resource.data.organizationId);
       allow update: if isAdmin()
-        || (isOrgMember(resource.data.organizationId)
+        || ((isOrgMember(resource.data.organizationId)
+          || isOrgMemberByOrganization(resource.data.organizationId))
           && request.resource.data.organizationId == resource.data.organizationId);
-      allow delete: if isAdmin() || isOrgMember(resource.data.organizationId);
+      allow delete: if isAdmin()
+        || isOrgMember(resource.data.organizationId)
+        || isOrgMemberByOrganization(resource.data.organizationId);
 
       match /scenarios/{scenarioId} {
         allow read, write: if isAdmin() || isOrgMemberByStore(storeId);
@@ -80,18 +103,28 @@ service cloud.firestore {
     match /environments/{environmentId} {
       allow read: if isAdmin()
         || isOrgMemberByStore(resource.data.storeId)
+        || isOrgMemberByStoreMembership(resource.data.storeId)
         || resource.data.publicShareLanguage != null;
-      allow create: if isAdmin() || isOrgMemberByStore(request.resource.data.storeId);
+      allow create: if isAdmin()
+        || isOrgMemberByStore(request.resource.data.storeId)
+        || isOrgMemberByStoreMembership(request.resource.data.storeId);
       allow update: if isAdmin()
-        || (isOrgMemberByStore(resource.data.storeId)
+        || ((isOrgMemberByStore(resource.data.storeId)
+          || isOrgMemberByStoreMembership(resource.data.storeId))
           && request.resource.data.storeId == resource.data.storeId);
-      allow delete: if isAdmin() || isOrgMemberByStore(resource.data.storeId);
+      allow delete: if isAdmin()
+        || isOrgMemberByStore(resource.data.storeId)
+        || isOrgMemberByStoreMembership(resource.data.storeId);
 
       match /bugs/{bugId} {
         allow read: if isAdmin() || isOrgMemberByStore(
           get(/databases/$(database)/documents/environments/$(environmentId)).data.storeId
+        ) || isOrgMemberByStoreMembership(
+          get(/databases/$(database)/documents/environments/$(environmentId)).data.storeId
         ) || isPublicEnvironment(environmentId);
         allow create, update, delete: if isAdmin() || isOrgMemberByStore(
+          get(/databases/$(database)/documents/environments/$(environmentId)).data.storeId
+        ) || isOrgMemberByStoreMembership(
           get(/databases/$(database)/documents/environments/$(environmentId)).data.storeId
         );
       }
