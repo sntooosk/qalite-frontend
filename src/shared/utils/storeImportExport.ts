@@ -397,6 +397,23 @@ const formatCriticalityLabel = (value: string | null | undefined, t: (key: strin
   return value?.trim() || t('storeSummary.emptyValue');
 };
 
+const getCriticalityClassName = (value: string | null | undefined) => {
+  const normalized = normalizeCriticalityEnum(value);
+  if (normalized === 'LOW') {
+    return 'criticality-pill criticality-pill--low';
+  }
+  if (normalized === 'MEDIUM') {
+    return 'criticality-pill criticality-pill--medium';
+  }
+  if (normalized === 'HIGH') {
+    return 'criticality-pill criticality-pill--high';
+  }
+  if (normalized === 'CRITICAL') {
+    return 'criticality-pill criticality-pill--critical';
+  }
+  return 'criticality-pill criticality-pill--unknown';
+};
+
 const buildExternalLink = (value: string | null | undefined) => {
   const trimmed = value?.trim();
   if (!trimmed) {
@@ -429,6 +446,7 @@ export const openScenarioPdf = (
       const bdd = scenario.bdd?.trim() || t('storeSummary.emptyValue');
       const automation = formatAutomationLabel(scenario.automation, t);
       const criticality = formatCriticalityLabel(scenario.criticality, t);
+      const criticalityClass = getCriticalityClassName(scenario.criticality);
 
       return `
         <tr>
@@ -436,7 +454,7 @@ export const openScenarioPdf = (
           <td>${linkifyHtml(scenario.title || t('storeSummary.emptyValue'))}</td>
           <td>${linkifyHtml(scenario.category || t('storeSummary.emptyValue'))}</td>
           <td>${escapeHtml(automation)}</td>
-          <td>${escapeHtml(criticality)}</td>
+          <td><span class="${criticalityClass}">${escapeHtml(criticality)}</span></td>
           <td>${linkifyHtml(observation)}</td>
           <td>${linkifyHtml(bdd)}</td>
         </tr>
@@ -465,6 +483,16 @@ export const openScenarioPdf = (
             --color-text-muted: #6b7280;
             --table-border: #d1d5db;
             --table-header-bg: #f9fafb;
+            --criticality-low-bg: #22c55e;
+            --criticality-low-text: #ffffff;
+            --criticality-medium-bg: #f59e0b;
+            --criticality-medium-text: #ffffff;
+            --criticality-high-bg: #f97316;
+            --criticality-high-text: #ffffff;
+            --criticality-critical-bg: #8b5cf6;
+            --criticality-critical-text: #ffffff;
+            --criticality-unknown-bg: #bdc3c7;
+            --criticality-unknown-text: #2c3e50;
           }
           body { font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 24px; }
           h1 { margin-bottom: 4px; }
@@ -474,6 +502,12 @@ export const openScenarioPdf = (
           table { width: 100%; border-collapse: collapse; margin-top: 16px; }
           th, td { border: 1px solid var(--table-border); padding: 8px; text-align: left; vertical-align: top; }
           th { background: var(--table-header-bg); }
+          .criticality-pill { display: inline-flex; align-items: center; justify-content: center; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid var(--table-border); }
+          .criticality-pill--low { background: var(--criticality-low-bg); color: var(--criticality-low-text); }
+          .criticality-pill--medium { background: var(--criticality-medium-bg); color: var(--criticality-medium-text); }
+          .criticality-pill--high { background: var(--criticality-high-bg); color: var(--criticality-high-text); }
+          .criticality-pill--critical { background: var(--criticality-critical-bg); color: var(--criticality-critical-text); }
+          .criticality-pill--unknown { background: var(--criticality-unknown-bg); color: var(--criticality-unknown-text); }
         </style>
       </head>
       <body>
