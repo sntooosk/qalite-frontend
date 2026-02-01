@@ -195,9 +195,35 @@ const listStoresFromServer = async (organizationId: string): Promise<Store[]> =>
 
       const snapshot = await getDocsCacheThenServer(pageQuery);
 
+      const storeRefreshPromises: Promise<void>[] = [];
+
       snapshot.docs.forEach((docSnapshot) => {
-        stores.push(mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })));
+        const data = docSnapshot.data({ serverTimestamps: 'estimate' });
+        const store = mapStore(docSnapshot.id, data);
+        stores.push(store);
+
+        const hasAutomationCounts =
+          data.automatedScenarioCount !== undefined || data.notAutomatedScenarioCount !== undefined;
+
+        if (!hasAutomationCounts) {
+          storeRefreshPromises.push(
+            listScenariosFromServer(store.id).then((scenarios) => {
+              const automatedScenarioCount = scenarios.filter((scenario) =>
+                isAutomatedScenario(scenario.automation),
+              ).length;
+              const scenarioCount = scenarios.length;
+
+              store.scenarioCount = scenarioCount;
+              store.automatedScenarioCount = automatedScenarioCount;
+              store.notAutomatedScenarioCount = Math.max(scenarioCount - automatedScenarioCount, 0);
+            }),
+          );
+        }
       });
+
+      if (storeRefreshPromises.length > 0) {
+        await Promise.all(storeRefreshPromises);
+      }
 
       lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
       hasMore = Boolean(lastDoc && snapshot.size === STORE_PAGE_SIZE);
