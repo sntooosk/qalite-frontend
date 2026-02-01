@@ -24,6 +24,7 @@ export interface EnvironmentRepository {
     filters: EnvironmentRealtimeFilters,
     onChange: (environments: Environment[]) => void,
   ) => () => void;
+  listSummary: (filters: EnvironmentRealtimeFilters) => Promise<Environment[]>;
   addUser: (id: string, userId: string) => Promise<void>;
   removeUser: (id: string, userId: string) => Promise<void>;
   updateScenarioStatus: (

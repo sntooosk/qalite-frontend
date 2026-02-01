@@ -24,6 +24,7 @@ import type { Organization, OrganizationMember } from '../../domain/entities/org
 import { getNormalizedEmailDomain, normalizeEmailDomain } from '../../shared/utils/email';
 import { firebaseFirestore } from '../database/firebase';
 import { CacheStore } from '../cache/CacheStore';
+import { fetchWithCache } from '../cache/cacheFetch';
 import {
   getDocCacheFirst,
   getDocCacheThenServer,
@@ -108,27 +109,12 @@ const listOrganizationsFromServer = async (): Promise<Organization[]> => {
 };
 
 export const listOrganizationsSummary = async (): Promise<Organization[]> => {
-  const cached = ORGANIZATION_CACHE.getWithStatus<Organization[]>(ORGANIZATION_LIST_CACHE_KEY);
-
-  if (cached.value && !cached.isExpired) {
-    return cached.value;
-  }
-
-  if (cached.value) {
-    void listOrganizationsFromServer()
-      .then((organizations) => ORGANIZATION_CACHE.set(ORGANIZATION_LIST_CACHE_KEY, organizations))
-      .catch((error) => console.error(error));
-    return cached.value;
-  }
-
-  try {
-    const organizations = await listOrganizationsFromServer();
-    ORGANIZATION_CACHE.set(ORGANIZATION_LIST_CACHE_KEY, organizations);
-    return organizations;
-  } catch (error) {
-    console.error(error);
-    return [];
-  }
+  return fetchWithCache({
+    cache: ORGANIZATION_CACHE,
+    key: ORGANIZATION_LIST_CACHE_KEY,
+    fetcher: listOrganizationsFromServer,
+    fallback: [],
+  });
 };
 
 export const listOrganizations = listOrganizationsSummary;
@@ -150,35 +136,19 @@ export const getOrganizationDetail = async (id: string): Promise<Organization | 
   }
 
   const cacheKey = `${ORGANIZATION_DETAIL_CACHE_PREFIX}${id}`;
-  const cached = ORGANIZATION_CACHE.getWithStatus<Organization>(cacheKey);
-
-  if (cached.value && !cached.isExpired) {
-    return cached.value;
-  }
-
-  if (cached.value) {
-    void getOrganizationFromServer(id)
-      .then((organization) => {
-        if (organization) {
-          ORGANIZATION_CACHE.set(cacheKey, organization);
-        } else {
-          ORGANIZATION_CACHE.remove(cacheKey);
-        }
-      })
-      .catch((error) => console.error(error));
-    return cached.value;
-  }
-
-  try {
-    const organization = await getOrganizationFromServer(id);
-    if (organization) {
-      ORGANIZATION_CACHE.set(cacheKey, organization);
-    }
-    return organization;
-  } catch (error) {
-    console.error(error);
-    return null;
-  }
+  return fetchWithCache({
+    cache: ORGANIZATION_CACHE,
+    key: cacheKey,
+    fetcher: () => getOrganizationFromServer(id),
+    fallback: null,
+    store: (organization) => {
+      if (organization) {
+        ORGANIZATION_CACHE.set(cacheKey, organization);
+      } else {
+        ORGANIZATION_CACHE.remove(cacheKey);
+      }
+    },
+  });
 };
 
 export const getOrganization = getOrganizationDetail;

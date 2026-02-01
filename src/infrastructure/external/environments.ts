@@ -11,6 +11,10 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  orderBy,
+  limit,
+  startAfter,
+  type QueryDocumentSnapshot,
   type QueryConstraint,
 } from 'firebase/firestore';
 
@@ -47,10 +51,22 @@ import { translateEnvironmentOption } from '../../shared/utils/environmentOption
 import i18n from '../../lib/i18n';
 import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
 import { getDocsCacheThenServer } from './firestoreCache';
+import { CacheStore } from '../cache/CacheStore';
+import { fetchWithCache } from '../cache/cacheFetch';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
 const environmentsCollection = collection(firebaseFirestore, ENVIRONMENTS_COLLECTION);
+const ENVIRONMENT_CACHE = new CacheStore({
+  namespace: 'environments',
+  version: 'v1',
+  ttlMs: 1000 * 60 * 5,
+});
+const ENVIRONMENT_LIST_CACHE_PREFIX = 'listSummary:';
+const ENVIRONMENT_PAGE_SIZE = 50;
+const invalidateEnvironmentLists = () => {
+  ENVIRONMENT_CACHE.invalidatePrefix(ENVIRONMENT_LIST_CACHE_PREFIX);
+};
 
 export const SCENARIO_COMPLETED_STATUSES: EnvironmentScenarioStatus[] = [
   'concluido',
@@ -201,6 +217,8 @@ export const createEnvironment = async (payload: CreateEnvironmentInput): Promis
     updatedAt: serverTimestamp(),
   });
 
+  invalidateEnvironmentLists();
+
   return {
     id: docRef.id,
     identificador: payload.identificador,
@@ -242,11 +260,13 @@ export const updateEnvironment = async (
   }
 
   await updateDoc(environmentRef, data);
+  invalidateEnvironmentLists();
 };
 
 export const deleteEnvironment = async (environmentId: string): Promise<void> => {
   const environmentRef = doc(firebaseFirestore, ENVIRONMENTS_COLLECTION, environmentId);
   await deleteDoc(environmentRef);
+  invalidateEnvironmentLists();
 };
 
 export const observeEnvironment = (
@@ -313,6 +333,63 @@ export const observeEnvironments = (
       callback([]);
     },
   );
+};
+
+const buildEnvironmentQuery = (filters: EnvironmentRealtimeFilters) => {
+  const constraints: QueryConstraint[] = [];
+
+  if (filters.storeId) {
+    constraints.push(where('loja', '==', filters.storeId));
+  }
+
+  return constraints.length > 0
+    ? query(environmentsCollection, ...constraints, orderBy('createdAt', 'desc'))
+    : query(environmentsCollection, orderBy('createdAt', 'desc'));
+};
+
+const buildEnvironmentListKey = (filters: EnvironmentRealtimeFilters) =>
+  `${ENVIRONMENT_LIST_CACHE_PREFIX}${filters.storeId ?? 'all'}`;
+
+const listEnvironmentsFromServer = async (
+  filters: EnvironmentRealtimeFilters,
+): Promise<Environment[]> => {
+  const environmentsQuery = buildEnvironmentQuery(filters);
+  const environments: Environment[] = [];
+  let lastDoc: QueryDocumentSnapshot | null = null;
+  let hasMore = true;
+
+  while (hasMore) {
+    const pageQuery = lastDoc
+      ? query(environmentsQuery, startAfter(lastDoc), limit(ENVIRONMENT_PAGE_SIZE))
+      : query(environmentsQuery, limit(ENVIRONMENT_PAGE_SIZE));
+    const snapshot = await getDocsCacheThenServer(pageQuery);
+
+    snapshot.docs.forEach((docSnapshot) => {
+      environments.push(
+        normalizeEnvironment(
+          docSnapshot.id,
+          docSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
+        ),
+      );
+    });
+
+    lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+    hasMore = Boolean(lastDoc && snapshot.size === ENVIRONMENT_PAGE_SIZE);
+  }
+
+  return environments;
+};
+
+export const listEnvironmentsSummary = async (
+  filters: EnvironmentRealtimeFilters,
+): Promise<Environment[]> => {
+  const cacheKey = buildEnvironmentListKey(filters);
+  return fetchWithCache({
+    cache: ENVIRONMENT_CACHE,
+    key: cacheKey,
+    fetcher: () => listEnvironmentsFromServer(filters),
+    fallback: [],
+  });
 };
 
 export const addEnvironmentUser = async (environmentId: string, userId: string): Promise<void> => {

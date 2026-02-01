@@ -37,6 +37,7 @@ import {
 } from '../../shared/utils/scenarioEnums';
 import { firebaseFirestore } from '../database/firebase';
 import { CacheStore } from '../cache/CacheStore';
+import { fetchWithCache } from '../cache/cacheFetch';
 import { getDocCacheFirst, getDocsCacheFirst, getDocsCacheThenServer } from './firestoreCache';
 
 const STORES_COLLECTION = 'stores';
@@ -47,8 +48,10 @@ const STORE_CACHE = new CacheStore({ namespace: 'stores', version: 'v1', ttlMs: 
 const STORE_LIST_CACHE_KEY = 'listSummary';
 const STORE_DETAIL_CACHE_PREFIX = 'detail:';
 const SCENARIO_LIST_CACHE_PREFIX = 'scenarios:';
+const SUITE_LIST_CACHE_PREFIX = 'suites:';
 const STORE_PAGE_SIZE = 50;
 const SCENARIOS_PAGE_SIZE = 50;
+const SUITES_PAGE_SIZE = 50;
 
 const timestampToDate = (value: unknown): Date | null => {
   if (value instanceof Timestamp) {
@@ -167,27 +170,12 @@ const listStoresFromServer = async (organizationId: string): Promise<Store[]> =>
 
 export const listStoresSummary = async (organizationId: string): Promise<Store[]> => {
   const cacheKey = `${STORE_LIST_CACHE_KEY}:${organizationId}`;
-  const cached = STORE_CACHE.getWithStatus<Store[]>(cacheKey);
-
-  if (cached.value && !cached.isExpired) {
-    return cached.value;
-  }
-
-  if (cached.value) {
-    void listStoresFromServer(organizationId)
-      .then((stores) => STORE_CACHE.set(cacheKey, stores))
-      .catch((error) => console.error(error));
-    return cached.value;
-  }
-
-  try {
-    const stores = await listStoresFromServer(organizationId);
-    STORE_CACHE.set(cacheKey, stores);
-    return stores;
-  } catch (error) {
-    console.error(error);
-    return [];
-  }
+  return fetchWithCache({
+    cache: STORE_CACHE,
+    key: cacheKey,
+    fetcher: () => listStoresFromServer(organizationId),
+    fallback: [],
+  });
 };
 
 export const listStores = listStoresSummary;
@@ -229,35 +217,19 @@ export const getStoreDetail = async (storeId: string): Promise<Store | null> => 
   }
 
   const cacheKey = `${STORE_DETAIL_CACHE_PREFIX}${storeId}`;
-  const cached = STORE_CACHE.getWithStatus<Store>(cacheKey);
-
-  if (cached.value && !cached.isExpired) {
-    return cached.value;
-  }
-
-  if (cached.value) {
-    void getStoreFromServer(storeId)
-      .then((store) => {
-        if (store) {
-          STORE_CACHE.set(cacheKey, store);
-        } else {
-          STORE_CACHE.remove(cacheKey);
-        }
-      })
-      .catch((error) => console.error(error));
-    return cached.value;
-  }
-
-  try {
-    const store = await getStoreFromServer(storeId);
-    if (store) {
-      STORE_CACHE.set(cacheKey, store);
-    }
-    return store;
-  } catch (error) {
-    console.error(error);
-    return null;
-  }
+  return fetchWithCache({
+    cache: STORE_CACHE,
+    key: cacheKey,
+    fetcher: () => getStoreFromServer(storeId),
+    fallback: null,
+    store: (store) => {
+      if (store) {
+        STORE_CACHE.set(cacheKey, store);
+      } else {
+        STORE_CACHE.remove(cacheKey);
+      }
+    },
+  });
 };
 
 export const getStore = getStoreDetail;
@@ -369,27 +341,12 @@ export const listScenarios = async (storeId: string): Promise<StoreScenario[]> =
   }
 
   const cacheKey = `${SCENARIO_LIST_CACHE_PREFIX}${storeId}`;
-  const cached = STORE_CACHE.getWithStatus<StoreScenario[]>(cacheKey);
-
-  if (cached.value && !cached.isExpired) {
-    return cached.value;
-  }
-
-  if (cached.value) {
-    void listScenariosFromServer(storeId)
-      .then((scenarios) => STORE_CACHE.set(cacheKey, scenarios))
-      .catch((error) => console.error(error));
-    return cached.value;
-  }
-
-  try {
-    const scenarios = await listScenariosFromServer(storeId);
-    STORE_CACHE.set(cacheKey, scenarios);
-    return scenarios;
-  } catch (error) {
-    console.error(error);
-    return [];
-  }
+  return fetchWithCache({
+    cache: STORE_CACHE,
+    key: cacheKey,
+    fetcher: () => listScenariosFromServer(storeId),
+    fallback: [],
+  });
 };
 
 export const createScenario = async (
@@ -499,19 +456,44 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
   STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
 };
 
-export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {
+const listSuitesFromServer = async (storeId: string): Promise<StoreSuite[]> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
   const suitesQuery = query(suitesCollection, orderBy('name'));
-  try {
-    const snapshot = await getDocsCacheThenServer(suitesQuery);
-    return snapshot.docs.map((docSnapshot) =>
-      mapSuite(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-    );
-  } catch (error) {
-    console.error(error);
+  const suites: StoreSuite[] = [];
+  let lastDoc: QueryDocumentSnapshot | null = null;
+  let hasMore = true;
+
+  while (hasMore) {
+    const pageQuery = lastDoc
+      ? query(suitesQuery, startAfter(lastDoc), limit(SUITES_PAGE_SIZE))
+      : query(suitesQuery, limit(SUITES_PAGE_SIZE));
+    const snapshot = await getDocsCacheThenServer(pageQuery);
+    snapshot.docs.forEach((docSnapshot) => {
+      suites.push(
+        mapSuite(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+      );
+    });
+
+    lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+    hasMore = Boolean(lastDoc && snapshot.size === SUITES_PAGE_SIZE);
+  }
+
+  return suites;
+};
+
+export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {
+  if (!storeId) {
     return [];
   }
+
+  const cacheKey = `${SUITE_LIST_CACHE_PREFIX}${storeId}`;
+  return fetchWithCache({
+    cache: STORE_CACHE,
+    key: cacheKey,
+    fetcher: () => listSuitesFromServer(storeId),
+    fallback: [],
+  });
 };
 
 export const createSuite = async (
@@ -533,7 +515,7 @@ export const createSuite = async (
     updatedAt: serverTimestamp(),
   });
 
-  return {
+  const suite: StoreSuite = {
     id: suiteRef.id,
     storeId: payload.storeId,
     name: normalized.name,
@@ -542,6 +524,10 @@ export const createSuite = async (
     createdAt: now,
     updatedAt: now,
   };
+
+  STORE_CACHE.remove(`${SUITE_LIST_CACHE_PREFIX}${payload.storeId}`);
+
+  return suite;
 };
 
 export const updateSuite = async (
@@ -569,6 +555,8 @@ export const updateSuite = async (
     updatedSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
   );
 
+  STORE_CACHE.remove(`${SUITE_LIST_CACHE_PREFIX}${storeId}`);
+
   return updatedSuite;
 };
 
@@ -582,6 +570,7 @@ export const deleteSuite = async (storeId: string, suiteId: string): Promise<voi
   }
 
   await deleteDoc(suiteRef);
+  STORE_CACHE.remove(`${SUITE_LIST_CACHE_PREFIX}${storeId}`);
 };
 
 export const listCategories = async (storeId: string): Promise<StoreCategory[]> => {

@@ -34,12 +34,29 @@ export const useStoreEnvironments = (
     }
 
     setIsLoading(true);
-    const unsubscribe = environmentService.observeAll({ storeId }, (list) => {
-      setEnvironments(list);
-      setIsLoading(false);
-    });
+    let isMounted = true;
 
-    return () => unsubscribe();
+    const loadEnvironments = async () => {
+      try {
+        const list = await environmentService.listSummary({ storeId });
+        if (isMounted) {
+          setEnvironments(list);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setEnvironments([]);
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadEnvironments();
+
+    return () => {
+      isMounted = false;
+    };
   }, [storeId]);
 
   const statusCounts = useMemo(() => {
