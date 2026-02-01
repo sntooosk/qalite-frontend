@@ -874,6 +874,97 @@ const formatCriticalityLabel = (value: string, t: (key: string) => string) => {
   return value?.trim() || t('storeSummary.emptyValue');
 };
 
+const normalizeLabel = (value: string) =>
+  (value ?? '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toLowerCase();
+
+const getCriticalityClassName = (value: string) => {
+  const normalized = normalizeCriticalityEnum(value);
+  if (normalized === 'LOW') {
+    return 'criticality-pill criticality-pill--low';
+  }
+  if (normalized === 'MEDIUM') {
+    return 'criticality-pill criticality-pill--medium';
+  }
+  if (normalized === 'HIGH') {
+    return 'criticality-pill criticality-pill--high';
+  }
+  if (normalized === 'CRITICAL') {
+    return 'criticality-pill criticality-pill--critical';
+  }
+  return 'criticality-pill criticality-pill--unknown';
+};
+
+const getStatusClassName = (status: string) => {
+  const normalized = normalizeLabel(status);
+  if (normalized.includes('nao') && normalized.includes('aplica')) {
+    return 'status-pill status-pill--na';
+  }
+  if (
+    normalized.includes('conclu') ||
+    normalized.includes('complete') ||
+    normalized.includes('resolvid')
+  ) {
+    return 'status-pill status-pill--done';
+  }
+  if (normalized.includes('andamento') || normalized.includes('progress')) {
+    return 'status-pill status-pill--in-progress';
+  }
+  if (normalized.includes('pend') || normalized.includes('abert')) {
+    return 'status-pill status-pill--pending';
+  }
+  if (
+    normalized.includes('bloq') ||
+    normalized.includes('erro') ||
+    normalized.includes('block') ||
+    normalized.includes('fail')
+  ) {
+    return 'status-pill status-pill--blocked';
+  }
+  return 'status-pill status-pill--neutral';
+};
+
+const getSeverityClassName = (severity: string) => {
+  const normalized = normalizeLabel(severity);
+  if (normalized.includes('crit') || normalized.includes('critical')) {
+    return 'severity-pill severity-pill--critical';
+  }
+  if (normalized.includes('alta') || normalized.includes('high')) {
+    return 'severity-pill severity-pill--high';
+  }
+  if (normalized.includes('media') || normalized.includes('medium')) {
+    return 'severity-pill severity-pill--medium';
+  }
+  if (normalized.includes('baixa') || normalized.includes('low')) {
+    return 'severity-pill severity-pill--low';
+  }
+  return 'severity-pill severity-pill--unknown';
+};
+
+const getPriorityClassName = (priority: string) => {
+  const normalized = normalizeLabel(priority);
+  if (
+    normalized.includes('urgente') ||
+    normalized.includes('crit') ||
+    normalized.includes('critical')
+  ) {
+    return 'priority-pill priority-pill--critical';
+  }
+  if (normalized.includes('alta') || normalized.includes('high')) {
+    return 'priority-pill priority-pill--high';
+  }
+  if (normalized.includes('media') || normalized.includes('medium')) {
+    return 'priority-pill priority-pill--medium';
+  }
+  if (normalized.includes('baixa') || normalized.includes('low')) {
+    return 'priority-pill priority-pill--low';
+  }
+  return 'priority-pill priority-pill--unknown';
+};
+
 export const exportEnvironmentAsPDF = (
   environment: Environment,
   bugs: EnvironmentBug[] = [],
@@ -924,16 +1015,17 @@ export const exportEnvironmentAsPDF = (
         ? t('environmentEvidenceTable.evidencia_abrir')
         : t('environmentEvidenceTable.evidencia_sem');
       const criticalityLabel = formatCriticalityLabel(scenario.criticidade, t);
+      const criticalityClass = getCriticalityClassName(scenario.criticidade);
       const observation =
         scenario.observacao?.trim() || t('environmentEvidenceTable.observacao_none');
       return `
         <tr>
           <td>${linkifyHtml(scenario.titulo)}</td>
           <td>${linkifyHtml(scenario.categoria)}</td>
-          <td>${escapeHtml(criticalityLabel)}</td>
+          <td><span class="${criticalityClass}">${escapeHtml(criticalityLabel)}</span></td>
           <td>${linkifyHtml(observation)}</td>
-          <td>${escapeHtml(statusMobile)}</td>
-          <td>${escapeHtml(statusDesktop)}</td>
+          <td><span class="${getStatusClassName(statusMobile)}">${escapeHtml(statusMobile)}</span></td>
+          <td><span class="${getStatusClassName(statusDesktop)}">${escapeHtml(statusDesktop)}</span></td>
           <td>${
             scenario.evidenciaArquivoUrl
               ? `<a href="${escapeHtml(
@@ -975,11 +1067,13 @@ export const exportEnvironmentAsPDF = (
               ? t(BUG_PRIORITY_LABEL[bug.priority])
               : t('environmentExport.noPriority');
             const actualResult = bug.actualResult?.trim() || t('environmentExport.noActualResult');
+            const severityClass = getSeverityClassName(severityLabel);
+            const priorityClass = getPriorityClassName(priorityLabel);
             return `
         <tr>
           <td>${escapeHtml(getScenarioLabel(environment, bug.scenarioId))}</td>
-          <td>${escapeHtml(severityLabel)}</td>
-          <td>${escapeHtml(priorityLabel)}</td>
+          <td><span class="${severityClass}">${escapeHtml(severityLabel)}</span></td>
+          <td><span class="${priorityClass}">${escapeHtml(priorityLabel)}</span></td>
           <td>${linkifyHtml(actualResult)}</td>
         </tr>
       `;
@@ -996,13 +1090,70 @@ export const exportEnvironmentAsPDF = (
       <head>
         <title>${escapeHtml(exportTitleWithStore)}</title>
         <style>
+          :root {
+            --color-surface-muted: #f5f7fb;
+            --color-border: #e5e7eb;
+            --table-border: #d1d5db;
+            --criticality-low-bg: #22c55e;
+            --criticality-low-text: #ffffff;
+            --criticality-medium-bg: #f59e0b;
+            --criticality-medium-text: #ffffff;
+            --criticality-high-bg: #f97316;
+            --criticality-high-text: #ffffff;
+            --criticality-critical-bg: #8b5cf6;
+            --criticality-critical-text: #ffffff;
+            --criticality-unknown-bg: #bdc3c7;
+            --criticality-unknown-text: #2c3e50;
+            --status-pending-bg: #f59e0b;
+            --status-pending-text: #ffffff;
+            --status-in-progress-bg: #3b82f6;
+            --status-in-progress-text: #ffffff;
+            --status-done-bg: #22c55e;
+            --status-done-text: #ffffff;
+            --status-blocked-bg: #ef4444;
+            --status-blocked-text: #ffffff;
+            --status-na-bg: #94a3b8;
+            --status-na-text: #ffffff;
+            --status-neutral-bg: #bdc3c7;
+            --status-neutral-text: #2c3e50;
+            --severity-low-bg: #22c55e;
+            --severity-low-text: #ffffff;
+            --severity-medium-bg: #f59e0b;
+            --severity-medium-text: #ffffff;
+            --severity-high-bg: #f97316;
+            --severity-high-text: #ffffff;
+            --severity-critical-bg: #8b5cf6;
+            --severity-critical-text: #ffffff;
+            --severity-unknown-bg: #bdc3c7;
+            --severity-unknown-text: #2c3e50;
+          }
           body { font-family: Arial, sans-serif; padding: 24px; }
           h1 { margin-bottom: 0; }
           h2 { margin-top: 24px; }
-          .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding: 12px; background: #f5f7fb; border: 1px solid #e5e7eb; border-radius: 12px; }
+          .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding: 12px; background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: 12px; }
           .summary-grid strong { display: block; margin-top: 4px; }
           table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-          th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+          th, td { border: 1px solid var(--table-border); padding: 8px; text-align: left; }
+          .criticality-pill,
+          .status-pill,
+          .severity-pill,
+          .priority-pill { display: inline-flex; align-items: center; justify-content: center; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; border: 1px solid var(--table-border); }
+          .criticality-pill--low { background: var(--criticality-low-bg); color: var(--criticality-low-text); }
+          .criticality-pill--medium { background: var(--criticality-medium-bg); color: var(--criticality-medium-text); }
+          .criticality-pill--high { background: var(--criticality-high-bg); color: var(--criticality-high-text); }
+          .criticality-pill--critical { background: var(--criticality-critical-bg); color: var(--criticality-critical-text); }
+          .criticality-pill--unknown { background: var(--criticality-unknown-bg); color: var(--criticality-unknown-text); }
+          .status-pill--pending { background: var(--status-pending-bg); color: var(--status-pending-text); }
+          .status-pill--in-progress { background: var(--status-in-progress-bg); color: var(--status-in-progress-text); }
+          .status-pill--done { background: var(--status-done-bg); color: var(--status-done-text); }
+          .status-pill--blocked { background: var(--status-blocked-bg); color: var(--status-blocked-text); }
+          .status-pill--na { background: var(--status-na-bg); color: var(--status-na-text); }
+          .status-pill--neutral { background: var(--status-neutral-bg); color: var(--status-neutral-text); }
+          .severity-pill--low, .priority-pill--low { background: var(--severity-low-bg); color: var(--severity-low-text); }
+          .severity-pill--medium, .priority-pill--medium { background: var(--severity-medium-bg); color: var(--severity-medium-text); }
+          .severity-pill--high, .priority-pill--high { background: var(--severity-high-bg); color: var(--severity-high-text); }
+          .severity-pill--critical, .priority-pill--critical { background: var(--severity-critical-bg); color: var(--severity-critical-text); }
+          .severity-pill--unknown, .priority-pill--unknown { background: var(--severity-unknown-bg); color: var(--severity-unknown-text); }
         </style>
       </head>
       <body>
