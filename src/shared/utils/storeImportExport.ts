@@ -459,14 +459,21 @@ export const openScenarioPdf = (
         <meta charset="UTF-8" />
         <title>${escapeHtml(title)}</title>
         <style>
+          :root {
+            --color-surface-muted: #f5f7fb;
+            --color-border: #e5e7eb;
+            --color-text-muted: #6b7280;
+            --table-border: #d1d5db;
+            --table-header-bg: #f9fafb;
+          }
           body { font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 24px; }
           h1 { margin-bottom: 4px; }
-          .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0; padding: 12px; background: #f5f7fb; border: 1px solid #e5e7eb; border-radius: 12px; }
-          .summary-grid span { color: #6b7280; font-size: 12px; }
+          .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0; padding: 12px; background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: 12px; }
+          .summary-grid span { color: var(--color-text-muted); font-size: 12px; }
           .summary-grid strong { display: block; margin-top: 4px; }
           table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-          th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; vertical-align: top; }
-          th { background: #f9fafb; }
+          th, td { border: 1px solid var(--table-border); padding: 8px; text-align: left; vertical-align: top; }
+          th { background: var(--table-header-bg); }
         </style>
       </head>
       <body>

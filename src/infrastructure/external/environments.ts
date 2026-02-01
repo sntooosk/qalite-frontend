@@ -996,13 +996,18 @@ export const exportEnvironmentAsPDF = (
       <head>
         <title>${escapeHtml(exportTitleWithStore)}</title>
         <style>
+          :root {
+            --color-surface-muted: #f5f7fb;
+            --color-border: #e5e7eb;
+            --table-border: #d1d5db;
+          }
           body { font-family: Arial, sans-serif; padding: 24px; }
           h1 { margin-bottom: 0; }
           h2 { margin-top: 24px; }
-          .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding: 12px; background: #f5f7fb; border: 1px solid #e5e7eb; border-radius: 12px; }
+          .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding: 12px; background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: 12px; }
           .summary-grid strong { display: block; margin-top: 4px; }
           table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-          th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+          th, td { border: 1px solid var(--table-border); padding: 8px; text-align: left; }
         </style>
       </head>
       <body>
