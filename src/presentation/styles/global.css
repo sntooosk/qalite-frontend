@@ -6,6 +6,8 @@
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
+  --app-shell-max: 88rem;
+  --app-main-max: 84rem;
   --color-background: linear-gradient(135deg, #e7f0ff 0%, #f9fbff 55%, #e4edff 100%);
   --color-surface: rgba(255, 255, 255, 0.98);
   --color-surface-alt: rgba(232, 242, 255, 0.94);
@@ -171,7 +173,7 @@ a.text-link:hover {
   flex-direction: column;
   padding: clamp(1rem, 2.2vw, 2.5rem);
   gap: clamp(1.5rem, 2vw, 2.5rem);
-  width: min(100%, 88rem);
+  width: min(100%, var(--app-shell-max));
   margin: 0 auto;
 }
 
@@ -377,17 +379,21 @@ a.text-link:hover {
 
 .app-main {
   flex: 1;
-  width: min(100%, 84rem);
+  width: min(100%, var(--app-main-max));
   margin: 0 auto;
 }
 
-@media (min-width: 1600px) {
-  .app-shell {
-    width: min(100%, 96rem);
+@media (min-width: 1366px) {
+  :root {
+    --app-shell-max: 94rem;
+    --app-main-max: 90rem;
   }
+}
 
-  .app-main {
-    width: min(100%, 90rem);
+@media (min-width: 1920px) {
+  :root {
+    --app-shell-max: 116rem;
+    --app-main-max: 110rem;
   }
 }
 
@@ -604,6 +610,16 @@ a.text-link:hover {
   margin-top: 1.25rem;
 }
 
+@media (max-width: 420px) {
+  .card {
+    padding: 1.5rem;
+  }
+
+  .card-title {
+    font-size: 1.15rem;
+  }
+}
+
 .page-container {
   display: flex;
   flex-direction: column;
@@ -657,6 +673,12 @@ a.text-link:hover {
 @media (min-width: 1200px) {
   .dashboard-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1600px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -917,6 +939,13 @@ a.text-link:hover {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+@media (min-width: 1366px) {
+  .modal {
+    width: min(44rem, 92vw);
+    max-height: 85vh;
+  }
 }
 
 @media (max-width: 640px) {
@@ -2651,6 +2680,17 @@ button.store-summary-highlight:focus-visible {
   width: 100%;
   overflow-x: visible;
   padding-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .table-scroll-area {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    min-width: 36rem;
+  }
 }
 
 .scenario-table {

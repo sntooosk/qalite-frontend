@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userData() {
+      return userDoc().data;
+    }
+
+    function userOrgId() {
+      return userDoc().exists() ? userData().organizationId : null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && userDoc().exists() && userData().role == 'admin';
+    }
+
+    function isOrgMember(orgId) {
+      return isSignedIn() && userDoc().exists() && orgId != null && userOrgId() == orgId;
+    }
+
+    function isOrgMemberByStore(storeId) {
+      return isSignedIn()
+        && userDoc().exists()
+        && get(/databases/$(database)/documents/stores/$(storeId)).data.organizationId == userOrgId();
+    }
+
+    function isPublicEnvironment(environmentId) {
+      return get(/databases/$(database)/documents/environments/$(environmentId))
+        .data.publicShareLanguage != null;
+    }
+
+    match /users/{userId} {
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn()
+        && (request.auth.uid == userId
+          || (userDoc().exists()
+            && resource.data.organizationId != null
+            && resource.data.organizationId == userOrgId()));
+      allow update: if isSignedIn()
+        && (request.auth.uid == userId
+          || (isAdmin() && request.resource.data.organizationId == userOrgId()));
+      allow delete: if false;
+    }
+
+    match /organizations/{orgId} {
+      allow read: if isSignedIn()
+        && (isAdmin()
+          || (resource.data.members != null
+            && resource.data.members.hasAny([request.auth.uid])));
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /stores/{storeId} {
+      allow read: if isOrgMember(resource.data.organizationId);
+      allow create: if isOrgMember(request.resource.data.organizationId);
+      allow update: if isOrgMember(resource.data.organizationId)
+        && request.resource.data.organizationId == resource.data.organizationId;
+      allow delete: if isOrgMember(resource.data.organizationId);
+
+      match /scenarios/{scenarioId} {
+        allow read, write: if isOrgMemberByStore(storeId);
+      }
+
+      match /suites/{suiteId} {
+        allow read, write: if isOrgMemberByStore(storeId);
+      }
+
+      match /categories/{categoryId} {
+        allow read, write: if isOrgMemberByStore(storeId);
+      }
+    }
+
+    match /environments/{environmentId} {
+      allow read: if isOrgMemberByStore(resource.data.storeId)
+        || resource.data.publicShareLanguage != null;
+      allow create: if isOrgMemberByStore(request.resource.data.storeId);
+      allow update: if isOrgMemberByStore(resource.data.storeId)
+        && request.resource.data.storeId == resource.data.storeId;
+      allow delete: if isOrgMemberByStore(resource.data.storeId);
+
+      match /bugs/{bugId} {
+        allow read: if isOrgMemberByStore(
+          get(/databases/$(database)/documents/environments/$(environmentId)).data.storeId
+        ) || isPublicEnvironment(environmentId);
+        allow create, update, delete: if isOrgMemberByStore(
+          get(/databases/$(database)/documents/environments/$(environmentId)).data.storeId
+        );
+      }
+    }
+  }
+}
