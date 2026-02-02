@@ -30,6 +30,7 @@ export const Layout = ({ children }: LayoutProps) => {
             src={brandLogo}
             alt={t('layout.brandLogoAlt', { brandName })}
             className="app-brand-logo"
+            decoding="async"
           />
           <span className="app-brand-name">{brandSource?.name || brandName}</span>
         </Link>

@@ -235,7 +235,12 @@ export const EnvironmentSummaryCard = ({
               return (
                 <li key={participant.id} className="summary-card__avatar-item">
                   {participant.photoURL ? (
-                    <img src={participant.photoURL} alt={readableName} />
+                    <img
+                      src={participant.photoURL}
+                      alt={readableName}
+                      loading="lazy"
+                      decoding="async"
+                    />
                   ) : (
                     <span className="summary-card__avatar-fallback">{initials}</span>
                   )}

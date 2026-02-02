@@ -279,6 +279,8 @@ export const AdminOrganizationsPage = () => {
                   alt={translation('adminOrganizationsPage.form.browserstack.iconAlt')}
                   width={48}
                   height={48}
+                  loading="lazy"
+                  decoding="async"
                 />
                 <p className="collapsible-section__title">
                   {translation('adminOrganizationsPage.form.browserstack.title')}
@@ -357,6 +359,8 @@ export const AdminOrganizationsPage = () => {
                   alt={translation('adminOrganizationsPage.form.slack.iconAlt')}
                   width={24}
                   height={24}
+                  loading="lazy"
+                  decoding="async"
                 />
 
                 <p className="collapsible-section__title">

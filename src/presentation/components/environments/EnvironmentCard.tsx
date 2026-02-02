@@ -148,6 +148,8 @@ export const EnvironmentCard = ({
                         src={user.photoURL}
                         alt={readableName}
                         className="environment-card-avatar"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : (
                       <span

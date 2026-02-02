@@ -948,6 +948,8 @@ export const AdminStoresPage = () => {
                   <img
                     src={organizationLogoSource}
                     alt={translation('AdminStoresPage.org-logo-preview')}
+                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <span className="organization-logo-fallback">
@@ -992,6 +994,8 @@ export const AdminStoresPage = () => {
                     alt={translation('AdminStoresPage.org-browserstack-icon-alt')}
                     width={48}
                     height={48}
+                    loading="lazy"
+                    decoding="async"
                   />
                   <p className="collapsible-section__title">
                     {translation('AdminStoresPage.org-browserstack-section-title')}
@@ -1069,6 +1073,8 @@ export const AdminStoresPage = () => {
                     alt={translation('AdminStoresPage.org-slack-icon-alt')}
                     width={24}
                     height={24}
+                    loading="lazy"
+                    decoding="async"
                   />
                   <p className="collapsible-section__title">
                     {translation('AdminStoresPage.org-slack-section-title')}
