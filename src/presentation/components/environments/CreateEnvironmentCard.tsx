@@ -266,7 +266,6 @@ export const CreateEnvironmentCard = ({
 
         <div className="environment-form-actions">
           <Button type="submit" isLoading={isSubmitting} loadingText={t('saving')}>
-            <PlusCircleIcon aria-hidden className="icon" />
             {t('createEnvironment.create')}
           </Button>
         </div>
