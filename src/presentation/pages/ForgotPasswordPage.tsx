@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../hooks/useAuth';
-import { AuthLayout } from '../components/AuthLayout';
+import { AuthShell } from '../components/AuthShell';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
 
@@ -45,7 +45,7 @@ export const ForgotPasswordPage = () => {
   };
 
   return (
-    <AuthLayout
+    <AuthShell
       title={translation('forgotPassword.title')}
       footer={
         <div className="auth-links">
@@ -84,6 +84,6 @@ export const ForgotPasswordPage = () => {
           {translation('forgotPassword.submit')}
         </Button>
       </form>
-    </AuthLayout>
+    </AuthShell>
   );
 };

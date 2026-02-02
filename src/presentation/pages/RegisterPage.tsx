@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { useAuth } from '../hooks/useAuth';
-import { AuthLayout } from '../components/AuthLayout';
+import { AuthShell } from '../components/AuthShell';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
 import { PasswordInput } from '../components/PasswordInput';
@@ -66,7 +66,7 @@ export const RegisterPage = () => {
   };
 
   return (
-    <AuthLayout
+    <AuthShell
       title={translation('registerPage.title')}
       footer={
         <div className="auth-links">
@@ -134,6 +134,6 @@ export const RegisterPage = () => {
           {translation('registerPage.submit')}
         </Button>
       </form>
-    </AuthLayout>
+    </AuthShell>
   );
 };
