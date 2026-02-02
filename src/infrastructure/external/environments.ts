@@ -984,6 +984,7 @@ export const exportEnvironmentAsPDF = (
   bugs: EnvironmentBug[] = [],
   participantProfiles: UserSummary[] = [],
   storeName?: string,
+  organization?: { name?: string | null; logoUrl?: string | null } | null,
 ): void => {
   if (typeof window === 'undefined') {
     return;
@@ -999,6 +1000,15 @@ export const exportEnvironmentAsPDF = (
   const exportTitle = t('environmentExport.title', { id: environment.identificador });
   const storeLabel = storeName?.trim();
   const exportTitleWithStore = storeLabel ? `${exportTitle} · ${storeLabel}` : exportTitle;
+  const organizationName = organization?.name?.trim() || '';
+  const organizationLogo = organization?.logoUrl?.trim() || '';
+  const organizationHeader =
+    organizationName || organizationLogo
+      ? `<div class="org-header">
+          ${organizationLogo ? `<img src="${escapeHtml(organizationLogo)}" alt="${escapeHtml(organizationName || 'Organization logo')}" class="org-logo" />` : ''}
+          ${organizationName ? `<span class="org-name">${escapeHtml(organizationName)}</span>` : ''}
+        </div>`
+      : '';
   const jiraTask = environment.jiraTask?.trim() || '';
   const jiraHref = buildExternalLink(jiraTask);
   const jiraValue = jiraHref
@@ -1153,6 +1163,9 @@ export const exportEnvironmentAsPDF = (
           body { font-family: Arial, sans-serif; padding: 24px; }
           h1 { margin-bottom: 0; }
           h2 { margin-top: 24px; }
+          .org-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+          .org-logo { width: 48px; height: 48px; border-radius: 10px; object-fit: contain; border: 1px solid var(--color-border); background: #fff; }
+          .org-name { font-size: 16px; font-weight: 600; color: #111827; }
           .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding: 12px; background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: 12px; }
           .summary-grid strong { display: block; margin-top: 4px; }
           table { width: 100%; border-collapse: collapse; margin-top: 16px; }
@@ -1182,6 +1195,7 @@ export const exportEnvironmentAsPDF = (
         </style>
       </head>
       <body>
+        ${organizationHeader}
         <h1>${escapeHtml(exportTitleWithStore)}</h1>
         <p>${escapeHtml(t('environmentExport.statusLabel'))}: ${escapeHtml(statusLabel)}</p>
         <p>${escapeHtml(t('environmentExport.typeLabel'))}: ${escapeHtml(

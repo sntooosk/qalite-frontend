@@ -562,8 +562,18 @@ export const EnvironmentPage = () => {
     if (!environment) {
       return;
     }
-    environmentService.exportAsPDF(environment, bugs, participantProfiles, storeName);
-  }, [bugs, environment, participantProfiles, storeName]);
+    environmentService.exportAsPDF(environment, bugs, participantProfiles, storeName, {
+      name: environmentOrganization?.name ?? null,
+      logoUrl: environmentOrganization?.logoUrl ?? null,
+    });
+  }, [
+    bugs,
+    environment,
+    environmentOrganization?.logoUrl,
+    environmentOrganization?.name,
+    participantProfiles,
+    storeName,
+  ]);
 
   const handleExportExcel = useCallback(() => {
     if (!environment) {

@@ -1205,7 +1205,12 @@ export const StoreSummaryPage = () => {
       }
 
       if (format === 'pdf') {
-        openScenarioPdf(data, `${store.name} - ${t('scenarios')}`, pdfWindow);
+        openScenarioPdf(
+          data,
+          `${store.name} - ${t('scenarios')}`,
+          pdfWindow,
+          organization ? { name: organization.name, logoUrl: organization.logoUrl } : null,
+        );
       }
 
       showToast({ type: 'success', message: t('storeSummary.scenarioExportSuccess') });
@@ -2488,8 +2493,8 @@ export const StoreSummaryPage = () => {
           const detailAutomation = detailScenario
             ? formatAutomationLabel(detailScenario.automation)
             : t('storeSummary.emptyValue');
-          const detailObservation =
-            detailScenario?.observation?.trim() || t('storeSummary.emptyValue');
+          const detailObservationValue = detailScenario?.observation?.trim() ?? '';
+          const hasDetailObservation = Boolean(detailObservationValue);
           const detailBddValue = detailScenario?.bdd?.trim() ?? '';
           const localizedBdd = detailBddValue
             ? translateBddKeywords(detailBddValue, i18n.language)
@@ -2524,27 +2529,35 @@ export const StoreSummaryPage = () => {
                   )}
                 </div>
               </div>
-              <div className="scenario-details-section">
-                <span className="scenario-details-label">{t('storeSummary.observation')}</span>
-                <LinkifiedText text={detailObservation} className="scenario-details-text" as="p" />
-              </div>
-              <div className="scenario-details-section">
-                <div className="scenario-details-section-header">
-                  <span className="scenario-details-label">{t('storeSummary.bdd')}</span>
-                  {canCopyBdd && (
-                    <button
-                      type="button"
-                      className="scenario-copy-button scenario-copy-button--with-icon"
-                      onClick={() => void handleCopyBdd(localizedBdd)}
-                      disabled={!hasDetailBdd}
-                    >
-                      <CopyIcon aria-hidden className="icon" />
-                      {t('storeSummary.copyBdd')}
-                    </button>
-                  )}
+              {hasDetailObservation && (
+                <div className="scenario-details-section">
+                  <span className="scenario-details-label">{t('storeSummary.observation')}</span>
+                  <LinkifiedText
+                    text={detailObservationValue}
+                    className="scenario-details-text"
+                    as="p"
+                  />
                 </div>
-                <LinkifiedText text={detailBdd} className="scenario-details-text" as="p" />
-              </div>
+              )}
+              {hasDetailBdd && (
+                <div className="scenario-details-section">
+                  <div className="scenario-details-section-header">
+                    <span className="scenario-details-label">{t('storeSummary.bdd')}</span>
+                    {canCopyBdd && (
+                      <button
+                        type="button"
+                        className="scenario-copy-button scenario-copy-button--with-icon"
+                        onClick={() => void handleCopyBdd(localizedBdd)}
+                        disabled={!hasDetailBdd}
+                      >
+                        <CopyIcon aria-hidden className="icon" />
+                        {t('storeSummary.copyBdd')}
+                      </button>
+                    )}
+                  </div>
+                  <LinkifiedText text={detailBdd} className="scenario-details-text" as="p" />
+                </div>
+              )}
             </div>
           );
         })()}

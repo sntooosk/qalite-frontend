@@ -4,6 +4,8 @@ import {
   FiAlertTriangle,
   FiArchive,
   FiArrowLeft,
+  FiArrowDown,
+  FiArrowUp,
   FiBarChart2,
   FiCheckCircle,
   FiChevronDown,
@@ -32,6 +34,8 @@ import {
 } from 'react-icons/fi';
 
 export const ArrowLeftIcon = (props: IconBaseProps) => <FiArrowLeft {...props} />;
+export const ArrowUpIcon = (props: IconBaseProps) => <FiArrowUp {...props} />;
+export const ArrowDownIcon = (props: IconBaseProps) => <FiArrowDown {...props} />;
 export const LogoutIcon = (props: IconBaseProps) => <FiLogOut {...props} />;
 export const UserIcon = (props: IconBaseProps) => <FiUser {...props} />;
 export const ThemeIcon = (props: IconBaseProps) => <FiMoon {...props} />;

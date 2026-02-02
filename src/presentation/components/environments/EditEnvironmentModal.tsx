@@ -362,7 +362,11 @@ export const EditEnvironmentModal = ({
               <h4>{translation('editEnvironmentModal.dangerZoneTitle')}</h4>
               <p>{translation('editEnvironmentModal.dangerZoneDescription')}</p>
             </div>
-            <button type="button" className="link-danger" onClick={onDeleteRequest}>
+            <button
+              type="button"
+              className="link-danger link-danger--with-icon"
+              onClick={onDeleteRequest}
+            >
               <TrashIcon aria-hidden className="icon" />
               {translation('deleteEnvironmentModal.deleteEnvironment')}
             </button>
