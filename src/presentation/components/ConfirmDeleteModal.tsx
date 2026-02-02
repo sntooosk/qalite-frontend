@@ -1,5 +1,6 @@
 import { Modal } from './Modal';
 import { Button } from './Button';
+import { TrashIcon } from './icons';
 import { useTranslation } from 'react-i18next';
 
 interface ConfirmDeleteModalProps {
@@ -52,6 +53,7 @@ export const ConfirmDeleteModal = ({
           loadingText={t('confirmDeleteModal.loading')}
           data-testid="confirm-delete-button"
         >
+          <TrashIcon aria-hidden className="icon" />
           {confirmText ?? t('confirmDeleteModal.confirmText')}
         </Button>
       </div>

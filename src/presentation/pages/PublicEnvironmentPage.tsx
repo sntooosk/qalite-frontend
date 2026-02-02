@@ -136,6 +136,7 @@ export const PublicEnvironmentPage = () => {
         <EnvironmentBugList
           environment={environment}
           bugs={bugs}
+          participants={participants}
           isLocked
           isLoading={isLoadingBugs}
           onEdit={() => {}}

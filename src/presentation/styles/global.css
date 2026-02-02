@@ -1180,11 +1180,6 @@ a.text-link:hover {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  padding: 1.5rem;
-  border-radius: 1.5rem;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-md);
 }
 
 .scenario-details-title {
@@ -1194,7 +1189,7 @@ a.text-link:hover {
   color: var(--color-text-primary);
 }
 
-.scenario-details-grid {
+.scenario-details-items {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1224,8 +1219,8 @@ a.text-link:hover {
 }
 
 .scenario-details-criticality {
-  font-size: 0.65rem;
-  padding: 0.1rem 0.6rem;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.75rem;
 }
 
 .scenario-details-section {
@@ -3910,7 +3905,7 @@ button.store-summary-highlight:focus-visible {
 
 .environment-kanban-columns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.35rem;
 }
 
@@ -3973,7 +3968,7 @@ button.store-summary-highlight:focus-visible {
 
 .environment-kanban-archived-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.9rem;
   align-items: stretch;
 }
@@ -4025,6 +4020,7 @@ button.store-summary-highlight:focus-visible {
   flex-direction: column;
   gap: 0.75rem;
   min-height: 0;
+  min-width: 0;
   transition:
     transform var(--transition-base),
     box-shadow var(--transition-base),
@@ -4059,12 +4055,15 @@ button.store-summary-highlight:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  min-width: 0;
 }
 
 .environment-card-actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .environment-card-action {
@@ -4168,6 +4167,7 @@ button.store-summary-highlight:focus-visible {
   font-size: 1rem;
   font-weight: 700;
   color: var(--color-text-primary);
+  word-break: break-word;
 }
 
 .environment-card-type {
@@ -4202,6 +4202,7 @@ button.store-summary-highlight:focus-visible {
   font-size: 0.85rem;
   color: var(--color-text-secondary);
   font-weight: 600;
+  word-break: break-word;
 }
 
 .environment-card-moment-row {
@@ -4226,6 +4227,7 @@ button.store-summary-highlight:focus-visible {
   font-size: 0.85rem;
   color: var(--color-text-secondary);
   font-weight: 600;
+  word-break: break-word;
 }
 
 .environment-card-stats {
@@ -4242,6 +4244,7 @@ button.store-summary-highlight:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 [data-theme='dark'] .environment-card-stat {
@@ -4261,6 +4264,7 @@ button.store-summary-highlight:focus-visible {
 .environment-card-stat-value {
   font-size: 1.15rem;
   color: var(--color-text-primary);
+  word-break: break-word;
 }
 
 .environment-card-participant-list {
@@ -4460,6 +4464,24 @@ button.store-summary-highlight:focus-visible {
   gap: 0.5rem;
   align-items: center;
   width: 100%;
+}
+
+.scenario-evidence-upload-button {
+  border: 1px dashed var(--color-primary);
+  background: linear-gradient(135deg, rgba(26, 92, 255, 0.12), rgba(26, 92, 255, 0.02));
+  color: var(--color-primary-strong);
+  font-weight: 600;
+  transition:
+    border-color var(--transition-base),
+    background var(--transition-base),
+    color var(--transition-base);
+}
+
+.scenario-evidence-upload-button:hover,
+.scenario-evidence-upload-button:focus-visible {
+  border-color: var(--color-primary);
+  background: linear-gradient(135deg, rgba(26, 92, 255, 0.2), rgba(26, 92, 255, 0.05));
+  color: var(--color-primary);
 }
 
 .scenario-evidence-input {
@@ -5232,6 +5254,34 @@ button.store-summary-highlight:focus-visible {
   gap: 1rem;
 }
 
+.environment-bug-form__reporter {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+.environment-bug-form__reporter-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.environment-bug-form__reporter-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.environment-bug-form__reporter-name {
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+}
+
 .environment-bug-form__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
@@ -5297,6 +5347,17 @@ button.store-summary-highlight:focus-visible {
 .bug-details__value {
   display: block;
   color: var(--color-text-primary);
+}
+
+.bug-details__reporter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  font-weight: 600;
 }
 
 .bug-details__list {
@@ -5447,7 +5508,7 @@ button.store-summary-highlight:focus-visible {
 
 @media (max-width: 1024px) {
   .environment-kanban-columns {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 
   .environment-kanban-column {

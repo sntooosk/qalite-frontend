@@ -13,6 +13,7 @@ import { Modal } from '../Modal';
 import { SelectInput } from '../SelectInput';
 import { TextArea } from '../TextArea';
 import { TextInput } from '../TextInput';
+import { TrashIcon } from '../icons';
 import {
   MOMENT_OPTIONS_BY_ENVIRONMENT,
   TEST_TYPES_BY_ENVIRONMENT,
@@ -362,6 +363,7 @@ export const EditEnvironmentModal = ({
               <p>{translation('editEnvironmentModal.dangerZoneDescription')}</p>
             </div>
             <button type="button" className="link-danger" onClick={onDeleteRequest}>
+              <TrashIcon aria-hidden className="icon" />
               {translation('deleteEnvironmentModal.deleteEnvironment')}
             </button>
           </div>

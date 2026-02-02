@@ -2,6 +2,7 @@ import type { Environment } from '../../../domain/entities/environment';
 import type { UserSummary } from '../../../domain/entities/user';
 import { ENVIRONMENT_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 import { getReadableUserName, getUserInitials } from '../../utils/userDisplay';
+import { CachedImage } from '../CachedImage';
 import { translateEnvironmentOption } from '../../constants/environmentOptions';
 import { useTranslation } from 'react-i18next';
 import { buildExternalLink } from '../../utils/externalLink';
@@ -235,7 +236,7 @@ export const EnvironmentSummaryCard = ({
               return (
                 <li key={participant.id} className="summary-card__avatar-item">
                   {participant.photoURL ? (
-                    <img src={participant.photoURL} alt={readableName} />
+                    <CachedImage src={participant.photoURL} alt={readableName} />
                   ) : (
                     <span className="summary-card__avatar-fallback">{initials}</span>
                   )}

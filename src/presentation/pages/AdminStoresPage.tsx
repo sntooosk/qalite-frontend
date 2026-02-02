@@ -21,6 +21,7 @@ import { UserAvatar } from '../components/UserAvatar';
 import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanban';
 import { StoreScenarioComparisonChart } from '../components/StoreScenarioComparisonChart';
 import { SettingsIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
+import { CachedImage } from '../components/CachedImage';
 import { useTranslation } from 'react-i18next';
 
 interface StoreForm {
@@ -945,7 +946,7 @@ export const AdminStoresPage = () => {
             <div className="organization-logo-field">
               <div className="organization-logo-preview">
                 {organizationLogoSource ? (
-                  <img
+                  <CachedImage
                     src={organizationLogoSource}
                     alt={translation('AdminStoresPage.org-logo-preview')}
                   />
@@ -986,7 +987,7 @@ export const AdminStoresPage = () => {
             <div className="collapsible-section">
               <div className="collapsible-section__header">
                 <div className="collapsible-section__titles">
-                  <img
+                  <CachedImage
                     className="collapsible-section__icon"
                     src="https://img.icons8.com/color/48/browser-stack.png"
                     alt={translation('AdminStoresPage.org-browserstack-icon-alt')}
@@ -1063,7 +1064,7 @@ export const AdminStoresPage = () => {
             <div className="collapsible-section">
               <div className="collapsible-section__header">
                 <div className="collapsible-section__titles">
-                  <img
+                  <CachedImage
                     className="collapsible-section__icon"
                     src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/24/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
                     alt={translation('AdminStoresPage.org-slack-icon-alt')}

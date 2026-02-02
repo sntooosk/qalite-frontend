@@ -232,7 +232,6 @@ export const EnvironmentPage = () => {
   const [editingBug, setEditingBug] = useState<EnvironmentBug | null>(null);
   const [defaultBugScenarioId, setDefaultBugScenarioId] = useState<string | null>(null);
   const [scenarioDetailsId, setScenarioDetailsId] = useState<string | null>(null);
-  const [modalEvidenceLink, setModalEvidenceLink] = useState('');
   const [modalEvidenceFile, setModalEvidenceFile] = useState<File | null>(null);
   const [isCopyingMarkdown, setIsCopyingMarkdown] = useState(false);
   const [isSendingSlackSummary, setIsSendingSlackSummary] = useState(false);
@@ -336,22 +335,6 @@ export const EnvironmentPage = () => {
     setScenarioDetailsId(null);
   }, []);
 
-  const handleModalEvidenceSave = useCallback(async () => {
-    if (!scenarioDetailsId) {
-      return;
-    }
-    const link = modalEvidenceLink.trim();
-    if (!link) {
-      return;
-    }
-
-    try {
-      await handleEvidenceUpload(scenarioDetailsId, link);
-    } catch (error) {
-      console.error(error);
-    }
-  }, [handleEvidenceUpload, modalEvidenceLink, scenarioDetailsId]);
-
   const handleModalEvidenceFileUpload = useCallback(async () => {
     if (!scenarioDetailsId || !modalEvidenceFile) {
       return;
@@ -366,13 +349,8 @@ export const EnvironmentPage = () => {
   }, [handleEvidenceUpload, modalEvidenceFile, scenarioDetailsId]);
 
   useEffect(() => {
-    const nextLink = detailScenario?.evidenciaArquivoUrl ?? '';
-    if (modalEvidenceLink === nextLink) {
-      return;
-    }
-    setModalEvidenceLink(nextLink);
     setModalEvidenceFile(null);
-  }, [detailScenario, modalEvidenceLink]);
+  }, [detailScenario]);
 
   useEffect(() => {
     const nextOrganizationId = environmentOrganization?.id ?? null;
@@ -1033,6 +1011,7 @@ export const EnvironmentPage = () => {
         <EnvironmentBugList
           environment={environment}
           bugs={bugs}
+          participants={participantProfiles}
           isLocked={Boolean(isInteractionLocked)}
           isLoading={isLoadingBugs}
           onEdit={handleEditBug}
@@ -1073,11 +1052,12 @@ export const EnvironmentPage = () => {
         isOpen={Boolean(scenarioDetailsId)}
         onClose={handleCloseScenarioDetails}
         title={translation('storeSummary.scenarioDetailsTitle')}
+        bodyClassName="scenario-details"
       >
         {detailScenario ? (
-          <div className="scenario-details">
+          <>
             <p className="scenario-details-title">{detailScenario.titulo}</p>
-            <div className="scenario-details-grid">
+            <div className="scenario-details-items">
               <div className="scenario-details-item">
                 <span className="scenario-details-label">
                   {translation('environmentEvidenceTable.table_categoria')}
@@ -1163,23 +1143,6 @@ export const EnvironmentPage = () => {
                 <div className="scenario-evidence-actions">
                   <div className="scenario-evidence-field">
                     <input
-                      type="url"
-                      value={modalEvidenceLink}
-                      onChange={(event) => setModalEvidenceLink(event.target.value)}
-                      placeholder={translation('environmentEvidenceTable.evidencia_placeholder')}
-                      className="scenario-evidence-input"
-                    />
-                    <Button
-                      type="button"
-                      onClick={handleModalEvidenceSave}
-                      isLoading={isUpdatingEvidence}
-                      loadingText={translation('saving')}
-                    >
-                      {translation('environmentEvidenceTable.evidencia_salvar')}
-                    </Button>
-                  </div>
-                  <div className="scenario-evidence-field">
-                    <input
                       id="scenario-evidence-upload"
                       type="file"
                       accept="image/*,application/pdf"
@@ -1189,6 +1152,7 @@ export const EnvironmentPage = () => {
                     <Button
                       type="button"
                       variant="secondary"
+                      className="scenario-evidence-upload-button"
                       onClick={handleModalEvidenceFileUpload}
                       disabled={!modalEvidenceFile}
                       isLoading={isUpdatingEvidence}
@@ -1235,7 +1199,7 @@ export const EnvironmentPage = () => {
                 )}
               </div>
             </div>
-          </div>
+          </>
         ) : (
           <p className="section-subtitle">{translation('storeSummary.emptyValue')}</p>
         )}

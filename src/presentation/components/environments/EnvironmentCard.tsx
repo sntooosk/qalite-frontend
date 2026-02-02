@@ -7,6 +7,7 @@ import { getReadableUserName, getUserInitials } from '../../utils/userDisplay';
 import { ENVIRONMENT_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 import { translateEnvironmentOption } from '../../constants/environmentOptions';
 import { BugIcon, ClockIcon, CopyIcon, ListIcon, LayersIcon, UsersIcon } from '../icons';
+import { CachedImage } from '../CachedImage';
 
 interface EnvironmentCardProps {
   environment: Environment;
@@ -144,7 +145,7 @@ export const EnvironmentCard = ({
                 return (
                   <li key={user.id} className="environment-card-participant" title={readableName}>
                     {user.photoURL ? (
-                      <img
+                      <CachedImage
                         src={user.photoURL}
                         alt={readableName}
                         className="environment-card-avatar"

@@ -8,6 +8,7 @@ import { Layout } from '../components/Layout';
 import { Button } from '../components/Button';
 import { TextInput } from '../components/TextInput';
 import { Modal } from '../components/Modal';
+import { CachedImage } from '../components/CachedImage';
 import { useTranslation } from 'react-i18next';
 
 interface OrganizationFormState {
@@ -273,7 +274,7 @@ export const AdminOrganizationsPage = () => {
           <div className="collapsible-section">
             <div className="collapsible-section__header">
               <div className="collapsible-section__titles">
-                <img
+                <CachedImage
                   className="collapsible-section__icon"
                   src="https://img.icons8.com/color/48/browser-stack.png"
                   alt={translation('adminOrganizationsPage.form.browserstack.iconAlt')}
@@ -351,7 +352,7 @@ export const AdminOrganizationsPage = () => {
           <div className="collapsible-section">
             <div className="collapsible-section__header">
               <div className="collapsible-section__titles">
-                <img
+                <CachedImage
                   className="collapsible-section__icon"
                   src="https://img.icons8.com/external-tal-revivo-color-tal-revivo/24/external-slack-replace-email-text-messaging-and-instant-messaging-for-your-team-logo-color-tal-revivo.png"
                   alt={translation('adminOrganizationsPage.form.slack.iconAlt')}

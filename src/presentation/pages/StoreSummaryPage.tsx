@@ -37,6 +37,7 @@ import {
   EyeIcon,
   FileTextIcon,
   PencilIcon,
+  PlusCircleIcon,
   SettingsIcon,
   TrashIcon,
 } from '../components/icons';
@@ -1690,6 +1691,7 @@ export const StoreSummaryPage = () => {
                           disabled={!store || isLoadingCategories || isSyncingLegacyCategories}
                           data-testid="add-category-button"
                         >
+                          <PlusCircleIcon aria-hidden className="icon" />
                           {t('storeSummary.addCategory')}
                         </Button>
                       </div>
@@ -1753,6 +1755,7 @@ export const StoreSummaryPage = () => {
                                         onClick={() => handleStartEditCategory(category)}
                                         disabled={deletingCategoryId === category.id}
                                       >
+                                        <PencilIcon aria-hidden className="icon" />
                                         {t('edit')}
                                       </Button>
                                       <Button
@@ -1770,6 +1773,7 @@ export const StoreSummaryPage = () => {
                                             : undefined
                                         }
                                       >
+                                        <TrashIcon aria-hidden className="icon" />
                                         {t('delete')}
                                       </Button>
                                     </div>
@@ -1802,9 +1806,17 @@ export const StoreSummaryPage = () => {
                         loadingText={t('storeSummary.saving')}
                         data-testid="save-scenario-button"
                       >
-                        {editingScenarioId
-                          ? t('storeSummary.updateScenario')
-                          : t('storeSummary.addScenario')}
+                        {editingScenarioId ? (
+                          <>
+                            <PencilIcon aria-hidden className="icon" />
+                            {t('storeSummary.updateScenario')}
+                          </>
+                        ) : (
+                          <>
+                            <PlusCircleIcon aria-hidden className="icon" />
+                            {t('storeSummary.addScenario')}
+                          </>
+                        )}
                       </Button>
                       {editingScenarioId && (
                         <Button
@@ -2167,6 +2179,7 @@ export const StoreSummaryPage = () => {
                                 disabled={isSavingSuite}
                                 className="suite-edit"
                               >
+                                <PencilIcon aria-hidden className="icon" />
                                 {t('storeSummary.suiteEdit')}
                               </Button>
                               <Button
@@ -2176,6 +2189,7 @@ export const StoreSummaryPage = () => {
                                 disabled={isSavingSuite}
                                 className="suite-delete"
                               >
+                                <TrashIcon aria-hidden className="icon" />
                                 {t('storeSummary.deleteSuite')}
                               </Button>
                             </div>
@@ -2220,9 +2234,17 @@ export const StoreSummaryPage = () => {
                                     loadingText={t('storeSummary.saving')}
                                     data-testid="save-suite-button"
                                   >
-                                    {editingSuiteId
-                                      ? t('storeSummary.updateSuite')
-                                      : t('storeSummary.saveSuite')}
+                                    {editingSuiteId ? (
+                                      <>
+                                        <PencilIcon aria-hidden className="icon" />
+                                        {t('storeSummary.updateSuite')}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <PlusCircleIcon aria-hidden className="icon" />
+                                        {t('storeSummary.saveSuite')}
+                                      </>
+                                    )}
                                   </Button>
                                   {!editingSuiteId && (
                                     <Button
