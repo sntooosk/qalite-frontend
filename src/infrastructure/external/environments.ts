@@ -998,15 +998,18 @@ export const exportEnvironmentAsPDF = (
   const testTypeLabel = translateEnvironmentOption(environment.tipoTeste, t);
   const momentLabel = translateEnvironmentOption(environment.momento, t);
   const exportTitle = t('environmentExport.title', { id: environment.identificador });
-  const storeLabel = storeName?.trim();
-  const exportTitleWithStore = storeLabel ? `${exportTitle} · ${storeLabel}` : exportTitle;
+  const storeLabel = storeName?.trim() ?? '';
+  const exportTitleWithStore = exportTitle;
   const organizationName = organization?.name?.trim() || '';
   const organizationLogo = organization?.logoUrl?.trim() || '';
   const organizationHeader =
     organizationName || organizationLogo
       ? `<div class="org-header">
           ${organizationLogo ? `<img src="${escapeHtml(organizationLogo)}" alt="${escapeHtml(organizationName || 'Organization logo')}" class="org-logo" />` : ''}
-          ${organizationName ? `<span class="org-name">${escapeHtml(organizationName)}</span>` : ''}
+          <div class="org-text">
+            ${organizationName ? `<span class="org-name">${escapeHtml(organizationName)}</span>` : ''}
+            ${storeLabel ? `<span class="org-store">${escapeHtml(storeLabel)}</span>` : ''}
+          </div>
         </div>`
       : '';
   const jiraTask = environment.jiraTask?.trim() || '';
@@ -1165,7 +1168,9 @@ export const exportEnvironmentAsPDF = (
           h2 { margin-top: 24px; }
           .org-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
           .org-logo { width: 48px; height: 48px; border-radius: 10px; object-fit: contain; border: 1px solid var(--color-border); background: #fff; }
+          .org-text { display: flex; flex-direction: column; gap: 2px; }
           .org-name { font-size: 16px; font-weight: 600; color: #111827; }
+          .org-store { font-size: 13px; color: #4b5563; }
           .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding: 12px; background: var(--color-surface-muted); border: 1px solid var(--color-border); border-radius: 12px; }
           .summary-grid strong { display: block; margin-top: 4px; }
           table { width: 100%; border-collapse: collapse; margin-top: 16px; }
@@ -1305,6 +1310,7 @@ export const copyEnvironmentAsMarkdown = async (
   bugs: EnvironmentBug[] = [],
   participantProfiles: UserSummary[] = [],
   storeName?: string,
+  organization?: { name?: string | null } | null,
 ): Promise<void> => {
   if (typeof navigator === 'undefined' && typeof document === 'undefined') {
     return;
@@ -1374,10 +1380,18 @@ export const copyEnvironmentAsMarkdown = async (
 
   const exportTitle = t('environmentExport.title', { id: environment.identificador });
   const storeLabel = storeName?.trim();
-  const markdownTitle = storeLabel ? `${exportTitle} · ${storeLabel}` : exportTitle;
+  const organizationName = organization?.name?.trim();
+  const markdownTitle = exportTitle;
+  const organizationLine = organizationName
+    ? `**${t('environmentExport.organizationLabel')}**: ${organizationName}\n`
+    : '';
+  const storeLine = storeLabel
+    ? `**${t('storeSummary.storeName')}**: ${storeLabel}\n`
+    : '';
 
   const markdown = `# ${markdownTitle}
 
+${organizationLine}${storeLine}
 - ${t('environmentExport.statusLabel')}: ${statusLabel}
 - ${t('environmentExport.typeLabel')}: ${environment.tipoAmbiente} · ${testTypeLabel}
 ${environment.momento ? `- ${t('environmentExport.momentLabel')}: ${momentLabel}\n` : ''}${

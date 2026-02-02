@@ -39,7 +39,6 @@ interface EnvironmentSummaryCardProps {
   urls: string[];
   participants: UserSummary[];
   bugsCount: number;
-  storeName?: string;
 }
 
 export const EnvironmentSummaryCard = ({
@@ -53,7 +52,6 @@ export const EnvironmentSummaryCard = ({
   urls,
   participants,
   bugsCount,
-  storeName,
 }: EnvironmentSummaryCardProps) => {
   const { t: translation } = useTranslation();
 
@@ -102,11 +100,6 @@ export const EnvironmentSummaryCard = ({
             {translation('environmentSummary.totalTime')}
           </span>
           <strong>{formattedTime}</strong>
-        </div>
-
-        <div className="summary-card__meta-item">
-          <span className="summary-card__meta-label">{translation('storeSummary.storeName')}</span>
-          <strong>{storeName?.trim() || translation('storeSummary.emptyValue')}</strong>
         </div>
 
         <div className="summary-card__meta-item">

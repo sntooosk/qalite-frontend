@@ -32,6 +32,11 @@ export type ExportInfoRow = {
   value: string;
 };
 
+export type ExportBranding = {
+  name?: string | null;
+  logoUrl?: string | null;
+};
+
 const COLORS = {
   headerBg: '1F3A5F',
   headerText: 'FFFFFF',
@@ -248,11 +253,52 @@ const applyAutoRowHeights = (
   }
 };
 
-const buildInfoSheet = (
+const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+};
+
+const fetchImageAsBase64 = async (url: string) => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      return null;
+    }
+    const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
+    if (!contentType.startsWith('image/')) {
+      return null;
+    }
+    const extensionMap: Record<string, string | undefined> = {
+      'image/png': 'png',
+      'image/jpeg': 'jpeg',
+      'image/jpg': 'jpeg',
+    };
+    const extension = extensionMap[contentType];
+    if (!extension) {
+      return null;
+    }
+    const buffer = await response.arrayBuffer();
+    const base64 = arrayBufferToBase64(buffer);
+    return {
+      base64: `data:${contentType};base64,${base64}`,
+      extension,
+    };
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+};
+
+const buildInfoSheet = async (
   workbook: ExcelJS.Workbook,
   sheetName: string,
   headerLabels: [string, string],
   rows: ExportInfoRow[],
+  branding?: ExportBranding,
 ) => {
   const worksheet = workbook.addWorksheet(sheetName, { views: [{ state: 'frozen', ySplit: 1 }] });
 
@@ -261,23 +307,49 @@ const buildInfoSheet = (
     { header: headerLabels[1], key: 'value' },
   ];
 
-  const headerRow = worksheet.getRow(1);
+  const brandingName = branding?.name?.trim() ?? '';
+  const brandingLogoUrl = branding?.logoUrl?.trim() ?? '';
+  const hasBranding = Boolean(brandingName || brandingLogoUrl);
+  const headerRowIndex = hasBranding ? 2 : 1;
+
+  if (hasBranding) {
+    worksheet.spliceRows(1, 0, ['', brandingName]);
+    const brandingRow = worksheet.getRow(1);
+    brandingRow.height = 36;
+    brandingRow.eachCell((cell) => applyBaseCellStyle(cell));
+    const brandingNameCell = brandingRow.getCell(2);
+    brandingNameCell.font = { bold: true };
+    brandingNameCell.alignment = { vertical: 'middle', horizontal: 'left' };
+
+    if (brandingLogoUrl) {
+      const logoImage = await fetchImageAsBase64(brandingLogoUrl);
+      if (logoImage) {
+        const imageId = workbook.addImage(logoImage);
+        worksheet.addImage(imageId, {
+          tl: { col: 0, row: 0 },
+          ext: { width: 32, height: 32 },
+        });
+      }
+    }
+  }
+
+  const headerRow = worksheet.getRow(headerRowIndex);
   headerRow.height = 22;
   headerRow.eachCell((cell) => applyHeaderStyle(cell));
 
   rows.forEach((row) => worksheet.addRow(row));
 
-  for (let rowIndex = 2; rowIndex <= worksheet.rowCount; rowIndex += 1) {
+  for (let rowIndex = headerRowIndex + 1; rowIndex <= worksheet.rowCount; rowIndex += 1) {
     const row = worksheet.getRow(rowIndex);
     row.eachCell((cell) => applyBaseCellStyle(cell));
   }
 
   const columnValues = [
-    [headerLabels[0], ...rows.map((row) => row.label)],
-    [headerLabels[1], ...rows.map((row) => row.value)],
+    [headerLabels[0], ...(hasBranding ? [''] : []), ...rows.map((row) => row.label)],
+    [headerLabels[1], ...(hasBranding ? [brandingName] : []), ...rows.map((row) => row.value)],
   ];
   const columnWidths = applyColumnWidths(worksheet, columnValues);
-  applyAutoRowHeights(worksheet, columnWidths);
+  applyAutoRowHeights(worksheet, columnWidths, headerRowIndex + 1);
 };
 
 export const exportEnvironmentExcel = async ({
@@ -291,6 +363,7 @@ export const exportEnvironmentExcel = async ({
   scenarioHeaderLabels,
   bugRows,
   bugHeaderLabels,
+  branding,
 }: {
   fileName: string;
   scenarioSheetName: string;
@@ -302,10 +375,11 @@ export const exportEnvironmentExcel = async ({
   scenarioHeaderLabels: [string, string, string, string, string, string, string];
   bugRows: EnvironmentBugExportRow[];
   bugHeaderLabels: [string, string, string, string];
+  branding?: ExportBranding;
 }) => {
   const workbook = new ExcelJS.Workbook();
 
-  buildInfoSheet(workbook, environmentSheetName, infoHeaderLabels, infoRows);
+  await buildInfoSheet(workbook, environmentSheetName, infoHeaderLabels, infoRows, branding);
 
   const worksheet = workbook.addWorksheet(scenarioSheetName, {
     views: [{ state: 'frozen', ySplit: 1 }],
@@ -409,6 +483,7 @@ export const exportScenarioExcel = async ({
   infoRows,
   scenarioRows,
   scenarioHeaderLabels,
+  branding,
 }: {
   fileName: string;
   scenarioSheetName: string;
@@ -417,10 +492,11 @@ export const exportScenarioExcel = async ({
   infoRows: ExportInfoRow[];
   scenarioRows: ScenarioExportRow[];
   scenarioHeaderLabels: [string, string, string, string, string, string];
+  branding?: ExportBranding;
 }) => {
   const workbook = new ExcelJS.Workbook();
 
-  buildInfoSheet(workbook, infoSheetName, infoHeaderLabels, infoRows);
+  await buildInfoSheet(workbook, infoSheetName, infoHeaderLabels, infoRows, branding);
 
   const worksheet = workbook.addWorksheet(scenarioSheetName, {
     views: [{ state: 'frozen', ySplit: 1 }],

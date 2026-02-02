@@ -59,5 +59,6 @@ export interface EnvironmentRepository {
     bugs?: EnvironmentBug[],
     participantProfiles?: UserSummary[],
     storeName?: string,
+    organization?: { name?: string | null } | null,
   ) => Promise<void>;
 }

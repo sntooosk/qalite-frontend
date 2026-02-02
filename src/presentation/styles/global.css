@@ -1284,29 +1284,6 @@ a.text-link:hover {
   gap: 1.5rem;
 }
 
-.store-summary-context {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
-  color: var(--color-text-secondary);
-  font-size: 0.95rem;
-}
-
-.store-summary-context__name {
-  flex-basis: 100%;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.store-summary-context a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.store-summary-context a:hover,
-.store-summary-context a:focus-visible {
-  color: var(--color-primary);
-}
 
 .store-summary-highlights {
   display: grid;
@@ -4742,6 +4719,24 @@ button.store-summary-highlight:focus-visible {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 1rem;
+}
+
+.environment-page__context {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+
+.environment-page__org {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.environment-page__store {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
 }
 
 .environment-summary-grid {

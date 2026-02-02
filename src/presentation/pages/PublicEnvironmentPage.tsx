@@ -111,6 +111,18 @@ export const PublicEnvironmentPage = () => {
               {environment.tipoAmbiente} · {environment.tipoTeste}
             </p>
             {headerMeta.length > 0 && <p className="section-subtitle">{headerMeta.join(' · ')}</p>}
+            {(environmentOrganization?.name || storeName) && (
+              <div className="environment-page__context">
+                {environmentOrganization?.name && (
+                  <span className="environment-page__org">
+                    {environmentOrganization.name}
+                  </span>
+                )}
+                {storeName && (
+                  <span className="environment-page__store">{storeName}</span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -126,7 +138,6 @@ export const PublicEnvironmentPage = () => {
             urls={urls}
             participants={participants}
             bugsCount={bugs.length}
-            storeName={storeName}
           />
         </div>
 

@@ -1201,6 +1201,9 @@ export const StoreSummaryPage = () => {
             t('storeSummary.observation'),
             t('storeSummary.bdd'),
           ],
+          branding: organization
+            ? { name: organization.name, logoUrl: organization.logoUrl }
+            : undefined,
         });
       }
 
@@ -1538,21 +1541,6 @@ export const StoreSummaryPage = () => {
             ) : (
               <div className="store-summary">
                 <div className="store-summary-meta">
-                  <div className="store-summary-context">
-                    {organization?.name && <span>{organization.name}</span>}
-                    {store?.name && (
-                      <span className="store-summary-context__name">{store.name}</span>
-                    )}
-                    <span>
-                      {storeSiteInfo.href ? (
-                        <a href={storeSiteInfo.href} target="_blank" rel="noreferrer noopener">
-                          {storeSiteInfo.label}
-                        </a>
-                      ) : (
-                        storeSiteInfo.label
-                      )}
-                    </span>
-                  </div>
                   <div
                     className="store-summary-highlights"
                     role="group"

@@ -775,6 +775,7 @@
     },
     "environmentExport": {
       "title": "Environment {{id}}",
+      "organizationLabel": "Organization",
       "statusLabel": "Status",
       "typeLabel": "Type",
       "momentLabel": "Moment",

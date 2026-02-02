@@ -830,6 +830,10 @@ export const StoreManagementPanel = ({
             t('storeSummary.observation'),
             t('storeSummary.bdd'),
           ],
+          branding: {
+            name: storeOrganization?.name ?? organizationName,
+            logoUrl: storeOrganization?.logoUrl ?? null,
+          },
         });
       }
 

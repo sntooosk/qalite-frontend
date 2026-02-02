@@ -721,10 +721,16 @@ export const EnvironmentPage = () => {
         translation('environmentBugList.priority'),
         translation('environmentBugList.actualResult'),
       ],
+      branding: {
+        name: environmentOrganization?.name ?? null,
+        logoUrl: environmentOrganization?.logoUrl ?? null,
+      },
     });
   }, [
     bugs,
     environment,
+    environmentOrganization?.logoUrl,
+    environmentOrganization?.name,
     executedScenariosCount,
     formatCriticalityLabel,
     formatScenarioStatusLabel,
@@ -747,7 +753,9 @@ export const EnvironmentPage = () => {
     setIsCopyingMarkdown(true);
 
     try {
-      await environmentService.copyAsMarkdown(environment, bugs, participantProfiles, storeName);
+      await environmentService.copyAsMarkdown(environment, bugs, participantProfiles, storeName, {
+        name: environmentOrganization?.name ?? null,
+      });
       showToast({ type: 'success', message: translation('environment.copyMarkdownSuccess') });
     } catch (error) {
       console.error(error);
@@ -756,7 +764,15 @@ export const EnvironmentPage = () => {
       setIsCopyingMarkdown(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bugs, environment, participantProfiles, showToast, storeName, translation]);
+  }, [
+    bugs,
+    environment,
+    environmentOrganization?.name,
+    participantProfiles,
+    showToast,
+    storeName,
+    translation,
+  ]);
 
   const openCreateBugModal = useCallback((scenarioId: string) => {
     setEditingBug(null);
@@ -871,6 +887,18 @@ export const EnvironmentPage = () => {
                   {headerMeta.join(` ${translation('environment.typeSeparator')} `)}
                 </p>
               )}
+              {(environmentOrganization?.name || storeName) && (
+                <div className="environment-page__context">
+                  {environmentOrganization?.name && (
+                    <span className="environment-page__org">
+                      {environmentOrganization.name}
+                    </span>
+                  )}
+                  {storeName && (
+                    <span className="environment-page__store">{storeName}</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="environment-actions">
@@ -944,7 +972,6 @@ export const EnvironmentPage = () => {
             urls={urls}
             participants={participantProfiles}
             bugsCount={bugs.length}
-            storeName={storeName}
           />
           <div className="summary-card">
             <h3>{translation('environment.actions.shareExport')}</h3>
