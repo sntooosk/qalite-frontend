@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { UserSummary } from '../../domain/entities/user';
-import { userService } from '../../application/use-cases/UserUseCase';
+import { userService } from '../../infrastructure/services/userService';
 
 export const useUserProfiles = (userIds: string[]) => {
   const [profiles, setProfiles] = useState<UserSummary[]>([]);

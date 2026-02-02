@@ -23,6 +23,8 @@ import {
 export const firebaseStoreRepository: StoreRepository = {
   listByOrganization: listStores,
   getById: getStore,
+  listSummary: listStores,
+  getDetail: getStore,
   create: createStore,
   update: updateStore,
   delete: deleteStore,

@@ -2,6 +2,7 @@ import type { Environment } from '../../../domain/entities/environment';
 import type { UserSummary } from '../../../domain/entities/user';
 import { ENVIRONMENT_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 import { getReadableUserName, getUserInitials } from '../../utils/userDisplay';
+import { CachedImage } from '../CachedImage';
 import { translateEnvironmentOption } from '../../constants/environmentOptions';
 import { useTranslation } from 'react-i18next';
 import { buildExternalLink } from '../../utils/externalLink';
@@ -38,6 +39,7 @@ interface EnvironmentSummaryCardProps {
   urls: string[];
   participants: UserSummary[];
   bugsCount: number;
+  storeName?: string;
 }
 
 export const EnvironmentSummaryCard = ({
@@ -51,6 +53,7 @@ export const EnvironmentSummaryCard = ({
   urls,
   participants,
   bugsCount,
+  storeName,
 }: EnvironmentSummaryCardProps) => {
   const { t: translation } = useTranslation();
 
@@ -99,6 +102,11 @@ export const EnvironmentSummaryCard = ({
             {translation('environmentSummary.totalTime')}
           </span>
           <strong>{formattedTime}</strong>
+        </div>
+
+        <div className="summary-card__meta-item">
+          <span className="summary-card__meta-label">{translation('storeSummary.storeName')}</span>
+          <strong>{storeName?.trim() || translation('storeSummary.emptyValue')}</strong>
         </div>
 
         <div className="summary-card__meta-item">
@@ -227,7 +235,11 @@ export const EnvironmentSummaryCard = ({
               const initials = getUserInitials(readableName);
               return (
                 <li key={participant.id} className="summary-card__avatar-item">
-                  <span className="summary-card__avatar-fallback">{initials}</span>
+                  {participant.photoURL ? (
+                    <CachedImage src={participant.photoURL} alt={readableName} />
+                  ) : (
+                    <span className="summary-card__avatar-fallback">{initials}</span>
+                  )}
                   <span>{readableName}</span>
                 </li>
               );

@@ -2,7 +2,8 @@ import { useState } from 'react';
 
 import type { Environment } from '../../../domain/entities/environment';
 import type { EnvironmentBug } from '../../../domain/entities/environment';
-import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
+import type { UserSummary } from '../../../domain/entities/user';
+import { environmentService } from '../../../infrastructure/services/environmentService';
 import { useToast } from '../../context/ToastContext';
 import { BUG_PRIORITY_LABEL, BUG_SEVERITY_LABEL } from '../../../shared/config/environmentLabels';
 import { ConfirmDeleteModal } from '../ConfirmDeleteModal';
@@ -13,6 +14,7 @@ import { EnvironmentBugDetailsModal } from './EnvironmentBugDetailsModal';
 interface EnvironmentBugListProps {
   environment: Environment;
   bugs: EnvironmentBug[];
+  participants?: UserSummary[];
   isLocked?: boolean;
   isLoading?: boolean;
   onEdit: (bug: EnvironmentBug) => void;
@@ -24,6 +26,7 @@ interface EnvironmentBugListProps {
 export const EnvironmentBugList = ({
   environment,
   bugs,
+  participants,
   isLocked,
   isLoading,
   onEdit,
@@ -162,6 +165,7 @@ export const EnvironmentBugList = ({
                         title={translation('environmentBugList.viewDetails')}
                       >
                         <EyeIcon aria-hidden className="action-button__icon" />
+                        {translation('environmentBugList.viewDetails')}
                       </button>
                       <button
                         type="button"
@@ -206,6 +210,7 @@ export const EnvironmentBugList = ({
         isOpen={Boolean(bugToView)}
         bug={bugToView}
         environment={environment}
+        participants={participants}
         onClose={() => setBugToView(null)}
       />
     </div>

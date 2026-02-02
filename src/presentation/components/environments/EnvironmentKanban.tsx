@@ -4,17 +4,23 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { EnvironmentStatusError } from '../../../shared/errors/firebaseErrors';
-import type { Environment, EnvironmentStatus } from '../../../domain/entities/environment';
+import type {
+  Environment,
+  EnvironmentScenario,
+  EnvironmentStatus,
+} from '../../../domain/entities/environment';
 import type { StoreScenario, StoreSuite } from '../../../domain/entities/store';
 import type { UserSummary } from '../../../domain/entities/user';
-import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
-import { userService } from '../../../application/use-cases/UserUseCase';
+import { environmentService } from '../../../infrastructure/services/environmentService';
+import { userService } from '../../../infrastructure/services/userService';
 import { useToast } from '../../context/ToastContext';
 import { useAuth } from '../../hooks/useAuth';
 import { PaginationControls } from '../PaginationControls';
+import { Modal } from '../Modal';
+import { Button } from '../Button';
 import { EnvironmentCard } from './EnvironmentCard';
 import { CreateEnvironmentCard } from './CreateEnvironmentCard';
-import { ArchiveIcon } from '../icons';
+import { ArchiveIcon, CheckCircleIcon, InboxIcon, ProgressIcon } from '../icons';
 
 interface EnvironmentKanbanProps {
   storeId: string;
@@ -22,13 +28,30 @@ interface EnvironmentKanbanProps {
   scenarios: StoreScenario[];
   environments: Environment[];
   isLoading: boolean;
+  onEnvironmentCreated: (environment: Environment) => void;
 }
 
-const COLUMNS: { status: EnvironmentStatus; title: string }[] = [
-  { status: 'backlog', title: 'Backlog' },
-  { status: 'in_progress', title: 'environmentKanban.progress' },
-  { status: 'done', title: 'environmentKanban.done' },
+const COLUMNS: { status: EnvironmentStatus; title: string; Icon: typeof InboxIcon }[] = [
+  { status: 'backlog', title: 'Backlog', Icon: InboxIcon },
+  { status: 'in_progress', title: 'environmentKanban.progress', Icon: ProgressIcon },
+  { status: 'done', title: 'environmentKanban.done', Icon: CheckCircleIcon },
 ];
+
+const cloneScenarioMap = (
+  scenarios: Record<string, EnvironmentScenario>,
+): Record<string, EnvironmentScenario> =>
+  Object.fromEntries(
+    Object.entries(scenarios).map(([id, scenario]) => [
+      id,
+      {
+        ...scenario,
+        status: 'pendente',
+        statusMobile: 'pendente',
+        statusDesktop: 'pendente',
+        evidenciaArquivoUrl: null,
+      },
+    ]),
+  );
 
 export const EnvironmentKanban = ({
   storeId,
@@ -36,13 +59,15 @@ export const EnvironmentKanban = ({
   scenarios,
   environments,
   isLoading,
+  onEnvironmentCreated,
 }: EnvironmentKanbanProps) => {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [userProfilesMap, setUserProfilesMap] = useState<Record<string, UserSummary>>({});
   const [isArchiveMinimized, setIsArchiveMinimized] = useState(true);
   const [archivedVisibleCount, setArchivedVisibleCount] = useState(5);
-  const [bugCounts, setBugCounts] = useState<Record<string, number>>({});
+  const [environmentToClone, setEnvironmentToClone] = useState<Environment | null>(null);
+  const [isCloning, setIsCloning] = useState(false);
   const { user } = useAuth();
   const { t } = useTranslation();
 
@@ -76,37 +101,6 @@ export const EnvironmentKanban = ({
     };
 
     void fetchProfiles();
-    return () => {
-      isMounted = false;
-    };
-  }, [environments]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchBugCounts = async () => {
-      try {
-        const entries = await Promise.all(
-          environments.map(async (environment) => {
-            const bugs = await environmentService.listBugs(environment.id);
-            return [environment.id, bugs.length] as const;
-          }),
-        );
-
-        if (isMounted) {
-          setBugCounts(Object.fromEntries(entries));
-        }
-      } catch (error) {
-        console.error('Failed to fetch environment bugs', error);
-      }
-    };
-
-    if (environments.length > 0) {
-      void fetchBugCounts();
-    } else {
-      setBugCounts({});
-    }
-
     return () => {
       isMounted = false;
     };
@@ -224,6 +218,68 @@ export const EnvironmentKanban = ({
     }
   };
 
+  const requestCloneEnvironment = (environment: Environment) => {
+    setEnvironmentToClone(environment);
+  };
+
+  const handleCloseCloneModal = () => {
+    if (isCloning) {
+      return;
+    }
+    setEnvironmentToClone(null);
+  };
+
+  const handleConfirmClone = async () => {
+    if (!environmentToClone) {
+      return;
+    }
+
+    const environment = environmentToClone;
+    setIsCloning(true);
+    try {
+      const suffix = t('environmentKanban.cloneIdentifierSuffix').trim().replace(/\s+/g, '-');
+      const stamp = Date.now().toString(36).slice(-4);
+      const identifier = `${environment.identificador}-${suffix}-${stamp}`;
+      const clonedScenarios = cloneScenarioMap(environment.scenarios ?? {});
+      const createdEnvironment = await environmentService.create({
+        identificador: identifier,
+        storeId: environment.storeId,
+        suiteId: environment.suiteId,
+        suiteName: environment.suiteName,
+        urls: environment.urls ?? [],
+        jiraTask: environment.jiraTask ?? '',
+        tipoAmbiente: environment.tipoAmbiente,
+        tipoTeste: environment.tipoTeste,
+        momento: environment.momento,
+        release: environment.release,
+        status: 'backlog',
+        timeTracking: { start: null, end: null, totalMs: 0 },
+        presentUsersIds: [],
+        concludedBy: null,
+        scenarios: clonedScenarios,
+        bugs: 0,
+        totalCenarios: Object.keys(clonedScenarios).length,
+        participants: [],
+        publicShareLanguage: environment.publicShareLanguage ?? null,
+      });
+      showToast({ type: 'success', message: t('environmentKanban.cloneSuccess') });
+      onEnvironmentCreated(createdEnvironment);
+      setEnvironmentToClone(null);
+    } catch (error) {
+      console.error(error);
+      showToast({ type: 'error', message: t('environmentKanban.cloneError') });
+    } finally {
+      setIsCloning(false);
+    }
+  };
+
+  const handleEnvironmentCreated = (environment: Environment | null) => {
+    showToast({ type: 'success', message: t('environmentKanban.environmentCreated') });
+    if (environment) {
+      onEnvironmentCreated(environment);
+    }
+  };
+
   const handleOpenEnvironment = (environment: Environment) => {
     navigate(`/environments/${environment.id}`);
   };
@@ -246,9 +302,7 @@ export const EnvironmentKanban = ({
           storeId={storeId}
           suites={suites}
           scenarios={scenarios}
-          onCreated={() =>
-            showToast({ type: 'success', message: t('environmentKanban.environmentCreated') })
-          }
+          onCreated={handleEnvironmentCreated}
         />
       </header>
 
@@ -278,7 +332,10 @@ export const EnvironmentKanban = ({
                 onDrop={handleDrop(column.status)}
               >
                 <div className="environment-kanban-column-header">
-                  <h4>{t(column.title)}</h4>
+                  <h4 className="environment-kanban-column-title">
+                    <column.Icon aria-hidden className="icon" />
+                    {t(column.title)}
+                  </h4>
                   <span className="environment-kanban-column-count">
                     {environmentsToRender.length}
                   </span>
@@ -294,10 +351,10 @@ export const EnvironmentKanban = ({
                         .map((id) => userProfilesMap[id])
                         .filter((user): user is UserSummary => Boolean(user))}
                       suiteName={suiteNameByEnvironment[environment.id]}
-                      bugCount={bugCounts[environment.id]}
                       draggable
                       onDragStart={handleDragStart}
                       onOpen={handleOpenEnvironment}
+                      onClone={requestCloneEnvironment}
                     />
                   ))
                 )}
@@ -354,10 +411,10 @@ export const EnvironmentKanban = ({
                         .map((id) => userProfilesMap[id])
                         .filter((user): user is UserSummary => Boolean(user))}
                       suiteName={suiteNameByEnvironment[environment.id]}
-                      bugCount={bugCounts[environment.id]}
                       draggable
                       onDragStart={handleDragStart}
                       onOpen={handleOpenEnvironment}
+                      onClone={requestCloneEnvironment}
                     />
                   ))}
                 </div>
@@ -379,6 +436,37 @@ export const EnvironmentKanban = ({
           )}
         </div>
       )}
+
+      <Modal
+        isOpen={Boolean(environmentToClone)}
+        onClose={handleCloseCloneModal}
+        title={t('environmentKanban.cloneConfirmTitle')}
+        description={t('environmentKanban.cloneConfirmDescription')}
+      >
+        <p>
+          {t('environmentKanban.cloneConfirmMessage', {
+            identifier: environmentToClone?.identificador ?? '',
+          })}
+        </p>
+        <div className="modal-actions">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleCloseCloneModal}
+            disabled={isCloning}
+          >
+            {t('environmentKanban.cloneCancel')}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleConfirmClone}
+            isLoading={isCloning}
+            loadingText={t('environmentKanban.cloneLoading')}
+          >
+            {t('environmentKanban.cloneConfirmAction')}
+          </Button>
+        </div>
+      </Modal>
     </section>
   );
 };

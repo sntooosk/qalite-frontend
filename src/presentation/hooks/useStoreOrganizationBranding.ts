@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
 import type { Organization } from '../../domain/entities/organization';
-import { organizationService } from '../../application/use-cases/OrganizationUseCase';
-import { storeService } from '../../application/use-cases/StoreUseCase';
+import { organizationService } from '../../infrastructure/services/organizationService';
+import { storeService } from '../../infrastructure/services/storeService';
 
 export const useStoreOrganizationBranding = (storeId: string | null | undefined) => {
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -22,7 +22,7 @@ export const useStoreOrganizationBranding = (storeId: string | null | undefined)
 
       setIsLoading(true);
       try {
-        const store = await storeService.getById(storeId);
+        const store = await storeService.getDetail(storeId);
 
         if (!store?.organizationId) {
           if (isMounted) {
@@ -31,7 +31,7 @@ export const useStoreOrganizationBranding = (storeId: string | null | undefined)
           return;
         }
 
-        const org = await organizationService.getById(store.organizationId);
+        const org = await organizationService.getDetail(store.organizationId);
         if (isMounted) {
           setOrganization(org);
         }

@@ -14,6 +14,8 @@ import type {
 export interface StoreRepository {
   listByOrganization: (organizationId: string) => Promise<Store[]>;
   getById: (id: string) => Promise<Store | null>;
+  listSummary: (organizationId: string) => Promise<Store[]>;
+  getDetail: (id: string) => Promise<Store | null>;
   create: (store: CreateStorePayload) => Promise<Store>;
   update: (id: string, store: UpdateStorePayload) => Promise<Store>;
   delete: (id: string) => Promise<void>;

@@ -4,13 +4,13 @@ import type {
   EnvironmentScenarioPlatform,
   EnvironmentScenarioStatus,
 } from '../../domain/entities/environment';
-import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
+import { environmentService } from '../../infrastructure/services/environmentService';
 
 export const useScenarioEvidence = (environmentId: string | null | undefined) => {
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleEvidenceUpload = useCallback(
-    async (scenarioId: string, link: string) => {
+    async (scenarioId: string, link: string | File) => {
       if (!environmentId) {
         throw new Error('Ambiente inválido.');
       }

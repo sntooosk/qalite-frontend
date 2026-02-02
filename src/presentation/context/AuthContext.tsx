@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 
-import { authService } from '../../application/use-cases/AuthUseCase';
+import { authService } from '../../infrastructure/services/authService';
 import type { AuthUser, Role, UpdateProfilePayload } from '../../domain/entities/auth';
 import { DEFAULT_ROLE } from '../../domain/entities/auth';
 import { mapFirebaseError } from '../../shared/errors/firebaseErrors';

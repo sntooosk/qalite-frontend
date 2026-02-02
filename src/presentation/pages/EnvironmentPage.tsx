@@ -10,9 +10,9 @@ import type {
 } from '../../domain/entities/environment';
 import type { UserSummary } from '../../domain/entities/user';
 import type { SlackTaskSummaryPayload } from '../../infrastructure/external/slack';
-import { environmentService } from '../../application/use-cases/EnvironmentUseCase';
-import { storeService } from '../../application/use-cases/StoreUseCase';
-import { slackService } from '../../application/use-cases/SlackUseCase';
+import { environmentService } from '../../infrastructure/services/environmentService';
+import { storeService } from '../../infrastructure/services/storeService';
+import { slackService } from '../../infrastructure/services/slackService';
 import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
@@ -232,11 +232,12 @@ export const EnvironmentPage = () => {
   const [editingBug, setEditingBug] = useState<EnvironmentBug | null>(null);
   const [defaultBugScenarioId, setDefaultBugScenarioId] = useState<string | null>(null);
   const [scenarioDetailsId, setScenarioDetailsId] = useState<string | null>(null);
-  const [modalEvidenceLink, setModalEvidenceLink] = useState('');
+  const [modalEvidenceFile, setModalEvidenceFile] = useState<File | null>(null);
   const [isCopyingMarkdown, setIsCopyingMarkdown] = useState(false);
   const [isSendingSlackSummary, setIsSendingSlackSummary] = useState(false);
   const [suites, setSuites] = useState<StoreSuite[]>([]);
   const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
+  const [storeName, setStoreName] = useState<string>('');
   const { setActiveOrganization } = useOrganizationBranding();
   const participantProfiles = useUserProfiles(environment?.participants ?? []);
   const activeOrganizationIdRef = useRef<string | null>(null);
@@ -334,29 +335,22 @@ export const EnvironmentPage = () => {
     setScenarioDetailsId(null);
   }, []);
 
-  const handleModalEvidenceSave = useCallback(async () => {
-    if (!scenarioDetailsId) {
-      return;
-    }
-    const link = modalEvidenceLink.trim();
-    if (!link) {
+  const handleModalEvidenceFileUpload = useCallback(async () => {
+    if (!scenarioDetailsId || !modalEvidenceFile) {
       return;
     }
 
     try {
-      await handleEvidenceUpload(scenarioDetailsId, link);
+      await handleEvidenceUpload(scenarioDetailsId, modalEvidenceFile);
+      setModalEvidenceFile(null);
     } catch (error) {
       console.error(error);
     }
-  }, [handleEvidenceUpload, modalEvidenceLink, scenarioDetailsId]);
+  }, [handleEvidenceUpload, modalEvidenceFile, scenarioDetailsId]);
 
   useEffect(() => {
-    const nextLink = detailScenario?.evidenciaArquivoUrl ?? '';
-    if (modalEvidenceLink === nextLink) {
-      return;
-    }
-    setModalEvidenceLink(nextLink);
-  }, [detailScenario, modalEvidenceLink]);
+    setModalEvidenceFile(null);
+  }, [detailScenario]);
 
   useEffect(() => {
     const nextOrganizationId = environmentOrganization?.id ?? null;
@@ -400,6 +394,35 @@ export const EnvironmentPage = () => {
       isMounted = false;
     };
   }, [environment?.storeId, isEditOpen]);
+
+  useEffect(() => {
+    if (!environment?.storeId) {
+      setStoreName('');
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchStoreName = async () => {
+      try {
+        const store = await storeService.getDetail(environment.storeId);
+        if (isMounted) {
+          setStoreName(store?.name?.trim() || '');
+        }
+      } catch (error) {
+        console.error(error);
+        if (isMounted) {
+          setStoreName('');
+        }
+      }
+    };
+
+    void fetchStoreName();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [environment?.storeId]);
 
   const { formattedTime, totalMs, formattedStart, formattedEnd } = useTimeTracking(
     environment?.timeTracking ?? null,
@@ -539,8 +562,18 @@ export const EnvironmentPage = () => {
     if (!environment) {
       return;
     }
-    environmentService.exportAsPDF(environment, bugs, participantProfiles);
-  }, [bugs, environment, participantProfiles]);
+    environmentService.exportAsPDF(environment, bugs, participantProfiles, storeName, {
+      name: environmentOrganization?.name ?? null,
+      logoUrl: environmentOrganization?.logoUrl ?? null,
+    });
+  }, [
+    bugs,
+    environment,
+    environmentOrganization?.logoUrl,
+    environmentOrganization?.name,
+    participantProfiles,
+    storeName,
+  ]);
 
   const handleExportExcel = useCallback(() => {
     if (!environment) {
@@ -568,11 +601,17 @@ export const EnvironmentPage = () => {
       };
     });
 
-    const fileName = `${translation('environment.exportExcelFileName')}-${environment.identificador}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    const normalizedStoreName = storeName ? storeName.replace(/\s+/g, '_') : '';
+    const storePrefix = normalizedStoreName ? `${normalizedStoreName}_` : '';
+    const fileName = `${storePrefix}${translation('environment.exportExcelFileName')}-${environment.identificador}-${new Date().toISOString().slice(0, 10)}.xlsx`;
     const infoRows = [
       {
         label: translation('editEnvironmentModal.identifier'),
         value: environment.identificador || translation('storeSummary.emptyValue'),
+      },
+      {
+        label: translation('storeSummary.storeName'),
+        value: storeName || translation('storeSummary.emptyValue'),
       },
       {
         label: translation('environment.exportExcelStatusLabel'),
@@ -694,6 +733,7 @@ export const EnvironmentPage = () => {
     formattedTime,
     participantProfiles,
     scenarioCount,
+    storeName,
     translateOptionValue,
     translation,
     urls,
@@ -707,7 +747,7 @@ export const EnvironmentPage = () => {
     setIsCopyingMarkdown(true);
 
     try {
-      await environmentService.copyAsMarkdown(environment, bugs, participantProfiles);
+      await environmentService.copyAsMarkdown(environment, bugs, participantProfiles, storeName);
       showToast({ type: 'success', message: translation('environment.copyMarkdownSuccess') });
     } catch (error) {
       console.error(error);
@@ -716,7 +756,7 @@ export const EnvironmentPage = () => {
       setIsCopyingMarkdown(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bugs, environment, participantProfiles, showToast]);
+  }, [bugs, environment, participantProfiles, showToast, storeName, translation]);
 
   const openCreateBugModal = useCallback((scenarioId: string) => {
     setEditingBug(null);
@@ -904,6 +944,7 @@ export const EnvironmentPage = () => {
             urls={urls}
             participants={participantProfiles}
             bugsCount={bugs.length}
+            storeName={storeName}
           />
           <div className="summary-card">
             <h3>{translation('environment.actions.shareExport')}</h3>
@@ -980,6 +1021,7 @@ export const EnvironmentPage = () => {
         <EnvironmentBugList
           environment={environment}
           bugs={bugs}
+          participants={participantProfiles}
           isLocked={Boolean(isInteractionLocked)}
           isLoading={isLoadingBugs}
           onEdit={handleEditBug}
@@ -1020,11 +1062,12 @@ export const EnvironmentPage = () => {
         isOpen={Boolean(scenarioDetailsId)}
         onClose={handleCloseScenarioDetails}
         title={translation('storeSummary.scenarioDetailsTitle')}
+        bodyClassName="scenario-details"
       >
         {detailScenario ? (
-          <div className="scenario-details">
+          <>
             <p className="scenario-details-title">{detailScenario.titulo}</p>
-            <div className="scenario-details-grid">
+            <div className="scenario-details-items">
               <div className="scenario-details-item">
                 <span className="scenario-details-label">
                   {translation('environmentEvidenceTable.table_categoria')}
@@ -1108,21 +1151,29 @@ export const EnvironmentPage = () => {
                 </a>
               ) : canManageEvidence ? (
                 <div className="scenario-evidence-actions">
-                  <input
-                    type="url"
-                    value={modalEvidenceLink}
-                    onChange={(event) => setModalEvidenceLink(event.target.value)}
-                    placeholder={translation('environmentEvidenceTable.evidencia_placeholder')}
-                    className="scenario-evidence-input"
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleModalEvidenceSave}
-                    isLoading={isUpdatingEvidence}
-                    loadingText={translation('saving')}
-                  >
-                    {translation('environmentEvidenceTable.evidencia_salvar')}
-                  </Button>
+                  <div className="scenario-evidence-field">
+                    <input
+                      id="scenario-evidence-upload"
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="file-input"
+                      onChange={(event) => setModalEvidenceFile(event.target.files?.[0] ?? null)}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="scenario-evidence-upload-button"
+                      onClick={handleModalEvidenceFileUpload}
+                      disabled={!modalEvidenceFile}
+                      isLoading={isUpdatingEvidence}
+                      loadingText={translation('saving')}
+                    >
+                      {translation('environmentEvidenceTable.evidencia_upload')}
+                    </Button>
+                  </div>
+                  <span className="form-hint">
+                    {translation('environmentEvidenceTable.evidencia_upload_hint')}
+                  </span>
                 </div>
               ) : (
                 <span className="section-subtitle">
@@ -1158,7 +1209,7 @@ export const EnvironmentPage = () => {
                 )}
               </div>
             </div>
-          </div>
+          </>
         ) : (
           <p className="section-subtitle">{translation('storeSummary.emptyValue')}</p>
         )}

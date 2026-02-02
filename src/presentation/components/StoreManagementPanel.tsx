@@ -7,7 +7,7 @@ import type {
   StoreScenario,
   StoreScenarioInput,
 } from '../../domain/entities/store';
-import { storeService } from '../../application/use-cases/StoreUseCase';
+import { storeService } from '../../infrastructure/services/storeService';
 import { useStoresRealtime } from '../context/StoresRealtimeContext';
 import { useToast } from '../context/ToastContext';
 import { Button } from './Button';
@@ -38,6 +38,7 @@ import { exportScenarioExcel } from '../../utils/exportExcel';
 import { formatDateTime } from '../../shared/utils/time';
 import { buildExternalLink } from '../utils/externalLink';
 import { FileTextIcon, PencilIcon, TrashIcon } from './icons';
+import { useStoreOrganizationBranding } from '../hooks/useStoreOrganizationBranding';
 
 interface StoreManagementPanelProps {
   organizationId: string;
@@ -82,6 +83,7 @@ export const StoreManagementPanel = ({
   const [storeFormError, setStoreFormError] = useState<string | null>(null);
   const [isSavingStore, setIsSavingStore] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  const { organization: storeOrganization } = useStoreOrganizationBranding(selectedStoreId);
 
   const [scenarios, setScenarios] = useState<StoreScenario[]>([]);
   const [isLoadingScenarios, setIsLoadingScenarios] = useState(false);
@@ -836,6 +838,10 @@ export const StoreManagementPanel = ({
           data,
           t('storeManagement.exportTitle', { name: selectedStore.name }),
           pdfWindow,
+          {
+            name: storeOrganization?.name ?? organizationName,
+            logoUrl: storeOrganization?.logoUrl ?? null,
+          },
         );
       }
 
@@ -1275,7 +1281,7 @@ export const StoreManagementPanel = ({
                 <table className="scenario-table data-table">
                   <thead>
                     <tr>
-                      <th>{t('storeSummary.title')}</th>
+                      <th>{t('storeSummary.scenarioTitle')}</th>
                       <th>
                         <ScenarioColumnSortControl
                           label={t('storeSummary.category')}

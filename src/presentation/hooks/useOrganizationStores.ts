@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 
 import type { Organization } from '../../domain/entities/organization';
 import type { Store } from '../../domain/entities/store';
-import { organizationService } from '../../application/use-cases/OrganizationUseCase';
-import { storeService } from '../../application/use-cases/StoreUseCase';
+import { organizationService } from '../../infrastructure/services/organizationService';
+import { storeService } from '../../infrastructure/services/storeService';
 import { useToast } from '../context/ToastContext';
 
 export type OrganizationStoresStatus = 'idle' | 'loading' | 'ready' | 'empty' | 'error';
@@ -39,8 +39,8 @@ export const useOrganizationStores = (organizationId: string | null) => {
 
       try {
         const [organizationData, storesData] = await Promise.all([
-          organizationService.getById(organizationId),
-          storeService.listByOrganization(organizationId),
+          organizationService.getDetail(organizationId),
+          storeService.listSummary(organizationId),
         ]);
 
         if (!isSubscribed) {

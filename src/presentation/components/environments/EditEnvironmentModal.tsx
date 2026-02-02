@@ -6,13 +6,14 @@ import type {
   UpdateEnvironmentInput,
 } from '../../../domain/entities/environment';
 import type { StoreScenario, StoreSuite } from '../../../domain/entities/store';
-import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
+import { environmentService } from '../../../infrastructure/services/environmentService';
 import { getScenarioPlatformStatuses } from '../../../infrastructure/external/environments';
 import { Button } from '../Button';
 import { Modal } from '../Modal';
 import { SelectInput } from '../SelectInput';
 import { TextArea } from '../TextArea';
 import { TextInput } from '../TextInput';
+import { TrashIcon } from '../icons';
 import {
   MOMENT_OPTIONS_BY_ENVIRONMENT,
   TEST_TYPES_BY_ENVIRONMENT,
@@ -361,7 +362,12 @@ export const EditEnvironmentModal = ({
               <h4>{translation('editEnvironmentModal.dangerZoneTitle')}</h4>
               <p>{translation('editEnvironmentModal.dangerZoneDescription')}</p>
             </div>
-            <button type="button" className="link-danger" onClick={onDeleteRequest}>
+            <button
+              type="button"
+              className="link-danger link-danger--with-icon"
+              onClick={onDeleteRequest}
+            >
+              <TrashIcon aria-hidden className="icon" />
               {translation('deleteEnvironmentModal.deleteEnvironment')}
             </button>
           </div>

@@ -5,6 +5,8 @@ export interface Store {
   site: string;
   stage: string;
   scenarioCount: number;
+  automatedScenarioCount: number;
+  notAutomatedScenarioCount: number;
   createdAt: Date | null;
   updatedAt: Date | null;
 }

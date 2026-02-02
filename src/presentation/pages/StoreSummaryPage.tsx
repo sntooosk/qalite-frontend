@@ -10,8 +10,8 @@ import type {
   StoreSuite,
   StoreSuiteInput,
 } from '../../domain/entities/store';
-import { organizationService } from '../../application/use-cases/OrganizationUseCase';
-import { storeService } from '../../application/use-cases/StoreUseCase';
+import { organizationService } from '../../infrastructure/services/organizationService';
+import { storeService } from '../../infrastructure/services/storeService';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
@@ -37,6 +37,7 @@ import {
   EyeIcon,
   FileTextIcon,
   PencilIcon,
+  PlusCircleIcon,
   SettingsIcon,
   TrashIcon,
 } from '../components/icons';
@@ -233,6 +234,7 @@ export const StoreSummaryPage = () => {
     environments,
     isLoading: isLoadingEnvironments,
     statusCounts: environmentStatusCounts,
+    addEnvironment,
   } = useStoreEnvironments(storeId);
   const selectedSuiteScenarioCount = suiteForm.scenarioIds.length;
   const suiteSelectionSummary =
@@ -240,12 +242,7 @@ export const StoreSummaryPage = () => {
       ? t('storeSummary.noScenario')
       : `${selectedSuiteScenarioCount} ${t('storeSummary.scenario')} ${t('storeSummary.selected')}`;
 
-  const isPreparingStoreView =
-    isLoadingStore ||
-    isLoadingScenarios ||
-    isLoadingSuites ||
-    isLoadingCategories ||
-    isSyncingLegacyCategories;
+  const isPreparingStoreView = isLoadingStore && !store;
 
   const canManageScenarios = Boolean(user);
   const canManageStoreSettings = user?.role === 'admin';
@@ -537,7 +534,7 @@ export const StoreSummaryPage = () => {
         setIsLoadingStore(true);
         setIsLoadingScenarios(true);
 
-        const data = await storeService.getById(storeId);
+        const data = await storeService.getDetail(storeId);
 
         if (!data) {
           showToast({ type: 'error', message: t('storeSummary.storeNotFound') });
@@ -554,7 +551,7 @@ export const StoreSummaryPage = () => {
         setStore(data);
 
         const [organizationData, scenariosData] = await Promise.all([
-          organizationService.getById(data.organizationId),
+          organizationService.getDetail(data.organizationId),
           storeService.listScenarios(data.id),
         ]);
 
@@ -1156,6 +1153,7 @@ export const StoreSummaryPage = () => {
     try {
       setExportingScenarioFormat(format);
       const data = await storeService.exportStore(store.id);
+      const baseFileName = `${store.name.replace(/\s+/g, '_')}_${t('storeSummary.exportFileSuffix')}`;
 
       if (format === 'xlsx') {
         const scenarioRows = data.scenarios.map((scenario) => ({
@@ -1188,8 +1186,6 @@ export const StoreSummaryPage = () => {
             }),
           },
         ];
-        const baseFileName = `${store.name.replace(/\s+/g, '_')}_${t('storeSummary.exportFileSuffix')}`;
-
         exportScenarioExcel({
           fileName: `${baseFileName}.xlsx`,
           scenarioSheetName: t('storeSummary.exportExcelSheetName'),
@@ -1198,7 +1194,7 @@ export const StoreSummaryPage = () => {
           infoRows,
           scenarioRows,
           scenarioHeaderLabels: [
-            t('storeSummary.title'),
+            t('storeSummary.scenarioTitle'),
             t('storeSummary.category'),
             t('storeSummary.automation'),
             t('storeSummary.criticality'),
@@ -1209,7 +1205,12 @@ export const StoreSummaryPage = () => {
       }
 
       if (format === 'pdf') {
-        openScenarioPdf(data, `${store.name} - ${t('scenarios')}`, pdfWindow);
+        openScenarioPdf(
+          data,
+          `${store.name} - ${t('scenarios')}`,
+          pdfWindow,
+          organization ? { name: organization.name, logoUrl: organization.logoUrl } : null,
+        );
       }
 
       showToast({ type: 'success', message: t('storeSummary.scenarioExportSuccess') });
@@ -1280,21 +1281,25 @@ export const StoreSummaryPage = () => {
   const handleScenarioFilterChange =
     (field: keyof ScenarioFilters) =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setScenarioVisibleCount(PAGE_SIZE);
       setScenarioFilters((previous) => ({ ...previous, [field]: event.target.value }));
     };
 
   const handleSuiteScenarioFilterChange =
     (field: keyof ScenarioFilters) =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setSuiteScenarioVisibleCount(PAGE_SIZE);
       setSuiteScenarioFilters((previous) => ({ ...previous, [field]: event.target.value }));
     };
 
   const handleClearScenarioFilters = () => {
     setScenarioFilters(emptyScenarioFilters);
+    setScenarioVisibleCount(PAGE_SIZE);
   };
 
   const handleClearSuiteScenarioFilters = () => {
     setSuiteScenarioFilters(emptyScenarioFilters);
+    setSuiteScenarioVisibleCount(PAGE_SIZE);
   };
 
   const handleSuiteSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -1535,6 +1540,9 @@ export const StoreSummaryPage = () => {
                 <div className="store-summary-meta">
                   <div className="store-summary-context">
                     {organization?.name && <span>{organization.name}</span>}
+                    {store?.name && (
+                      <span className="store-summary-context__name">{store.name}</span>
+                    )}
                     <span>
                       {storeSiteInfo.href ? (
                         <a href={storeSiteInfo.href} target="_blank" rel="noreferrer noopener">
@@ -1688,6 +1696,7 @@ export const StoreSummaryPage = () => {
                           disabled={!store || isLoadingCategories || isSyncingLegacyCategories}
                           data-testid="add-category-button"
                         >
+                          <PlusCircleIcon aria-hidden className="icon" />
                           {t('storeSummary.addCategory')}
                         </Button>
                       </div>
@@ -1751,6 +1760,7 @@ export const StoreSummaryPage = () => {
                                         onClick={() => handleStartEditCategory(category)}
                                         disabled={deletingCategoryId === category.id}
                                       >
+                                        <PencilIcon aria-hidden className="icon" />
                                         {t('edit')}
                                       </Button>
                                       <Button
@@ -1768,6 +1778,7 @@ export const StoreSummaryPage = () => {
                                             : undefined
                                         }
                                       >
+                                        <TrashIcon aria-hidden className="icon" />
                                         {t('delete')}
                                       </Button>
                                     </div>
@@ -1800,9 +1811,17 @@ export const StoreSummaryPage = () => {
                         loadingText={t('storeSummary.saving')}
                         data-testid="save-scenario-button"
                       >
-                        {editingScenarioId
-                          ? t('storeSummary.updateScenario')
-                          : t('storeSummary.addScenario')}
+                        {editingScenarioId ? (
+                          <>
+                            <PencilIcon aria-hidden className="icon" />
+                            {t('storeSummary.updateScenario')}
+                          </>
+                        ) : (
+                          <>
+                            <PlusCircleIcon aria-hidden className="icon" />
+                            {t('storeSummary.addScenario')}
+                          </>
+                        )}
                       </Button>
                       {editingScenarioId && (
                         <Button
@@ -1921,7 +1940,7 @@ export const StoreSummaryPage = () => {
                               <table className="scenario-table data-table">
                                 <thead>
                                   <tr>
-                                    <th>{t('storeSummary.title')}</th>
+                                    <th>{t('storeSummary.scenarioTitle')}</th>
                                     <th>
                                       <ScenarioColumnSortControl
                                         label={t('storeSummary.category')}
@@ -2025,9 +2044,13 @@ export const StoreSummaryPage = () => {
                               {t('storeSummary.suitesRegistered')}
                             </span>
                             <div className="suite-table-actions">
-                              <Button type="button" variant="ghost" onClick={handleBackToSuiteForm}>
-                                {t('storeSummary.backToForm')}
-                              </Button>
+                              <BackButton
+                                label={t('storeSummary.backToForm')}
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  handleBackToSuiteForm();
+                                }}
+                              />
                             </div>
                           </div>
                           {isLoadingSuites ? (
@@ -2074,7 +2097,7 @@ export const StoreSummaryPage = () => {
                                 <table className="suite-preview-table data-table">
                                   <thead>
                                     <tr>
-                                      <th>{t('storeSummary.scenario')}</th>
+                                      <th>{t('storeSummary.scenarioTitle')}</th>
                                       <th>
                                         <ScenarioColumnSortControl
                                           label={t('storeSummary.category')}
@@ -2161,6 +2184,7 @@ export const StoreSummaryPage = () => {
                                 disabled={isSavingSuite}
                                 className="suite-edit"
                               >
+                                <PencilIcon aria-hidden className="icon" />
                                 {t('storeSummary.suiteEdit')}
                               </Button>
                               <Button
@@ -2170,6 +2194,7 @@ export const StoreSummaryPage = () => {
                                 disabled={isSavingSuite}
                                 className="suite-delete"
                               >
+                                <TrashIcon aria-hidden className="icon" />
                                 {t('storeSummary.deleteSuite')}
                               </Button>
                             </div>
@@ -2214,9 +2239,17 @@ export const StoreSummaryPage = () => {
                                     loadingText={t('storeSummary.saving')}
                                     data-testid="save-suite-button"
                                   >
-                                    {editingSuiteId
-                                      ? t('storeSummary.updateSuite')
-                                      : t('storeSummary.saveSuite')}
+                                    {editingSuiteId ? (
+                                      <>
+                                        <PencilIcon aria-hidden className="icon" />
+                                        {t('storeSummary.updateSuite')}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <PlusCircleIcon aria-hidden className="icon" />
+                                        {t('storeSummary.saveSuite')}
+                                      </>
+                                    )}
                                   </Button>
                                   {!editingSuiteId && (
                                     <Button
@@ -2387,7 +2420,11 @@ export const StoreSummaryPage = () => {
                                                         aria-label={`Selecionar cenário ${scenario.title}`}
                                                       />
                                                     </td>
-                                                    <td data-label="Título">{scenario.title}</td>
+                                                    <td
+                                                      data-label={t('storeSummary.scenarioTitle')}
+                                                    >
+                                                      {scenario.title}
+                                                    </td>
                                                     <td data-label="Categoria">
                                                       {scenario.category}
                                                     </td>
@@ -2431,6 +2468,7 @@ export const StoreSummaryPage = () => {
                       scenarios={scenarios}
                       environments={environments}
                       isLoading={isLoadingEnvironments}
+                      onEnvironmentCreated={addEnvironment}
                     />
                   )}
                 </div>
@@ -2455,8 +2493,8 @@ export const StoreSummaryPage = () => {
           const detailAutomation = detailScenario
             ? formatAutomationLabel(detailScenario.automation)
             : t('storeSummary.emptyValue');
-          const detailObservation =
-            detailScenario?.observation?.trim() || t('storeSummary.emptyValue');
+          const detailObservationValue = detailScenario?.observation?.trim() ?? '';
+          const hasDetailObservation = Boolean(detailObservationValue);
           const detailBddValue = detailScenario?.bdd?.trim() ?? '';
           const localizedBdd = detailBddValue
             ? translateBddKeywords(detailBddValue, i18n.language)
@@ -2491,27 +2529,35 @@ export const StoreSummaryPage = () => {
                   )}
                 </div>
               </div>
-              <div className="scenario-details-section">
-                <span className="scenario-details-label">{t('storeSummary.observation')}</span>
-                <LinkifiedText text={detailObservation} className="scenario-details-text" as="p" />
-              </div>
-              <div className="scenario-details-section">
-                <div className="scenario-details-section-header">
-                  <span className="scenario-details-label">{t('storeSummary.bdd')}</span>
-                  {canCopyBdd && (
-                    <button
-                      type="button"
-                      className="scenario-copy-button scenario-copy-button--with-icon"
-                      onClick={() => void handleCopyBdd(localizedBdd)}
-                      disabled={!hasDetailBdd}
-                    >
-                      <CopyIcon aria-hidden className="icon" />
-                      {t('storeSummary.copyBdd')}
-                    </button>
-                  )}
+              {hasDetailObservation && (
+                <div className="scenario-details-section">
+                  <span className="scenario-details-label">{t('storeSummary.observation')}</span>
+                  <LinkifiedText
+                    text={detailObservationValue}
+                    className="scenario-details-text"
+                    as="p"
+                  />
                 </div>
-                <LinkifiedText text={detailBdd} className="scenario-details-text" as="p" />
-              </div>
+              )}
+              {hasDetailBdd && (
+                <div className="scenario-details-section">
+                  <div className="scenario-details-section-header">
+                    <span className="scenario-details-label">{t('storeSummary.bdd')}</span>
+                    {canCopyBdd && (
+                      <button
+                        type="button"
+                        className="scenario-copy-button scenario-copy-button--with-icon"
+                        onClick={() => void handleCopyBdd(localizedBdd)}
+                        disabled={!hasDetailBdd}
+                      >
+                        <CopyIcon aria-hidden className="icon" />
+                        {t('storeSummary.copyBdd')}
+                      </button>
+                    )}
+                  </div>
+                  <LinkifiedText text={detailBdd} className="scenario-details-text" as="p" />
+                </div>
+              )}
             </div>
           );
         })()}

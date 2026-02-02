@@ -13,7 +13,7 @@ export const BackButton = ({ label = 'Voltar', onClick, ...props }: BackButtonPr
   return (
     <button
       type="button"
-      className="back-button"
+      className="button button-secondary back-button"
       onClick={(event) => {
         onClick?.(event);
         if (!event.defaultPrevented) {

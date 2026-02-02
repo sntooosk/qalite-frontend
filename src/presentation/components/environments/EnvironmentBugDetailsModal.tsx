@@ -2,17 +2,20 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Environment, EnvironmentBug } from '../../../domain/entities/environment';
+import type { UserSummary } from '../../../domain/entities/user';
 import {
   BUG_PRIORITY_LABEL,
   BUG_SEVERITY_LABEL,
   BUG_STATUS_LABEL,
 } from '../../../shared/config/environmentLabels';
 import { Modal } from '../Modal';
+import { UserAvatar } from '../UserAvatar';
 
 interface EnvironmentBugDetailsModalProps {
   isOpen: boolean;
   bug: EnvironmentBug | null;
   environment: Environment;
+  participants?: UserSummary[];
   onClose: () => void;
 }
 
@@ -20,6 +23,7 @@ export const EnvironmentBugDetailsModal = ({
   isOpen,
   bug,
   environment,
+  participants,
   onClose,
 }: EnvironmentBugDetailsModalProps) => {
   const { t } = useTranslation();
@@ -46,6 +50,9 @@ export const EnvironmentBugDetailsModal = ({
     ? t(BUG_PRIORITY_LABEL[bug.priority])
     : t('environmentBugDetails.emptyValue');
   const reportedBy = bug.reportedBy?.trim() || t('environmentBugDetails.emptyValue');
+  const reporterProfile = participants?.find(
+    (participant) => participant.displayName === reportedBy || participant.email === reportedBy,
+  );
   const description = bug.description?.trim() || t('environmentBugDetails.noDescription');
   const stepsToReproduce = bug.stepsToReproduce?.trim() || t('environmentBugDetails.noSteps');
   const expectedResult = bug.expectedResult?.trim() || t('environmentBugDetails.noExpectedResult');
@@ -84,7 +91,14 @@ export const EnvironmentBugDetailsModal = ({
           </div>
           <div>
             <span className="bug-details__label">{t('environmentBugDetails.reportedBy')}</span>
-            <span className="bug-details__value">{reportedBy}</span>
+            <span className="bug-details__value bug-details__reporter">
+              <UserAvatar
+                name={reportedBy}
+                photoUrl={reporterProfile?.photoURL ?? null}
+                size="sm"
+              />
+              <span>{reportedBy}</span>
+            </span>
           </div>
           <div>
             <span className="bug-details__label">{t('environmentBugDetails.scenario')}</span>

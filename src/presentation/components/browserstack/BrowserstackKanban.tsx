@@ -1,6 +1,7 @@
 import type { BrowserstackBuild } from '../../../domain/entities/browserstack';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../Button';
+import { CachedImage } from '../CachedImage';
 
 interface BrowserstackKanbanProps {
   builds: BrowserstackBuild[];
@@ -56,7 +57,7 @@ export const BrowserstackKanban = ({ builds, isLoading, onRefresh }: Browserstac
       <header className="browserstack-kanban__header">
         <div>
           <div className="browserstack-kanban__title-row">
-            <img
+            <CachedImage
               className="browserstack-kanban__brand"
               src="https://img.icons8.com/color/48/browser-stack.png"
               alt={t('browserstackKanban.brandAlt')}

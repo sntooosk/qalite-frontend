@@ -24,6 +24,7 @@ import { DEFAULT_ROLE, DEFAULT_USER_PREFERENCES } from '../../domain/entities/au
 import { addUserToOrganizationByEmailDomain } from './organizations';
 import { firebaseAuth, firebaseFirestore } from '../database/firebase';
 import { getDocCacheFirst } from './firestoreCache';
+import { buildStorageFileName, uploadFileAndGetUrl } from './storage';
 import {
   getStoredLanguagePreference,
   getStoredThemePreference,
@@ -220,7 +221,12 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
   }
 
   const currentProfile = await fetchUserProfile(user.uid);
-  const photoURL = null;
+  const resolvedPhotoUrl = payload.photoFile
+    ? await uploadFileAndGetUrl(
+        `users/${user.uid}/profile/${buildStorageFileName(payload.photoFile)}`,
+        payload.photoFile,
+      )
+    : (currentProfile.photoURL ?? user.photoURL ?? null);
 
   const trimmedFirstName = payload.firstName?.trim() ?? currentProfile.firstName ?? '';
   const trimmedLastName = payload.lastName?.trim() ?? currentProfile.lastName ?? '';
@@ -238,7 +244,7 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
 
   await firebaseUpdateProfile(user, {
     displayName: displayName || undefined,
-    photoURL,
+    photoURL: resolvedPhotoUrl ?? undefined,
   });
 
   await persistUserProfile(
@@ -248,7 +254,7 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
       displayName,
       firstName: trimmedFirstName,
       lastName: trimmedLastName,
-      photoURL,
+      photoURL: resolvedPhotoUrl ?? null,
       organizationId: currentProfile.organizationId ?? null,
       browserstackCredentials,
       preferences,
@@ -262,7 +268,7 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
     displayName,
     firstName: trimmedFirstName,
     lastName: trimmedLastName,
-    photoURL,
+    photoURL: resolvedPhotoUrl ?? null,
     organizationId: currentProfile.organizationId ?? null,
     browserstackCredentials,
     preferences,

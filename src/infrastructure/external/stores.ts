@@ -5,12 +5,15 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  limit,
   onSnapshot,
   orderBy,
   query,
   runTransaction,
   serverTimestamp,
+  startAfter,
   updateDoc,
+  type QueryDocumentSnapshot,
   type Unsubscribe,
   where,
   writeBatch,
@@ -32,13 +35,24 @@ import {
   normalizeAutomationEnum,
   normalizeCriticalityEnum,
 } from '../../shared/utils/scenarioEnums';
+import { isAutomatedScenario } from '../../shared/utils/automation';
 import { firebaseFirestore } from '../database/firebase';
+import { CacheStore } from '../cache/CacheStore';
+import { fetchWithCache } from '../cache/cacheFetch';
 import { getDocCacheFirst, getDocsCacheFirst, getDocsCacheThenServer } from './firestoreCache';
 
 const STORES_COLLECTION = 'stores';
 const SCENARIOS_SUBCOLLECTION = 'scenarios';
 const SUITES_SUBCOLLECTION = 'suites';
 const CATEGORIES_SUBCOLLECTION = 'categories';
+const STORE_CACHE = new CacheStore({ namespace: 'stores', version: 'v1', ttlMs: 1000 * 60 * 5 });
+const STORE_LIST_CACHE_KEY = 'listSummary';
+const STORE_DETAIL_CACHE_PREFIX = 'detail:';
+const SCENARIO_LIST_CACHE_PREFIX = 'scenarios:';
+const SUITE_LIST_CACHE_PREFIX = 'suites:';
+const STORE_PAGE_SIZE = 50;
+const SCENARIOS_PAGE_SIZE = 50;
+const SUITES_PAGE_SIZE = 50;
 
 const timestampToDate = (value: unknown): Date | null => {
   if (value instanceof Timestamp) {
@@ -48,16 +62,44 @@ const timestampToDate = (value: unknown): Date | null => {
   return null;
 };
 
-const mapStore = (id: string, data: Record<string, unknown>): Store => ({
-  id,
-  organizationId: ((data.organizationId as string) ?? '').trim(),
-  name: ((data.name as string) ?? '').trim(),
-  site: ((data.site as string) ?? '').trim(),
-  stage: ((data.stage as string) ?? '').trim(),
-  scenarioCount: Number(data.scenarioCount ?? 0),
-  createdAt: timestampToDate(data.createdAt),
-  updatedAt: timestampToDate(data.updatedAt),
-});
+const getStoreAutomationCounts = (data: Record<string, unknown>, scenarioCount: number) => {
+  const automatedScenarioCount = Number(data.automatedScenarioCount ?? 0);
+  const hasAutomatedField = data.automatedScenarioCount !== undefined;
+  const hasNotAutomatedField = data.notAutomatedScenarioCount !== undefined;
+  const hasAutomationCounts = hasAutomatedField || hasNotAutomatedField;
+  const defaultNotAutomated = hasAutomationCounts
+    ? Number(data.notAutomatedScenarioCount ?? Math.max(scenarioCount - automatedScenarioCount, 0))
+    : scenarioCount;
+
+  return {
+    automatedScenarioCount,
+    notAutomatedScenarioCount: Math.max(defaultNotAutomated, 0),
+  };
+};
+
+const mapStore = (id: string, data: Record<string, unknown>): Store => {
+  const scenarioCount = Number(data.scenarioCount ?? 0);
+  const { automatedScenarioCount, notAutomatedScenarioCount } = getStoreAutomationCounts(
+    data,
+    scenarioCount,
+  );
+
+  return {
+    id,
+    organizationId: ((data.organizationId as string) ?? '').trim(),
+    name: ((data.name as string) ?? '').trim(),
+    site: ((data.site as string) ?? '').trim(),
+    stage: ((data.stage as string) ?? '').trim(),
+    scenarioCount,
+    automatedScenarioCount,
+    notAutomatedScenarioCount,
+    createdAt: timestampToDate(data.createdAt),
+    updatedAt: timestampToDate(data.updatedAt),
+  };
+};
+
+const getScenarioAutomationValue = (data: Record<string, unknown>) =>
+  ((data.automation as string) ?? (data.automatizado as string) ?? '').trim();
 
 const mapScenario = (
   storeId: string,
@@ -68,7 +110,7 @@ const mapScenario = (
   storeId,
   title: ((data.title as string) ?? '').trim(),
   category: ((data.category as string) ?? '').trim(),
-  automation: normalizeAutomationEnum((data.automation as string) ?? '') || '',
+  automation: normalizeAutomationEnum(getScenarioAutomationValue(data)) || '',
   criticality: normalizeCriticalityEnum((data.criticality as string) ?? '') || '',
   observation: ((data.observation as string) ?? '').trim(),
   bdd: ((data.bdd as string) ?? '').trim(),
@@ -125,20 +167,67 @@ const normalizeCategoryInput = (input: StoreCategoryInput): StoreCategoryInput =
   name: input.name.trim(),
 });
 
-export const listStores = async (organizationId: string): Promise<Store[]> => {
-  const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
-  const storesQuery = query(storesCollection, where('organizationId', '==', organizationId));
+const getAutomationDeltas = (automation: string) => {
+  const normalized = normalizeAutomationEnum(automation);
+  return {
+    automated: normalized === 'AUTOMATED' ? 1 : 0,
+    notAutomated: normalized === 'NOT_AUTOMATED' ? 1 : 0,
+  };
+};
+
+const listStoresFromServer = async (organizationId: string): Promise<Store[]> => {
   try {
-    const snapshot = await getDocsCacheThenServer(storesQuery);
-    const stores = snapshot.docs.map((docSnapshot) =>
-      mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+    const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
+    const storesQuery = query(
+      storesCollection,
+      where('organizationId', '==', organizationId),
+      orderBy('name'),
     );
-    return stores.sort((a, b) => a.name.localeCompare(b.name));
+
+    const stores: Store[] = [];
+    let lastDoc: QueryDocumentSnapshot | null = null;
+    let hasMore = true;
+
+    while (hasMore) {
+      const pageQuery = lastDoc
+        ? query(storesQuery, startAfter(lastDoc), limit(STORE_PAGE_SIZE))
+        : query(storesQuery, limit(STORE_PAGE_SIZE));
+
+      const snapshot = await getDocsCacheThenServer(pageQuery);
+
+      snapshot.docs.forEach((docSnapshot) => {
+        stores.push(mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })));
+      });
+
+      lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+      hasMore = Boolean(lastDoc && snapshot.size === STORE_PAGE_SIZE);
+    }
+
+    return stores;
   } catch (error) {
     console.error(error);
-    return [];
+    const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
+    const fallbackQuery = query(storesCollection, where('organizationId', '==', organizationId));
+    const snapshot = await getDocsCacheThenServer(fallbackQuery);
+    return snapshot.docs
+      .map((docSnapshot) =>
+        mapStore(docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 };
+
+export const listStoresSummary = async (organizationId: string): Promise<Store[]> => {
+  const cacheKey = `${STORE_LIST_CACHE_KEY}:${organizationId}`;
+  return fetchWithCache({
+    cache: STORE_CACHE,
+    key: cacheKey,
+    fetcher: () => listStoresFromServer(organizationId),
+    fallback: [],
+  });
+};
+
+export const listStores = listStoresSummary;
 
 export const listenToStores = (
   organizationId: string,
@@ -163,18 +252,36 @@ export const listenToStores = (
   );
 };
 
-export const getStore = async (storeId: string): Promise<Store | null> => {
+const getStoreFromServer = async (storeId: string): Promise<Store | null> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
-  try {
-    const snapshot = await getDocCacheFirst(storeRef);
-    return snapshot.exists()
-      ? mapStore(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {})
-      : null;
-  } catch (error) {
-    console.error(error);
+  const snapshot = await getDocCacheFirst(storeRef);
+  return snapshot.exists()
+    ? mapStore(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {})
+    : null;
+};
+
+export const getStoreDetail = async (storeId: string): Promise<Store | null> => {
+  if (!storeId) {
     return null;
   }
+
+  const cacheKey = `${STORE_DETAIL_CACHE_PREFIX}${storeId}`;
+  return fetchWithCache({
+    cache: STORE_CACHE,
+    key: cacheKey,
+    fetcher: () => getStoreFromServer(storeId),
+    fallback: null,
+    store: (store) => {
+      if (store) {
+        STORE_CACHE.set(cacheKey, store);
+      } else {
+        STORE_CACHE.remove(cacheKey);
+      }
+    },
+  });
 };
+
+export const getStore = getStoreDetail;
 
 export const createStore = async (payload: CreateStorePayload): Promise<Store> => {
   const storesCollection = collection(firebaseFirestore, STORES_COLLECTION);
@@ -185,20 +292,29 @@ export const createStore = async (payload: CreateStorePayload): Promise<Store> =
     site: payload.site.trim(),
     stage: payload.stage.trim(),
     scenarioCount: 0,
+    automatedScenarioCount: 0,
+    notAutomatedScenarioCount: 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 
-  return {
+  const store: Store = {
     id: docRef.id,
     organizationId: payload.organizationId,
     name: payload.name.trim(),
     site: payload.site.trim(),
     stage: payload.stage.trim(),
     scenarioCount: 0,
+    automatedScenarioCount: 0,
+    notAutomatedScenarioCount: 0,
     createdAt: now,
     updatedAt: now,
   };
+
+  STORE_CACHE.set(`${STORE_DETAIL_CACHE_PREFIX}${store.id}`, store);
+  STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
+
+  return store;
 };
 
 export const updateStore = async (storeId: string, payload: UpdateStorePayload): Promise<Store> => {
@@ -212,6 +328,9 @@ export const updateStore = async (storeId: string, payload: UpdateStorePayload):
 
   const snapshot = await getDocCacheFirst(storeRef);
   const updated = mapStore(snapshot.id, snapshot.data({ serverTimestamps: 'estimate' }) ?? {});
+
+  STORE_CACHE.set(`${STORE_DETAIL_CACHE_PREFIX}${storeId}`, updated);
+  STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
 
   return updated;
 };
@@ -239,21 +358,61 @@ export const deleteStore = async (storeId: string): Promise<void> => {
 
   batch.delete(storeRef);
   await batch.commit();
+  STORE_CACHE.remove(`${STORE_DETAIL_CACHE_PREFIX}${storeId}`);
+  STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
 };
 
-export const listScenarios = async (storeId: string): Promise<StoreScenario[]> => {
+const listScenariosFromServer = async (storeId: string): Promise<StoreScenario[]> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const scenariosCollection = collection(storeRef, SCENARIOS_SUBCOLLECTION);
   const scenariosQuery = query(scenariosCollection, orderBy('title'));
-  try {
-    const snapshot = await getDocsCacheThenServer(scenariosQuery);
-    return snapshot.docs.map((docSnapshot) =>
-      mapScenario(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-    );
-  } catch (error) {
-    console.error(error);
+  const scenarios: StoreScenario[] = [];
+  let lastDoc: QueryDocumentSnapshot | null = null;
+  let hasMore = true;
+
+  while (hasMore) {
+    const pageQuery = lastDoc
+      ? query(scenariosQuery, startAfter(lastDoc), limit(SCENARIOS_PAGE_SIZE))
+      : query(scenariosQuery, limit(SCENARIOS_PAGE_SIZE));
+    const snapshot = await getDocsCacheThenServer(pageQuery);
+    snapshot.docs.forEach((docSnapshot) => {
+      scenarios.push(
+        mapScenario(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+      );
+    });
+
+    lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+    hasMore = Boolean(lastDoc && snapshot.size === SCENARIOS_PAGE_SIZE);
+  }
+
+  const automatedScenarioCount = scenarios.filter((scenario) =>
+    isAutomatedScenario(scenario.automation),
+  ).length;
+  const scenarioCount = scenarios.length;
+  const notAutomatedScenarioCount = Math.max(scenarioCount - automatedScenarioCount, 0);
+
+  await updateDoc(storeRef, {
+    scenarioCount,
+    automatedScenarioCount,
+    notAutomatedScenarioCount,
+    updatedAt: serverTimestamp(),
+  });
+
+  return scenarios;
+};
+
+export const listScenarios = async (storeId: string): Promise<StoreScenario[]> => {
+  if (!storeId) {
     return [];
   }
+
+  const cacheKey = `${SCENARIO_LIST_CACHE_PREFIX}${storeId}`;
+  return fetchWithCache({
+    cache: STORE_CACHE,
+    key: cacheKey,
+    fetcher: () => listScenariosFromServer(storeId),
+    fallback: [],
+  });
 };
 
 export const createScenario = async (
@@ -279,18 +438,24 @@ export const createScenario = async (
       updatedAt: serverTimestamp(),
     });
 
-    const currentCount = Number(
-      storeSnapshot.data({ serverTimestamps: 'estimate' })?.scenarioCount ?? 0,
+    const storeData = storeSnapshot.data({ serverTimestamps: 'estimate' }) ?? {};
+    const currentCount = Number(storeData?.scenarioCount ?? 0);
+    const { automatedScenarioCount, notAutomatedScenarioCount } = getStoreAutomationCounts(
+      storeData,
+      currentCount,
     );
+    const automationDelta = getAutomationDeltas(normalizedScenario.automation);
     transaction.update(storeRef, {
       scenarioCount: currentCount + 1,
+      automatedScenarioCount: automatedScenarioCount + automationDelta.automated,
+      notAutomatedScenarioCount: notAutomatedScenarioCount + automationDelta.notAutomated,
       updatedAt: serverTimestamp(),
     });
 
     return newScenarioRef;
   });
 
-  return {
+  const scenario: StoreScenario = {
     id: scenarioRef.id,
     storeId,
     title: normalizedScenario.title,
@@ -302,6 +467,12 @@ export const createScenario = async (
     createdAt: now,
     updatedAt: now,
   };
+
+  STORE_CACHE.remove(`${STORE_DETAIL_CACHE_PREFIX}${storeId}`);
+  STORE_CACHE.remove(`${SCENARIO_LIST_CACHE_PREFIX}${storeId}`);
+  STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
+
+  return scenario;
 };
 
 export const updateScenario = async (
@@ -311,13 +482,49 @@ export const updateScenario = async (
 ): Promise<StoreScenario> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const scenarioRef = doc(storeRef, SCENARIOS_SUBCOLLECTION, scenarioId);
+  const normalizedScenario = normalizeScenarioInput(payload);
 
-  await updateDoc(scenarioRef, {
-    ...normalizeScenarioInput(payload),
-    updatedAt: serverTimestamp(),
+  await runTransaction(firebaseFirestore, async (transaction) => {
+    const [storeSnapshot, scenarioSnapshot] = await Promise.all([
+      transaction.get(storeRef),
+      transaction.get(scenarioRef),
+    ]);
+
+    if (!storeSnapshot.exists()) {
+      throw new Error('Loja não encontrada.');
+    }
+
+    if (!scenarioSnapshot.exists()) {
+      throw new Error('Cenário não encontrado.');
+    }
+
+    const storeData = storeSnapshot.data({ serverTimestamps: 'estimate' }) ?? {};
+    const currentCount = Number(storeData?.scenarioCount ?? 0);
+    const { automatedScenarioCount, notAutomatedScenarioCount } = getStoreAutomationCounts(
+      storeData,
+      currentCount,
+    );
+    const previousAutomation = normalizeAutomationEnum(
+      getScenarioAutomationValue(
+        (scenarioSnapshot.data({ serverTimestamps: 'estimate' }) ?? {}) as Record<string, unknown>,
+      ),
+    );
+    const nextAutomation = normalizeAutomationEnum(normalizedScenario.automation);
+    const automationDelta = getAutomationDeltas(nextAutomation);
+    const previousDelta = getAutomationDeltas(previousAutomation);
+    const automatedDelta = automationDelta.automated - previousDelta.automated;
+    const notAutomatedDelta = automationDelta.notAutomated - previousDelta.notAutomated;
+
+    transaction.update(scenarioRef, {
+      ...normalizedScenario,
+      updatedAt: serverTimestamp(),
+    });
+    transaction.update(storeRef, {
+      automatedScenarioCount: Math.max(automatedScenarioCount + automatedDelta, 0),
+      notAutomatedScenarioCount: Math.max(notAutomatedScenarioCount + notAutomatedDelta, 0),
+      updatedAt: serverTimestamp(),
+    });
   });
-
-  await updateDoc(storeRef, { updatedAt: serverTimestamp() });
 
   const scenarioSnapshot = await getDocCacheFirst(scenarioRef);
   const updatedScenario = mapScenario(
@@ -325,6 +532,8 @@ export const updateScenario = async (
     scenarioSnapshot.id,
     scenarioSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
   );
+
+  STORE_CACHE.remove(`${SCENARIO_LIST_CACHE_PREFIX}${storeId}`);
 
   return updatedScenario;
 };
@@ -334,36 +543,84 @@ export const deleteScenario = async (storeId: string, scenarioId: string): Promi
   const scenarioRef = doc(storeRef, SCENARIOS_SUBCOLLECTION, scenarioId);
 
   await runTransaction(firebaseFirestore, async (transaction) => {
-    const storeSnapshot = await transaction.get(storeRef);
+    const [storeSnapshot, scenarioSnapshot] = await Promise.all([
+      transaction.get(storeRef),
+      transaction.get(scenarioRef),
+    ]);
     if (!storeSnapshot.exists()) {
       throw new Error('Loja não encontrada.');
+    }
+    if (!scenarioSnapshot.exists()) {
+      throw new Error('Cenário não encontrado.');
     }
 
     transaction.delete(scenarioRef);
 
-    const currentCount = Number(
-      storeSnapshot.data({ serverTimestamps: 'estimate' })?.scenarioCount ?? 0,
+    const storeData = storeSnapshot.data({ serverTimestamps: 'estimate' }) ?? {};
+    const currentCount = Number(storeData?.scenarioCount ?? 0);
+    const { automatedScenarioCount, notAutomatedScenarioCount } = getStoreAutomationCounts(
+      storeData,
+      currentCount,
+    );
+    const automationDelta = getAutomationDeltas(
+      getScenarioAutomationValue(
+        (scenarioSnapshot.data({ serverTimestamps: 'estimate' }) ?? {}) as Record<string, unknown>,
+      ),
     );
     transaction.update(storeRef, {
       scenarioCount: Math.max(currentCount - 1, 0),
+      automatedScenarioCount: Math.max(automatedScenarioCount - automationDelta.automated, 0),
+      notAutomatedScenarioCount: Math.max(
+        notAutomatedScenarioCount - automationDelta.notAutomated,
+        0,
+      ),
       updatedAt: serverTimestamp(),
     });
   });
+
+  STORE_CACHE.remove(`${STORE_DETAIL_CACHE_PREFIX}${storeId}`);
+  STORE_CACHE.remove(`${SCENARIO_LIST_CACHE_PREFIX}${storeId}`);
+  STORE_CACHE.invalidatePrefix(`${STORE_LIST_CACHE_KEY}:`);
 };
 
-export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {
+const listSuitesFromServer = async (storeId: string): Promise<StoreSuite[]> => {
   const storeRef = doc(firebaseFirestore, STORES_COLLECTION, storeId);
   const suitesCollection = collection(storeRef, SUITES_SUBCOLLECTION);
   const suitesQuery = query(suitesCollection, orderBy('name'));
-  try {
-    const snapshot = await getDocsCacheThenServer(suitesQuery);
-    return snapshot.docs.map((docSnapshot) =>
-      mapSuite(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
-    );
-  } catch (error) {
-    console.error(error);
+  const suites: StoreSuite[] = [];
+  let lastDoc: QueryDocumentSnapshot | null = null;
+  let hasMore = true;
+
+  while (hasMore) {
+    const pageQuery = lastDoc
+      ? query(suitesQuery, startAfter(lastDoc), limit(SUITES_PAGE_SIZE))
+      : query(suitesQuery, limit(SUITES_PAGE_SIZE));
+    const snapshot = await getDocsCacheThenServer(pageQuery);
+    snapshot.docs.forEach((docSnapshot) => {
+      suites.push(
+        mapSuite(storeId, docSnapshot.id, docSnapshot.data({ serverTimestamps: 'estimate' })),
+      );
+    });
+
+    lastDoc = snapshot.docs[snapshot.docs.length - 1] ?? null;
+    hasMore = Boolean(lastDoc && snapshot.size === SUITES_PAGE_SIZE);
+  }
+
+  return suites;
+};
+
+export const listSuites = async (storeId: string): Promise<StoreSuite[]> => {
+  if (!storeId) {
     return [];
   }
+
+  const cacheKey = `${SUITE_LIST_CACHE_PREFIX}${storeId}`;
+  return fetchWithCache({
+    cache: STORE_CACHE,
+    key: cacheKey,
+    fetcher: () => listSuitesFromServer(storeId),
+    fallback: [],
+  });
 };
 
 export const createSuite = async (
@@ -385,7 +642,7 @@ export const createSuite = async (
     updatedAt: serverTimestamp(),
   });
 
-  return {
+  const suite: StoreSuite = {
     id: suiteRef.id,
     storeId: payload.storeId,
     name: normalized.name,
@@ -394,6 +651,10 @@ export const createSuite = async (
     createdAt: now,
     updatedAt: now,
   };
+
+  STORE_CACHE.remove(`${SUITE_LIST_CACHE_PREFIX}${payload.storeId}`);
+
+  return suite;
 };
 
 export const updateSuite = async (
@@ -421,6 +682,8 @@ export const updateSuite = async (
     updatedSnapshot.data({ serverTimestamps: 'estimate' }) ?? {},
   );
 
+  STORE_CACHE.remove(`${SUITE_LIST_CACHE_PREFIX}${storeId}`);
+
   return updatedSuite;
 };
 
@@ -434,6 +697,7 @@ export const deleteSuite = async (storeId: string, suiteId: string): Promise<voi
   }
 
   await deleteDoc(suiteRef);
+  STORE_CACHE.remove(`${SUITE_LIST_CACHE_PREFIX}${storeId}`);
 };
 
 export const listCategories = async (storeId: string): Promise<StoreCategory[]> => {

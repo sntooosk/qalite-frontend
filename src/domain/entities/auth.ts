@@ -48,6 +48,7 @@ export interface LoginPayload {
 export interface UpdateProfilePayload {
   firstName?: string;
   lastName?: string;
+  photoFile?: File | null;
   browserstackCredentials?: BrowserstackCredentials | null;
   preferences?: UserPreferences;
 }

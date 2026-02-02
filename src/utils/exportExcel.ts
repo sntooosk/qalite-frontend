@@ -37,23 +37,45 @@ const COLORS = {
   headerText: 'FFFFFF',
   border: '2B3B55',
 
-  greenBg: '0E5A3A',
-  greenText: 'D7FFE9',
+  grayBg: 'BDC3C7',
+  grayText: '2C3E50',
 
-  orangeBg: '7C2D12',
-  orangeText: 'FFEDD5',
+  pendingBg: 'F59E0B',
+  pendingText: 'FFFFFF',
+  inProgressBg: '3B82F6',
+  inProgressText: 'FFFFFF',
+  doneBg: '22C55E',
+  doneText: 'FFFFFF',
+  blockedBg: 'EF4444',
+  blockedText: 'FFFFFF',
+  notApplicableBg: '94A3B8',
+  notApplicableText: 'FFFFFF',
 
-  redBg: '6B1F2A',
-  redText: 'FFD6DC',
+  severityLowBg: '22C55E',
+  severityLowText: 'FFFFFF',
+  severityMediumBg: 'F59E0B',
+  severityMediumText: 'FFFFFF',
+  severityHighBg: 'F97316',
+  severityHighText: 'FFFFFF',
+  severityCriticalBg: '8B5CF6',
+  severityCriticalText: 'FFFFFF',
 
-  yellowBg: '6B5A1F',
-  yellowText: 'FFF2C7',
-
-  grayBg: '3A3F4B',
-  grayText: 'E6E6E6',
+  criticalityLowBg: '22C55E',
+  criticalityLowText: 'FFFFFF',
+  criticalityMediumBg: 'F59E0B',
+  criticalityMediumText: 'FFFFFF',
+  criticalityHighBg: 'F97316',
+  criticalityHighText: 'FFFFFF',
+  criticalityCriticalBg: '8B5CF6',
+  criticalityCriticalText: 'FFFFFF',
 };
 
-const normalize = (value: string) => (value ?? '').trim().toLowerCase();
+const normalize = (value: string) =>
+  (value ?? '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toLowerCase();
 
 const applyBorder = (cell: ExcelJS.Cell) => {
   cell.border = {
@@ -85,20 +107,29 @@ const stylePill = (cell: ExcelJS.Cell, bg: string, fg: string) => {
 
 const statusStyle = (status: string) => {
   const normalized = normalize(status);
-  if (normalized.includes('conclu') || normalized.includes('complete')) {
-    return { bg: COLORS.greenBg, fg: COLORS.greenText };
-  }
-  if (normalized.includes('andamento') || normalized.includes('progress')) {
-    return { bg: COLORS.yellowBg, fg: COLORS.yellowText };
+  if (normalized.includes('nao') && normalized.includes('aplica')) {
+    return { bg: COLORS.notApplicableBg, fg: COLORS.notApplicableText };
   }
   if (
-    normalized.includes('pend') ||
+    normalized.includes('conclu') ||
+    normalized.includes('complete') ||
+    normalized.includes('resolvid')
+  ) {
+    return { bg: COLORS.doneBg, fg: COLORS.doneText };
+  }
+  if (normalized.includes('andamento') || normalized.includes('progress')) {
+    return { bg: COLORS.inProgressBg, fg: COLORS.inProgressText };
+  }
+  if (normalized.includes('pend') || normalized.includes('abert')) {
+    return { bg: COLORS.pendingBg, fg: COLORS.pendingText };
+  }
+  if (
     normalized.includes('bloq') ||
     normalized.includes('erro') ||
     normalized.includes('block') ||
     normalized.includes('fail')
   ) {
-    return { bg: COLORS.redBg, fg: COLORS.redText };
+    return { bg: COLORS.blockedBg, fg: COLORS.blockedText };
   }
   return { bg: COLORS.grayBg, fg: COLORS.grayText };
 };
@@ -106,17 +137,20 @@ const statusStyle = (status: string) => {
 const criticidadeStyle = (criticality: string) => {
   const normalized = normalize(criticality);
   if (normalized.includes('baixa') || normalized.includes('low')) {
-    return { bg: COLORS.greenBg, fg: COLORS.greenText };
+    return { bg: COLORS.criticalityLowBg, fg: COLORS.criticalityLowText };
   }
   if (
     normalized.includes('média') ||
     normalized.includes('media') ||
     normalized.includes('medium')
   ) {
-    return { bg: COLORS.yellowBg, fg: COLORS.yellowText };
+    return { bg: COLORS.criticalityMediumBg, fg: COLORS.criticalityMediumText };
+  }
+  if (normalized.includes('crit') || normalized.includes('critical')) {
+    return { bg: COLORS.criticalityCriticalBg, fg: COLORS.criticalityCriticalText };
   }
   if (normalized.includes('alta') || normalized.includes('high')) {
-    return { bg: COLORS.redBg, fg: COLORS.redText };
+    return { bg: COLORS.criticalityHighBg, fg: COLORS.criticalityHighText };
   }
   return { bg: COLORS.grayBg, fg: COLORS.grayText };
 };
@@ -124,20 +158,45 @@ const criticidadeStyle = (criticality: string) => {
 const severityStyle = (severity: string) => {
   const normalized = normalize(severity);
   if (normalized.includes('crit') || normalized.includes('critical')) {
-    return { bg: COLORS.redBg, fg: COLORS.redText };
+    return { bg: COLORS.severityCriticalBg, fg: COLORS.severityCriticalText };
   }
   if (normalized.includes('alta') || normalized.includes('high')) {
-    return { bg: COLORS.orangeBg, fg: COLORS.orangeText };
+    return { bg: COLORS.severityHighBg, fg: COLORS.severityHighText };
   }
   if (
     normalized.includes('média') ||
     normalized.includes('media') ||
     normalized.includes('medium')
   ) {
-    return { bg: COLORS.yellowBg, fg: COLORS.yellowText };
+    return { bg: COLORS.severityMediumBg, fg: COLORS.severityMediumText };
   }
   if (normalized.includes('baixa') || normalized.includes('low')) {
-    return { bg: COLORS.greenBg, fg: COLORS.greenText };
+    return { bg: COLORS.severityLowBg, fg: COLORS.severityLowText };
+  }
+  return { bg: COLORS.grayBg, fg: COLORS.grayText };
+};
+
+const priorityStyle = (priority: string) => {
+  const normalized = normalize(priority);
+  if (
+    normalized.includes('urgente') ||
+    normalized.includes('crit') ||
+    normalized.includes('critical')
+  ) {
+    return { bg: COLORS.severityCriticalBg, fg: COLORS.severityCriticalText };
+  }
+  if (normalized.includes('alta') || normalized.includes('high')) {
+    return { bg: COLORS.severityHighBg, fg: COLORS.severityHighText };
+  }
+  if (
+    normalized.includes('média') ||
+    normalized.includes('media') ||
+    normalized.includes('medium')
+  ) {
+    return { bg: COLORS.severityMediumBg, fg: COLORS.severityMediumText };
+  }
+  if (normalized.includes('baixa') || normalized.includes('low')) {
+    return { bg: COLORS.severityLowBg, fg: COLORS.severityLowText };
   }
   return { bg: COLORS.grayBg, fg: COLORS.grayText };
 };
@@ -297,40 +356,46 @@ export const exportEnvironmentExcel = async ({
   const columnWidths = applyColumnWidths(worksheet, columnValues);
   applyAutoRowHeights(worksheet, columnWidths);
 
-  const bugWorksheet = workbook.addWorksheet(bugSheetName, {
-    views: [{ state: 'frozen', ySplit: 1 }],
-  });
+  if (bugRows.length > 0) {
+    const bugWorksheet = workbook.addWorksheet(bugSheetName, {
+      views: [{ state: 'frozen', ySplit: 1 }],
+    });
 
-  bugWorksheet.columns = [
-    { header: bugHeaderLabels[0], key: 'cenario' },
-    { header: bugHeaderLabels[1], key: 'severidade' },
-    { header: bugHeaderLabels[2], key: 'prioridade' },
-    { header: bugHeaderLabels[3], key: 'resultadoAtual' },
-  ];
+    bugWorksheet.columns = [
+      { header: bugHeaderLabels[0], key: 'cenario' },
+      { header: bugHeaderLabels[1], key: 'severidade' },
+      { header: bugHeaderLabels[2], key: 'prioridade' },
+      { header: bugHeaderLabels[3], key: 'resultadoAtual' },
+    ];
 
-  const bugHeaderRow = bugWorksheet.getRow(1);
-  bugHeaderRow.height = 22;
-  bugHeaderRow.eachCell((cell) => applyHeaderStyle(cell));
+    const bugHeaderRow = bugWorksheet.getRow(1);
+    bugHeaderRow.height = 22;
+    bugHeaderRow.eachCell((cell) => applyHeaderStyle(cell));
 
-  bugRows.forEach((row) => bugWorksheet.addRow(row));
+    bugRows.forEach((row) => bugWorksheet.addRow(row));
 
-  for (let rowIndex = 2; rowIndex <= bugWorksheet.rowCount; rowIndex += 1) {
-    const row = bugWorksheet.getRow(rowIndex);
-    row.eachCell((cell) => applyBaseCellStyle(cell));
+    for (let rowIndex = 2; rowIndex <= bugWorksheet.rowCount; rowIndex += 1) {
+      const row = bugWorksheet.getRow(rowIndex);
+      row.eachCell((cell) => applyBaseCellStyle(cell));
 
-    const severityCell = row.getCell(2);
-    const severity = severityStyle(String(severityCell.value ?? ''));
-    stylePill(severityCell, severity.bg, severity.fg);
+      const severityCell = row.getCell(2);
+      const severity = severityStyle(String(severityCell.value ?? ''));
+      stylePill(severityCell, severity.bg, severity.fg);
+
+      const priorityCell = row.getCell(3);
+      const priority = priorityStyle(String(priorityCell.value ?? ''));
+      stylePill(priorityCell, priority.bg, priority.fg);
+    }
+
+    const bugColumnValues = [
+      [bugWorksheet.getColumn(1).header as string, ...bugRows.map((row) => row.cenario)],
+      [bugWorksheet.getColumn(2).header as string, ...bugRows.map((row) => row.severidade)],
+      [bugWorksheet.getColumn(3).header as string, ...bugRows.map((row) => row.prioridade)],
+      [bugWorksheet.getColumn(4).header as string, ...bugRows.map((row) => row.resultadoAtual)],
+    ];
+    const bugColumnWidths = applyColumnWidths(bugWorksheet, bugColumnValues);
+    applyAutoRowHeights(bugWorksheet, bugColumnWidths);
   }
-
-  const bugColumnValues = [
-    [bugWorksheet.getColumn(1).header as string, ...bugRows.map((row) => row.cenario)],
-    [bugWorksheet.getColumn(2).header as string, ...bugRows.map((row) => row.severidade)],
-    [bugWorksheet.getColumn(3).header as string, ...bugRows.map((row) => row.prioridade)],
-    [bugWorksheet.getColumn(4).header as string, ...bugRows.map((row) => row.resultadoAtual)],
-  ];
-  const bugColumnWidths = applyColumnWidths(bugWorksheet, bugColumnValues);
-  applyAutoRowHeights(bugWorksheet, bugColumnWidths);
 
   const buffer = await workbook.xlsx.writeBuffer();
   saveAs(new Blob([buffer]), fileName);

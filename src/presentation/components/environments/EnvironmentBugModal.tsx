@@ -8,11 +8,12 @@ import type {
   EnvironmentBugSeverity,
   EnvironmentBugStatus,
 } from '../../../domain/entities/environment';
-import { environmentService } from '../../../application/use-cases/EnvironmentUseCase';
+import { environmentService } from '../../../infrastructure/services/environmentService';
 import { useToast } from '../../context/ToastContext';
 import { Button } from '../Button';
 import { Modal } from '../Modal';
 import { useAuth } from '../../hooks/useAuth';
+import { UserAvatar } from '../UserAvatar';
 
 interface EnvironmentBugModalProps {
   environment: Environment;
@@ -65,6 +66,8 @@ export const EnvironmentBugModal = ({
   const [priority, setPriority] = useState<EnvironmentBugPriority>('media');
   const [reportedBy, setReportedBy] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const reporterName =
+    reportedBy || user?.displayName || user?.email || t('environmentBugModal.reportedByFallback');
 
   const scenarioLabel = useMemo(() => {
     if (!scenarioId) {
@@ -153,6 +156,15 @@ export const EnvironmentBugModal = ({
       onClose={onClose}
     >
       <form className="environment-bug-form" onSubmit={handleSubmit}>
+        <div className="environment-bug-form__reporter">
+          <UserAvatar name={reporterName} photoUrl={user?.photoURL ?? null} size="sm" />
+          <div className="environment-bug-form__reporter-details">
+            <span className="environment-bug-form__reporter-label">
+              {t('environmentBugModal.reportedBy')}
+            </span>
+            <strong className="environment-bug-form__reporter-name">{reporterName}</strong>
+          </div>
+        </div>
         <div className="environment-bug-form__grid">
           <label>
             <span>{t('environmentBugModal.related')}</span>
