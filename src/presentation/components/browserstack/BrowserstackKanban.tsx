@@ -60,7 +60,6 @@ export const BrowserstackKanban = ({ builds, isLoading, onRefresh }: Browserstac
               className="browserstack-kanban__brand"
               src="https://img.icons8.com/color/48/browser-stack.png"
               alt={t('browserstackKanban.brandAlt')}
-              loading="lazy"
               decoding="async"
             />
             <h3 className="section-title">{t('browserstackKanban.title')}</h3>

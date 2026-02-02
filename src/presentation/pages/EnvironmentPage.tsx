@@ -1011,6 +1011,7 @@ export const EnvironmentPage = () => {
         <EnvironmentBugList
           environment={environment}
           bugs={bugs}
+          participants={participantProfiles}
           isLocked={Boolean(isInteractionLocked)}
           isLoading={isLoadingBugs}
           onEdit={handleEditBug}
@@ -1051,11 +1052,12 @@ export const EnvironmentPage = () => {
         isOpen={Boolean(scenarioDetailsId)}
         onClose={handleCloseScenarioDetails}
         title={translation('storeSummary.scenarioDetailsTitle')}
+        bodyClassName="scenario-details"
       >
         {detailScenario ? (
-          <div className="scenario-details">
+          <>
             <p className="scenario-details-title">{detailScenario.titulo}</p>
-            <div className="scenario-details-grid">
+            <div className="scenario-details-items">
               <div className="scenario-details-item">
                 <span className="scenario-details-label">
                   {translation('environmentEvidenceTable.table_categoria')}
@@ -1197,7 +1199,7 @@ export const EnvironmentPage = () => {
                 )}
               </div>
             </div>
-          </div>
+          </>
         ) : (
           <p className="section-subtitle">{translation('storeSummary.emptyValue')}</p>
         )}
