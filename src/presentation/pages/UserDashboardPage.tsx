@@ -9,7 +9,7 @@ import { useOrganizationStores } from '../hooks/useOrganizationStores';
 import { UserAvatar } from '../components/UserAvatar';
 import { BrowserstackKanban } from '../components/browserstack/BrowserstackKanban';
 import { StoreScenarioComparisonChart } from '../components/StoreScenarioComparisonChart';
-import { StorefrontIcon, UsersGroupIcon } from '../components/icons';
+import { InboxIcon, StorefrontIcon, UsersGroupIcon } from '../components/icons';
 import { useToast } from '../context/ToastContext';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { browserstackService } from '../../infrastructure/services/browserstackService';
@@ -143,6 +143,7 @@ export const UserDashboardPage = () => {
           <EmptyState
             title={emptyStateTitle}
             description={emptyStateDescription}
+            icon={<InboxIcon className="icon icon--lg" aria-hidden />}
             action={
               isError ? (
                 <Button type="button" variant="secondary" onClick={() => window.location.reload()}>
@@ -189,18 +190,6 @@ export const UserDashboardPage = () => {
         )}
 
         {stores.length > 0 && (
-          <div className="organization-charts-grid organization-charts-grid--dashboard">
-            <StoreScenarioComparisonChart
-              title={t('AdminStoresPage.chart-automation-comparison-title')}
-              description={t('AdminStoresPage.chart-automation-comparison-description')}
-              data={hasScenarioChartData ? scenarioChartData : []}
-              emptyMessage={t('AdminStoresPage.chart-automation-comparison-empty-message')}
-              isLoading={isLoading}
-            />
-          </div>
-        )}
-
-        {stores.length > 0 && (
           <div className="organization-extra">
             {organization && (
               <section className="organization-collaborators-card">
@@ -237,6 +226,18 @@ export const UserDashboardPage = () => {
                 )}
               </section>
             )}
+          </div>
+        )}
+
+        {stores.length > 0 && (
+          <div className="organization-charts-grid organization-charts-grid--dashboard">
+            <StoreScenarioComparisonChart
+              title={t('AdminStoresPage.chart-automation-comparison-title')}
+              description={t('AdminStoresPage.chart-automation-comparison-description')}
+              data={hasScenarioChartData ? scenarioChartData : []}
+              emptyMessage={t('AdminStoresPage.chart-automation-comparison-empty-message')}
+              isLoading={isLoading}
+            />
           </div>
         )}
       </section>

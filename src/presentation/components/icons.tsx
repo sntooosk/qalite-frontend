@@ -22,6 +22,7 @@ import {
   FiMonitor,
   FiMoon,
   FiPlusCircle,
+  FiShield,
   FiSettings,
   FiShoppingBag,
   FiStar,
@@ -60,3 +61,4 @@ export const UsersIcon = (props: IconBaseProps) => <FiUsers {...props} />;
 export const BugIcon = (props: IconBaseProps) => <FiAlertTriangle {...props} />;
 export const ListIcon = (props: IconBaseProps) => <FiList {...props} />;
 export const PlusCircleIcon = (props: IconBaseProps) => <FiPlusCircle {...props} />;
+export const ShieldIcon = (props: IconBaseProps) => <FiShield {...props} />;
