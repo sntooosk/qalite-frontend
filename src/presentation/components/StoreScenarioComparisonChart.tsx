@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { BarChartIcon } from './icons';
 
 interface StoreScenarioComparisonDataPoint {
   label: string;
@@ -29,9 +30,14 @@ export const StoreScenarioComparisonChart = ({
     <section className="card store-scenario-chart">
       <div className="store-scenario-chart__header">
         <div className="store-scenario-chart__title">
-          <div>
-            <span className="badge">{t('simpleChart.badge')}</span>
-            <h3>{title}</h3>
+          <div className="store-scenario-chart__title-main">
+            <span className="card-title-icon" aria-hidden>
+              <BarChartIcon className="icon icon--lg" />
+            </span>
+            <div>
+              <span className="badge">{t('simpleChart.badge')}</span>
+              <h3>{title}</h3>
+            </div>
           </div>
           <div className="store-scenario-chart__legend">
             <span className="store-scenario-chart__legend-item">

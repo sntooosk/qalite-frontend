@@ -772,18 +772,6 @@ export const AdminStoresPage = () => {
               ))}
             </div>
 
-            <div className="organization-charts-grid organization-charts-grid--dashboard">
-              <StoreScenarioComparisonChart
-                title={translation('AdminStoresPage.chart-automation-comparison-title')}
-                description={translation('AdminStoresPage.chart-automation-comparison-description')}
-                data={hasScenarioChartData ? scenarioChartData : []}
-                emptyMessage={translation(
-                  'AdminStoresPage.chart-automation-comparison-empty-message',
-                )}
-                isLoading={isLoadingStores}
-              />
-            </div>
-
             <div className="organization-extra">
               {selectedOrganization && (
                 <section className="organization-collaborators-card">
@@ -833,6 +821,18 @@ export const AdminStoresPage = () => {
                   onRefresh={loadBrowserstackBuilds}
                 />
               )}
+            </div>
+
+            <div className="organization-charts-grid organization-charts-grid--dashboard">
+              <StoreScenarioComparisonChart
+                title={translation('AdminStoresPage.chart-automation-comparison-title')}
+                description={translation('AdminStoresPage.chart-automation-comparison-description')}
+                data={hasScenarioChartData ? scenarioChartData : []}
+                emptyMessage={translation(
+                  'AdminStoresPage.chart-automation-comparison-empty-message',
+                )}
+                isLoading={isLoadingStores}
+              />
             </div>
           </>
         )}

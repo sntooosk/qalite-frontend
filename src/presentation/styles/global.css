@@ -71,6 +71,7 @@
   --table-row-border: rgba(97, 123, 189, 0.38);
   --table-text: #0f172a;
   --table-shadow: 0 16px 48px rgba(15, 30, 70, 0.16);
+  --control-height: 44px;
 }
 
 [data-theme='dark'] {
@@ -843,6 +844,12 @@ a.text-link:hover {
   flex-wrap: wrap;
 }
 
+.store-scenario-chart__title-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .store-scenario-chart__title h3 {
   margin: 0;
 }
@@ -1379,7 +1386,8 @@ button.store-summary-highlight:focus-visible {
   justify-content: center;
   gap: 0.5rem;
   border-radius: 999px;
-  padding: 0.75rem 1.5rem;
+  min-height: var(--control-height);
+  padding: 0.7rem 1.5rem;
   font-size: 0.95rem;
   font-weight: 600;
   border: none;
@@ -1869,27 +1877,11 @@ button.store-summary-highlight:focus-visible {
 }
 
 .back-button {
-  display: inline-flex;
-  align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-alt);
-  color: var(--color-text-primary);
-  font-weight: 600;
-  font-size: 0.9rem;
-  line-height: 1.2;
   white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background var(--transition-base),
-    box-shadow var(--transition-base),
-    transform var(--transition-base);
 }
 
 .back-button:hover {
-  box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }
 
@@ -2038,6 +2030,29 @@ button.store-summary-highlight:focus-visible {
 .list-grid {
   display: grid;
   gap: 1.5rem;
+}
+
+.list-with-icons {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+.list-with-icons li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.forbidden-title {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
 }
 
 .flex {
@@ -2604,6 +2619,12 @@ button.store-summary-highlight:focus-visible {
   color: var(--color-text-primary);
 }
 
+.form-title--with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .form-actions,
 .store-form-actions,
 .scenario-form-actions {
@@ -2843,7 +2864,8 @@ button.store-summary-highlight:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  padding: 0.4rem 0.75rem;
+  min-height: var(--control-height);
+  padding: 0.4rem 0.85rem;
   border-radius: 0.75rem;
   border: 1px solid var(--color-border-strong);
   background: var(--color-surface);
@@ -4094,6 +4116,12 @@ button.store-summary-highlight:focus-visible {
   border-radius: 12px;
 }
 
+.environment-card-row-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .environment-card-suite-label {
   font-size: 0.75rem;
   letter-spacing: 0.08em;
@@ -4156,6 +4184,9 @@ button.store-summary-highlight:focus-visible {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .environment-card-stat-value {
@@ -4183,6 +4214,9 @@ button.store-summary-highlight:focus-visible {
 }
 
 .environment-card-avatars__placeholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.85rem;
   color: var(--color-text-muted);
 }
@@ -4194,6 +4228,9 @@ button.store-summary-highlight:focus-visible {
 }
 
 .environment-card-participants-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.8rem;
   color: var(--color-text-muted);
 }
@@ -5331,6 +5368,21 @@ button.store-summary-highlight:focus-visible {
   flex-wrap: wrap;
 }
 
+@media (max-width: 1024px) {
+  .environment-kanban-columns {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .environment-kanban-column {
+    padding: 0.9rem;
+  }
+
+  .environment-card-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 768px) {
   .app-shell {
     padding: 1rem;
@@ -5369,6 +5421,28 @@ button.store-summary-highlight:focus-visible {
   .summary-card__metrics,
   .summary-card__details {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .create-card {
+    padding: 1.1rem;
+    min-height: auto;
+  }
+
+  .environment-card-suite-row,
+  .environment-card-moment-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .environment-card-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .environment-card-action {
+    width: 100%;
+    justify-content: center;
   }
 }
 
