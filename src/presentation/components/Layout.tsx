@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useOrganizationBranding } from '../context/OrganizationBrandingContext';
 import { Button } from './Button';
 import { UserAvatar } from './UserAvatar';
+import { CachedImage } from './CachedImage';
 import { LogoutIcon } from './icons';
 import qliteLogo from '../assets/logo.png';
 import { useTranslation } from 'react-i18next';
@@ -26,11 +27,10 @@ export const Layout = ({ children }: LayoutProps) => {
     <div className="app-shell">
       <header className="app-header">
         <Link to="/" className="app-brand" aria-label={t('layout.homeAriaLabel', { brandName })}>
-          <img
+          <CachedImage
             src={brandLogo}
             alt={t('layout.brandLogoAlt', { brandName })}
             className="app-brand-logo"
-            decoding="async"
           />
           <span className="app-brand-name">{brandSource?.name || brandName}</span>
         </Link>

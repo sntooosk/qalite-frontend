@@ -5,6 +5,7 @@ import type { Environment } from '../../../domain/entities/environment';
 import { environmentService } from '../../../infrastructure/services/environmentService';
 import { Button } from '../Button';
 import { Modal } from '../Modal';
+import { TrashIcon } from '../icons';
 
 interface DeleteEnvironmentModalProps {
   isOpen: boolean;
@@ -76,6 +77,7 @@ export const DeleteEnvironmentModal = ({
           loadingText={translation('deleteEnvironmentModal.deleting')}
           data-testid="confirm-delete-environment"
         >
+          <TrashIcon aria-hidden className="icon" />
           {translation('deleteEnvironmentModal.confirmDelete')}
         </Button>
       </div>

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { CachedImage } from './CachedImage';
 
 interface UserAvatarProps {
   name: string;
@@ -18,11 +19,10 @@ export const UserAvatar = ({ name, photoUrl, size = 'md', onClick }: UserAvatarP
   const dimension = size === 'sm' ? '2.5rem' : '3rem';
   const renderContent = () =>
     photoUrl ? (
-      <img
+      <CachedImage
         src={photoUrl}
         alt={t('userAvatar.avatarLabel', { name })}
         className="avatar-image"
-        decoding="async"
       />
     ) : (
       <span className="avatar-fallback">{getInitials(name)}</span>
