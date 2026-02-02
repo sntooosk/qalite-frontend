@@ -20,7 +20,7 @@ export const Layout = ({ children }: LayoutProps) => {
   const brandSource = activeOrganization;
   const { t } = useTranslation();
   const brandName = brandSource?.name || t('app.brandName');
-  const brandLogo = qliteLogo;
+  const brandLogo = brandSource?.logoUrl || qliteLogo;
 
   return (
     <div className="app-shell">
@@ -42,7 +42,7 @@ export const Layout = ({ children }: LayoutProps) => {
                   className="header-profile"
                   onClick={() => navigate('/profile')}
                 >
-                  <UserAvatar name={displayName} size="sm" />
+                  <UserAvatar name={displayName} size="sm" photoUrl={user?.photoURL ?? null} />
                   <span>{t('profile')}</span>
                 </button>
                 <Button type="button" variant="ghost" onClick={() => void logout()}>

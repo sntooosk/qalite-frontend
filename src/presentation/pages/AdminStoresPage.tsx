@@ -73,6 +73,8 @@ export const AdminStoresPage = () => {
   const [isOrganizationModalOpen, setIsOrganizationModalOpen] = useState(false);
   const [organizationForm, setOrganizationForm] =
     useState<OrganizationFormState>(initialOrganizationForm);
+  const [organizationLogoFile, setOrganizationLogoFile] = useState<File | null>(null);
+  const [organizationLogoPreview, setOrganizationLogoPreview] = useState<string | null>(null);
   const [isOrganizationSlackSectionOpen, setIsOrganizationSlackSectionOpen] = useState(false);
   const [isOrganizationBrowserstackSectionOpen, setIsOrganizationBrowserstackSectionOpen] =
     useState(false);
@@ -111,6 +113,7 @@ export const AdminStoresPage = () => {
       );
   }, [storesForOrganization]);
   const hasScenarioChartData = scenarioChartData.some((item) => item.total > 0);
+  const organizationLogoSource = organizationLogoPreview ?? selectedOrganization?.logoUrl ?? null;
 
   useEffect(() => {
     const fetchOrganizations = async () => {
@@ -278,6 +281,17 @@ export const AdminStoresPage = () => {
     void loadBrowserstackBuilds();
   }, [loadBrowserstackBuilds]);
 
+  useEffect(() => {
+    if (!organizationLogoFile) {
+      setOrganizationLogoPreview(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(organizationLogoFile);
+    setOrganizationLogoPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [organizationLogoFile]);
+
   const openCreateModal = () => {
     setStoreForm(initialStoreForm);
     setStoreError(null);
@@ -312,6 +326,7 @@ export const AdminStoresPage = () => {
       Boolean(browserstackUsername.trim() || browserstackAccessKey.trim()),
     );
     setOrganizationError(null);
+    setOrganizationLogoFile(null);
     setIsOrganizationModalOpen(true);
   };
 
@@ -321,6 +336,8 @@ export const AdminStoresPage = () => {
     setIsOrganizationSlackSectionOpen(false);
     setIsOrganizationBrowserstackSectionOpen(false);
     setOrganizationForm(initialOrganizationForm);
+    setOrganizationLogoFile(null);
+    setOrganizationLogoPreview(null);
     setNewMemberEmail('');
     setUserSuggestions([]);
   };
@@ -429,10 +446,14 @@ export const AdminStoresPage = () => {
       const browserstackAccessKey = isOrganizationBrowserstackSectionOpen
         ? organizationForm.browserstackAccessKey.trim()
         : '';
+      const logoUrl = organizationLogoFile
+        ? await organizationService.uploadLogo(selectedOrganization.id, organizationLogoFile)
+        : undefined;
 
       const updated = await organizationService.update(selectedOrganization.id, {
         name: trimmedName,
         description: (selectedOrganization.description ?? '').trim(),
+        ...(logoUrl !== undefined ? { logoUrl } : {}),
         slackWebhookUrl,
         emailDomain,
         browserstackCredentials:
@@ -803,7 +824,11 @@ export const AdminStoresPage = () => {
                     <ul className="collaborator-list">
                       {selectedOrganization.members.map((member) => (
                         <li key={member.uid} className="collaborator-card">
-                          <UserAvatar name={member.displayName || member.email} size="sm" />
+                          <UserAvatar
+                            name={member.displayName || member.email}
+                            size="sm"
+                            photoUrl={member.photoURL ?? null}
+                          />
                           <div className="collaborator-card__details">
                             <strong>{member.displayName || member.email}</strong>
                           </div>
@@ -917,6 +942,33 @@ export const AdminStoresPage = () => {
               required
               dataTestId="organization-settings-name"
             />
+            <div className="organization-logo-field">
+              <div className="organization-logo-preview">
+                {organizationLogoSource ? (
+                  <img
+                    src={organizationLogoSource}
+                    alt={translation('AdminStoresPage.org-logo-preview')}
+                  />
+                ) : (
+                  <span className="organization-logo-fallback">
+                    {translation('AdminStoresPage.org-logo-placeholder')}
+                  </span>
+                )}
+              </div>
+              <div className="organization-logo-actions">
+                <label htmlFor="organization-logo-upload" className="field-label">
+                  {translation('AdminStoresPage.org-logo-label')}
+                </label>
+                <input
+                  id="organization-logo-upload"
+                  type="file"
+                  accept="image/*"
+                  className="file-input"
+                  onChange={(event) => setOrganizationLogoFile(event.target.files?.[0] ?? null)}
+                />
+                <p className="form-hint">{translation('AdminStoresPage.org-logo-hint')}</p>
+              </div>
+            </div>
             <TextInput
               id="organization-email-domain"
               label={translation('AdminStoresPage.org-email-domain-label')}
@@ -1140,7 +1192,11 @@ export const AdminStoresPage = () => {
                       className="suggestion-option"
                       onClick={() => setNewMemberEmail(suggestion.email)}
                     >
-                      <UserAvatar name={suggestion.displayName || suggestion.email} size="sm" />
+                      <UserAvatar
+                        name={suggestion.displayName || suggestion.email}
+                        size="sm"
+                        photoUrl={suggestion.photoURL ?? null}
+                      />
                       <div className="suggestion-option__details">
                         <span className="suggestion-option__name">
                           {suggestion.displayName || suggestion.email}
@@ -1164,7 +1220,10 @@ export const AdminStoresPage = () => {
               <ul className="member-list">
                 {selectedOrganization.members.map((member) => (
                   <li key={member.uid} className="member-list-item">
-                    <UserAvatar name={member.displayName || member.email} />
+                    <UserAvatar
+                      name={member.displayName || member.email}
+                      photoUrl={member.photoURL ?? null}
+                    />
                     <div className="member-list-details">
                       <span className="member-list-name">{member.displayName || member.email}</span>
                       <span className="member-list-email">{member.email}</span>

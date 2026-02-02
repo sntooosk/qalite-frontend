@@ -1,5 +1,6 @@
 import { FirebaseOptions, getApp, getApps, initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import { getStorage } from 'firebase/storage';
 import {
   initializeFirestore,
   persistentLocalCache,
@@ -24,3 +25,4 @@ export const firebaseFirestore = initializeFirestore(firebaseApp, {
     tabManager: persistentMultipleTabManager(),
   }),
 });
+export const firebaseStorage = getStorage(firebaseApp);

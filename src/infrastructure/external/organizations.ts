@@ -25,6 +25,7 @@ import { getNormalizedEmailDomain, normalizeEmailDomain } from '../../shared/uti
 import { firebaseFirestore } from '../database/firebase';
 import { CacheStore } from '../cache/CacheStore';
 import { fetchWithCache } from '../cache/cacheFetch';
+import { buildStorageFileName, uploadFileAndGetUrl } from './storage';
 import {
   getDocCacheFirst,
   getDocCacheThenServer,
@@ -54,6 +55,7 @@ export interface CreateOrganizationPayload {
 export interface UpdateOrganizationPayload {
   name: string;
   description: string;
+  logoUrl?: string | null;
   slackWebhookUrl?: string | null;
   emailDomain?: string | null;
   browserstackCredentials?: BrowserstackCredentials | null;
@@ -197,6 +199,10 @@ export const updateOrganization = async (
     updatedAt: serverTimestamp(),
   };
 
+  if (payload.logoUrl !== undefined) {
+    updatePayload.logoUrl = payload.logoUrl;
+  }
+
   if (payload.browserstackCredentials !== undefined) {
     updatePayload.browserstackCredentials = browserstackCredentials;
   }
@@ -211,6 +217,14 @@ export const updateOrganization = async (
   ORGANIZATION_CACHE.invalidatePrefix(`${ORGANIZATION_LIST_CACHE_KEY}`);
   ORGANIZATION_CACHE.set(`${ORGANIZATION_DETAIL_CACHE_PREFIX}${organization.id}`, organization);
   return organization;
+};
+
+export const uploadOrganizationLogo = async (
+  organizationId: string,
+  file: File,
+): Promise<string> => {
+  const fileName = buildStorageFileName(file);
+  return uploadFileAndGetUrl(`organizations/${organizationId}/logo/${fileName}`, file);
 };
 
 export const deleteOrganization = async (id: string): Promise<void> => {

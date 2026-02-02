@@ -143,12 +143,20 @@ export const EnvironmentCard = ({
                 const initials = getUserInitials(readableName);
                 return (
                   <li key={user.id} className="environment-card-participant" title={readableName}>
-                    <span
-                      className="environment-card-avatar environment-card-avatar--initials"
-                      aria-label={readableName}
-                    >
-                      {initials}
-                    </span>
+                    {user.photoURL ? (
+                      <img
+                        src={user.photoURL}
+                        alt={readableName}
+                        className="environment-card-avatar"
+                      />
+                    ) : (
+                      <span
+                        className="environment-card-avatar environment-card-avatar--initials"
+                        aria-label={readableName}
+                      >
+                        {initials}
+                      </span>
+                    )}
                   </li>
                 );
               })}

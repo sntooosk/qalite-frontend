@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 interface UserAvatarProps {
   name: string;
+  photoUrl?: string | null;
   size?: 'sm' | 'md';
   onClick?: () => void;
 }
@@ -12,10 +13,15 @@ const getInitials = (name: string) => {
   return ((first?.[0] ?? '') + (second?.[0] ?? '')).toUpperCase() || name[0].toUpperCase();
 };
 
-export const UserAvatar = ({ name, size = 'md', onClick }: UserAvatarProps) => {
+export const UserAvatar = ({ name, photoUrl, size = 'md', onClick }: UserAvatarProps) => {
   const { t } = useTranslation();
   const dimension = size === 'sm' ? '2.5rem' : '3rem';
-  const renderContent = () => <span className="avatar-fallback">{getInitials(name)}</span>;
+  const renderContent = () =>
+    photoUrl ? (
+      <img src={photoUrl} alt={t('userAvatar.avatarLabel', { name })} className="avatar-image" />
+    ) : (
+      <span className="avatar-fallback">{getInitials(name)}</span>
+    );
 
   if (onClick) {
     return (

@@ -233,6 +233,7 @@ export const EnvironmentPage = () => {
   const [defaultBugScenarioId, setDefaultBugScenarioId] = useState<string | null>(null);
   const [scenarioDetailsId, setScenarioDetailsId] = useState<string | null>(null);
   const [modalEvidenceLink, setModalEvidenceLink] = useState('');
+  const [modalEvidenceFile, setModalEvidenceFile] = useState<File | null>(null);
   const [isCopyingMarkdown, setIsCopyingMarkdown] = useState(false);
   const [isSendingSlackSummary, setIsSendingSlackSummary] = useState(false);
   const [suites, setSuites] = useState<StoreSuite[]>([]);
@@ -351,12 +352,26 @@ export const EnvironmentPage = () => {
     }
   }, [handleEvidenceUpload, modalEvidenceLink, scenarioDetailsId]);
 
+  const handleModalEvidenceFileUpload = useCallback(async () => {
+    if (!scenarioDetailsId || !modalEvidenceFile) {
+      return;
+    }
+
+    try {
+      await handleEvidenceUpload(scenarioDetailsId, modalEvidenceFile);
+      setModalEvidenceFile(null);
+    } catch (error) {
+      console.error(error);
+    }
+  }, [handleEvidenceUpload, modalEvidenceFile, scenarioDetailsId]);
+
   useEffect(() => {
     const nextLink = detailScenario?.evidenciaArquivoUrl ?? '';
     if (modalEvidenceLink === nextLink) {
       return;
     }
     setModalEvidenceLink(nextLink);
+    setModalEvidenceFile(null);
   }, [detailScenario, modalEvidenceLink]);
 
   useEffect(() => {
@@ -1146,21 +1161,45 @@ export const EnvironmentPage = () => {
                 </a>
               ) : canManageEvidence ? (
                 <div className="scenario-evidence-actions">
-                  <input
-                    type="url"
-                    value={modalEvidenceLink}
-                    onChange={(event) => setModalEvidenceLink(event.target.value)}
-                    placeholder={translation('environmentEvidenceTable.evidencia_placeholder')}
-                    className="scenario-evidence-input"
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleModalEvidenceSave}
-                    isLoading={isUpdatingEvidence}
-                    loadingText={translation('saving')}
-                  >
-                    {translation('environmentEvidenceTable.evidencia_salvar')}
-                  </Button>
+                  <div className="scenario-evidence-field">
+                    <input
+                      type="url"
+                      value={modalEvidenceLink}
+                      onChange={(event) => setModalEvidenceLink(event.target.value)}
+                      placeholder={translation('environmentEvidenceTable.evidencia_placeholder')}
+                      className="scenario-evidence-input"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleModalEvidenceSave}
+                      isLoading={isUpdatingEvidence}
+                      loadingText={translation('saving')}
+                    >
+                      {translation('environmentEvidenceTable.evidencia_salvar')}
+                    </Button>
+                  </div>
+                  <div className="scenario-evidence-field">
+                    <input
+                      id="scenario-evidence-upload"
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="file-input"
+                      onChange={(event) => setModalEvidenceFile(event.target.files?.[0] ?? null)}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleModalEvidenceFileUpload}
+                      disabled={!modalEvidenceFile}
+                      isLoading={isUpdatingEvidence}
+                      loadingText={translation('saving')}
+                    >
+                      {translation('environmentEvidenceTable.evidencia_upload')}
+                    </Button>
+                  </div>
+                  <span className="form-hint">
+                    {translation('environmentEvidenceTable.evidencia_upload_hint')}
+                  </span>
                 </div>
               ) : (
                 <span className="section-subtitle">
