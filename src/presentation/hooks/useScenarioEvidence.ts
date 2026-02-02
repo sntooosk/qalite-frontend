@@ -10,7 +10,7 @@ export const useScenarioEvidence = (environmentId: string | null | undefined) =>
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleEvidenceUpload = useCallback(
-    async (scenarioId: string, link: string) => {
+    async (scenarioId: string, link: string | File) => {
       if (!environmentId) {
         throw new Error('Ambiente inválido.');
       }

@@ -53,6 +53,7 @@ import { normalizeCriticalityEnum } from '../../shared/utils/scenarioEnums';
 import { getDocsCacheThenServer } from './firestoreCache';
 import { CacheStore } from '../cache/CacheStore';
 import { fetchWithCache } from '../cache/cacheFetch';
+import { buildStorageFileName, uploadFileAndGetUrl } from './storage';
 
 const ENVIRONMENTS_COLLECTION = 'environments';
 const BUGS_SUBCOLLECTION = 'bugs';
@@ -529,26 +530,38 @@ export const updateScenarioStatus = async (
 export const uploadScenarioEvidence = async (
   environmentId: string,
   scenarioId: string,
-  evidenceLink: string,
+  evidenceLink: string | File,
 ): Promise<string> => {
-  const trimmedLink = evidenceLink.trim();
-  if (!trimmedLink) {
-    throw new Error('Informe um link válido para a evidência.');
-  }
+  let resolvedLink = '';
 
-  try {
-    const parsedUrl = new URL(trimmedLink);
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+  if (typeof evidenceLink === 'string') {
+    const trimmedLink = evidenceLink.trim();
+    if (!trimmedLink) {
       throw new Error('Informe um link válido para a evidência.');
     }
-  } catch (error) {
-    console.error(error);
-    throw new Error('Informe um link válido para a evidência.');
+
+    try {
+      const parsedUrl = new URL(trimmedLink);
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        throw new Error('Informe um link válido para a evidência.');
+      }
+    } catch (error) {
+      console.error(error);
+      throw new Error('Informe um link válido para a evidência.');
+    }
+
+    resolvedLink = trimmedLink;
+  } else {
+    const fileName = buildStorageFileName(evidenceLink);
+    resolvedLink = await uploadFileAndGetUrl(
+      `environments/${environmentId}/scenarios/${scenarioId}/${fileName}`,
+      evidenceLink,
+    );
   }
 
-  await updateScenarioField(environmentId, scenarioId, { evidenciaArquivoUrl: trimmedLink });
+  await updateScenarioField(environmentId, scenarioId, { evidenciaArquivoUrl: resolvedLink });
 
-  return trimmedLink;
+  return resolvedLink;
 };
 
 export const listEnvironmentBugs = async (environmentId: string): Promise<EnvironmentBug[]> => {
@@ -772,6 +785,7 @@ const normalizeParticipants = (
       id,
       name: displayName,
       email: profile?.email ?? t('dynamic.noEmail'),
+      photoURL: profile?.photoURL ?? null,
     };
   });
 };
@@ -1044,6 +1058,15 @@ export const exportEnvironmentAsPDF = (
           .map(
             (participant) => `
         <tr>
+          <td>
+            ${
+              participant.photoURL
+                ? `<img src="${escapeHtml(participant.photoURL)}" alt="${escapeHtml(
+                    participant.name,
+                  )}" class="participant-photo" />`
+                : `<span class="participant-photo participant-photo--empty">-</span>`
+            }
+          </td>
           <td>${escapeHtml(participant.name)}</td>
           <td>${escapeHtml(participant.email)}</td>
         </tr>
@@ -1052,7 +1075,7 @@ export const exportEnvironmentAsPDF = (
           .join('')
       : `
         <tr>
-          <td colspan="2">${t('environmentExport.noParticipants')}</td>
+          <td colspan="3">${t('environmentExport.noParticipants')}</td>
         </tr>
       `;
 
@@ -1134,6 +1157,8 @@ export const exportEnvironmentAsPDF = (
           .summary-grid strong { display: block; margin-top: 4px; }
           table { width: 100%; border-collapse: collapse; margin-top: 16px; }
           th, td { border: 1px solid var(--table-border); padding: 8px; text-align: left; }
+          .participant-photo { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+          .participant-photo--empty { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #e5e7eb; color: #6b7280; font-size: 0.75rem; }
           .criticality-pill,
           .status-pill,
           .severity-pill,
@@ -1212,6 +1237,7 @@ export const exportEnvironmentAsPDF = (
         <table class="participants-table">
           <thead>
             <tr>
+              <th>${t('environmentExport.participantPhoto')}</th>
               <th>${t('environmentExport.participantName')}</th>
               <th>${t('environmentExport.participantEmail')}</th>
             </tr>

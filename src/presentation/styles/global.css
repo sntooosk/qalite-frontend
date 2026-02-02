@@ -1897,6 +1897,75 @@ button.store-summary-highlight:focus-visible {
   gap: 1.5rem;
 }
 
+.profile-photo-field {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.profile-photo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.file-input {
+  width: 100%;
+  max-width: 320px;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+}
+
+.file-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-ring);
+}
+
+.organization-logo-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.organization-logo-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.organization-logo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.organization-logo-fallback {
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 0 0.4rem;
+}
+
+.organization-logo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
 .toast-viewport {
   position: fixed;
   top: 1.5rem;
@@ -4383,6 +4452,14 @@ button.store-summary-highlight:focus-visible {
   gap: 0.5rem;
   margin-top: 0.5rem;
   align-items: center;
+}
+
+.scenario-evidence-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  width: 100%;
 }
 
 .scenario-evidence-input {

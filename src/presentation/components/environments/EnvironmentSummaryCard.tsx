@@ -234,7 +234,11 @@ export const EnvironmentSummaryCard = ({
               const initials = getUserInitials(readableName);
               return (
                 <li key={participant.id} className="summary-card__avatar-item">
-                  <span className="summary-card__avatar-fallback">{initials}</span>
+                  {participant.photoURL ? (
+                    <img src={participant.photoURL} alt={readableName} />
+                  ) : (
+                    <span className="summary-card__avatar-fallback">{initials}</span>
+                  )}
                   <span>{readableName}</span>
                 </li>
               );

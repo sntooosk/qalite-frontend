@@ -6,6 +6,7 @@ import { BackButton } from '../components/BackButton';
 import { Button } from '../components/Button';
 import { Layout } from '../components/Layout';
 import { TextInput } from '../components/TextInput';
+import { UserAvatar } from '../components/UserAvatar';
 import { UserPreferencesSection } from '../components/UserPreferencesSection';
 import { useTranslation } from 'react-i18next';
 import { useUserPreferences } from '../context/UserPreferencesContext';
@@ -17,6 +18,8 @@ export const ProfilePage = () => {
   const [lastName, setLastName] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const [draftPreferences, setDraftPreferences] = useState(preferences);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -27,6 +30,17 @@ export const ProfilePage = () => {
   useEffect(() => {
     setDraftPreferences(preferences);
   }, [preferences]);
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPhotoPreview(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(photoFile);
+    setPhotoPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [photoFile]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -48,6 +62,7 @@ export const ProfilePage = () => {
       await updateProfile({
         firstName: trimmedFirstName,
         lastName: trimmedLastName,
+        ...(photoFile ? { photoFile } : {}),
       });
 
       if (
@@ -76,6 +91,34 @@ export const ProfilePage = () => {
           {localError && <Alert type="error" message={localError} />}
 
           <form className="profile-editor" onSubmit={handleSubmit}>
+            <div className="profile-photo-field">
+              <UserAvatar
+                name={user?.displayName || user?.email || ''}
+                photoUrl={photoPreview ?? user?.photoURL ?? null}
+              />
+              <div className="profile-photo-actions">
+                <label htmlFor="profile-photo-upload" className="field-label">
+                  {t('profilePage.photo')}
+                </label>
+                <input
+                  id="profile-photo-upload"
+                  type="file"
+                  accept="image/*"
+                  className="file-input"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    if (file && file.size > 5 * 1024 * 1024) {
+                      setLocalError(t('profilePage.errorSize'));
+                      setPhotoFile(null);
+                      return;
+                    }
+                    setLocalError(null);
+                    setPhotoFile(file);
+                  }}
+                />
+                <span className="form-hint">{t('profilePage.formats')}</span>
+              </div>
+            </div>
             <TextInput
               id="firstName"
               label={t('name')}

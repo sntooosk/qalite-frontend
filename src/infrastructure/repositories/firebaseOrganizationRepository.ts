@@ -8,6 +8,7 @@ import {
   listOrganizations,
   removeUserFromOrganization,
   updateOrganization,
+  uploadOrganizationLogo,
 } from '../external/organizations';
 
 export const firebaseOrganizationRepository: OrganizationRepository = {
@@ -17,6 +18,7 @@ export const firebaseOrganizationRepository: OrganizationRepository = {
   getDetail: getOrganization,
   create: createOrganization,
   update: updateOrganization,
+  uploadLogo: uploadOrganizationLogo,
   delete: deleteOrganization,
   addUser: addUserToOrganization,
   removeUser: removeUserFromOrganization,

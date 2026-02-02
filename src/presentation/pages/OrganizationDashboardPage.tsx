@@ -106,7 +106,10 @@ export const OrganizationDashboardPage = () => {
             <ul className="member-list member-list--compact">
               {organization?.members.map((member) => (
                 <li key={member.uid} className="member-list-item">
-                  <UserAvatar name={member.displayName || member.email} />
+                  <UserAvatar
+                    name={member.displayName || member.email}
+                    photoUrl={member.photoURL ?? null}
+                  />
                   <div className="member-list-details">
                     <span className="member-list-name">{member.displayName || member.email}</span>
                     <span className="member-list-email">{member.email}</span>

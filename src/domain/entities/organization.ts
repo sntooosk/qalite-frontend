@@ -32,6 +32,7 @@ export interface CreateOrganizationPayload {
 export interface UpdateOrganizationPayload {
   name: string;
   description: string;
+  logoUrl?: string | null;
   slackWebhookUrl?: string | null;
   emailDomain?: string | null;
   browserstackCredentials?: BrowserstackCredentials | null;
