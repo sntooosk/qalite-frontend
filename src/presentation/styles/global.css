@@ -1219,9 +1219,8 @@ a.text-link:hover {
 }
 
 .scenario-details-criticality {
-  font-size: clamp(0.55rem, 1.6vw, 0.68rem);
-  padding: 0.1rem 0.5rem;
-  line-height: 1.2;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.75rem;
 }
 
 .scenario-details-section {
