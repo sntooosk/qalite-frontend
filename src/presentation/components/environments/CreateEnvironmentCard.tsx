@@ -8,6 +8,7 @@ import { Button } from '../Button';
 import { SelectInput } from '../SelectInput';
 import { TextArea } from '../TextArea';
 import { TextInput } from '../TextInput';
+import { PlusCircleIcon } from '../icons';
 import {
   MOMENT_OPTIONS_BY_ENVIRONMENT,
   TEST_TYPES_BY_ENVIRONMENT,
@@ -186,7 +187,10 @@ export const CreateEnvironmentCard = ({
   return (
     <div className="create-card">
       <div className="create-card__header">
-        <h3 className="form-title">{t('createEnvironment.create')}</h3>
+        <h3 className="form-title form-title--with-icon">
+          <PlusCircleIcon aria-hidden className="icon icon--lg" />
+          {t('createEnvironment.create')}
+        </h3>
         <p className="create-card__description">{t('createEnvironment.description')}</p>
       </div>
       <form className="environment-form" onSubmit={handleSubmit}>

@@ -20,7 +20,7 @@ import { Modal } from '../Modal';
 import { Button } from '../Button';
 import { EnvironmentCard } from './EnvironmentCard';
 import { CreateEnvironmentCard } from './CreateEnvironmentCard';
-import { ArchiveIcon } from '../icons';
+import { ArchiveIcon, CheckCircleIcon, InboxIcon, ProgressIcon } from '../icons';
 
 interface EnvironmentKanbanProps {
   storeId: string;
@@ -31,10 +31,10 @@ interface EnvironmentKanbanProps {
   onEnvironmentCreated: (environment: Environment) => void;
 }
 
-const COLUMNS: { status: EnvironmentStatus; title: string }[] = [
-  { status: 'backlog', title: 'Backlog' },
-  { status: 'in_progress', title: 'environmentKanban.progress' },
-  { status: 'done', title: 'environmentKanban.done' },
+const COLUMNS: { status: EnvironmentStatus; title: string; Icon: typeof InboxIcon }[] = [
+  { status: 'backlog', title: 'Backlog', Icon: InboxIcon },
+  { status: 'in_progress', title: 'environmentKanban.progress', Icon: ProgressIcon },
+  { status: 'done', title: 'environmentKanban.done', Icon: CheckCircleIcon },
 ];
 
 const cloneScenarioMap = (
@@ -332,7 +332,10 @@ export const EnvironmentKanban = ({
                 onDrop={handleDrop(column.status)}
               >
                 <div className="environment-kanban-column-header">
-                  <h4>{t(column.title)}</h4>
+                  <h4 className="environment-kanban-column-title">
+                    <column.Icon aria-hidden className="icon" />
+                    {t(column.title)}
+                  </h4>
                   <span className="environment-kanban-column-count">
                     {environmentsToRender.length}
                   </span>

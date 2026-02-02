@@ -6,7 +6,7 @@ import type { UserSummary } from '../../../domain/entities/user';
 import { getReadableUserName, getUserInitials } from '../../utils/userDisplay';
 import { ENVIRONMENT_STATUS_LABEL } from '../../../shared/config/environmentLabels';
 import { translateEnvironmentOption } from '../../constants/environmentOptions';
-import { CopyIcon } from '../icons';
+import { BugIcon, ClockIcon, CopyIcon, ListIcon, LayersIcon, UsersIcon } from '../icons';
 
 interface EnvironmentCardProps {
   environment: Environment;
@@ -92,24 +92,38 @@ export const EnvironmentCard = ({
       </div>
 
       <div className="environment-card-suite-row">
-        <span className="environment-card-suite-label">{t('environmentCard.suiteLabel')}</span>
+        <div className="environment-card-row-title">
+          <LayersIcon aria-hidden className="icon" />
+          <span className="environment-card-suite-label">{t('environmentCard.suiteLabel')}</span>
+        </div>
         <span className="environment-card-suite-name">{displaySuiteName}</span>
       </div>
 
       {environment.momento && (
         <div className="environment-card-moment-row">
-          <span className="environment-card-moment-label">{t('environmentCard.momentLabel')}</span>
+          <div className="environment-card-row-title">
+            <ClockIcon aria-hidden className="icon" />
+            <span className="environment-card-moment-label">
+              {t('environmentCard.momentLabel')}
+            </span>
+          </div>
           <span className="environment-card-moment-name">{momentLabel}</span>
         </div>
       )}
 
       <div className="environment-card-stats">
         <div className="environment-card-stat">
-          <span className="environment-card-stat-label">{t('scenarios')}</span>
+          <span className="environment-card-stat-label">
+            <ListIcon aria-hidden className="icon" />
+            {t('scenarios')}
+          </span>
           <strong className="environment-card-stat-value">{totalScenariosWithPlatforms}</strong>
         </div>
         <div className="environment-card-stat">
-          <span className="environment-card-stat-label">{bugLabel}</span>
+          <span className="environment-card-stat-label">
+            <BugIcon aria-hidden className="icon" />
+            {bugLabel}
+          </span>
           <strong className="environment-card-stat-value">{displayBugCount}</strong>
         </div>
       </div>
@@ -145,11 +159,13 @@ export const EnvironmentCard = ({
               )}
             </ul>
             <span className="environment-card-participants-label">
+              <UsersIcon aria-hidden className="icon" />
               {t('environmentCard.participant', { count: participants.length })}
             </span>
           </>
         ) : (
           <span className="environment-card-avatars__placeholder">
+            <UsersIcon aria-hidden className="icon" />
             {t('environmentCard.noParticipants')}
           </span>
         )}
